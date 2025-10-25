@@ -4,6 +4,7 @@
 
 import { useState } from 'react';
 import { ArticlePreview } from '../components/ArticleGenerator/ArticlePreview';
+import { GenerationProgress } from '../components/ArticleGenerator/GenerationProgress';
 import { TopicSubmissionForm } from '../components/ArticleGenerator/TopicSubmissionForm';
 import { Button } from '../components/ui';
 import { useArticles } from '../hooks/useArticles';
@@ -19,20 +20,36 @@ interface TopicFormData {
 export default function ArticleGeneratorPage() {
   const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(true);
+  const [generatingTopicId, setGeneratingTopicId] = useState<number | null>(null);
 
   const { data: articles, isLoading: articlesLoading, refetch: refetchArticles } = useArticles(0, 10);
   const createTopicMutation = useCreateTopicRequest();
 
   const handleSubmitTopic = async (data: TopicFormData) => {
     try {
-      await createTopicMutation.mutateAsync(data);
-      // Poll for new articles after submission
-      setTimeout(() => {
-        refetchArticles();
-      }, 3000);
+      const result = await createTopicMutation.mutateAsync(data);
+      // Set the generating topic ID to show progress
+      setGeneratingTopicId(result.id);
     } catch (error) {
       console.error('Failed to submit topic:', error);
     }
+  };
+
+  const handleGenerationComplete = (articleId: number) => {
+    // Refresh articles list when generation completes
+    refetchArticles();
+    // Clear generating state after a short delay to show success message
+    setTimeout(() => {
+      setGeneratingTopicId(null);
+    }, 3000);
+  };
+
+  const handleGenerationError = (error: string) => {
+    console.error('Generation failed:', error);
+    // Keep the error visible for 5 seconds
+    setTimeout(() => {
+      setGeneratingTopicId(null);
+    }, 5000);
   };
 
   const handleViewArticle = (articleId: number) => {
@@ -50,25 +67,25 @@ export default function ArticleGeneratorPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left column - Topic submission form */}
-        <div className="lg:col-span-1">
-          {showForm && (
+        {/* Left column - Topic submission form and progress */}
+        <div className="lg:col-span-1 space-y-4">
+          {showForm && !generatingTopicId && (
             <TopicSubmissionForm
               onSubmit={handleSubmitTopic}
               isLoading={createTopicMutation.isPending}
             />
           )}
 
-          {createTopicMutation.isSuccess && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                Topic submitted successfully! Article generation started in the background.
-              </p>
-            </div>
+          {generatingTopicId && (
+            <GenerationProgress
+              topicRequestId={generatingTopicId}
+              onComplete={handleGenerationComplete}
+              onError={handleGenerationError}
+            />
           )}
 
           {createTopicMutation.isError && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-800">
                 Failed to submit topic. Please try again.
               </p>
