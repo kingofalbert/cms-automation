@@ -1,0 +1,1256 @@
+openapi: 3.0.3
+info:
+  title: CMS Automation API
+  description: |
+    API for AI-powered content management system automation.
+    Enables automated article generation, tagging, scheduling, and publishing workflows.
+  version: 1.0.0
+  contact:
+    name: CMS Automation Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.cms-automation.example.com/v1
+    description: Production server
+  - url: https://staging-api.cms-automation.example.com/v1
+    description: Staging server
+  - url: http://localhost:8000/v1
+    description: Local development
+
+tags:
+  - name: Articles
+    description: Article generation and management
+  - name: Topics
+    description: Topic request submission and tracking
+  - name: Tags
+    description: Tag and categorization management
+  - name: Schedules
+    description: Publishing schedule operations
+  - name: Workflows
+    description: Review and approval workflows
+  - name: Health
+    description: Service health and monitoring
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+paths:
+  # ============================================================================
+  # HEALTH & MONITORING
+  # ============================================================================
+
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check endpoint
+      description: Returns service health status and dependencies
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # ============================================================================
+  # TOPIC REQUESTS
+  # ============================================================================
+
+  /topics:
+    post:
+      tags: [Topics]
+      summary: Submit article topic request
+      description: |
+        Submit a new topic for AI article generation. Supports single topics
+        or batch submissions. Triggers async article generation workflow.
+      operationId: submitTopicRequest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicRequestCreate'
+      responses:
+        '202':
+          description: Topic request accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicRequestResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+    get:
+      tags: [Topics]
+      summary: List topic requests
+      description: Retrieve paginated list of topic requests with filtering
+      operationId: listTopicRequests
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          description: Filter by request status
+          schema:
+            type: string
+            enum: [pending, processing, completed, failed, cancelled]
+        - name: priority
+          in: query
+          description: Filter by priority
+          schema:
+            type: string
+            enum: [urgent, normal, low]
+      responses:
+        '200':
+          description: Topic requests retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicRequestList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /topics/{requestId}:
+    get:
+      tags: [Topics]
+      summary: Get topic request details
+      description: Retrieve detailed information about a specific topic request
+      operationId: getTopicRequest
+      parameters:
+        - $ref: '#/components/parameters/RequestIdParam'
+      responses:
+        '200':
+          description: Topic request details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicRequestDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Topics]
+      summary: Cancel topic request
+      description: Cancel a pending or processing topic request
+      operationId: cancelTopicRequest
+      parameters:
+        - $ref: '#/components/parameters/RequestIdParam'
+      responses:
+        '204':
+          description: Topic request cancelled
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # ARTICLES
+  # ============================================================================
+
+  /articles:
+    get:
+      tags: [Articles]
+      summary: List articles
+      description: Retrieve paginated list of articles with filtering and search
+      operationId: listArticles
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          description: Filter by article status
+          schema:
+            type: string
+            enum: [draft, in-review, scheduled, published, failed]
+        - name: tags
+          in: query
+          description: Filter by tag IDs (comma-separated)
+          schema:
+            type: string
+        - name: search
+          in: query
+          description: Search in title and body
+          schema:
+            type: string
+        - name: author_id
+          in: query
+          description: Filter by author user ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Articles retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleList'
+
+  /articles/{articleId}:
+    get:
+      tags: [Articles]
+      summary: Get article details
+      description: Retrieve complete article with metadata and workflow state
+      operationId: getArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Articles]
+      summary: Update article
+      description: |
+        Update article content, metadata, or tags. Supports both manual edits
+        and AI re-generation requests.
+      operationId: updateArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleUpdate'
+      responses:
+        '200':
+          description: Article updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags: [Articles]
+      summary: Delete article
+      description: Soft delete article (moves to deleted status)
+      operationId: deleteArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      responses:
+        '204':
+          description: Article deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /articles/{articleId}/regenerate:
+    post:
+      tags: [Articles]
+      summary: Request AI re-generation
+      description: |
+        Request AI to regenerate article with specific feedback.
+        Creates new version while preserving history.
+      operationId: regenerateArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegenerationRequest'
+      responses:
+        '202':
+          description: Regeneration request accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegenerationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /articles/{articleId}/rollback:
+    post:
+      tags: [Articles]
+      summary: Rollback published article
+      description: Rollback published article to draft status (FR-020)
+      operationId: rollbackArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      responses:
+        '200':
+          description: Article rolled back to draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /articles/{articleId}/similarity:
+    get:
+      tags: [Articles]
+      summary: Find similar articles
+      description: |
+        Find articles with similar topics using semantic similarity (FR-018).
+        Returns articles with similarity score > 0.85.
+      operationId: findSimilarArticles
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+        - name: threshold
+          in: query
+          description: Similarity threshold (0.0-1.0)
+          schema:
+            type: number
+            format: float
+            minimum: 0.0
+            maximum: 1.0
+            default: 0.85
+        - name: limit
+          in: query
+          description: Maximum number of similar articles
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Similar articles found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimilarityResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # TAGS
+  # ============================================================================
+
+  /tags:
+    get:
+      tags: [Tags]
+      summary: List tags
+      description: Retrieve all tags with usage statistics
+      operationId: listTags
+      parameters:
+        - name: category
+          in: query
+          description: Filter by category
+          schema:
+            type: string
+        - name: min_usage
+          in: query
+          description: Minimum usage count
+          schema:
+            type: integer
+            minimum: 0
+        - name: source
+          in: query
+          description: Filter by creation source
+          schema:
+            type: string
+            enum: [automated, manual]
+      responses:
+        '200':
+          description: Tags retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagList'
+
+    post:
+      tags: [Tags]
+      summary: Create tag
+      description: Manually create a new tag
+      operationId: createTag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagCreate'
+      responses:
+        '201':
+          description: Tag created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ============================================================================
+  # SCHEDULES
+  # ============================================================================
+
+  /schedules:
+    post:
+      tags: [Schedules]
+      summary: Schedule article publication
+      description: |
+        Schedule an article for future publication (FR-007, FR-008).
+        Validates article is in publishable state.
+      operationId: createSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleCreate'
+      responses:
+        '201':
+          description: Schedule created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    get:
+      tags: [Schedules]
+      summary: List schedules
+      description: Retrieve paginated list of publication schedules
+      operationId: listSchedules
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          description: Filter by schedule status
+          schema:
+            type: string
+            enum: [pending, published, failed, cancelled]
+        - name: from_date
+          in: query
+          description: Filter schedules from this date (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          description: Filter schedules until this date (ISO 8601)
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Schedules retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleList'
+
+  /schedules/{scheduleId}:
+    get:
+      tags: [Schedules]
+      summary: Get schedule details
+      description: Retrieve detailed schedule information
+      operationId: getSchedule
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdParam'
+      responses:
+        '200':
+          description: Schedule details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Schedules]
+      summary: Update schedule
+      description: Modify scheduled publication time or retry configuration
+      operationId: updateSchedule
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleUpdate'
+      responses:
+        '200':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Schedules]
+      summary: Cancel schedule
+      description: Cancel pending publication schedule
+      operationId: cancelSchedule
+      parameters:
+        - $ref: '#/components/parameters/ScheduleIdParam'
+      responses:
+        '204':
+          description: Schedule cancelled
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # WORKFLOWS
+  # ============================================================================
+
+  /workflows/{articleId}:
+    get:
+      tags: [Workflows]
+      summary: Get workflow state
+      description: Retrieve current workflow and approval state for article
+      operationId: getWorkflowState
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      responses:
+        '200':
+          description: Workflow state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workflows/{articleId}/approve:
+    post:
+      tags: [Workflows]
+      summary: Approve article
+      description: Approve article for publication (FR-010)
+      operationId: approveArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+      responses:
+        '200':
+          description: Article approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /workflows/{articleId}/reject:
+    post:
+      tags: [Workflows]
+      summary: Reject article
+      description: Reject article and optionally request modifications
+      operationId: rejectArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectionRequest'
+      responses:
+        '200':
+          description: Article rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowState'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from CMS authentication system
+
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for service-to-service authentication
+
+  parameters:
+    PageParam:
+      name: page
+      in: query
+      description: Page number (1-indexed)
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    PageSizeParam:
+      name: page_size
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+    ArticleIdParam:
+      name: articleId
+      in: path
+      required: true
+      description: Article unique identifier
+      schema:
+        type: integer
+
+    RequestIdParam:
+      name: requestId
+      in: path
+      required: true
+      description: Topic request unique identifier
+      schema:
+        type: integer
+
+    ScheduleIdParam:
+      name: scheduleId
+      in: path
+      required: true
+      description: Schedule unique identifier
+      schema:
+        type: integer
+
+  schemas:
+    # ========================================================================
+    # CORE ENTITIES
+    # ========================================================================
+
+    TopicRequestCreate:
+      type: object
+      required:
+        - topic_description
+      properties:
+        topic_description:
+          type: string
+          minLength: 10
+          maxLength: 5000
+          description: Topic description or outline
+          example: "Write a comprehensive guide on implementing OAuth2 authentication in Python web applications"
+        outline:
+          type: string
+          nullable: true
+          description: Optional structured outline (Markdown or JSON)
+          example: |
+            # Introduction
+            # OAuth2 Fundamentals
+            # Implementation Steps
+            # Security Best Practices
+        style_tone:
+          type: string
+          enum: [professional, casual, technical, conversational, academic]
+          default: professional
+          description: Requested writing style
+        target_word_count:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 1000
+          description: Desired article length in words
+        priority:
+          type: string
+          enum: [urgent, normal, low]
+          default: normal
+          description: Processing priority
+
+    TopicRequestResponse:
+      type: object
+      properties:
+        request_id:
+          type: integer
+          example: 42
+        status:
+          type: string
+          enum: [pending, processing, completed, failed, cancelled]
+          example: "pending"
+        estimated_completion:
+          type: string
+          format: date-time
+          description: Estimated completion time (generation < 5 minutes)
+          example: "2025-10-25T14:35:00Z"
+        message:
+          type: string
+          example: "Topic request accepted for processing"
+
+    TopicRequestDetail:
+      allOf:
+        - $ref: '#/components/schemas/TopicRequestCreate'
+        - type: object
+          properties:
+            id:
+              type: integer
+              example: 42
+            status:
+              type: string
+              enum: [pending, processing, completed, failed, cancelled]
+            submitted_by:
+              type: integer
+              description: User ID who submitted request
+            submitted_at:
+              type: string
+              format: date-time
+            article_id:
+              type: integer
+              nullable: true
+              description: Generated article ID (if completed)
+            error_message:
+              type: string
+              nullable: true
+              description: Error details if generation failed
+
+    TopicRequestList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopicRequestDetail'
+        total:
+          type: integer
+          example: 150
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+        total_pages:
+          type: integer
+          example: 8
+
+    Article:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        title:
+          type: string
+          minLength: 10
+          maxLength: 500
+          example: "Implementing OAuth2 Authentication in Python"
+        body:
+          type: string
+          description: Article content (Markdown or HTML)
+        status:
+          type: string
+          enum: [draft, in-review, scheduled, published, failed]
+        author_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+          description: CMS-specific metadata
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+
+    ArticleDetail:
+      allOf:
+        - $ref: '#/components/schemas/Article'
+        - type: object
+          properties:
+            workflow_state:
+              $ref: '#/components/schemas/WorkflowState'
+            schedule:
+              $ref: '#/components/schemas/Schedule'
+              nullable: true
+            version:
+              type: integer
+              description: Article version number
+            modification_history:
+              type: array
+              items:
+                type: object
+                properties:
+                  version:
+                    type: integer
+                  timestamp:
+                    type: string
+                    format: date-time
+                  change_type:
+                    type: string
+                    enum: [manual_edit, ai_regeneration]
+                  user_id:
+                    type: integer
+
+    ArticleList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Article'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+
+    ArticleUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 10
+          maxLength: 500
+        body:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        tag_ids:
+          type: array
+          items:
+            type: integer
+          description: Replace existing tags
+
+    RegenerationRequest:
+      type: object
+      required:
+        - feedback
+      properties:
+        feedback:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Specific guidance for AI re-generation
+          example: "Add more code examples in the authentication flow section. Expand the security best practices section with at least 5 recommendations."
+        preserve_sections:
+          type: array
+          items:
+            type: string
+          description: Section headings to preserve from current version
+          example: ["Introduction", "Conclusion"]
+
+    RegenerationResponse:
+      type: object
+      properties:
+        regeneration_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, processing]
+        estimated_completion:
+          type: string
+          format: date-time
+
+    Tag:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 7
+        name:
+          type: string
+          example: "OAuth2"
+        slug:
+          type: string
+          example: "oauth2"
+        category:
+          type: string
+          nullable: true
+          example: "Authentication"
+        usage_count:
+          type: integer
+          example: 42
+        source:
+          type: string
+          enum: [automated, manual]
+        cms_tag_id:
+          type: string
+          nullable: true
+
+    TagCreate:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        category:
+          type: string
+          nullable: true
+
+    TagList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        total:
+          type: integer
+
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        article_id:
+          type: integer
+        scheduled_time:
+          type: string
+          format: date-time
+          description: Target publication time (UTC)
+        creator_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, published, failed, cancelled]
+        retry_count:
+          type: integer
+        max_retries:
+          type: integer
+          default: 3
+        created_at:
+          type: string
+          format: date-time
+        executed_at:
+          type: string
+          format: date-time
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+
+    ScheduleCreate:
+      type: object
+      required:
+        - article_id
+        - scheduled_time
+      properties:
+        article_id:
+          type: integer
+        scheduled_time:
+          type: string
+          format: date-time
+          description: Must be future time (FR-008)
+        max_retries:
+          type: integer
+          minimum: 0
+          maximum: 5
+          default: 3
+
+    ScheduleUpdate:
+      type: object
+      properties:
+        scheduled_time:
+          type: string
+          format: date-time
+        max_retries:
+          type: integer
+          minimum: 0
+          maximum: 5
+
+    ScheduleList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Schedule'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+
+    WorkflowState:
+      type: object
+      properties:
+        id:
+          type: integer
+        article_id:
+          type: integer
+        current_status:
+          type: string
+          enum: [pending_review, approved, rejected, revision_requested]
+        assigned_reviewers:
+          type: array
+          items:
+            type: integer
+          description: User IDs of assigned reviewers
+        approval_history:
+          type: array
+          items:
+            type: object
+            properties:
+              reviewer_id:
+                type: integer
+              action:
+                type: string
+                enum: [approved, rejected]
+              comment:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+        modification_requests:
+          type: array
+          items:
+            type: object
+            properties:
+              requester_id:
+                type: integer
+              request_type:
+                type: string
+                enum: [ai_regeneration, manual_edit]
+              feedback:
+                type: string
+              status:
+                type: string
+                enum: [pending, completed, cancelled]
+              created_at:
+                type: string
+                format: date-time
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ApprovalRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          maxLength: 1000
+          description: Optional approval comment
+
+    RejectionRequest:
+      type: object
+      required:
+        - comment
+      properties:
+        comment:
+          type: string
+          minLength: 10
+          maxLength: 2000
+          description: Rejection reason (required)
+        request_modification:
+          type: boolean
+          default: false
+          description: Whether to request article modification
+        modification_type:
+          type: string
+          enum: [ai_regeneration, manual_edit]
+        modification_feedback:
+          type: string
+          description: Specific feedback for modification (required if request_modification=true)
+
+    SimilarityResult:
+      type: object
+      properties:
+        article_id:
+          type: integer
+        similar_articles:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              title:
+                type: string
+              similarity_score:
+                type: number
+                format: float
+                minimum: 0.0
+                maximum: 1.0
+                description: Cosine similarity score
+              created_at:
+                type: string
+                format: date-time
+        threshold:
+          type: number
+          format: float
+
+    # ========================================================================
+    # COMMON RESPONSES
+    # ========================================================================
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "1.0.0"
+        dependencies:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [healthy, unhealthy]
+            redis:
+              type: string
+              enum: [healthy, unhealthy]
+            claude_api:
+              type: string
+              enum: [healthy, unhealthy]
+            cms_api:
+              type: string
+              enum: [healthy, unhealthy]
+        metrics:
+          type: object
+          properties:
+            queue_depth:
+              type: integer
+            active_workers:
+              type: integer
+            avg_generation_time:
+              type: number
+              description: Average article generation time (seconds)
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              example: "Invalid request parameters"
+            details:
+              type: object
+              additionalProperties: true
+            request_id:
+              type: string
+              format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Conflict:
+      description: Resource conflict (e.g., duplicate, version mismatch)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    RateLimited:
+      description: Too many requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Request limit per window
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Requests remaining in window
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Time when limit resets (Unix timestamp)

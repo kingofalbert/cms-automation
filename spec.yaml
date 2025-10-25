@@ -1,0 +1,59 @@
+project:
+  name: cms_automation
+  version: 2.0
+  description: >
+    Claude Computer Use–based CMS Automation.
+    Automates article upload, formatting, scheduling, and Supabase logging.
+  language: python
+  framework: automation
+  ai_assistant: claude
+  entry_point: cms_automation.py
+
+dependencies:
+  python:
+    - anthropic
+    - python-dotenv
+    - supabase
+    - playwright
+    - requests
+    - pytz
+
+structure:
+  - cms_automation.py
+  - supabase_integration.py
+  - scheduler.py
+  - error_handler.py
+  - tasks/
+  - logs/
+  - screenshots/
+
+env:
+  required:
+    - ANTHROPIC_API_KEY
+    - CMS_URL
+    - CMS_USERNAME
+    - CMS_PASSWORD
+  optional:
+    - SUPABASE_URL
+    - SUPABASE_KEY
+    - TZ
+    - LOG_LEVEL
+
+build:
+  commands:
+    - echo "✅ Building CMS Automation Environment..."
+    - python3 -m venv venv
+    - source venv/bin/activate
+    - pip install anthropic python-dotenv supabase playwright requests pytz
+    - echo "✅ Dependencies installed."
+    - echo "📁 Project structure verified."
+
+test:
+  commands:
+    - python -m unittest discover -s tests -p "*.py"
+
+deploy:
+  target: local
+  commands:
+    - python scheduler.py
+
