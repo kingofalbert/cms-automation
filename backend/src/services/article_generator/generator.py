@@ -87,7 +87,7 @@ class ArticleGeneratorService:
                 body=result["body"],
                 status=ArticleStatus.DRAFT,
                 author_id=topic_request.submitted_by,
-                metadata=result["metadata"],
+                article_metadata=result["metadata"],
                 formatting={},
             )
 

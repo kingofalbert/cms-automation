@@ -13,7 +13,7 @@ interface Article {
   author_id: number;
   cms_article_id?: string;
   published_at?: string;
-  metadata: {
+  article_metadata: {
     word_count?: number;
     cost_usd?: number;
     input_tokens?: number;

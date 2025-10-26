@@ -41,7 +41,7 @@ class Article(Base, TimestampMixin):
 
     # Status and workflow
     status: Mapped[ArticleStatus] = mapped_column(
-        Enum(ArticleStatus),
+        Enum(ArticleStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=ArticleStatus.DRAFT,
         index=True,
@@ -72,7 +72,7 @@ class Article(Base, TimestampMixin):
     )
 
     # Metadata
-    metadata: Mapped[dict] = mapped_column(
+    article_metadata: Mapped[dict] = mapped_column(
         JSONB,
         nullable=False,
         default=dict,

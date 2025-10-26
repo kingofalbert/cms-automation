@@ -18,7 +18,7 @@ class ArticleResponse(TimestampSchema):
     author_id: int
     cms_article_id: str | None
     published_at: datetime | None
-    metadata: dict
+    article_metadata: dict
     formatting: dict
 
 

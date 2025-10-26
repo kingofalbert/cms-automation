@@ -60,7 +60,7 @@ class TopicRequest(Base, TimestampMixin):
         comment="Desired article length",
     )
     priority: Mapped[TopicRequestPriority] = mapped_column(
-        Enum(TopicRequestPriority),
+        Enum(TopicRequestPriority, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=TopicRequestPriority.NORMAL,
         comment="Processing priority",
@@ -73,7 +73,7 @@ class TopicRequest(Base, TimestampMixin):
         comment="User ID who submitted request",
     )
     status: Mapped[TopicRequestStatus] = mapped_column(
-        Enum(TopicRequestStatus),
+        Enum(TopicRequestStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=TopicRequestStatus.PENDING,
         index=True,

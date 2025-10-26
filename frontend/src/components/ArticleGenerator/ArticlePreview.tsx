@@ -11,7 +11,7 @@ interface ArticlePreviewProps {
     body: string;
     status: string;
     created_at: string;
-    metadata?: {
+    article_metadata?: {
       word_count?: number;
       cost_usd?: number;
       input_tokens?: number;
@@ -59,28 +59,28 @@ export function ArticlePreview({ article, onView }: ArticlePreviewProps) {
       <CardContent>
         <p className="text-gray-700 mb-4 line-clamp-3">{getExcerpt(article.body)}</p>
 
-        {article.metadata && (
+        {article.article_metadata && (
           <div className="grid grid-cols-2 gap-2 text-sm text-gray-600 mb-4">
-            {article.metadata.word_count && (
+            {article.article_metadata.word_count && (
               <div>
-                <span className="font-medium">Words:</span> {article.metadata.word_count.toLocaleString()}
+                <span className="font-medium">Words:</span> {article.article_metadata.word_count.toLocaleString()}
               </div>
             )}
-            {article.metadata.cost_usd && (
+            {article.article_metadata.cost_usd && (
               <div>
-                <span className="font-medium">Cost:</span> ${article.metadata.cost_usd.toFixed(4)}
+                <span className="font-medium">Cost:</span> ${article.article_metadata.cost_usd.toFixed(4)}
               </div>
             )}
-            {article.metadata.input_tokens && (
+            {article.article_metadata.input_tokens && (
               <div>
                 <span className="font-medium">Input tokens:</span>{' '}
-                {article.metadata.input_tokens.toLocaleString()}
+                {article.article_metadata.input_tokens.toLocaleString()}
               </div>
             )}
-            {article.metadata.output_tokens && (
+            {article.article_metadata.output_tokens && (
               <div>
                 <span className="font-medium">Output tokens:</span>{' '}
-                {article.metadata.output_tokens.toLocaleString()}
+                {article.article_metadata.output_tokens.toLocaleString()}
               </div>
             )}
           </div>

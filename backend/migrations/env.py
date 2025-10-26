@@ -31,7 +31,7 @@ settings = get_settings()
 
 def get_url():
     """Get database URL from settings."""
-    return settings.DATABASE_URL
+    return str(settings.DATABASE_URL)
 
 
 def run_migrations_offline() -> None:

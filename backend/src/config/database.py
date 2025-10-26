@@ -38,18 +38,21 @@ class DatabaseConfig:
             if db_url.startswith("postgresql://"):
                 db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-            pool_class = QueuePool if self.settings.ENVIRONMENT != "test" else NullPool
+            # For async engines, only use NullPool in test mode
+            # Default async pool will be used in non-test environments
+            engine_kwargs = {
+                "echo": self.settings.LOG_LEVEL == "DEBUG",
+                "pool_size": self.settings.DATABASE_POOL_SIZE,
+                "max_overflow": self.settings.DATABASE_MAX_OVERFLOW,
+                "pool_timeout": self.settings.DATABASE_POOL_TIMEOUT,
+                "pool_recycle": self.settings.DATABASE_POOL_RECYCLE,
+                "pool_pre_ping": True,  # Verify connections before using
+            }
 
-            self._engine = create_async_engine(
-                db_url,
-                echo=self.settings.LOG_LEVEL == "DEBUG",
-                pool_size=self.settings.DATABASE_POOL_SIZE,
-                max_overflow=self.settings.DATABASE_MAX_OVERFLOW,
-                pool_timeout=self.settings.DATABASE_POOL_TIMEOUT,
-                pool_recycle=self.settings.DATABASE_POOL_RECYCLE,
-                pool_pre_ping=True,  # Verify connections before using
-                poolclass=pool_class,
-            )
+            if self.settings.ENVIRONMENT == "test":
+                engine_kwargs["poolclass"] = NullPool
+
+            self._engine = create_async_engine(db_url, **engine_kwargs)
 
             logger.info(
                 "database_engine_created",
