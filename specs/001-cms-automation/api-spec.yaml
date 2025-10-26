@@ -1,0 +1,1435 @@
+openapi: 3.0.3
+info:
+  title: CMS Automation API
+  version: 1.0.0
+  description: |
+    CMS Automation System API - Multi-Provider Computer Use Architecture
+
+    This API provides endpoints for:
+    - Importing articles from external sources
+    - Generating SEO metadata using Claude Messages API
+    - Publishing articles to WordPress using Computer Use (Anthropic/Gemini/Playwright)
+    - Monitoring publishing tasks and execution logs
+
+    ## Architecture
+
+    - **Article Import**: CSV/JSON batch import or single article submission
+    - **SEO Analysis**: Claude Messages API for keyword extraction and meta generation
+    - **Publishing**: Multi-provider Computer Use (Anthropic AI / Gemini AI / Playwright)
+    - **Cost Tracking**: Provider-specific cost tracking for Anthropic/Gemini
+
+    ## Provider Options
+
+    - `anthropic`: Anthropic Computer Use API ($1.00-$1.50/article, AI-driven)
+    - `gemini`: Google Gemini Computer Use API (future support)
+    - `playwright`: Traditional browser automation (free, default)
+
+  contact:
+    name: CMS Automation Team
+    email: dev@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000/api
+    description: Development server
+  - url: https://cms-automation.example.com/api
+    description: Production server
+
+tags:
+  - name: Articles
+    description: Article import and management
+  - name: SEO
+    description: SEO metadata generation and optimization
+  - name: Publishing
+    description: Computer Use publishing tasks
+  - name: Monitoring
+    description: System monitoring and health checks
+
+paths:
+  # ========================================
+  # Article Import Endpoints
+  # ========================================
+
+  /v1/articles/import:
+    post:
+      tags:
+        - Articles
+      summary: Import single article
+      description: |
+        Import a single article from external source.
+
+        After successful import, the article will have status `imported` and can be:
+        1. Sent for SEO analysis via POST /v1/seo/analyze/{article_id}
+        2. Directly published via POST /v1/publish/submit (will use default SEO metadata)
+      operationId: importArticle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleImportRequest'
+            examples:
+              wordpress_export:
+                summary: WordPress XML export
+                value:
+                  title: "10 Tips for React Performance Optimization"
+                  body: "<h2>Introduction</h2><p>React applications can become slow...</p>"
+                  source: "wordpress_export"
+                  featured_image_url: "https://old-blog.com/wp-content/uploads/react-perf.jpg"
+                  additional_images:
+                    - "https://old-blog.com/wp-content/uploads/diagram1.png"
+                    - "https://old-blog.com/wp-content/uploads/diagram2.png"
+                  article_metadata:
+                    original_url: "https://old-blog.com/react-performance"
+                    original_publish_date: "2024-08-15T10:30:00Z"
+                    original_author: "Jane Doe"
+                    word_count: 1850
+              manual_entry:
+                summary: Manually entered article
+                value:
+                  title: "Getting Started with TypeScript"
+                  body: "<p>TypeScript is a typed superset of JavaScript...</p>"
+                  source: "manual"
+                  article_metadata:
+                    category: "Programming"
+      responses:
+        '201':
+          description: Article imported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+              example:
+                id: 123
+                title: "10 Tips for React Performance Optimization"
+                body: "<h2>Introduction</h2><p>React applications can become slow...</p>"
+                source: "wordpress_export"
+                status: "imported"
+                featured_image_path: "/storage/articles/123/featured.jpg"
+                additional_images:
+                  - "/storage/articles/123/image1.png"
+                  - "/storage/articles/123/image2.png"
+                published_url: null
+                cms_article_id: null
+                article_metadata:
+                  original_url: "https://old-blog.com/react-performance"
+                  word_count: 1850
+                created_at: "2025-10-26T14:30:00Z"
+                updated_at: "2025-10-26T14:30:00Z"
+                published_at: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/articles/import/batch:
+    post:
+      tags:
+        - Articles
+      summary: Batch import articles
+      description: |
+        Import multiple articles from CSV or JSON file.
+
+        Supported formats:
+        - CSV: title, body, source, featured_image_url, metadata (JSON string)
+        - JSON: Array of article objects
+
+        Returns a batch job ID for tracking progress.
+      operationId: batchImportArticles
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or JSON file with articles
+                format:
+                  type: string
+                  enum: [csv, json]
+                  default: csv
+                  description: File format
+              required:
+                - file
+      responses:
+        '202':
+          description: Batch import job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id:
+                    type: string
+                    example: "batch_import_20251026_143000"
+                  status:
+                    type: string
+                    example: "processing"
+                  total_rows:
+                    type: integer
+                    example: 150
+                  estimated_completion:
+                    type: string
+                    format: date-time
+                    example: "2025-10-26T14:45:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/articles/{article_id}:
+    get:
+      tags:
+        - Articles
+      summary: Get article details
+      operationId: getArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: Article details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/articles:
+    get:
+      tags:
+        - Articles
+      summary: List articles
+      description: Get paginated list of articles with optional filters
+      operationId: listArticles
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ArticleStatus'
+          description: Filter by article status
+        - name: source
+          in: query
+          schema:
+            type: string
+          description: Filter by import source
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: List of articles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ArticleResponse'
+                  total:
+                    type: integer
+                    example: 347
+                  page:
+                    type: integer
+                    example: 1
+                  limit:
+                    type: integer
+                    example: 20
+                  pages:
+                    type: integer
+                    example: 18
+
+  # ========================================
+  # SEO Analysis Endpoints
+  # ========================================
+
+  /v1/seo/analyze/{article_id}:
+    post:
+      tags:
+        - SEO
+      summary: Generate SEO metadata for article
+      description: |
+        Analyze article content and generate SEO-optimized metadata using Claude Messages API.
+
+        This endpoint:
+        1. Extracts 3-5 primary keywords using TF-IDF + semantic analysis
+        2. Generates meta title (50-60 chars) and description (150-160 chars)
+        3. Calculates keyword density and readability score
+        4. Provides optimization recommendations
+
+        Cost: ~$0.02-$0.05 per article (using Claude 3.5 Sonnet)
+
+        After successful analysis, article status changes to `seo_optimized`.
+      operationId: analyzeSEO
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                manual_focus_keyword:
+                  type: string
+                  description: Optional manual focus keyword override
+                  example: "React performance optimization"
+                target_readability:
+                  type: string
+                  enum: [easy, medium, advanced]
+                  default: medium
+                  description: Target readability level (Flesch-Kincaid grade)
+      responses:
+        '200':
+          description: SEO metadata generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SEOMetadataResponse'
+              example:
+                id: 456
+                article_id: 123
+                meta_title: "10 React Performance Tips | Boost Your App Speed 2025"
+                meta_description: "Discover 10 proven React performance optimization techniques. Learn memoization, lazy loading, code splitting & more. Boost your React app speed today!"
+                focus_keyword: "React performance optimization"
+                primary_keywords:
+                  - "React performance optimization"
+                  - "React memoization"
+                  - "code splitting React"
+                secondary_keywords:
+                  - "useMemo hook"
+                  - "React.memo"
+                  - "lazy loading components"
+                  - "virtual scrolling"
+                  - "bundle size reduction"
+                keyword_density:
+                  "React performance optimization":
+                    count: 15
+                    density: 2.1
+                  "React memoization":
+                    count: 8
+                    density: 1.1
+                readability_score: 10.5
+                optimization_recommendations:
+                  - "Add internal links to related React tutorials"
+                  - "Consider adding FAQ schema markup"
+                  - "Featured image should include 'React' branding for better recognition"
+                generated_by: "claude-3.5-sonnet"
+                generation_cost: 0.0345
+                generation_tokens: 1523
+                created_at: "2025-10-26T14:35:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/seo/metadata/{article_id}:
+    get:
+      tags:
+        - SEO
+      summary: Get SEO metadata for article
+      operationId: getSEOMetadata
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      responses:
+        '200':
+          description: SEO metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SEOMetadataResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - SEO
+      summary: Update SEO metadata (manual overrides)
+      description: |
+        Manually update SEO metadata. Changes are stored in `manual_overrides` JSONB field.
+        Article status changes to `ready_to_publish` after manual edits.
+      operationId: updateSEOMetadata
+      parameters:
+        - $ref: '#/components/parameters/ArticleId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                meta_title:
+                  type: string
+                  minLength: 50
+                  maxLength: 60
+                meta_description:
+                  type: string
+                  minLength: 150
+                  maxLength: 160
+                focus_keyword:
+                  type: string
+                  maxLength: 100
+                primary_keywords:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 3
+                  maxItems: 5
+            example:
+              meta_title: "React Performance: 10 Expert Tips for 2025 | Dev Guide"
+              meta_description: "Master React performance with 10 expert techniques: memoization, code splitting, lazy loading & more. Reduce load time by 50%. Complete guide with examples."
+      responses:
+        '200':
+          description: SEO metadata updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SEOMetadataResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========================================
+  # Publishing Endpoints
+  # ========================================
+
+  /v1/publish/submit:
+    post:
+      tags:
+        - Publishing
+      summary: Submit article for publishing
+      description: |
+        Submit an article for Computer Use publishing to WordPress.
+
+        ## Provider Selection
+
+        The system will use the provider specified in the request, falling back to:
+        1. Request body `provider` field
+        2. Environment variable `COMPUTER_USE_PROVIDER`
+        3. Default: `playwright`
+
+        ## Provider Comparison
+
+        | Provider | Type | Cost | Reliability | Speed |
+        |----------|------|------|-------------|-------|
+        | anthropic | AI | $1.00-$1.50 | High | Slow (2-4 min) |
+        | gemini | AI | TBD | TBD | TBD |
+        | playwright | Script | Free | Very High | Fast (30-60s) |
+
+        ## Workflow Steps
+
+        1. Navigate to WordPress login
+        2. Authenticate with credentials
+        3. Create new post
+        4. Fill title, body, SEO metadata
+        5. Upload featured image
+        6. Set categories/tags
+        7. Publish post
+        8. Capture screenshots (8+ per task)
+
+        Article status changes through: `ready_to_publish` → `publishing` → `published`
+      operationId: submitPublish
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishRequest'
+            examples:
+              anthropic_provider:
+                summary: Using Anthropic Computer Use
+                value:
+                  article_id: 123
+                  provider: "anthropic"
+                  cms_type: "wordpress"
+                  cms_config:
+                    url: "https://blog.example.com/wp-admin"
+                    username: "admin"
+                    password: "secure_password"
+                  post_config:
+                    categories:
+                      - "Programming"
+                      - "React"
+                    tags:
+                      - "performance"
+                      - "optimization"
+                    post_status: "publish"
+              playwright_provider:
+                summary: Using Playwright (default, free)
+                value:
+                  article_id: 124
+                  provider: "playwright"
+                  cms_type: "wordpress"
+                  cms_config:
+                    url: "https://blog.example.com/wp-admin"
+                    username: "admin"
+                    password: "secure_password"
+      responses:
+        '202':
+          description: Publishing task submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishTaskResponse'
+              example:
+                id: 789
+                task_id: "pub_20251026_143500_abc123"
+                article_id: 123
+                provider: "anthropic"
+                cms_type: "wordpress"
+                status: "pending"
+                screenshots: []
+                cost_usd: null
+                started_at: null
+                completed_at: null
+                duration_seconds: null
+                created_at: "2025-10-26T14:35:00Z"
+                estimated_completion: "2025-10-26T14:39:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/publish/tasks/{task_id}:
+    get:
+      tags:
+        - Publishing
+      summary: Get publishing task status
+      description: |
+        Get real-time status of a publishing task.
+
+        Poll this endpoint to monitor task progress. Returns:
+        - Current status (pending/running/completed/failed)
+        - Screenshots taken so far
+        - Cost incurred (for Anthropic/Gemini)
+        - Execution duration
+        - Error details (if failed)
+      operationId: getPublishTask
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "pub_20251026_143500_abc123"
+      responses:
+        '200':
+          description: Publishing task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishTaskResponse'
+              examples:
+                running:
+                  summary: Task in progress
+                  value:
+                    id: 789
+                    task_id: "pub_20251026_143500_abc123"
+                    article_id: 123
+                    provider: "anthropic"
+                    cms_type: "wordpress"
+                    status: "running"
+                    screenshots:
+                      - step: "01_login_success"
+                        url: "https://s3.amazonaws.com/bucket/screenshots/789/01_login_success.png"
+                        timestamp: "2025-10-26T14:35:30Z"
+                        description: "WordPress admin login successful"
+                      - step: "02_new_post_page"
+                        url: "https://s3.amazonaws.com/bucket/screenshots/789/02_new_post.png"
+                        timestamp: "2025-10-26T14:36:00Z"
+                        description: "New post creation page loaded"
+                      - step: "03_title_filled"
+                        url: "https://s3.amazonaws.com/bucket/screenshots/789/03_title.png"
+                        timestamp: "2025-10-26T14:36:15Z"
+                        description: "Post title entered"
+                    cost_usd: 0.45
+                    started_at: "2025-10-26T14:35:15Z"
+                    completed_at: null
+                    duration_seconds: 75
+                    created_at: "2025-10-26T14:35:00Z"
+                completed:
+                  summary: Task completed successfully
+                  value:
+                    id: 789
+                    task_id: "pub_20251026_143500_abc123"
+                    article_id: 123
+                    provider: "anthropic"
+                    cms_type: "wordpress"
+                    status: "completed"
+                    screenshots:
+                      - step: "01_login_success"
+                        url: "https://s3.amazonaws.com/bucket/screenshots/789/01_login_success.png"
+                        timestamp: "2025-10-26T14:35:30Z"
+                      - step: "08_publish_success"
+                        url: "https://s3.amazonaws.com/bucket/screenshots/789/08_publish_success.png"
+                        timestamp: "2025-10-26T14:38:45Z"
+                        description: "Article published successfully"
+                    cost_usd: 1.23
+                    started_at: "2025-10-26T14:35:15Z"
+                    completed_at: "2025-10-26T14:38:50Z"
+                    duration_seconds: 215
+                    created_at: "2025-10-26T14:35:00Z"
+                failed:
+                  summary: Task failed
+                  value:
+                    id: 790
+                    task_id: "pub_20251026_150000_def456"
+                    article_id: 125
+                    provider: "anthropic"
+                    cms_type: "wordpress"
+                    status: "failed"
+                    error_message: "Authentication failed: Invalid credentials"
+                    screenshots:
+                      - step: "01_login_failed"
+                        url: "https://s3.amazonaws.com/bucket/screenshots/790/01_login_failed.png"
+                        timestamp: "2025-10-26T15:00:30Z"
+                        description: "Login error: Invalid username or password"
+                    cost_usd: 0.15
+                    started_at: "2025-10-26T15:00:15Z"
+                    completed_at: "2025-10-26T15:00:35Z"
+                    duration_seconds: 20
+                    created_at: "2025-10-26T15:00:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/publish/tasks/{task_id}/logs:
+    get:
+      tags:
+        - Publishing
+      summary: Get execution logs for task
+      description: |
+        Get detailed execution logs showing all actions performed during publishing.
+
+        Logs include:
+        - Navigation steps
+        - Form interactions
+        - Screenshot captures
+        - Error messages
+        - Timing information
+      operationId: getTaskLogs
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: log_level
+          in: query
+          schema:
+            type: string
+            enum: [DEBUG, INFO, WARNING, ERROR]
+          description: Filter by log level
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: Execution logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ExecutionLog'
+              example:
+                task_id: "pub_20251026_143500_abc123"
+                logs:
+                  - id: 1001
+                    log_level: "INFO"
+                    step_name: "login"
+                    message: "Navigating to WordPress login page"
+                    action_type: "navigate"
+                    action_target: "https://blog.example.com/wp-login.php"
+                    action_result: "success"
+                    created_at: "2025-10-26T14:35:15Z"
+                  - id: 1002
+                    log_level: "INFO"
+                    step_name: "login"
+                    message: "Entering credentials"
+                    action_type: "type"
+                    action_target: "input#user_login"
+                    action_result: "success"
+                    created_at: "2025-10-26T14:35:20Z"
+                  - id: 1003
+                    log_level: "INFO"
+                    step_name: "login"
+                    message: "Screenshot captured: Login success"
+                    action_type: "screenshot"
+                    screenshot_path: "/screenshots/789/01_login_success.png"
+                    action_result: "success"
+                    created_at: "2025-10-26T14:35:30Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /v1/publish/tasks/{task_id}/screenshots:
+    get:
+      tags:
+        - Publishing
+      summary: Get all screenshots for task
+      description: Get list of all screenshots captured during task execution
+      operationId: getTaskScreenshots
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Screenshot list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  screenshots:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Screenshot'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ========================================
+  # Monitoring Endpoints
+  # ========================================
+
+  /v1/health:
+    get:
+      tags:
+        - Monitoring
+      summary: Health check
+      description: Check API health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  version:
+                    type: string
+                    example: "1.0.0"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  checks:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                        example: "ok"
+                      redis:
+                        type: string
+                        example: "ok"
+                      celery:
+                        type: string
+                        example: "ok"
+
+  /v1/metrics:
+    get:
+      tags:
+        - Monitoring
+      summary: Get system metrics
+      description: |
+        Get system metrics for monitoring and analytics.
+
+        Metrics include:
+        - Total articles imported
+        - Articles by status
+        - Publishing success rate
+        - Average cost per provider
+        - Average publishing duration
+      operationId: getMetrics
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  articles:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        example: 347
+                      by_status:
+                        type: object
+                        properties:
+                          imported:
+                            type: integer
+                            example: 45
+                          seo_optimized:
+                            type: integer
+                            example: 23
+                          ready_to_publish:
+                            type: integer
+                            example: 12
+                          publishing:
+                            type: integer
+                            example: 3
+                          published:
+                            type: integer
+                            example: 264
+                  publishing:
+                    type: object
+                    properties:
+                      total_tasks:
+                        type: integer
+                        example: 289
+                      success_rate:
+                        type: number
+                        format: float
+                        example: 0.952
+                      by_provider:
+                        type: object
+                        properties:
+                          anthropic:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                                example: 150
+                              avg_cost:
+                                type: number
+                                example: 1.15
+                              avg_duration:
+                                type: integer
+                                example: 185
+                          playwright:
+                            type: object
+                            properties:
+                              count:
+                                type: integer
+                                example: 139
+                              avg_cost:
+                                type: number
+                                example: 0.0
+                              avg_duration:
+                                type: integer
+                                example: 45
+                  costs:
+                    type: object
+                    properties:
+                      total_usd:
+                        type: number
+                        example: 178.50
+                      seo_analysis:
+                        type: number
+                        example: 6.90
+                      publishing:
+                        type: number
+                        example: 171.60
+
+# ========================================
+# Components
+# ========================================
+
+components:
+  parameters:
+    ArticleId:
+      name: article_id
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Article ID
+      example: 123
+
+  schemas:
+    # ========================================
+    # Enums
+    # ========================================
+
+    ArticleStatus:
+      type: string
+      enum:
+        - imported
+        - seo_optimized
+        - ready_to_publish
+        - publishing
+        - published
+      description: |
+        Article lifecycle status:
+        - `imported`: Article imported, no SEO metadata yet
+        - `seo_optimized`: SEO metadata generated
+        - `ready_to_publish`: Ready for publishing (SEO completed or manually approved)
+        - `publishing`: Currently being published via Computer Use
+        - `published`: Successfully published to CMS
+
+    ProviderType:
+      type: string
+      enum:
+        - anthropic
+        - gemini
+        - playwright
+      description: |
+        Computer Use provider type:
+        - `anthropic`: Anthropic Computer Use API (AI-driven, $1.00-$1.50/article)
+        - `gemini`: Google Gemini Computer Use API (future support)
+        - `playwright`: Traditional browser automation (free, default)
+
+    PublishStatus:
+      type: string
+      enum:
+        - pending
+        - running
+        - completed
+        - failed
+      description: Publishing task status
+
+    LogLevel:
+      type: string
+      enum:
+        - DEBUG
+        - INFO
+        - WARNING
+        - ERROR
+      description: Log severity level
+
+    ActionType:
+      type: string
+      enum:
+        - navigate
+        - click
+        - type
+        - screenshot
+        - wait
+        - scroll
+        - upload
+      description: Computer Use action type
+
+    # ========================================
+    # Article Schemas
+    # ========================================
+
+    ArticleImportRequest:
+      type: object
+      required:
+        - title
+        - body
+        - source
+      properties:
+        title:
+          type: string
+          minLength: 10
+          maxLength: 500
+          description: Article title
+          example: "10 Tips for React Performance Optimization"
+        body:
+          type: string
+          description: Article body (HTML or plain text)
+          example: "<h2>Introduction</h2><p>React applications...</p>"
+        source:
+          type: string
+          maxLength: 20
+          description: Import source identifier
+          example: "wordpress_export"
+        featured_image_url:
+          type: string
+          format: uri
+          description: URL of featured image to download
+          example: "https://old-blog.com/wp-content/uploads/image.jpg"
+        additional_images:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: Additional image URLs to download
+        article_metadata:
+          type: object
+          description: Additional metadata (JSONB)
+          example:
+            original_url: "https://old-blog.com/article"
+            original_publish_date: "2024-08-15T10:30:00Z"
+            original_author: "Jane Doe"
+            word_count: 1850
+
+    ArticleResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 123
+        title:
+          type: string
+          example: "10 Tips for React Performance Optimization"
+        body:
+          type: string
+          example: "<h2>Introduction</h2><p>...</p>"
+        source:
+          type: string
+          example: "wordpress_export"
+        status:
+          $ref: '#/components/schemas/ArticleStatus'
+        featured_image_path:
+          type: string
+          nullable: true
+          example: "/storage/articles/123/featured.jpg"
+        additional_images:
+          type: array
+          items:
+            type: string
+          example:
+            - "/storage/articles/123/image1.png"
+        published_url:
+          type: string
+          nullable: true
+          example: "https://blog.example.com/react-performance-tips"
+        cms_article_id:
+          type: string
+          nullable: true
+          example: "wp_post_456"
+        article_metadata:
+          type: object
+          example:
+            original_url: "https://old-blog.com/article"
+            word_count: 1850
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ========================================
+    # SEO Schemas
+    # ========================================
+
+    SEOMetadataResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 456
+        article_id:
+          type: integer
+          example: 123
+        meta_title:
+          type: string
+          minLength: 50
+          maxLength: 60
+          example: "10 React Performance Tips | Boost Your App Speed 2025"
+        meta_description:
+          type: string
+          minLength: 150
+          maxLength: 160
+          example: "Discover 10 proven React performance optimization techniques..."
+        focus_keyword:
+          type: string
+          example: "React performance optimization"
+        primary_keywords:
+          type: array
+          items:
+            type: string
+          minItems: 3
+          maxItems: 5
+          example:
+            - "React performance optimization"
+            - "React memoization"
+            - "code splitting React"
+        secondary_keywords:
+          type: array
+          items:
+            type: string
+          minItems: 5
+          maxItems: 10
+          example:
+            - "useMemo hook"
+            - "React.memo"
+            - "lazy loading components"
+        keyword_density:
+          type: object
+          description: Keyword occurrence counts and density percentages
+          example:
+            "React performance optimization":
+              count: 15
+              density: 2.1
+        readability_score:
+          type: number
+          format: float
+          description: Flesch-Kincaid reading ease score
+          example: 10.5
+        optimization_recommendations:
+          type: array
+          items:
+            type: string
+          example:
+            - "Add internal links to related tutorials"
+            - "Consider FAQ schema markup"
+        manual_overrides:
+          type: object
+          description: Manual edits made by user
+        generated_by:
+          type: string
+          example: "claude-3.5-sonnet"
+        generation_cost:
+          type: number
+          format: float
+          example: 0.0345
+        generation_tokens:
+          type: integer
+          example: 1523
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # ========================================
+    # Publishing Schemas
+    # ========================================
+
+    PublishRequest:
+      type: object
+      required:
+        - article_id
+        - cms_config
+      properties:
+        article_id:
+          type: integer
+          description: Article ID to publish
+          example: 123
+        provider:
+          $ref: '#/components/schemas/ProviderType'
+        cms_type:
+          type: string
+          default: "wordpress"
+          description: CMS platform type
+          example: "wordpress"
+        cms_config:
+          type: object
+          required:
+            - url
+            - username
+            - password
+          properties:
+            url:
+              type: string
+              format: uri
+              description: CMS admin URL
+              example: "https://blog.example.com/wp-admin"
+            username:
+              type: string
+              description: CMS username
+              example: "admin"
+            password:
+              type: string
+              format: password
+              description: CMS password
+        post_config:
+          type: object
+          description: Additional post configuration
+          properties:
+            categories:
+              type: array
+              items:
+                type: string
+              example: ["Programming", "React"]
+            tags:
+              type: array
+              items:
+                type: string
+              example: ["performance", "optimization"]
+            post_status:
+              type: string
+              enum: [publish, draft]
+              default: "publish"
+
+    PublishTaskResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 789
+        task_id:
+          type: string
+          example: "pub_20251026_143500_abc123"
+        article_id:
+          type: integer
+          example: 123
+        provider:
+          $ref: '#/components/schemas/ProviderType'
+        cms_type:
+          type: string
+          example: "wordpress"
+        status:
+          $ref: '#/components/schemas/PublishStatus'
+        error_message:
+          type: string
+          nullable: true
+          description: Error message if failed
+        screenshots:
+          type: array
+          items:
+            $ref: '#/components/schemas/Screenshot'
+        cost_usd:
+          type: number
+          format: float
+          nullable: true
+          description: Total cost (for Anthropic/Gemini providers)
+          example: 1.23
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_seconds:
+          type: integer
+          nullable: true
+          description: Execution duration in seconds
+          example: 215
+        created_at:
+          type: string
+          format: date-time
+        estimated_completion:
+          type: string
+          format: date-time
+          description: Estimated completion time (for pending tasks)
+
+    Screenshot:
+      type: object
+      properties:
+        step:
+          type: string
+          description: Step identifier
+          example: "01_login_success"
+        url:
+          type: string
+          format: uri
+          description: Screenshot URL (S3 or local path)
+          example: "https://s3.amazonaws.com/bucket/screenshots/789/01_login_success.png"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-10-26T14:35:30Z"
+        description:
+          type: string
+          description: Human-readable description
+          example: "WordPress admin login successful"
+
+    ExecutionLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1001
+        task_id:
+          type: integer
+          description: Reference to publish_tasks.id
+          example: 789
+        log_level:
+          $ref: '#/components/schemas/LogLevel'
+        step_name:
+          type: string
+          example: "login"
+        message:
+          type: string
+          example: "Navigating to WordPress login page"
+        details:
+          type: object
+          description: Additional JSONB details
+        action_type:
+          $ref: '#/components/schemas/ActionType'
+        action_target:
+          type: string
+          description: Target element/URL for action
+          example: "input#user_login"
+        action_result:
+          type: string
+          enum: [success, failed, skipped]
+          example: "success"
+        screenshot_path:
+          type: string
+          nullable: true
+          example: "/screenshots/789/01_login_success.png"
+        created_at:
+          type: string
+          format: date-time
+
+    # ========================================
+    # Error Schemas
+    # ========================================
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "ValidationError"
+        message:
+          type: string
+          description: Error message
+          example: "Title must be between 10 and 500 characters"
+        details:
+          type: object
+          description: Additional error details
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "ValidationError"
+            message: "Title must be between 10 and 500 characters"
+            details:
+              field: "title"
+              constraint: "minLength"
+            timestamp: "2025-10-26T14:30:00Z"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "NotFound"
+            message: "Article with ID 123 not found"
+            timestamp: "2025-10-26T14:30:00Z"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "InternalServerError"
+            message: "An unexpected error occurred"
+            timestamp: "2025-10-26T14:30:00Z"
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT authentication (future implementation).
+
+        For now, the API is unauthenticated (development only).
+
+security:
+  - BearerAuth: []
+
+# ========================================
+# API Usage Examples
+# ========================================
+
+x-usage-examples:
+  complete_workflow:
+    description: Complete workflow from import to publish
+    steps:
+      - step: 1
+        operation: POST /v1/articles/import
+        description: Import article from external source
+        request:
+          title: "React Performance Guide"
+          body: "<h2>Introduction</h2>..."
+          source: "wordpress_export"
+        response:
+          id: 123
+          status: "imported"
+
+      - step: 2
+        operation: POST /v1/seo/analyze/123
+        description: Generate SEO metadata
+        response:
+          meta_title: "React Performance Guide | 2025 Expert Tips"
+          focus_keyword: "React performance"
+          article_status_updated: "seo_optimized"
+
+      - step: 3
+        operation: POST /v1/publish/submit
+        description: Publish with Playwright (free)
+        request:
+          article_id: 123
+          provider: "playwright"
+          cms_config:
+            url: "https://blog.example.com/wp-admin"
+            username: "admin"
+            password: "secure_password"
+        response:
+          task_id: "pub_20251026_143500_abc123"
+          status: "pending"
+
+      - step: 4
+        operation: GET /v1/publish/tasks/pub_20251026_143500_abc123
+        description: Poll for task completion (every 5s)
+        response:
+          status: "completed"
+          duration_seconds: 45
+          screenshots:
+            - step: "08_publish_success"
+              url: "https://s3.amazonaws.com/..."
+
+  cost_comparison:
+    description: Provider cost comparison
+    anthropic_workflow:
+      seo_analysis: "$0.03"
+      publishing: "$1.15"
+      total: "$1.18"
+      time: "3 min 35s"
+
+    playwright_workflow:
+      seo_analysis: "$0.03"
+      publishing: "$0.00"
+      total: "$0.03"
+      time: "45s"
+
+    recommendation: |
+      - Use Playwright for bulk publishing (free, fast, reliable)
+      - Use Anthropic for complex CMS configurations requiring AI reasoning
+      - Use Gemini when available for cost optimization

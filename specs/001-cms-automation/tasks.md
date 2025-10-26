@@ -1,761 +1,3171 @@
-# Tasks: AI-Powered CMS Automation with SEO Optimization (Fusion Architecture)
+# Tasks: SEO Optimization & Multi-Provider Computer Use Publishing
 
+**Version**: 2.0.0
+**Last Updated**: 2025-10-26
+**Architecture**: Article Import → SEO Analysis (Messages API) → Multi-Provider Computer Use Publishing
 **Input**: Design documents from `/specs/001-cms-automation/`
-**Prerequisites**: plan.md v2.0, spec.md (updated), research.md, data-model.md (fusion), contracts/api-spec.yaml
-**Last Updated**: 2025-10-25
-**Architecture**: Dual-Source (AI Generation + Import) → Unified SEO → Computer Use Publishing
+**Prerequisites**: plan.md v2.0, spec.md v2.0, data-model.md, contracts/api-spec.yaml
 
-**Tests**: Tests are OPTIONAL and not explicitly requested in the feature specification. This task list focuses on implementation only.
+---
 
-**Organization**: Tasks are grouped by phase and user story to enable independent implementation and testing.
+## Overview
 
-## Format: `[ID] [P?] [Story] Description`
+This document provides a detailed breakdown of **48+ implementation tasks** organized across **5 phases** over **10.5 weeks**. Each task includes:
+- **Task ID**: Unique identifier (T1.1, T2.3, etc.)
+- **Description**: What needs to be done
+- **Dependencies**: Which tasks must complete first
+- **Estimated Hours**: Time estimate
+- **Deliverables**: Concrete outputs
+- **Acceptance Criteria**: Definition of done
+- **File Paths**: Exact locations of files to create/modify
 
-- **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (US1-US7)
-- **✅**: Completed tasks (Phases 1-4)
-- **⏳**: In Progress (Phase 5)
-- Include exact file paths in descriptions
+**Key Architecture Decisions**:
+1. **Multi-Provider Pattern**: Abstract `ComputerUseProvider` base class with three implementations (Anthropic, Gemini, Playwright)
+2. **Two-Phase Workflow**: SEO Analysis (Messages API) → Computer Use Publishing (Browser Automation)
+3. **Provider Flexibility**: Runtime switching via environment variable or API parameter
+4. **Audit Trail**: 8+ screenshots per publishing task stored in S3/local
+5. **Cost Optimization**: Playwright as default (free), AI providers as fallback
+
+---
 
 ## Path Conventions
 
-Based on plan.md v2.0, this project uses web application structure:
+Based on plan.md v2.0:
 - **Backend**: `backend/src/`, `backend/tests/`, `backend/migrations/`
 - **Frontend**: `frontend/src/`, `frontend/tests/`
+- **Specs**: `specs/001-cms-automation/`
+- **Monitoring**: `monitoring/`
 
 ---
 
-## Phase 1: Setup (Shared Infrastructure) ✅ COMPLETE
+## Task Format
 
-**Purpose**: Project initialization and basic structure
-**Duration**: 1 week
-**Status**: Completed
+```
+[Task ID] [Priority] [User Story] Task Name
+Description: What needs to be done
+Dependencies: List of prerequisite tasks
+Estimated Hours: X hours
+Deliverables:
+  - Concrete output 1
+  - Concrete output 2
+Acceptance Criteria:
+  - Measurable success criterion 1
+  - Measurable success criterion 2
+File Paths:
+  - Path to file 1
+  - Path to file 2
+```
 
-- [x] T001 Create backend project structure (backend/src/{models,services,api,workers,config}) per plan.md
-- [x] T002 Create frontend project structure (frontend/src/{components,services,hooks,utils}) per plan.md
-- [x] T003 [P] Initialize Python 3.13.7 project with Poetry 2.2.0 in backend/
-- [x] T004 [P] Initialize React 18.3.1 TypeScript project with Vite in frontend/
-- [x] T005 [P] Install backend dependencies: anthropic 0.71.0+, fastapi, sqlalchemy 2.0, celery 5.5.3, redis, psycopg2, alembic, bleach ★NEW, pandas ★NEW
-- [x] T006 [P] Install frontend dependencies: react, react-query, react-hook-form, tailwind, date-fns
-- [x] T007 [P] Configure linting (ruff, mypy) and formatting (black, isort) for backend
-- [x] T008 [P] Configure linting (eslint, typescript) and formatting (prettier) for frontend
-- [x] T009 Create Docker Compose configuration in docker-compose.yml for postgres, redis, backend, frontend, workers
-- [x] T010 [P] Create .env.example template with required environment variables (including CMS_USERNAME, CMS_PASSWORD for Computer Use) ★UPDATED
-- [x] T011 [P] Setup README.md with project overview and setup instructions
-
----
-
-## Phase 2: Foundational Infrastructure ✅ COMPLETE
-
-**Purpose**: Core infrastructure for all user stories
-**Duration**: 2 weeks
-**Status**: Completed
-
-### Database Foundation
-- [x] T012 Install and enable pgvector extension in PostgreSQL 15 database
-- [x] T013 Initialize Alembic for database migrations in backend/migrations/
-- [x] T014 [P] Create base SQLAlchemy models infrastructure in backend/src/models/base.py
-- [x] T015 [P] Configure database connection pooling in backend/src/config/database.py
-- [x] T016 Create initial migration for base tables structure in backend/migrations/versions/
-
-### API Foundation
-- [x] T017 Setup FastAPI application with CORS and middleware in backend/src/main.py
-- [x] T018 [P] Implement authentication middleware integration in backend/src/api/middleware/auth.py
-- [x] T019 [P] Implement error handling middleware in backend/src/api/middleware/error_handler.py
-- [x] T020 [P] Implement request logging middleware in backend/src/api/middleware/logging.py
-- [x] T021 [P] Create API route registration structure in backend/src/api/routes/__init__.py
-- [x] T022 [P] Implement Pydantic base schemas for request/response validation in backend/src/api/schemas/base.py
-
-### Task Queue Foundation
-- [x] T023 Configure Celery application with Redis broker in backend/src/workers/celery_app.py
-- [x] T024 [P] Setup Celery Beat for scheduled tasks in backend/src/workers/beat_schedule.py
-- [x] T025 [P] Create base task classes with retry logic in backend/src/workers/base_task.py
-- [x] T026 [P] Implement task monitoring configuration for Flower in backend/src/workers/monitoring.py
-
-### Configuration & Logging
-- [x] T027 [P] Implement configuration management in backend/src/config/settings.py
-- [x] T028 [P] Setup structured logging with JSON output in backend/src/config/logging.py
-- [x] T029 [P] Create environment-specific configs (dev, staging, prod) in backend/src/config/
-
-### Frontend Foundation
-- [x] T030 Setup React Router with route definitions in frontend/src/routes.tsx
-- [x] T031 [P] Configure React Query client in frontend/src/services/query-client.ts
-- [x] T032 [P] Create API client with authentication in frontend/src/services/api-client.ts
-- [x] T033 [P] Implement Tailwind theme configuration in frontend/tailwind.config.js
-- [x] T034 [P] Create base UI components (Button, Input, Card) in frontend/src/components/ui/
-
-**Checkpoint**: ✅ Foundation ready
+**Symbols**:
+- **[P]**: Can run in parallel (no blocking dependencies)
+- **[US1-5]**: Maps to User Story in spec.md
+- **✅**: Completed
+- **⏳**: In Progress
+- **[ ]**: Not Started
 
 ---
 
-## Phase 3: User Story 1 - AI Article Generation (Priority: P1) ✅ COMPLETE
+## Phase 0: Governance Compliance Gate (Continuous)
 
-**Goal**: Content managers can submit topics and receive fully formatted articles within 5 minutes
-**Duration**: 2 weeks
-**Status**: Completed - 6/6 E2E tests passing, 91.7% faster than SLA
+**Purpose**: Ensure Constitution v1.0.0 compliance throughout development
+**Status**: Continuous validation
 
-### Data Models
-- [x] T035 [P] [US1] Create TopicRequest model in backend/src/models/topic_request.py
-- [x] T036 [P] [US1] Create Article model with status enum in backend/src/models/article.py
-- [x] T037 [US1] Create database migration for topic_requests and articles tables
+### New Constitution Requirements
 
-### Claude API Integration
-- [x] T038 [P] [US1] Implement Claude Messages API client wrapper in backend/src/services/article_generator/claude_client.py
-- [x] T039 [US1] Implement ArticleGeneratorService with retry logic in backend/src/services/article_generator/generator.py
-- [x] T040 [US1] Implement cost tracking for Claude API usage in backend/src/services/article_generator/cost_tracker.py
+#### III.5 - CMS Credential Management
+**Requirement**: Encrypted storage, 90-day rotation, complete audit logs
 
-### Celery Tasks
-- [x] T041 [US1] Create article generation Celery task in backend/src/workers/tasks/generate_article.py
-- [x] T042 [US1] Add task progress tracking and status updates
-- [x] T043 [US1] Implement error handling and retry logic for API failures
+**Tasks**:
+- [ ] G0.1 Implement encrypted credentials storage using AWS Secrets Manager or HashiCorp Vault
+- [ ] G0.2 Setup 90-day rotation schedule for CMS credentials
+- [ ] G0.3 Log all credential access to audit_logs table
+- [ ] G0.4 Mask passwords in all logs and screenshots
+- [ ] G0.5 Create credential rotation runbook
 
-### API Endpoints
-- [x] T044 [P] [US1] Create TopicRequest schemas in backend/src/api/schemas/topic_request.py
-- [x] T045 [P] [US1] Create Article schemas in backend/src/api/schemas/article.py
-- [x] T046 [US1] Implement POST /v1/topics endpoint in backend/src/api/routes/topics.py
-- [x] T047 [US1] Implement GET /v1/topics/{requestId} endpoint
-- [x] T048 [US1] Implement GET /v1/articles/{articleId} endpoint in backend/src/api/routes/articles.py
+#### IV.5 - Computer Use Testing Strategy
+**Requirement**: Mock tests, sandbox WordPress, screenshot validation
 
-### Frontend UI
-- [x] T049 [P] [US1] Create TopicSubmissionForm component in frontend/src/components/ArticleGenerator/TopicSubmissionForm.tsx
-- [x] T050 [P] [US1] Create ArticlePreview component in frontend/src/components/ArticleGenerator/ArticlePreview.tsx
-- [x] T051 [US1] Implement topic submission page in frontend/src/pages/ArticleGeneratorPage.tsx
-- [x] T052 [US1] Create React Query hooks for topic/article operations in frontend/src/hooks/
-
-**Checkpoint**: ✅ US1 complete - AI generation functional
+**Tasks**:
+- [ ] G0.6 Setup sandbox WordPress environment in Docker
+- [ ] G0.7 Implement mock Computer Use provider for unit tests
+- [ ] G0.8 Create screenshot validation tests (verify content, no credentials visible)
+- [ ] G0.9 Setup UI regression testing for WordPress selector changes
 
 ---
 
-## Phase 4: Testing & Validation ✅ COMPLETE
+## Phase 1: Database Refactor & Article Import (2 weeks)
 
-**Duration**: 1 week
-**Status**: Completed - 6/6 E2E tests passed (100%)
-
-### E2E Tests
-- [x] T053 E2E Test 1: Topic Submission workflow
-- [x] T054 E2E Test 2: Article Generation Pipeline (25s average, 91.7% faster than 300s SLA)
-- [x] T055 E2E Test 3: Article Display & Retrieval
-- [x] T056 E2E Test 4: Error Handling (100% coverage)
-- [x] T057 E2E Test 5: Concurrent Requests (3+ simultaneous)
-- [x] T058 E2E Test 6: SLA Compliance validation
-
-### Production Deployment
-- [x] T059 Create production Docker configurations
-- [x] T060 Create deployment documentation (DEPLOYMENT.md)
-
-**Checkpoint**: ✅ System production-ready
+**Goal**: Extend database schema and implement article import from external sources
+**Duration**: 2 weeks (Week 1-2)
+**Estimated Hours**: 46 hours
+**Status**: Not Started
 
 ---
 
-## Phase 5: Fusion Architecture Extensions (In Progress ⏳)
+### Week 1: Database Schema Design & Migration
 
-**Purpose**: Add external article import, unified SEO optimization, and Computer Use publishing while preserving AI generation
-**Duration**: 8-9 weeks
-**Status**: In Progress
+#### T1.1 [P] Design New Database Schema
 
----
+**Description**: Create ER diagram and detailed schema design for 4 core tables: articles (extended), seo_metadata, publish_tasks, execution_logs
 
-### Week 1-2: Database Extensions + Article Import (10 tasks)
+**Dependencies**: None
 
-#### Database Migration (T301-T306)
+**Estimated Hours**: 8 hours
 
-- [ ] T301 [P] [Phase 5] ⏳ **Extend articles table** with new columns in backend/migrations/versions/xxx_fusion_extensions.py:
-  - Add `source VARCHAR(20) NOT NULL DEFAULT 'ai_generated'` CHECK (source IN ('ai_generated', 'imported'))
-  - Add `seo_optimized BOOLEAN NOT NULL DEFAULT FALSE`
-  - Add indexes: `idx_articles_source`, `idx_articles_seo_optimized`
-  - **Dependencies**: None
-  - **Est**: 2 hours
-  - **Acceptance**: Migration runs successfully, existing articles have source='ai_generated', new columns indexed
+**Deliverables**:
+- ER diagram (Mermaid format) in `specs/001-cms-automation/data-model.md`
+- Schema design document with:
+  - All columns with types, constraints, defaults
+  - JSONB field structures
+  - Index definitions
+  - Foreign key relationships
+  - Partition strategy for execution_logs
 
-- [ ] T302 [P] [Phase 5] ⏳ **Create seo_metadata table** in same migration:
-  - Columns: id, article_id (FK), seo_title VARCHAR(60), meta_description VARCHAR(160), focus_keyword, primary_keywords TEXT[], secondary_keywords TEXT[], keyword_density JSONB, optimization_recommendations TEXT[], manual_overrides JSONB, readability_score DECIMAL(4,2), generated_at, updated_at
-  - Constraints: CHECK seo_title length 50-60, CHECK meta_description length 150-160, CHECK primary_keywords array length 3-5, CHECK secondary_keywords array length 5-10
-  - Indexes: `idx_seo_metadata_article`, `idx_seo_metadata_focus_keyword`
-  - **Dependencies**: T301
-  - **Est**: 2 hours
-  - **Acceptance**: Table created with all constraints, foreign keys working
+**Acceptance Criteria**:
+- ER diagram covers all 4 tables
+- Schema includes all fields from spec.md section 6.4
+- JSONB structures documented
+- Reviewed and approved by tech lead
 
-- [ ] T303 [P] [Phase 5] ⏳ **Create publish_tasks table** in same migration:
-  - Columns: id, article_id (FK), cms_type VARCHAR(50) DEFAULT 'wordpress', status VARCHAR(20) DEFAULT 'pending', screenshots JSONB DEFAULT '[]', retry_count INT DEFAULT 0, max_retries INT DEFAULT 3, error_message TEXT, started_at, completed_at, duration_seconds INT, created_at
-  - Constraints: CHECK max_retries > 0, CHECK retry_count <= max_retries, CHECK status IN ('pending', 'in_progress', 'completed', 'failed', 'cancelled')
-  - Indexes: `idx_publish_tasks_article`, `idx_publish_tasks_status`, `idx_publish_tasks_pending`
-  - **Dependencies**: T301
-  - **Est**: 2 hours
-  - **Acceptance**: Table created with all constraints
-
-- [ ] T304 [Phase 5] ⏳ **Create execution_logs table with partitioning** in same migration:
-  - Partitioned table by timestamp (monthly)
-  - Columns: id BIGSERIAL, publish_task_id (FK), action VARCHAR(50), target_element TEXT, payload JSONB, result VARCHAR(20), error_details TEXT, timestamp
-  - Constraints: CHECK action IN ('navigate', 'click', 'type', 'upload', 'screenshot', 'verify', 'wait', 'scroll'), CHECK result IN ('success', 'failure', 'retry')
-  - Indexes: `idx_execution_logs_task`, `idx_execution_logs_timestamp`, `idx_execution_logs_action`
-  - Create first partition: execution_logs_2025_10
-  - **Dependencies**: T303
-  - **Est**: 3 hours
-  - **Acceptance**: Partitioned table created, can insert logs to current month partition
-
-- [ ] T305 [Phase 5] ⏳ **Deploy database triggers** for SEO and audit logging:
-  - Trigger: `update_seo_optimized_status` on INSERT seo_metadata → UPDATE articles SET seo_optimized=TRUE
-  - Trigger: `update_updated_at` on UPDATE seo_metadata → SET updated_at=NOW()
-  - Trigger: `log_article_changes` on INSERT/UPDATE/DELETE articles → INSERT audit_logs
-  - **Dependencies**: T302
-  - **Est**: 2 hours
-  - **Acceptance**: All triggers fire correctly, tested with sample data
-
-- [ ] T306 [Phase 5] ⏳ **Backfill existing data** and validate migration:
-  - Update all existing articles: SET source='ai_generated', seo_optimized=FALSE
-  - Verify all foreign keys and constraints
-  - Run ANALYZE on all new tables/indexes
-  - **Dependencies**: T301-T305
-  - **Est**: 1 hour
-  - **Acceptance**: All existing data migrated correctly, performance benchmarks met
-
-#### Article Importer Service (T307-T310)
-
-- [ ] T307 [P] [US2] ⏳ **Implement CSV parser with validation** in backend/src/services/article_importer/csv_parser.py:
-  - Use pandas for CSV parsing
-  - Required columns: title, body
-  - Optional columns: images (comma-separated URLs), excerpt, metadata
-  - Validate: title 10-500 chars, body min 100 words
-  - Return list of validated article dictionaries
-  - **Dependencies**: None (can start parallel with T301)
-  - **Est**: 4 hours
-  - **Acceptance**: Parse CSV with 100 articles in < 30 seconds, validation catches all errors
-
-- [ ] T308 [P] [US2] ⏳ **Implement HTML sanitization** in backend/src/services/article_importer/sanitizer.py:
-  - Use bleach library for XSS prevention
-  - Allowed tags: p, h1-h6, ul, ol, li, a, strong, em, code, pre, blockquote, img
-  - Allowed attributes: href (for a), src/alt (for img), class
-  - Strip all scripts, iframes, and dangerous tags
-  - **Dependencies**: None
-  - **Est**: 3 hours
-  - **Acceptance**: 100% XSS prevention (tested with OWASP XSS vectors), preserves safe formatting
-
-- [ ] T309 [US2] ⏳ **Implement ArticleImporterService** in backend/src/services/article_importer/importer.py:
-  - Method: `import_csv(file_path, user_id) -> List[Article]`
-  - Method: `import_json(data, user_id) -> List[Article]`
-  - Method: `import_single(title, body, images, user_id) -> Article`
-  - For each article: sanitize HTML, validate images URLs, set source='imported', store to DB
-  - Batch insert for performance (100 articles in one transaction)
-  - Return list of created article IDs
-  - **Dependencies**: T306 (DB ready), T307 (CSV parser), T308 (sanitizer)
-  - **Est**: 6 hours
-  - **Acceptance**: Import 100 articles from CSV in < 5 minutes, 100% data integrity, transaction rollback on errors
-
-- [ ] T310 [US2] ⏳ **Implement import API endpoints**:
-  - POST /v1/articles/import endpoint in backend/src/api/routes/articles.py
-  - Request schema: multipart/form-data with CSV file OR JSON array
-  - Response schema: {article_ids: List[int], imported_count: int, failed_count: int, errors: List}
-  - Add progress tracking for large batches (return task_id if > 50 articles)
-  - **Dependencies**: T309
-  - **Est**: 4 hours
-  - **Acceptance**: API accepts CSV/JSON, returns correct counts, handles errors gracefully
-
-**Week 1-2 Checkpoint**: Database extended, import functionality working, can import 100 articles in < 5 minutes
+**File Paths**:
+- `specs/001-cms-automation/data-model.md`
+- `specs/001-cms-automation/diagrams/er-diagram.mmd`
 
 ---
 
-### Week 3-4: SEO Optimization Engine (15 tasks)
+#### T1.2 [P] Create Alembic Migration Scripts
 
-#### SEO Analyzer Service (T311-T318)
+**Description**: Write Alembic migration to extend articles table and create 3 new tables (seo_metadata, publish_tasks, execution_logs)
 
-- [ ] T311 [P] [US3] ⏳ **Implement keyword extraction** in backend/src/services/seo_analyzer/keyword_extractor.py:
-  - Use Claude Messages API with specialized SEO prompt
-  - Extract: 1 focus keyword, 3-5 primary keywords, 5-10 secondary keywords
-  - Calculate keyword density for each (count / total_words * 100)
-  - Store in JSONB format: {"keyword": {"count": N, "density": X.X}}
-  - **Dependencies**: None (can start parallel)
-  - **Est**: 6 hours
-  - **Acceptance**: Extract keywords from 1500-word article in < 20 seconds, 85%+ accuracy vs expert baseline (tested on 20 articles)
+**Dependencies**: T1.1
 
-- [ ] T312 [P] [US3] ⏳ **Implement SEO metadata generation** in backend/src/services/seo_analyzer/metadata_generator.py:
-  - Use Claude Messages API to generate SEO title (50-60 chars) and meta description (150-160 chars)
-  - Include focus keyword in title and description
-  - Follow Google Search Console best practices
-  - Auto-truncate if exceeds length limits
-  - **Dependencies**: T311 (needs focus keyword)
-  - **Est**: 4 hours
-  - **Acceptance**: Generated titles 100% within 50-60 chars, descriptions 100% within 150-160 chars, include focus keyword
+**Estimated Hours**: 6 hours
 
-- [ ] T313 [P] [US3] ⏳ **Implement readability scoring** in backend/src/services/seo_analyzer/readability_scorer.py:
-  - Calculate Flesch-Kincaid Grade Level
-  - Formula: 0.39 * (total_words / total_sentences) + 11.8 * (total_syllables / total_words) - 15.59
+**Deliverables**:
+- Migration file: `backend/migrations/versions/YYYYMMDD_multi_provider_schema.py`
+- Includes:
+  - ALTER TABLE articles: Add source, featured_image_path, additional_images, published_url, cms_article_id, article_metadata
+  - CREATE TABLE seo_metadata with all columns and constraints
+  - CREATE TABLE publish_tasks with provider enum and status tracking
+  - CREATE TABLE execution_logs with partitioning by month
+  - All indexes and foreign keys
+- Rollback logic tested
+
+**Acceptance Criteria**:
+- Migration runs successfully on empty database
+- Migration runs successfully on database with existing articles
+- Rollback restores original schema
+- All constraints enforced (checked with invalid data attempts)
+
+**File Paths**:
+- `backend/migrations/versions/YYYYMMDD_multi_provider_schema.py`
+
+**Code Example**:
+```python
+from alembic import op
+import sqlalchemy as sa
+from sqlalchemy.dialects.postgresql import JSONB, ENUM
+
+def upgrade():
+    # Extend articles table
+    op.add_column('articles', sa.Column('source', sa.String(20), nullable=False, server_default='imported'))
+    op.add_column('articles', sa.Column('featured_image_path', sa.String(500)))
+    op.add_column('articles', sa.Column('additional_images', JSONB))
+    op.add_column('articles', sa.Column('published_url', sa.String(500)))
+    op.add_column('articles', sa.Column('cms_article_id', sa.String(100)))
+    op.add_column('articles', sa.Column('article_metadata', JSONB))
+
+    # Create status enum
+    article_status_enum = ENUM('imported', 'seo_optimized', 'ready_to_publish',
+                                'publishing', 'published', name='article_status_enum')
+    article_status_enum.create(op.get_bind())
+
+    # Create seo_metadata table
+    op.create_table(
+        'seo_metadata',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('article_id', sa.Integer(), sa.ForeignKey('articles.id', ondelete='CASCADE'), unique=True, nullable=False),
+        sa.Column('meta_title', sa.String(60), nullable=False),
+        sa.Column('meta_description', sa.String(160), nullable=False),
+        sa.Column('focus_keyword', sa.String(100), nullable=False),
+        sa.Column('primary_keywords', sa.ARRAY(sa.String(100))),
+        sa.Column('secondary_keywords', sa.ARRAY(sa.String(100))),
+        sa.Column('keyword_density', JSONB),
+        sa.Column('readability_score', sa.Float),
+        sa.Column('optimization_recommendations', JSONB),
+        sa.Column('manual_overrides', JSONB),
+        sa.Column('generated_by', sa.String(50)),
+        sa.Column('generation_cost', sa.Float),
+        sa.Column('generation_tokens', sa.Integer),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now(), onupdate=sa.func.now()),
+        sa.CheckConstraint('char_length(meta_title) >= 50 AND char_length(meta_title) <= 60', name='meta_title_length_check'),
+        sa.CheckConstraint('char_length(meta_description) >= 150 AND char_length(meta_description) <= 160', name='meta_description_length_check'),
+        sa.CheckConstraint('array_length(primary_keywords, 1) >= 3 AND array_length(primary_keywords, 1) <= 5', name='primary_keywords_count_check'),
+        sa.CheckConstraint('array_length(secondary_keywords, 1) >= 5 AND array_length(secondary_keywords, 1) <= 10', name='secondary_keywords_count_check')
+    )
+
+    # Create publish_tasks table
+    provider_enum = ENUM('anthropic', 'gemini', 'playwright', name='provider_enum')
+    provider_enum.create(op.get_bind())
+
+    op.create_table(
+        'publish_tasks',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('article_id', sa.Integer(), sa.ForeignKey('articles.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('task_id', sa.String(100), unique=True),  # Celery task ID
+        sa.Column('provider', provider_enum, nullable=False, server_default='playwright'),
+        sa.Column('cms_type', sa.String(50), server_default='wordpress'),
+        sa.Column('cms_url', sa.String(500)),
+        sa.Column('status', sa.String(20), server_default='pending'),
+        sa.Column('retry_count', sa.Integer(), server_default='0'),
+        sa.Column('max_retries', sa.Integer(), server_default='3'),
+        sa.Column('error_message', sa.Text()),
+        sa.Column('session_id', sa.String(100)),
+        sa.Column('screenshots', JSONB, server_default='[]'),
+        sa.Column('cost_usd', sa.Float()),
+        sa.Column('started_at', sa.DateTime()),
+        sa.Column('completed_at', sa.DateTime()),
+        sa.Column('duration_seconds', sa.Integer()),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
+        sa.CheckConstraint('status IN (\'pending\', \'running\', \'completed\', \'failed\')', name='status_check'),
+        sa.CheckConstraint('retry_count <= max_retries', name='retry_count_check')
+    )
+
+    # Create execution_logs table with partitioning
+    op.execute("""
+        CREATE TABLE execution_logs (
+            id BIGSERIAL,
+            task_id INTEGER NOT NULL REFERENCES publish_tasks(id) ON DELETE CASCADE,
+            log_level VARCHAR(10) NOT NULL DEFAULT 'INFO',
+            step_name VARCHAR(100),
+            message TEXT,
+            details JSONB,
+            action_type VARCHAR(50),
+            action_target TEXT,
+            action_result VARCHAR(20),
+            screenshot_path VARCHAR(500),
+            created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        ) PARTITION BY RANGE (created_at);
+
+        CREATE TABLE execution_logs_2025_10 PARTITION OF execution_logs
+        FOR VALUES FROM ('2025-10-01') TO ('2025-11-01');
+
+        CREATE INDEX idx_execution_logs_task ON execution_logs(task_id);
+        CREATE INDEX idx_execution_logs_created_at ON execution_logs(created_at);
+    """)
+
+    # Create indexes
+    op.create_index('idx_articles_source', 'articles', ['source'])
+    op.create_index('idx_articles_status', 'articles', ['status'])
+    op.create_index('idx_seo_metadata_article', 'seo_metadata', ['article_id'])
+    op.create_index('idx_seo_metadata_focus_keyword', 'seo_metadata', ['focus_keyword'])
+    op.create_index('idx_publish_tasks_article', 'publish_tasks', ['article_id'])
+    op.create_index('idx_publish_tasks_status', 'publish_tasks', ['status'])
+    op.create_index('idx_publish_tasks_task_id', 'publish_tasks', ['task_id'])
+
+def downgrade():
+    # Drop tables in reverse order
+    op.drop_table('execution_logs_2025_10')
+    op.execute('DROP TABLE execution_logs')
+    op.drop_table('publish_tasks')
+    op.drop_table('seo_metadata')
+
+    # Drop enums
+    op.execute('DROP TYPE provider_enum')
+    op.execute('DROP TYPE article_status_enum')
+
+    # Remove columns from articles
+    op.drop_column('articles', 'article_metadata')
+    op.drop_column('articles', 'cms_article_id')
+    op.drop_column('articles', 'published_url')
+    op.drop_column('articles', 'additional_images')
+    op.drop_column('articles', 'featured_image_path')
+    op.drop_column('articles', 'source')
+```
+
+---
+
+#### T1.3 [P] Update SQLAlchemy Models
+
+**Description**: Create/update SQLAlchemy ORM models to match new database schema
+
+**Dependencies**: T1.2
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Updated `backend/src/models/article.py`:
+  - Add new fields: source, featured_image_path, additional_images, published_url, cms_article_id, article_metadata
+  - Update status enum
+  - Add relationship to SEOMetadata (1:1)
+  - Add relationship to PublishTask (1:N)
+- New `backend/src/models/seo_metadata.py`:
+  - All fields with proper types
+  - Relationship back to Article
+  - Validators for length constraints
+- New `backend/src/models/publish_task.py`:
+  - All fields including provider enum
+  - Relationship to Article
+  - Relationship to ExecutionLog (1:N)
+- New `backend/src/models/execution_log.py`:
+  - Partitioned table support
+  - Relationship to PublishTask
+
+**Acceptance Criteria**:
+- All models match migration schema exactly
+- Relationships work bidirectionally
+- Validators enforce constraints
+- Can create, read, update, delete records via ORM
+- Type hints complete (passes mypy)
+
+**File Paths**:
+- `backend/src/models/article.py`
+- `backend/src/models/seo_metadata.py`
+- `backend/src/models/publish_task.py`
+- `backend/src/models/execution_log.py`
+
+**Code Example** (`backend/src/models/seo_metadata.py`):
+```python
+"""SEO Metadata model."""
+
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import (
+    CheckConstraint,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+)
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
+from sqlalchemy.orm import relationship, validates
+
+from src.models.base import Base
+
+
+class SEOMetadata(Base):
+    """SEO metadata for articles."""
+
+    __tablename__ = "seo_metadata"
+
+    id = Column(Integer, primary_key=True)
+    article_id = Column(
+        Integer, ForeignKey("articles.id", ondelete="CASCADE"), unique=True, nullable=False
+    )
+
+    # SEO fields
+    meta_title = Column(String(60), nullable=False)
+    meta_description = Column(String(160), nullable=False)
+    focus_keyword = Column(String(100), nullable=False)
+    primary_keywords = Column(ARRAY(String(100)))
+    secondary_keywords = Column(ARRAY(String(100)))
+    keyword_density = Column(JSONB)  # {"keyword": {"count": 10, "density": 2.5}}
+    readability_score = Column(Float)
+    optimization_recommendations = Column(JSONB)  # List of recommendation objects
+    manual_overrides = Column(JSONB)  # Track manual edits
+
+    # Generation metadata
+    generated_by = Column(String(50))  # "claude-3-5-sonnet-20250101"
+    generation_cost = Column(Float)
+    generation_tokens = Column(Integer)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    # Relationships
+    article = relationship("Article", back_populates="seo_metadata")
+
+    # Constraints
+    __table_args__ = (
+        CheckConstraint(
+            "char_length(meta_title) >= 50 AND char_length(meta_title) <= 60",
+            name="meta_title_length_check",
+        ),
+        CheckConstraint(
+            "char_length(meta_description) >= 150 AND char_length(meta_description) <= 160",
+            name="meta_description_length_check",
+        ),
+        CheckConstraint(
+            "array_length(primary_keywords, 1) >= 3 AND array_length(primary_keywords, 1) <= 5",
+            name="primary_keywords_count_check",
+        ),
+        CheckConstraint(
+            "array_length(secondary_keywords, 1) >= 5 AND array_length(secondary_keywords, 1) <= 10",
+            name="secondary_keywords_count_check",
+        ),
+    )
+
+    @validates("meta_title")
+    def validate_meta_title(self, key: str, value: str) -> str:
+        """Validate meta title length."""
+        if not 50 <= len(value) <= 60:
+            raise ValueError("Meta title must be 50-60 characters")
+        return value
+
+    @validates("meta_description")
+    def validate_meta_description(self, key: str, value: str) -> str:
+        """Validate meta description length."""
+        if not 150 <= len(value) <= 160:
+            raise ValueError("Meta description must be 150-160 characters")
+        return value
+
+    @validates("primary_keywords")
+    def validate_primary_keywords(self, key: str, value: List[str]) -> List[str]:
+        """Validate primary keywords count."""
+        if not 3 <= len(value) <= 5:
+            raise ValueError("Must have 3-5 primary keywords")
+        return value
+
+    @validates("secondary_keywords")
+    def validate_secondary_keywords(self, key: str, value: List[str]) -> List[str]:
+        """Validate secondary keywords count."""
+        if not 5 <= len(value) <= 10:
+            raise ValueError("Must have 5-10 secondary keywords")
+        return value
+
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"<SEOMetadata(article_id={self.article_id}, focus_keyword='{self.focus_keyword}')>"
+```
+
+---
+
+#### T1.4 Run Migration & Verify
+
+**Description**: Execute migration on dev database and verify all tables, constraints, and indexes created correctly
+
+**Dependencies**: T1.3
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Migration executed successfully
+- Verification script: `backend/scripts/verify_migration.py`
+- Verification report showing:
+  - All tables exist
+  - All columns with correct types
+  - All constraints active
+  - All indexes created
+  - Sample data insertable
+
+**Acceptance Criteria**:
+- Migration completes without errors
+- All 4 tables exist in database
+- Can insert sample article with SEO metadata and publish task
+- Foreign keys enforce relationships
+- Constraints block invalid data
+- Indexes improve query performance (EXPLAIN ANALYZE shows index usage)
+
+**File Paths**:
+- `backend/scripts/verify_migration.py`
+- `backend/tests/test_migration.py`
+
+---
+
+### Week 2: Article Import Implementation
+
+#### T1.5 [P] Build Article Importer Service
+
+**Description**: Implement service to import articles from CSV/JSON with validation and HTML sanitization
+
+**Dependencies**: T1.4 (DB ready)
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- `backend/src/services/article_importer/csv_parser.py`:
+  - Parse CSV with pandas
+  - Validate required fields (title, body)
+  - Handle optional fields (images, excerpt, category, tags, metadata)
+- `backend/src/services/article_importer/json_parser.py`:
+  - Parse JSON array or single object
+  - Same validation as CSV
+- `backend/src/services/article_importer/sanitizer.py`:
+  - HTML sanitization with bleach library
+  - XSS prevention
+  - Preserve safe formatting (headings, lists, links, images)
+- `backend/src/services/article_importer/validator.py`:
+  - Title: 10-500 characters
+  - Body: minimum 100 words
+  - Images: valid URLs, max 10 additional images
+- `backend/src/services/article_importer/duplicate_detector.py`:
+  - Check for duplicate titles (85%+ similarity using difflib)
+  - Return list of potential duplicates
+
+**Acceptance Criteria**:
+- Parse CSV with 100 articles in < 30 seconds
+- Validation catches all invalid inputs (tested with edge cases)
+- HTML sanitization blocks all XSS vectors (tested with OWASP XSS test vectors)
+- Duplicate detection identifies near-identical titles
+- All functions have unit tests with 90%+ coverage
+
+**File Paths**:
+- `backend/src/services/article_importer/csv_parser.py`
+- `backend/src/services/article_importer/json_parser.py`
+- `backend/src/services/article_importer/sanitizer.py`
+- `backend/src/services/article_importer/validator.py`
+- `backend/src/services/article_importer/duplicate_detector.py`
+- `backend/tests/services/article_importer/test_csv_parser.py`
+- `backend/tests/services/article_importer/test_sanitizer.py`
+
+**Code Example** (`backend/src/services/article_importer/sanitizer.py`):
+```python
+"""HTML sanitization for article import."""
+
+import bleach
+from typing import Set
+
+# Allowed HTML tags
+ALLOWED_TAGS: Set[str] = {
+    'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'ul', 'ol', 'li',
+    'a', 'strong', 'em', 'u', 'code', 'pre',
+    'blockquote', 'img', 'br', 'hr',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td'
+}
+
+# Allowed attributes per tag
+ALLOWED_ATTRIBUTES: dict = {
+    'a': ['href', 'title', 'rel', 'target'],
+    'img': ['src', 'alt', 'title', 'width', 'height'],
+    'p': ['class'],
+    'h1': ['class'],
+    'h2': ['class'],
+    'h3': ['class'],
+    'h4': ['class'],
+    'h5': ['class'],
+    'h6': ['class'],
+    'code': ['class'],
+    'pre': ['class'],
+    'blockquote': ['class'],
+    'table': ['class'],
+}
+
+# Protocols for links and images
+ALLOWED_PROTOCOLS: Set[str] = {'http', 'https', 'mailto'}
+
+
+def sanitize_html(html: str) -> str:
+    """Sanitize HTML to prevent XSS attacks.
+
+    Args:
+        html: Raw HTML content
+
+    Returns:
+        Sanitized HTML content
+    """
+    cleaned = bleach.clean(
+        html,
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        protocols=ALLOWED_PROTOCOLS,
+        strip=True
+    )
+
+    # Additional cleaning: remove empty paragraphs
+    cleaned = cleaned.replace('<p></p>', '')
+    cleaned = cleaned.replace('<p> </p>', '')
+
+    return cleaned.strip()
+
+
+def strip_html(html: str) -> str:
+    """Strip all HTML tags and return plain text.
+
+    Args:
+        html: HTML content
+
+    Returns:
+        Plain text content
+    """
+    return bleach.clean(html, tags=set(), strip=True)
+```
+
+---
+
+#### T1.6 Implement Article Import API Endpoints
+
+**Description**: Create FastAPI endpoints for single and batch article import
+
+**Dependencies**: T1.5
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/src/api/schemas/article_import.py`:
+  - ArticleImportRequest schema
+  - BatchImportResponse schema
+- `backend/src/api/routes/articles.py` (extend existing):
+  - POST /v1/articles/import (single article, JSON body)
+  - POST /v1/articles/import/batch (CSV file upload or JSON array)
+  - GET /v1/articles/import/tasks/{task_id} (batch import progress)
+
+**Acceptance Criteria**:
+- POST /v1/articles/import accepts JSON and creates article
+- POST /v1/articles/import/batch accepts CSV file (multipart/form-data)
+- POST /v1/articles/import/batch accepts JSON array (application/json)
+- Batch endpoint returns task_id for async processing if > 50 articles
+- Returns article IDs, imported count, failed count, error details
+- Handles validation errors gracefully (returns 422 with details)
+- API documented in OpenAPI spec
+
+**File Paths**:
+- `backend/src/api/schemas/article_import.py`
+- `backend/src/api/routes/articles.py`
+- `backend/tests/api/test_article_import.py`
+
+---
+
+#### T1.7 Build File Storage Service
+
+**Description**: Implement abstraction for file storage supporting local filesystem (dev) and S3 (production)
+
+**Dependencies**: None (can run parallel)
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `backend/src/services/storage/base.py`:
+  - Abstract `FileStorage` base class
+  - Methods: upload(), download(), delete(), get_url(), list()
+- `backend/src/services/storage/local.py`:
+  - `LocalFileStorage` implementation
+  - Store files in `uploads/` directory
+  - Generate URLs like `/media/uploads/{filename}`
+- `backend/src/services/storage/s3.py`:
+  - `S3FileStorage` implementation
+  - Use boto3 to interact with S3 or MinIO
+  - Generate presigned URLs for secure access
+- `backend/src/services/storage/factory.py`:
+  - `StorageFactory.create()` returns appropriate storage based on env var
+
+**Acceptance Criteria**:
+- LocalFileStorage stores files in uploads/ directory
+- S3FileStorage uploads to configured S3 bucket
+- Both implementations pass same test suite
+- File URLs accessible via HTTP
+- Factory pattern allows switching storage via STORAGE_BACKEND env var
+- Supports image file types: jpg, jpeg, png, gif, webp
+
+**File Paths**:
+- `backend/src/services/storage/base.py`
+- `backend/src/services/storage/local.py`
+- `backend/src/services/storage/s3.py`
+- `backend/src/services/storage/factory.py`
+- `backend/tests/services/storage/test_storage.py`
+
+---
+
+#### T1.8 Implement Image Upload API
+
+**Description**: Create API endpoint for uploading article images (featured + additional)
+
+**Dependencies**: T1.7
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/src/api/routes/images.py`:
+  - POST /v1/images/upload (multipart/form-data)
+  - Returns image ID and URL
+  - Validates file type (jpg, jpeg, png, gif, webp)
+  - Validates file size (max 5MB)
+- `backend/src/services/image_processor.py`:
+  - Resize images if > 2000px width
+  - Generate thumbnail (300x300)
+  - Extract image metadata (dimensions, format)
+
+**Acceptance Criteria**:
+- API accepts image files up to 5MB
+- Only image types allowed (jpg, png, gif, webp)
+- Returns image URL immediately after upload
+- Images resized if > 2000px width
+- Generates thumbnails for all uploaded images
+- Handles upload failures gracefully
+
+**File Paths**:
+- `backend/src/api/routes/images.py`
+- `backend/src/services/image_processor.py`
+- `backend/tests/api/test_image_upload.py`
+
+---
+
+#### T1.9 Write Integration Tests
+
+**Description**: Comprehensive integration tests for article import workflow
+
+**Dependencies**: T1.6, T1.8
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/tests/integration/test_article_import_workflow.py`:
+  - Test 1: Import single article via API
+  - Test 2: Import CSV with 10 articles
+  - Test 3: Import JSON array with 5 articles
+  - Test 4: Upload featured image and attach to article
+  - Test 5: Duplicate detection (import same article twice)
+  - Test 6: Validation errors (invalid title, missing body)
+  - Test 7: HTML sanitization (submit XSS payload, verify cleaned)
+  - Test 8: Batch import with > 50 articles (async processing)
+
+**Acceptance Criteria**:
+- All 8 tests pass
+- Tests cover happy path and error cases
+- Integration tests use real database (test DB)
+- Tests clean up after themselves (rollback transactions)
+- Tests run in < 2 minutes total
+
+**File Paths**:
+- `backend/tests/integration/test_article_import_workflow.py`
+
+---
+
+#### T1.10 Documentation
+
+**Description**: Update documentation for article import feature
+
+**Dependencies**: T1.9 (all features implemented)
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- `specs/001-cms-automation/quickstart.md` (updated):
+  - Section: "Importing Articles from CSV"
+  - CSV format specification
+  - Example CSV file
+- `backend/README.md` (updated):
+  - Article import API endpoints
+  - Request/response examples
+- `specs/001-cms-automation/api-spec.yaml` (updated):
+  - OpenAPI spec for import endpoints
+
+**Acceptance Criteria**:
+- Documentation includes CSV format spec with example
+- API examples include curl commands
+- OpenAPI spec validates correctly
+
+**File Paths**:
+- `specs/001-cms-automation/quickstart.md`
+- `backend/README.md`
+- `specs/001-cms-automation/api-spec.yaml`
+
+---
+
+**Phase 1 Checkpoint**: ✅ Database extended, article import functional, can import 100 articles from CSV in < 5 minutes
+
+---
+
+## Phase 2: SEO Analysis Engine (1.5 weeks)
+
+**Goal**: Implement intelligent SEO metadata generation using Claude Messages API
+**Duration**: 1.5 weeks (Week 3-4)
+**Estimated Hours**: 52 hours
+**Status**: Not Started
+
+---
+
+### Week 3: SEO Analyzer Implementation
+
+#### T2.1 [P] Design SEO Analysis Prompt
+
+**Description**: Research and design optimized Claude prompt for SEO metadata generation
+
+**Dependencies**: None
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/src/services/seo_analyzer/prompts.py`:
+  - SEO analysis system prompt
+  - Few-shot examples (2-3 sample articles with expert metadata)
+  - Output format specification (JSON schema)
+- Prompt testing report:
+  - Tested with 10 diverse articles (news, blog, technical, product)
+  - Keyword accuracy: % match vs manual analysis
+  - Optimal temperature: 0.3 recommended
+  - Optimal model: claude-3-5-sonnet-20250101
+
+**Acceptance Criteria**:
+- Prompt consistently generates valid JSON output
+- Keyword extraction 85%+ accurate vs manual baseline (10 test articles)
+- Meta titles 100% within 50-60 character limit
+- Meta descriptions 100% within 150-160 character limit
+- Temperature 0.3 balances creativity and consistency
+
+**File Paths**:
+- `backend/src/services/seo_analyzer/prompts.py`
+- `specs/001-cms-automation/research.md` (updated with prompt design section)
+
+**Code Example** (`backend/src/services/seo_analyzer/prompts.py`):
+```python
+"""SEO analysis prompts for Claude."""
+
+SEO_ANALYSIS_SYSTEM_PROMPT = """You are an expert SEO consultant analyzing web content to extract optimal keywords and generate metadata.
+
+Your task is to analyze the provided article and generate comprehensive SEO metadata following these rules:
+
+1. **Focus Keyword**: Identify the ONE primary keyword or phrase (2-4 words) that best represents the article's core topic.
+
+2. **Primary Keywords** (3-5 keywords):
+   - Extract 3-5 highly relevant keywords or phrases
+   - These should appear naturally in the content
+   - Prioritize keywords with commercial intent or search volume
+
+3. **Secondary Keywords** (5-10 keywords):
+   - Extract 5-10 related keywords that support the focus keyword
+   - Include semantic variations and LSI (Latent Semantic Indexing) keywords
+   - Consider user intent and related search queries
+
+4. **Keyword Density**:
+   - Calculate how often each keyword appears in the article
+   - Format: {"keyword": {"count": N, "density": X.XX}}
+   - Density = (keyword_count / total_words) * 100
+
+5. **SEO Title** (50-60 characters):
+   - Must include the focus keyword
+   - Compelling and click-worthy
+   - Exactly 50-60 characters (strict requirement)
+
+6. **Meta Description** (150-160 characters):
+   - Must include the focus keyword
+   - Compelling call-to-action
+   - Exactly 150-160 characters (strict requirement)
+
+7. **Optimization Recommendations**:
+   - Provide 3-7 actionable recommendations to improve SEO
+   - Check for: keyword density issues, readability concerns, missing elements
+
+**Output Format** (JSON):
+```json
+{
+  "focus_keyword": "string",
+  "primary_keywords": ["keyword1", "keyword2", "keyword3"],
+  "secondary_keywords": ["keyword4", "keyword5", ...],
+  "keyword_density": {
+    "focus_keyword": {"count": 10, "density": 2.5}
+  },
+  "seo_title": "50-60 character title with focus keyword",
+  "meta_description": "150-160 character description with focus keyword and CTA",
+  "optimization_recommendations": [
+    "Recommendation 1",
+    "Recommendation 2"
+  ]
+}
+```
+
+Be precise, follow SEO best practices, and ensure all length constraints are met exactly."""
+
+
+def create_seo_analysis_prompt(title: str, body: str, word_count: int) -> str:
+    """Create user prompt for SEO analysis.
+
+    Args:
+        title: Article title
+        body: Article body (HTML or plain text)
+        word_count: Total word count
+
+    Returns:
+        Formatted prompt string
+    """
+    return f"""Analyze this article for SEO optimization:
+
+**Title**: {title}
+
+**Body** ({word_count} words):
+{body}
+
+**Instructions**:
+1. Extract focus keyword, primary keywords (3-5), and secondary keywords (5-10)
+2. Calculate keyword density for each keyword
+3. Generate SEO title (exactly 50-60 characters, must include focus keyword)
+4. Generate meta description (exactly 150-160 characters, must include focus keyword)
+5. Provide 3-7 specific optimization recommendations
+
+Return your analysis as JSON matching the specified format."""
+
+
+# Few-shot examples for improved accuracy
+FEW_SHOT_EXAMPLES = [
+    {
+        "title": "10 Best Practices for React Performance Optimization",
+        "body": "React is a powerful JavaScript library...",
+        "response": {
+            "focus_keyword": "React performance optimization",
+            "primary_keywords": ["React optimization", "React performance", "React best practices", "JavaScript performance"],
+            "secondary_keywords": ["component rendering", "useMemo hook", "useCallback", "code splitting", "lazy loading", "React DevTools"],
+            "keyword_density": {
+                "React performance optimization": {"count": 5, "density": 1.2},
+                "React optimization": {"count": 8, "density": 1.9}
+            },
+            "seo_title": "React Performance Optimization: 10 Best Practices",
+            "meta_description": "Discover 10 proven best practices for React performance optimization. Learn techniques like code splitting, memoization, and lazy loading to boost your app speed.",
+            "optimization_recommendations": [
+                "Add code examples for each best practice to increase content depth",
+                "Include performance benchmarks to demonstrate impact",
+                "Add internal links to related React tutorials",
+                "Increase focus keyword density to 2-3% (currently 1.2%)"
+            ]
+        }
+    }
+]
+```
+
+---
+
+#### T2.2 [P] Implement Basic Keyword Extraction
+
+**Description**: Implement TF-IDF-based keyword extraction as fallback/complement to Claude
+
+**Dependencies**: None
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `backend/src/services/seo_analyzer/tfidf_extractor.py`:
+  - Extract keywords using TF-IDF algorithm (scikit-learn)
+  - Remove stop words
+  - N-gram extraction (1-gram, 2-gram, 3-gram)
+  - Return top 20 keywords with scores
+- `backend/src/services/seo_analyzer/keyword_utils.py`:
+  - Calculate keyword density
+  - Count keyword occurrences (case-insensitive)
+  - Extract keywords from text
+
+**Acceptance Criteria**:
+- TF-IDF extractor returns relevant keywords for test articles
+- N-gram extraction captures multi-word phrases
+- Stop words filtered correctly
+- Keyword density calculations accurate (verified manually)
+- Processing 1500-word article in < 2 seconds
+
+**File Paths**:
+- `backend/src/services/seo_analyzer/tfidf_extractor.py`
+- `backend/src/services/seo_analyzer/keyword_utils.py`
+- `backend/tests/services/seo_analyzer/test_tfidf_extractor.py`
+
+---
+
+#### T2.3 Build SEO Analyzer Service
+
+**Description**: Core service orchestrating keyword extraction, metadata generation, and readability scoring
+
+**Dependencies**: T2.1 (prompt), T2.2 (TF-IDF)
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- `backend/src/services/seo_analyzer/analyzer.py`:
+  - Main `SEOAnalyzer` class
+  - Method: `analyze(article_id) -> SEOMetadata`
+  - Steps:
+    1. Load article from database
+    2. Extract TF-IDF keywords (fallback)
+    3. Call Claude Messages API with article content
+    4. Parse Claude response (JSON)
+    5. Validate output (length constraints, keyword counts)
+    6. Calculate readability score
+    7. Create SEOMetadata record in database
+    8. Return SEOMetadata object
+  - Error handling: Claude API failures, invalid JSON responses
+  - Cost tracking: log API usage and cost
+
+**Acceptance Criteria**:
+- Analyze 1500-word article in < 30 seconds
+- Cost per article < $0.10
+- 100% of outputs meet length constraints (50-60 chars title, 150-160 chars description)
+- Handles API failures gracefully (retry 3 times, fallback to TF-IDF if all fail)
+- Stores all metadata in database correctly
+- Unit tests cover happy path and error cases
+
+**File Paths**:
+- `backend/src/services/seo_analyzer/analyzer.py`
+- `backend/tests/services/seo_analyzer/test_analyzer.py`
+
+**Code Example** (`backend/src/services/seo_analyzer/analyzer.py`):
+```python
+"""SEO Analyzer service using Claude Messages API."""
+
+import json
+from typing import Dict, Any
+
+from anthropic import Anthropic
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from src.config import get_logger, get_settings
+from src.models import Article, SEOMetadata
+from src.services.seo_analyzer.prompts import (
+    SEO_ANALYSIS_SYSTEM_PROMPT,
+    create_seo_analysis_prompt,
+)
+from src.services.seo_analyzer.keyword_utils import calculate_keyword_density
+from src.services.seo_analyzer.readability import calculate_readability_score
+
+logger = get_logger(__name__)
+settings = get_settings()
+
+
+class SEOAnalyzer:
+    """Service for analyzing articles and generating SEO metadata."""
+
+    def __init__(self, session: AsyncSession):
+        """Initialize SEO analyzer.
+
+        Args:
+            session: Database session
+        """
+        self.session = session
+        self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+    async def analyze(self, article_id: int) -> SEOMetadata:
+        """Analyze article and generate SEO metadata.
+
+        Args:
+            article_id: Article ID to analyze
+
+        Returns:
+            SEOMetadata object
+
+        Raises:
+            ValueError: If article not found
+            Exception: If analysis fails
+        """
+        # Load article
+        result = await self.session.execute(
+            select(Article).where(Article.id == article_id)
+        )
+        article = result.scalar_one_or_none()
+
+        if not article:
+            raise ValueError(f"Article {article_id} not found")
+
+        logger.info(
+            "seo_analysis_started",
+            article_id=article_id,
+            title=article.title[:100],
+            word_count=article.word_count,
+        )
+
+        try:
+            # Create prompt
+            prompt = create_seo_analysis_prompt(
+                title=article.title,
+                body=article.body,
+                word_count=article.word_count,
+            )
+
+            # Call Claude API
+            response = self.client.messages.create(
+                model="claude-3-5-sonnet-20250101",
+                max_tokens=2000,
+                temperature=0.3,
+                system=SEO_ANALYSIS_SYSTEM_PROMPT,
+                messages=[
+                    {"role": "user", "content": prompt}
+                ],
+            )
+
+            # Parse response
+            content = response.content[0].text
+            seo_data = json.loads(content)
+
+            # Validate output
+            self._validate_seo_data(seo_data)
+
+            # Calculate readability score
+            readability = calculate_readability_score(article.body)
+
+            # Calculate cost
+            cost_usd = (
+                response.usage.input_tokens * 0.000003 +  # $3 per 1M input tokens
+                response.usage.output_tokens * 0.000015   # $15 per 1M output tokens
+            )
+
+            # Create SEO metadata record
+            seo_metadata = SEOMetadata(
+                article_id=article_id,
+                meta_title=seo_data["seo_title"],
+                meta_description=seo_data["meta_description"],
+                focus_keyword=seo_data["focus_keyword"],
+                primary_keywords=seo_data["primary_keywords"],
+                secondary_keywords=seo_data["secondary_keywords"],
+                keyword_density=seo_data["keyword_density"],
+                readability_score=readability,
+                optimization_recommendations=seo_data["optimization_recommendations"],
+                manual_overrides={},
+                generated_by=response.model,
+                generation_cost=cost_usd,
+                generation_tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+
+            self.session.add(seo_metadata)
+            await self.session.commit()
+            await self.session.refresh(seo_metadata)
+
+            # Update article status
+            article.status = "seo_optimized"
+            await self.session.commit()
+
+            logger.info(
+                "seo_analysis_completed",
+                article_id=article_id,
+                focus_keyword=seo_data["focus_keyword"],
+                cost_usd=cost_usd,
+                tokens=response.usage.input_tokens + response.usage.output_tokens,
+            )
+
+            return seo_metadata
+
+        except Exception as e:
+            logger.error(
+                "seo_analysis_failed",
+                article_id=article_id,
+                error=str(e),
+                exc_info=True,
+            )
+            raise
+
+    def _validate_seo_data(self, data: Dict[str, Any]) -> None:
+        """Validate SEO data from Claude.
+
+        Args:
+            data: SEO data dictionary
+
+        Raises:
+            ValueError: If validation fails
+        """
+        # Check required fields
+        required_fields = [
+            "focus_keyword", "primary_keywords", "secondary_keywords",
+            "keyword_density", "seo_title", "meta_description",
+            "optimization_recommendations"
+        ]
+        for field in required_fields:
+            if field not in data:
+                raise ValueError(f"Missing required field: {field}")
+
+        # Validate title length
+        title_len = len(data["seo_title"])
+        if not 50 <= title_len <= 60:
+            raise ValueError(f"SEO title length {title_len} not in range 50-60")
+
+        # Validate description length
+        desc_len = len(data["meta_description"])
+        if not 150 <= desc_len <= 160:
+            raise ValueError(f"Meta description length {desc_len} not in range 150-160")
+
+        # Validate keyword counts
+        if not 3 <= len(data["primary_keywords"]) <= 5:
+            raise ValueError(f"Primary keywords count must be 3-5, got {len(data['primary_keywords'])}")
+
+        if not 5 <= len(data["secondary_keywords"]) <= 10:
+            raise ValueError(f"Secondary keywords count must be 5-10, got {len(data['secondary_keywords'])}")
+```
+
+---
+
+#### T2.4 Implement Readability Scoring
+
+**Description**: Calculate Flesch-Kincaid readability score for articles
+
+**Dependencies**: None (can run parallel)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/src/services/seo_analyzer/readability.py`:
+  - Function: `calculate_readability_score(text: str) -> float`
+  - Implement Flesch-Kincaid Grade Level formula
   - Use pyphen library for syllable counting
-  - Target grade level: 8-12 (readable but professional)
-  - **Dependencies**: None
-  - **Est**: 3 hours
-  - **Acceptance**: Score 1500-word article in < 1 second, scores match manual calculations
+  - Return grade level (target: 8-12)
 
-- [ ] T314 [US3] ⏳ **Implement optimization recommendations generator** in backend/src/services/seo_analyzer/recommendations_generator.py:
-  - Check title length (warn if > 60 chars)
-  - Check description length (warn if > 160 chars)
-  - Check keyword density (warn if focus keyword < 0.5% or > 3%)
-  - Check readability (warn if grade level < 8 or > 14)
-  - Check image alt tags (if article has images)
-  - Return array of actionable recommendations
-  - **Dependencies**: T311-T313
-  - **Est**: 4 hours
-  - **Acceptance**: Generate 3-7 relevant recommendations per article, tested on 20 diverse articles
+**Acceptance Criteria**:
+- Readability score matches manual calculations (tested on 5 sample texts)
+- Processes 1500-word article in < 1 second
+- Handles edge cases (very short text, no punctuation)
+- Passes unit tests
 
-- [ ] T315 [US3] ⏳ **Implement SEO Analyzer orchestrator** in backend/src/services/seo_analyzer/analyzer.py:
-  - Method: `analyze_article(article_id) -> SEOMetadata`
-  - Orchestrate: keyword extraction → metadata generation → readability scoring → recommendations
-  - Create SEOMetadata record in database
-  - Update article.seo_optimized = TRUE
-  - Return complete SEO metadata object
-  - **Dependencies**: T311-T314, T306 (DB ready)
-  - **Est**: 5 hours
-  - **Acceptance**: Complete analysis of 1500-word article in < 30 seconds, all fields populated correctly
+**File Paths**:
+- `backend/src/services/seo_analyzer/readability.py`
+- `backend/tests/services/seo_analyzer/test_readability.py`
 
-- [ ] T316 [US3] ⏳ **Implement batch SEO analysis** in backend/src/services/seo_analyzer/batch_analyzer.py:
-  - Method: `analyze_batch(article_ids: List[int]) -> BatchResult`
-  - Process articles in parallel (using Celery tasks)
-  - Track progress for each article
-  - Return summary: {total, completed, failed, errors}
-  - **Dependencies**: T315
-  - **Est**: 4 hours
-  - **Acceptance**: Analyze 100 articles in < 50 minutes (30s each), handle failures gracefully
+---
 
-- [ ] T317 [P] [US3] ⏳ **Implement manual override tracking** in backend/src/services/seo_analyzer/override_tracker.py:
-  - Method: `record_override(seo_metadata_id, field, old_value, new_value, editor_id, reason)`
-  - Append to manual_overrides JSONB array with timestamp
-  - Update seo_metadata.updated_at
-  - Track which fields were edited by humans
-  - **Dependencies**: T306 (DB ready)
-  - **Est**: 3 hours
-  - **Acceptance**: Override records stored correctly, history preserved
+#### T2.5 Build SEO API Endpoints
 
-- [ ] T318 [US3] ⏳ **Create Celery task for async SEO analysis** in backend/src/workers/tasks/analyze_seo.py:
-  - Wrapper for SEO Analyzer
-  - Progress tracking (update task status)
-  - Error handling with retry (max 3 attempts)
-  - Update article status: draft → seo_optimizing → seo_complete
-  - **Dependencies**: T315
-  - **Est**: 3 hours
-  - **Acceptance**: Task completes successfully, retries on transient errors, updates article status
+**Description**: Create FastAPI endpoints for SEO analysis operations
 
-#### SEO API Endpoints (T319-T323)
+**Dependencies**: T2.3 (analyzer ready)
 
-- [ ] T319 [P] [US3] ⏳ **Create SEOMetadata schemas** in backend/src/api/schemas/seo_metadata.py:
-  - Schema: SEOMetadataCreate, SEOMetadataUpdate, SEOMetadataResponse
-  - Include all fields: seo_title, meta_description, keywords, density, recommendations
-  - Validation: title 50-60 chars, description 150-160 chars
-  - **Dependencies**: None
-  - **Est**: 2 hours
-  - **Acceptance**: Schemas validate correctly, match DB model
+**Estimated Hours**: 6 hours
 
-- [ ] T320 [US3] ⏳ **Implement POST /v1/seo/analyze/{article_id}** endpoint in backend/src/api/routes/seo.py:
-  - Trigger SEO analysis for specific article
-  - Return task_id for async tracking OR immediate result if sync
-  - Check article exists and is not already seo_optimized (or allow re-analysis)
-  - **Dependencies**: T318 (Celery task), T319 (schemas)
-  - **Est**: 3 hours
-  - **Acceptance**: Endpoint triggers analysis, returns task_id, handles errors (article not found, etc.)
+**Deliverables**:
+- `backend/src/api/routes/seo.py`:
+  - POST /v1/seo/analyze/{article_id} - Trigger analysis
+  - GET /v1/seo/analyze/{article_id}/status - Check analysis status
+  - GET /v1/seo/metadata/{article_id} - Retrieve metadata
+  - PUT /v1/seo/metadata/{article_id} - Update metadata (manual edits)
+  - POST /v1/seo/analyze/batch - Batch analysis
+- `backend/src/api/schemas/seo.py`:
+  - SEOAnalysisRequest
+  - SEOMetadataResponse
+  - SEOMetadataUpdateRequest
+  - BatchAnalysisRequest
 
-- [ ] T321 [US3] ⏳ **Implement GET /v1/seo/metadata/{article_id}** endpoint in backend/src/api/routes/seo.py:
-  - Retrieve SEO metadata for article
-  - Return 404 if not analyzed yet
-  - Include manual_overrides in response
-  - **Dependencies**: T319 (schemas)
-  - **Est**: 2 hours
-  - **Acceptance**: Returns metadata correctly, handles missing data
+**Acceptance Criteria**:
+- All endpoints documented in OpenAPI spec
+- POST /v1/seo/analyze triggers async analysis (returns task_id)
+- GET /v1/seo/metadata returns complete metadata
+- PUT /v1/seo/metadata allows editing title, description, focus keyword
+- Batch endpoint limits to 1000 articles
+- Error handling (article not found, analysis failed)
 
-- [ ] T322 [US3] ⏳ **Implement PUT /v1/seo/metadata/{article_id}** endpoint in backend/src/api/routes/seo.py:
-  - Allow manual editing of SEO fields
-  - Accept: seo_title, meta_description, focus_keyword (only these editable)
-  - Record override using T317 override tracker
-  - **Dependencies**: T317 (override tracker), T319 (schemas)
-  - **Est**: 3 hours
-  - **Acceptance**: Updates saved, overrides tracked, validation enforced
+**File Paths**:
+- `backend/src/api/routes/seo.py`
+- `backend/src/api/schemas/seo.py`
+- `backend/tests/api/test_seo_endpoints.py`
 
-- [ ] T323 [US3] ⏳ **Implement POST /v1/seo/analyze/batch** endpoint in backend/src/api/routes/seo.py:
-  - Accept list of article_ids OR filter (e.g., all articles with seo_optimized=FALSE)
-  - Trigger batch analysis using T316
-  - Return batch_task_id for progress tracking
-  - **Dependencies**: T316 (batch analyzer)
-  - **Est**: 3 hours
-  - **Acceptance**: Triggers batch analysis, returns task_id, limits batch size to 1000
+---
 
-#### SEO Testing (T324-T325)
+#### T2.6 Create Celery SEO Tasks
 
-- [ ] T324 [US3] ⏳ **Create SEO accuracy benchmark test** in backend/tests/services/seo_analyzer/test_accuracy.py:
-  - Collect 20 test articles with expert-written SEO metadata (baseline)
+**Description**: Implement Celery task for async SEO analysis
+
+**Dependencies**: T2.5
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/src/workers/tasks/analyze_seo.py`:
+  - Celery task: `analyze_seo_task(article_id: int)`
+  - Wrapper around SEOAnalyzer
+  - Progress tracking
+  - Error handling with retry (max 3 attempts, exponential backoff)
+  - Update article status throughout
+
+**Acceptance Criteria**:
+- Task processes article successfully
+- Retries on transient errors (API timeout, rate limit)
+- Does not retry on permanent errors (article not found, validation failure)
+- Updates article status: draft → seo_analyzing → seo_optimized
+- Task tracked in Celery/Flower dashboard
+
+**File Paths**:
+- `backend/src/workers/tasks/analyze_seo.py`
+- `backend/tests/workers/test_analyze_seo.py`
+
+---
+
+### Week 3.5: Testing & Validation
+
+#### T2.7 Build SEO Validation Suite
+
+**Description**: Create comprehensive validation tests with expert baseline
+
+**Dependencies**: T2.6
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/tests/validation/seo_accuracy_test.py`:
+  - 20 test articles with expert-written SEO metadata (baseline)
   - Run SEO analyzer on each article
-  - Compare keywords: count matches / total * 100 (target: 85%+)
-  - Report accuracy metrics
-  - **Dependencies**: T315 (analyzer ready)
-  - **Est**: 6 hours
-  - **Acceptance**: Accuracy report generated, 85%+ keyword match vs expert baseline
+  - Compare AI-generated keywords vs expert keywords
+  - Calculate accuracy: matching keywords / total keywords * 100
+  - Generate report with accuracy metrics
+  - Target: ≥85% keyword match rate
 
-- [ ] T325 [US3] ⏳ **Create SEO performance test** in backend/tests/services/seo_analyzer/test_performance.py:
-  - Test analysis duration for various article lengths (500, 1000, 1500, 2000 words)
-  - Verify 95% of articles analyzed in < 30 seconds
-  - Test batch processing (100 articles in < 50 minutes)
-  - **Dependencies**: T315 (analyzer), T316 (batch)
-  - **Est**: 4 hours
-  - **Acceptance**: Performance SLA met, no degradation with load
+**Acceptance Criteria**:
+- 20 diverse test articles collected (news, blog, technical, product, how-to)
+- Expert baseline metadata for all 20 articles
+- Accuracy report generated
+- ≥85% keyword match rate achieved
+- Report includes:
+  - Overall accuracy
+  - Per-article accuracy
+  - Common mismatches
+  - Recommendations for prompt improvement
 
-**Week 3-4 Checkpoint**: SEO analysis working, 85%+ accuracy, < 30s per article, batch processing functional
+**File Paths**:
+- `backend/tests/validation/seo_accuracy_test.py`
+- `backend/tests/validation/test_articles.json` (20 articles with expert metadata)
+- `backend/tests/validation/accuracy_report.md` (generated report)
 
 ---
 
-### Week 5-7: Computer Use Integration (17 tasks)
+#### T2.8 Unit Tests
 
-#### Computer Use Publisher Service (T326-T335)
+**Description**: Comprehensive unit tests for SEO analysis components
 
-- [ ] T326 [P] [US4] ⏳ **Setup Chrome/Chromium environment** for Computer Use:
-  - Install Chrome/Chromium in Docker container
-  - Configure headless mode
-  - Setup sandbox environment (isolated from host)
-  - Test basic Claude Computer Use API connectivity
-  - **Dependencies**: None
-  - **Est**: 4 hours
-  - **Acceptance**: Chrome launches in container, Computer Use API can control it
+**Dependencies**: T2.3-T2.6
 
-- [ ] T327 [P] [US4] ⏳ **Implement WordPress login automation** in backend/src/services/computer_use_publisher/wordpress_login.py:
-  - Method: `login(url, username, password) -> Session`
-  - Navigate to /wp-admin
-  - Fill username and password fields
-  - Click login button
-  - Verify success (check for dashboard URL or welcome message)
-  - Capture screenshot: login_success.png
-  - Handle failures: wrong credentials (retry 3 times), CAPTCHA (fail and alert)
-  - **Dependencies**: T326 (Chrome ready)
-  - **Est**: 6 hours
-  - **Acceptance**: Successfully logs into test WordPress, captures screenshot, handles login failures
+**Estimated Hours**: 4 hours
 
-- [ ] T328 [US4] ⏳ **Implement post creation workflow** in backend/src/services/computer_use_publisher/post_creator.py:
-  - Method: `create_post(session) -> PostEditor`
-  - Navigate to /wp-admin/post-new.php
-  - Wait for editor to load (Gutenberg or Classic)
-  - Detect editor type (check for .block-editor vs .wp-editor)
-  - Return editor context
-  - Capture screenshot: editor_loaded.png
-  - **Dependencies**: T327 (logged in session)
-  - **Est**: 4 hours
-  - **Acceptance**: Navigates to new post, detects editor type, screenshot captured
+**Deliverables**:
+- Unit tests for all SEO analyzer components:
+  - `test_tfidf_extractor.py`
+  - `test_keyword_utils.py`
+  - `test_readability.py`
+  - `test_analyzer.py`
+- Target: 90%+ code coverage
 
-- [ ] T329 [US4] ⏳ **Implement content filling** in backend/src/services/computer_use_publisher/content_filler.py:
-  - Method: `fill_content(editor, title, body) -> None`
-  - Fill title field (usually #post-title-0 or .editor-post-title__input)
-  - Fill body content (Gutenberg: add paragraph blocks, Classic: paste into editor)
-  - Handle HTML formatting (preserve headings, lists, bold, italic)
-  - Verify content filled (check field values)
-  - Capture screenshot: content_filled.png
-  - **Dependencies**: T328 (post created)
-  - **Est**: 6 hours
-  - **Acceptance**: Title and body filled correctly, HTML formatting preserved, screenshot shows filled content
+**Acceptance Criteria**:
+- All unit tests pass
+- Code coverage ≥90% for seo_analyzer package
+- Tests cover edge cases (empty content, very long content, special characters)
+- Mock Claude API in tests (use pytest-mock)
 
-- [ ] T330 [US4] ⏳ **Implement image upload automation** in backend/src/services/computer_use_publisher/image_uploader.py:
-  - Method: `upload_featured_image(session, image_url) -> ImageID`
-  - Click "Set featured image" button
-  - Navigate to Upload tab
-  - Download image from URL to temp file
-  - Upload file via file input
-  - Wait for upload complete
-  - Select uploaded image
-  - Set as featured image
-  - Capture screenshot: image_uploaded.png
-  - **Dependencies**: T328 (post created)
-  - **Est**: 8 hours
-  - **Acceptance**: Featured image uploaded and set, handles multiple images, screenshot verification
+**File Paths**:
+- `backend/tests/services/seo_analyzer/test_*.py`
 
-- [ ] T331 [US4] ⏳ **Implement SEO plugin field population** in backend/src/services/computer_use_publisher/seo_plugin_filler.py:
-  - Method: `fill_yoast_seo(seo_metadata) -> None` (for Yoast SEO)
-  - Method: `fill_rankmath_seo(seo_metadata) -> None` (for Rank Math)
-  - Detect installed SEO plugin (check for plugin meta boxes)
-  - Fill SEO title field
-  - Fill meta description field
-  - Fill focus keyword field
-  - Add primary keywords (tags or separate field depending on plugin)
-  - Capture screenshot: seo_fields_filled.png
-  - **Dependencies**: T328 (post created)
-  - **Est**: 8 hours (most critical and complex)
-  - **Acceptance**: SEO fields populated correctly for both Yoast and Rank Math, screenshot shows filled fields
+---
 
-- [ ] T332 [US4] ⏳ **Implement category and tag assignment** in backend/src/services/computer_use_publisher/taxonomy_setter.py:
-  - Method: `set_categories(categories: List[str]) -> None`
-  - Method: `set_tags(tags: List[str]) -> None`
-  - Open category panel (usually in sidebar)
-  - Check existing categories or create new
-  - Open tag panel
-  - Type tags (comma-separated) or add individually
-  - Capture screenshot: taxonomy_set.png
-  - **Dependencies**: T328 (post created)
-  - **Est**: 5 hours
-  - **Acceptance**: Categories and tags assigned, new ones created if needed, screenshot verification
+#### T2.9 Performance Optimization
 
-- [ ] T333 [US4] ⏳ **Implement publish action** in backend/src/services/computer_use_publisher/publisher.py:
-  - Method: `publish_post(session) -> PostURL`
-  - Click "Publish" button (may require 2 clicks in Gutenberg)
-  - Wait for success notification
-  - Extract post ID from URL or response
-  - Navigate to live post URL
-  - Verify post is published (check for content visibility)
-  - Capture screenshots: publish_clicked.png, article_live.png
-  - **Dependencies**: T329-T332 (all content filled)
-  - **Est**: 5 hours
-  - **Acceptance**: Post published successfully, post ID retrieved, live URL verified, screenshots captured
+**Description**: Optimize SEO analysis for speed and cost
 
-- [ ] T334 [US4] ⏳ **Implement retry logic with exponential backoff** in backend/src/services/computer_use_publisher/retry_handler.py:
-  - Detect transient failures: network timeout, element not found (temporary), slow loading
-  - Retry strategy: 10s delay → 30s delay → 90s delay (max 3 retries)
-  - Track retry count in publish_tasks table
-  - Log each retry attempt to execution_logs
-  - Stop retrying on permanent failures: login failure after 3 attempts, post already published
-  - **Dependencies**: None (used by all previous tasks)
-  - **Est**: 4 hours
-  - **Acceptance**: Retries transient errors correctly, exponential backoff working, permanent errors fail fast
+**Dependencies**: T2.8
 
-- [ ] T335 [US4] ⏳ **Implement Computer Use Publisher orchestrator** in backend/src/services/computer_use_publisher/publisher_service.py:
-  - Method: `publish_article(article_id) -> PublishResult`
-  - Orchestrate full workflow:
-    1. Login (T327)
-    2. Create post (T328)
-    3. Fill content (T329)
-    4. Upload images if present (T330)
-    5. Fill SEO fields (T331)
-    6. Set categories/tags (T332)
-    7. Publish (T333)
-  - Log each step to execution_logs table
-  - Capture all 8 screenshots
-  - Store screenshots to S3/local storage
-  - Update publish_tasks status throughout
-  - Handle errors at each step with retry logic (T334)
-  - Return: {success: bool, post_id: str, post_url: str, duration_seconds: int, screenshots: List}
-  - **Dependencies**: T327-T334
-  - **Est**: 8 hours
-  - **Acceptance**: Complete workflow executes successfully, all screenshots captured, errors handled gracefully
+**Estimated Hours**: 4 hours
 
-#### Execution Logging & Storage (T336-T338)
+**Deliverables**:
+- Performance improvements:
+  - Cache TF-IDF extractor results (Redis)
+  - Batch multiple article analyses in single Claude API call (if possible)
+  - Optimize database queries (select only needed fields)
+- Performance benchmarks:
+  - 500-word article: < 20 seconds
+  - 1000-word article: < 25 seconds
+  - 1500-word article: < 30 seconds
+  - 2000-word article: < 35 seconds
+- Cost optimization:
+  - Average cost per article: < $0.10
 
-- [ ] T336 [P] [US4] ⏳ **Implement execution logging service** in backend/src/services/computer_use_publisher/execution_logger.py:
-  - Method: `log_action(task_id, action, target_element, payload, result) -> LogID`
-  - Insert into execution_logs table (automatically partitioned by month)
-  - Include timestamp, action type, target element, payload (JSONB), result (success/failure/retry)
-  - Never log WordPress credentials (sanitize payload)
-  - **Dependencies**: T304 (execution_logs table ready)
-  - **Est**: 3 hours
-  - **Acceptance**: Logs inserted correctly into current month partition, credentials never logged
+**Acceptance Criteria**:
+- 95% of articles analyzed within SLA (< 30s)
+- Average cost < $0.10 per article
+- Caching reduces duplicate analysis costs
+- Performance report generated
 
-- [ ] T337 [P] [US4] ⏳ **Implement screenshot storage service** in backend/src/services/computer_use_publisher/screenshot_storage.py:
-  - Method: `store_screenshot(task_id, step_name, screenshot_data) -> URL`
-  - Support local filesystem storage (default for dev)
-  - Support S3-compatible storage (MinIO or AWS S3 for production)
-  - Filename format: `screenshots/task_{task_id}/{step_name}_{timestamp}.png`
+**File Paths**:
+- `backend/src/services/seo_analyzer/cache.py` (caching logic)
+- `backend/tests/performance/test_seo_performance.py`
+- `backend/tests/performance/seo_performance_report.md`
+
+---
+
+**Phase 2 Checkpoint**: ✅ SEO analysis working, 85%+ accuracy, < 30s per article, < $0.10 cost
+
+---
+
+## Phase 3: Multi-Provider Computer Use Framework (3 weeks)
+
+**Goal**: Implement abstract provider pattern for Computer Use with 3 providers (Anthropic, Gemini, Playwright)
+**Duration**: 3 weeks (Week 4-6)
+**Estimated Hours**: 94 hours
+**Status**: Not Started
+
+---
+
+### Week 4: Provider Interface & Anthropic Implementation
+
+#### T3.1 [P] Design Provider Abstraction
+
+**Description**: Design abstract base class and data structures for multi-provider Computer Use
+
+**Dependencies**: None
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/src/services/computer_use/base.py`:
+  - Abstract `ComputerUseProvider` base class with methods:
+    - `execute(instructions, context) -> ExecutionResult`
+    - `navigate(url) -> ExecutionStep`
+    - `type_text(selector, text) -> ExecutionStep`
+    - `click(selector) -> ExecutionStep`
+    - `upload_file(selector, file_path) -> ExecutionStep`
+    - `screenshot(name) -> str`
+    - `cleanup() -> None`
+  - Data classes:
+    - `ComputerUseConfig` (provider_type, credentials, options)
+    - `ExecutionStep` (action, target, payload, result, screenshot_path, timestamp)
+    - `ExecutionResult` (success, steps, error, post_url, post_id, duration)
+    - `ProviderType` enum (anthropic, gemini, playwright)
+
+**Acceptance Criteria**:
+- Abstract base class defines complete interface
+- All methods have clear docstrings
+- Data classes use dataclasses or Pydantic
+- Type hints complete (passes mypy)
+- Design reviewed and approved
+
+**File Paths**:
+- `backend/src/services/computer_use/base.py`
+
+**Code Example** (`backend/src/services/computer_use/base.py`):
+```python
+"""Computer Use provider abstraction."""
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+
+class ProviderType(str, Enum):
+    """Computer Use provider types."""
+
+    ANTHROPIC = "anthropic"
+    GEMINI = "gemini"
+    PLAYWRIGHT = "playwright"
+
+
+@dataclass
+class ComputerUseConfig:
+    """Configuration for Computer Use provider."""
+
+    provider_type: ProviderType
+    cms_url: str
+    cms_username: str
+    cms_password: str
+    cms_type: str = "wordpress"
+    headless: bool = True
+    timeout: int = 300000  # 5 minutes
+    screenshot_dir: str = "screenshots"
+    options: Dict[str, Any] = None
+
+
+@dataclass
+class ExecutionStep:
+    """Single execution step in Computer Use workflow."""
+
+    action: str  # navigate, click, type, upload, screenshot, verify, wait
+    target: Optional[str] = None  # Element selector or URL
+    payload: Optional[Dict[str, Any]] = None  # Additional data
+    result: str = "pending"  # pending, success, failure, retry
+    screenshot_path: Optional[str] = None
+    error: Optional[str] = None
+    timestamp: datetime = None
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.utcnow()
+
+
+@dataclass
+class ExecutionResult:
+    """Complete execution result."""
+
+    success: bool
+    steps: List[ExecutionStep]
+    post_url: Optional[str] = None
+    post_id: Optional[str] = None
+    duration_seconds: int = 0
+    error: Optional[str] = None
+    cost_usd: Optional[float] = None
+
+
+class ComputerUseProvider(ABC):
+    """Abstract base class for Computer Use providers."""
+
+    def __init__(self, config: ComputerUseConfig):
+        """Initialize provider.
+
+        Args:
+            config: Provider configuration
+        """
+        self.config = config
+        self.steps: List[ExecutionStep] = []
+
+    @abstractmethod
+    async def execute(
+        self,
+        instructions: str,
+        context: Dict[str, Any]
+    ) -> ExecutionResult:
+        """Execute high-level instructions (used by AI providers).
+
+        Args:
+            instructions: Natural language instructions
+            context: Execution context (article data, SEO metadata, etc.)
+
+        Returns:
+            ExecutionResult with all steps and final result
+        """
+        pass
+
+    @abstractmethod
+    async def navigate(self, url: str) -> ExecutionStep:
+        """Navigate to URL.
+
+        Args:
+            url: Target URL
+
+        Returns:
+            ExecutionStep for navigation
+        """
+        pass
+
+    @abstractmethod
+    async def type_text(self, selector: str, text: str) -> ExecutionStep:
+        """Type text into element.
+
+        Args:
+            selector: Element selector (CSS or XPath)
+            text: Text to type
+
+        Returns:
+            ExecutionStep for typing
+        """
+        pass
+
+    @abstractmethod
+    async def click(self, selector: str) -> ExecutionStep:
+        """Click element.
+
+        Args:
+            selector: Element selector
+
+        Returns:
+            ExecutionStep for click
+        """
+        pass
+
+    @abstractmethod
+    async def upload_file(self, selector: str, file_path: str) -> ExecutionStep:
+        """Upload file to element.
+
+        Args:
+            selector: File input selector
+            file_path: Path to file
+
+        Returns:
+            ExecutionStep for upload
+        """
+        pass
+
+    @abstractmethod
+    async def screenshot(self, name: str) -> str:
+        """Take screenshot.
+
+        Args:
+            name: Screenshot name
+
+        Returns:
+            Path to screenshot file
+        """
+        pass
+
+    @abstractmethod
+    async def cleanup(self) -> None:
+        """Cleanup resources (close browser, etc.)."""
+        pass
+
+    def add_step(self, step: ExecutionStep) -> None:
+        """Add execution step to history.
+
+        Args:
+            step: Execution step
+        """
+        self.steps.append(step)
+```
+
+---
+
+#### T3.2 Implement Anthropic Provider
+
+**Description**: Implement Computer Use provider using Anthropic's API
+
+**Dependencies**: T3.1
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- `backend/src/services/computer_use/anthropic_provider.py`:
+  - `AnthropicComputerUseProvider` class extending `ComputerUseProvider`
+  - Implement all abstract methods
+  - Use `client.beta.messages.create()` with `computer_20241022` tool
+  - Handle AI responses and extract structured actions
+  - Screenshot capture at each major step
+  - Cost tracking (input/output tokens)
+- High-level WordPress publishing logic:
+  - Login → Create Post → Fill Content → Upload Images → Set SEO → Publish
+
+**Acceptance Criteria**:
+- Provider successfully logs into test WordPress
+- Creates and publishes post with all content
+- Captures 8+ screenshots
+- Tracks API cost accurately
+- Handles errors and retries
+- Passes integration tests with sandbox WordPress
+
+**File Paths**:
+- `backend/src/services/computer_use/anthropic_provider.py`
+- `backend/tests/services/computer_use/test_anthropic_provider.py`
+
+---
+
+#### T3.3 Build Prompt Template System
+
+**Description**: Create reusable prompt templates for WordPress operations
+
+**Dependencies**: T3.2
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/src/services/computer_use/prompts.py`:
+  - Template: `WORDPRESS_LOGIN_PROMPT`
+  - Template: `CREATE_POST_PROMPT`
+  - Template: `FILL_CONTENT_PROMPT`
+  - Template: `UPLOAD_IMAGE_PROMPT`
+  - Template: `SET_SEO_PROMPT` (Yoast & Rank Math variants)
+  - Template: `PUBLISH_POST_PROMPT`
+  - Function: `render_prompt(template, context)` - Jinja2 rendering
+
+**Acceptance Criteria**:
+- All templates tested with sample data
+- Templates render correctly with Jinja2
+- Context variables documented
+- Templates include error handling instructions
+
+**File Paths**:
+- `backend/src/services/computer_use/prompts.py`
+- `backend/tests/services/computer_use/test_prompts.py`
+
+---
+
+#### T3.4 Implement Screenshot Management
+
+**Description**: Implement screenshot capture, storage, and retrieval
+
+**Dependencies**: T1.7 (storage service)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/src/services/computer_use/screenshot_manager.py`:
+  - Method: `capture(step_name, browser_screenshot_data) -> str`
+  - Store screenshots using FileStorage service
+  - Generate URLs for screenshot access
+  - Naming convention: `task_{task_id}/{step_name}_{timestamp}.png`
   - Store URLs in publish_tasks.screenshots JSONB
-  - **Dependencies**: None
-  - **Est**: 4 hours
-  - **Acceptance**: Screenshots stored to configured backend, URLs returned correctly, accessible via HTTP
 
-- [ ] T338 [US4] ⏳ **Implement credential sanitization** in backend/src/services/computer_use_publisher/credential_sanitizer.py:
-  - Method: `sanitize_payload(payload: dict) -> dict`
-  - Remove keys: password, secret, token, api_key, credential
-  - Redact values: replace with "***REDACTED***"
-  - Never log CMS_PASSWORD in any logs or screenshots
-  - **Dependencies**: None
-  - **Est**: 2 hours
-  - **Acceptance**: All credential fields removed from logs, tested with various payloads
+**Acceptance Criteria**:
+- Screenshots stored correctly (local dev, S3 production)
+- URLs generated and accessible via HTTP
+- Screenshot filenames follow naming convention
+- Screenshot metadata stored in database
 
-#### Publishing API Endpoints (T339-T342)
-
-- [ ] T339 [P] [US4] ⏳ **Create PublishTask schemas** in backend/src/api/schemas/publish_task.py:
-  - Schema: PublishTaskCreate, PublishTaskResponse, PublishTaskUpdate
-  - Include: task_id, article_id, status, screenshots, retry_count, error_message, duration_seconds
-  - **Dependencies**: None
-  - **Est**: 2 hours
-  - **Acceptance**: Schemas match DB model, validation working
-
-- [ ] T340 [US4] ⏳ **Implement POST /v1/publish/submit** endpoint in backend/src/api/routes/publish.py:
-  - Accept article_id in request body
-  - Validate article exists and has SEO metadata
-  - Create publish_task in database (status='pending')
-  - Trigger Computer Use Publisher Celery task (T342)
-  - Return task_id for tracking
-  - **Dependencies**: T339 (schemas), T303 (publish_tasks table)
-  - **Est**: 3 hours
-  - **Acceptance**: Creates task, triggers async publishing, returns task_id
-
-- [ ] T341 [US4] ⏳ **Implement GET /v1/publish/tasks/{task_id}** endpoint in backend/src/api/routes/publish.py:
-  - Retrieve publish task by ID
-  - Return status, progress, error_message if failed
-  - Include screenshot URLs
-  - Include duration_seconds if completed
-  - **Dependencies**: T339 (schemas)
-  - **Est**: 2 hours
-  - **Acceptance**: Returns task details, handles missing tasks (404)
-
-- [ ] T342 [US4] ⏳ **Create Celery task for async publishing** in backend/src/workers/tasks/publish_article.py:
-  - Wrapper for Computer Use Publisher (T335)
-  - Update publish_task status: pending → in_progress → completed/failed
-  - Track progress for each step
-  - Store screenshots to S3/local
-  - Log all actions to execution_logs
-  - Update article.cms_article_id with WordPress post ID
-  - Update article.published_at timestamp
-  - Send notification on completion/failure
-  - **Dependencies**: T335 (publisher ready), T336 (logging), T337 (storage)
-  - **Est**: 5 hours
-  - **Acceptance**: Task completes successfully, updates all fields, handles failures with retry
-
-**Week 5-7 Checkpoint**: Computer Use publishing working, 8 screenshots captured, success rate 95%+
+**File Paths**:
+- `backend/src/services/computer_use/screenshot_manager.py`
+- `backend/tests/services/computer_use/test_screenshot_manager.py`
 
 ---
 
-### Week 8: Integration Testing & Optimization (4 tasks)
+### Week 5: Playwright Provider & Factory
 
-#### E2E Fusion Workflow Tests (T343-T346)
+#### T3.5 Implement Playwright Provider
 
-- [ ] T343 [Phase 5] ⏳ **E2E Test 1: AI Generation → SEO → Publishing** in backend/tests/e2e/test_fusion_ai_workflow.py:
-  - Step 1: Submit topic via POST /v1/topics
-  - Step 2: Wait for article generation (poll GET /v1/topics/{id})
-  - Step 3: Trigger SEO analysis POST /v1/seo/analyze/{article_id}
-  - Step 4: Verify SEO metadata GET /v1/seo/metadata/{article_id}
-  - Step 5: Submit publish task POST /v1/publish/submit
-  - Step 6: Wait for publishing (poll GET /v1/publish/tasks/{task_id})
-  - Step 7: Verify WordPress post published (check post URL)
-  - Step 8: Verify all 8 screenshots captured
-  - **Dependencies**: T310 (import), T323 (SEO API), T342 (publish task)
-  - **Est**: 6 hours
-  - **Acceptance**: Complete workflow passes, article published to WordPress, all steps verified
+**Description**: Implement traditional browser automation provider using Playwright
 
-- [ ] T344 [Phase 5] ⏳ **E2E Test 2: Import → SEO → Publishing** in backend/tests/e2e/test_fusion_import_workflow.py:
-  - Step 1: Import article from CSV POST /v1/articles/import
-  - Step 2: Verify article imported with source='imported'
-  - Step 3-8: Same as T343 (SEO → Publishing)
-  - Verify imported articles work through full pipeline
-  - **Dependencies**: T310 (import), T323 (SEO API), T342 (publish task)
-  - **Est**: 5 hours
-  - **Acceptance**: Imported article published successfully, no errors specific to imported content
+**Dependencies**: T3.1
 
-- [ ] T345 [Phase 5] ⏳ **E2E Test 3: Concurrent publishing (3+ tasks)** in backend/tests/e2e/test_concurrent_publishing.py:
-  - Create 3 articles (AI-generated or imported)
-  - Trigger SEO analysis for all 3 in parallel
-  - Submit all 3 for publishing simultaneously
-  - Verify all 3 publish successfully
-  - Check for race conditions, resource conflicts
-  - **Dependencies**: T342 (publish task)
-  - **Est**: 5 hours
-  - **Acceptance**: All 3 articles publish successfully, no conflicts, screenshots for all tasks
+**Estimated Hours**: 16 hours
 
-- [ ] T346 [Phase 5] ⏳ **Performance optimization and benchmarking** in backend/tests/performance/:
-  - Database query optimization: EXPLAIN ANALYZE all SEO and publishing queries
-  - API response time tuning: p95 < 500ms for all endpoints
-  - Celery worker scaling: test with 10 concurrent tasks
-  - Screenshot storage optimization: test S3 upload speeds
-  - Generate performance report
-  - **Dependencies**: All Phase 5 tasks
-  - **Est**: 8 hours (includes optimization work)
-  - **Acceptance**: All SLAs met (SEO < 30s, publishing < 5min, API < 500ms), performance report generated
+**Deliverables**:
+- `backend/src/services/computer_use/playwright_provider.py`:
+  - `PlaywrightProvider` class extending `ComputerUseProvider`
+  - Implement all abstract methods using Playwright API
+  - WordPress-specific selectors:
+    - Login: `#user_login`, `#user_pass`, `#wp-submit`
+    - New Post: `.page-title-action` (Add New button)
+    - Title: `.editor-post-title__input` or `#post-title-0`
+    - Content: `.block-editor-rich-text__editable` or `#content`
+    - Yoast SEO: `#yoast-google-preview-title`, `#yoast-google-preview-description`, `#focus-keyword-input-metabox`
+    - Rank Math: `.rank-math-title`, `.rank-math-description`, `.rank-math-focus-keyword`
+    - Publish: `.editor-post-publish-button`
+  - Gutenberg editor support (block editor)
+  - Classic editor support (fallback)
+  - Detect editor type and adapt
+  - Screenshot capture after each operation
 
-**Week 8 Checkpoint**: All E2E tests passing, performance optimized, system ready for production
+**Acceptance Criteria**:
+- Successfully logs into WordPress
+- Creates post in both Gutenberg and Classic editor
+- Fills all SEO fields (Yoast and Rank Math)
+- Uploads featured image
+- Publishes post and extracts post URL and ID
+- Captures 8+ screenshots
+- Completes workflow in < 3 minutes
+- Handles WordPress UI variations gracefully
+
+**File Paths**:
+- `backend/src/services/computer_use/playwright_provider.py`
+- `backend/tests/services/computer_use/test_playwright_provider.py`
+
+**Code Example** (partial):
+```python
+"""Playwright-based Computer Use provider."""
+
+from playwright.async_api import async_playwright, Browser, Page
+from typing import Dict, Any
+
+from src.services.computer_use.base import (
+    ComputerUseProvider,
+    ComputerUseConfig,
+    ExecutionStep,
+    ExecutionResult,
+)
+from src.config import get_logger
+
+logger = get_logger(__name__)
+
+
+class PlaywrightProvider(ComputerUseProvider):
+    """Playwright-based traditional automation provider."""
+
+    def __init__(self, config: ComputerUseConfig):
+        """Initialize Playwright provider."""
+        super().__init__(config)
+        self.browser: Browser = None
+        self.page: Page = None
+        self.playwright = None
+
+    async def execute(
+        self,
+        instructions: str,
+        context: Dict[str, Any]
+    ) -> ExecutionResult:
+        """Execute WordPress publishing workflow.
+
+        Args:
+            instructions: Not used (Playwright uses fixed workflow)
+            context: Article data and SEO metadata
+
+        Returns:
+            ExecutionResult
+        """
+        try:
+            # Launch browser
+            self.playwright = await async_playwright().start()
+            self.browser = await self.playwright.chromium.launch(
+                headless=self.config.headless
+            )
+            self.page = await self.browser.new_page()
+
+            # Step 1: Login
+            await self._login()
+
+            # Step 2: Create new post
+            await self._create_post()
+
+            # Step 3: Fill content
+            await self._fill_content(
+                title=context["title"],
+                body=context["body"]
+            )
+
+            # Step 4: Upload featured image (if provided)
+            if context.get("featured_image"):
+                await self._upload_featured_image(context["featured_image"])
+
+            # Step 5: Fill SEO fields
+            await self._fill_seo_fields(context["seo_metadata"])
+
+            # Step 6: Publish
+            post_url, post_id = await self._publish_post()
+
+            return ExecutionResult(
+                success=True,
+                steps=self.steps,
+                post_url=post_url,
+                post_id=post_id,
+                duration_seconds=sum(s.duration for s in self.steps if hasattr(s, 'duration')),
+                cost_usd=0.0  # Playwright is free
+            )
+
+        except Exception as e:
+            logger.error("Playwright execution failed", error=str(e), exc_info=True)
+            return ExecutionResult(
+                success=False,
+                steps=self.steps,
+                error=str(e)
+            )
+
+        finally:
+            await self.cleanup()
+
+    async def _login(self) -> None:
+        """Login to WordPress."""
+        step = ExecutionStep(action="navigate", target=f"{self.config.cms_url}/wp-admin")
+
+        try:
+            await self.page.goto(f"{self.config.cms_url}/wp-admin")
+            await self.page.wait_for_selector("#user_login", timeout=10000)
+
+            await self.page.fill("#user_login", self.config.cms_username)
+            await self.page.fill("#user_pass", self.config.cms_password)
+            await self.page.click("#wp-submit")
+
+            # Wait for dashboard
+            await self.page.wait_for_url("**/wp-admin/**", timeout=15000)
+
+            step.result = "success"
+            step.screenshot_path = await self.screenshot("01_login_success")
+
+        except Exception as e:
+            step.result = "failure"
+            step.error = str(e)
+            logger.error("WordPress login failed", error=str(e))
+            raise
+
+        finally:
+            self.add_step(step)
+
+    async def _fill_seo_fields(self, seo_metadata: Dict[str, Any]) -> None:
+        """Fill SEO plugin fields (Yoast or Rank Math)."""
+        step = ExecutionStep(action="fill_seo", target="seo_plugin")
+
+        try:
+            # Detect SEO plugin
+            has_yoast = await self.page.query_selector("#yoast-google-preview-title")
+            has_rankmath = await self.page.query_selector(".rank-math-title")
+
+            if has_yoast:
+                logger.info("Detected Yoast SEO plugin")
+                await self._fill_yoast_seo(seo_metadata)
+            elif has_rankmath:
+                logger.info("Detected Rank Math plugin")
+                await self._fill_rankmath_seo(seo_metadata)
+            else:
+                logger.warning("No SEO plugin detected, skipping SEO fields")
+
+            step.result = "success"
+            step.screenshot_path = await self.screenshot("05_seo_fields_filled")
+
+        except Exception as e:
+            step.result = "failure"
+            step.error = str(e)
+            logger.error("Fill SEO fields failed", error=str(e))
+            raise
+
+        finally:
+            self.add_step(step)
+
+    async def _fill_yoast_seo(self, seo_metadata: Dict[str, Any]) -> None:
+        """Fill Yoast SEO fields."""
+        # SEO Title
+        title_input = await self.page.query_selector("#yoast-google-preview-title input")
+        if title_input:
+            await title_input.fill(seo_metadata["meta_title"])
+
+        # Meta Description
+        desc_input = await self.page.query_selector("#yoast-google-preview-description textarea")
+        if desc_input:
+            await desc_input.fill(seo_metadata["meta_description"])
+
+        # Focus Keyword
+        focus_input = await self.page.query_selector("#focus-keyword-input-metabox")
+        if focus_input:
+            await focus_input.fill(seo_metadata["focus_keyword"])
+
+    async def navigate(self, url: str) -> ExecutionStep:
+        """Navigate to URL."""
+        step = ExecutionStep(action="navigate", target=url)
+        try:
+            await self.page.goto(url, wait_until="domcontentloaded")
+            step.result = "success"
+        except Exception as e:
+            step.result = "failure"
+            step.error = str(e)
+        self.add_step(step)
+        return step
+
+    async def type_text(self, selector: str, text: str) -> ExecutionStep:
+        """Type text into element."""
+        step = ExecutionStep(action="type", target=selector, payload={"text": text})
+        try:
+            await self.page.fill(selector, text)
+            step.result = "success"
+        except Exception as e:
+            step.result = "failure"
+            step.error = str(e)
+        self.add_step(step)
+        return step
+
+    async def click(self, selector: str) -> ExecutionStep:
+        """Click element."""
+        step = ExecutionStep(action="click", target=selector)
+        try:
+            await self.page.click(selector)
+            step.result = "success"
+        except Exception as e:
+            step.result = "failure"
+            step.error = str(e)
+        self.add_step(step)
+        return step
+
+    async def upload_file(self, selector: str, file_path: str) -> ExecutionStep:
+        """Upload file."""
+        step = ExecutionStep(action="upload", target=selector, payload={"file_path": file_path})
+        try:
+            await self.page.set_input_files(selector, file_path)
+            step.result = "success"
+        except Exception as e:
+            step.result = "failure"
+            step.error = str(e)
+        self.add_step(step)
+        return step
+
+    async def screenshot(self, name: str) -> str:
+        """Take screenshot."""
+        path = f"{self.config.screenshot_dir}/{name}.png"
+        await self.page.screenshot(path=path)
+        return path
+
+    async def cleanup(self) -> None:
+        """Cleanup browser resources."""
+        if self.page:
+            await self.page.close()
+        if self.browser:
+            await self.browser.close()
+        if self.playwright:
+            await self.playwright.stop()
+```
 
 ---
 
-### Week 9: Production Deployment (2 tasks)
+#### T3.6 Implement Provider Factory
 
-#### Production Deployment (T347-T348)
+**Description**: Factory pattern for dynamic provider instantiation
 
-- [ ] T347 [Phase 5] ⏳ **Production deployment execution**:
-  - Build production Docker images
-  - Run database migration (Phase 5 schema) on production DB
-  - Deploy backend services (API, Celery workers with Computer Use)
-  - Deploy frontend build
-  - Configure Nginx reverse proxy
-  - Setup S3/MinIO for screenshot storage
-  - Run smoke tests in production
+**Dependencies**: T3.2 (Anthropic), T3.5 (Playwright)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/src/services/computer_use/factory.py`:
+  - `ProviderFactory` class
+  - Method: `create(config: ComputerUseConfig) -> ComputerUseProvider`
+  - Method: `create_from_settings() -> ComputerUseProvider` (reads from env)
+  - Support provider selection via:
+    - Environment variable: `COMPUTER_USE_PROVIDER=anthropic|gemini|playwright`
+    - Config parameter
+  - Validate config before creating provider
+
+**Acceptance Criteria**:
+- Factory creates correct provider based on config
+- Environment variable overrides default
+- Invalid provider type raises clear error
+- Factory tested with all 3 provider types
+
+**File Paths**:
+- `backend/src/services/computer_use/factory.py`
+- `backend/tests/services/computer_use/test_factory.py`
+
+---
+
+#### T3.7 Add Gemini Provider Placeholder
+
+**Description**: Create placeholder implementation for Google Gemini Computer Use
+
+**Dependencies**: T3.1
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/src/services/computer_use/gemini_provider.py`:
+  - `GeminiComputerUseProvider` class extending `ComputerUseProvider`
+  - Placeholder implementation (raises NotImplementedError)
+  - Documentation on Gemini Computer Use API (when available)
+  - TODO comments for future implementation
+
+**Acceptance Criteria**:
+- Class structure defined
+- Raises NotImplementedError with helpful message
+- Documentation includes API research findings
+- Integrated into factory (returns placeholder)
+
+**File Paths**:
+- `backend/src/services/computer_use/gemini_provider.py`
+- `specs/001-cms-automation/research.md` (Gemini API section)
+
+---
+
+#### T3.8 Build CMS Publisher Service
+
+**Description**: High-level service orchestrating provider selection and publishing workflow
+
+**Dependencies**: T3.6 (factory)
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `backend/src/services/cms_publisher/publisher.py`:
+  - `CMSPublisher` class
+  - Method: `publish_article(article_id, provider=None) -> PublishResult`
+  - Steps:
+    1. Load article and SEO metadata from database
+    2. Create ComputerUseConfig
+    3. Create provider via factory
+    4. Execute publishing workflow
+    5. Save screenshots to storage
+    6. Update publish_tasks record
+    7. Log all steps to execution_logs
+    8. Update article with post_url and cms_article_id
+  - Automatic provider fallback:
+    - If Playwright fails → retry with Anthropic
+    - If Anthropic fails → manual intervention required
+  - Cost tracking
+
+**Acceptance Criteria**:
+- Successfully publishes article to WordPress
+- All screenshots saved and URLs stored
+- All steps logged to execution_logs table
+- Article updated with published URL and CMS ID
+- Fallback mechanism works (tested by forcing Playwright failure)
+- Handles errors gracefully
+
+**File Paths**:
+- `backend/src/services/cms_publisher/publisher.py`
+- `backend/tests/services/cms_publisher/test_publisher.py`
+
+---
+
+### Week 6: Testing & Integration
+
+#### T3.9 Build Test WordPress Environment
+
+**Description**: Setup containerized WordPress for testing
+
+**Dependencies**: None (can run parallel)
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `docker-compose.test.yml`:
+  - WordPress container (latest)
+  - MySQL database
+  - Yoast SEO plugin pre-installed
+  - Rank Math plugin pre-installed (for testing both)
+  - Sample admin account (username: admin, password: test123)
+- `scripts/setup_test_wordpress.sh`:
+  - Initialize WordPress
+  - Install and activate plugins
+  - Create test posts
+  - Configure permalink structure
+
+**Acceptance Criteria**:
+- WordPress accessible at http://localhost:8080
+- Both Yoast SEO and Rank Math installed and activated
+- Can toggle between plugins for testing
+- Admin login works
+- Database persists between restarts
+
+**File Paths**:
+- `docker-compose.test.yml`
+- `scripts/setup_test_wordpress.sh`
+- `specs/001-cms-automation/testing.md` (testing environment documentation)
+
+---
+
+#### T3.10 Integration Tests for Each Provider
+
+**Description**: Comprehensive integration tests for all providers
+
+**Dependencies**: T3.9 (test WordPress), T3.2 (Anthropic), T3.5 (Playwright)
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- `backend/tests/integration/test_anthropic_provider.py`:
+  - Test: Login to test WordPress
+  - Test: Create and publish post with all content
+  - Test: Verify 8+ screenshots captured
+  - Test: Verify post published and accessible
+  - Test: Cost tracking accurate
+- `backend/tests/integration/test_playwright_provider.py`:
+  - Same tests as Anthropic provider
+  - Additional test: Gutenberg editor support
+  - Additional test: Classic editor support
+  - Additional test: Yoast SEO fields
+  - Additional test: Rank Math fields
+- `backend/tests/integration/test_provider_compatibility.py`:
+  - Test: Both providers publish same article consistently
+  - Test: Compare screenshots from both providers
+  - Test: Verify no credential leaks in screenshots
+
+**Acceptance Criteria**:
+- All integration tests pass
+- Both providers successfully publish to test WordPress
+- Screenshots captured and verified (no credentials visible)
+- Tests run in CI pipeline
+- Test coverage > 85% for computer_use package
+
+**File Paths**:
+- `backend/tests/integration/test_anthropic_provider.py`
+- `backend/tests/integration/test_playwright_provider.py`
+- `backend/tests/integration/test_provider_compatibility.py`
+
+---
+
+#### T3.11 Implement Provider Fallback Logic
+
+**Description**: Automatic fallback mechanism when primary provider fails
+
+**Dependencies**: T3.8 (publisher service)
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/src/services/cms_publisher/fallback_handler.py`:
+  - Method: `execute_with_fallback(article_id, preferred_provider) -> PublishResult`
+  - Fallback chain: Playwright → Anthropic → Manual
+  - Log all fallback attempts
+  - Track which provider succeeded
+  - Update publish_tasks with provider used
+
+**Acceptance Criteria**:
+- If Playwright fails, automatically tries Anthropic
+- If Anthropic fails, marks as "manual_intervention_required"
+- All fallback attempts logged
+- Fallback tested by injecting failures
+- Fallback chain configurable via settings
+
+**File Paths**:
+- `backend/src/services/cms_publisher/fallback_handler.py`
+- `backend/tests/services/cms_publisher/test_fallback.py`
+
+---
+
+#### T3.12 Build Publishing API Endpoints
+
+**Description**: FastAPI endpoints for triggering and monitoring publishing tasks
+
+**Dependencies**: T3.8 (publisher service)
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/src/api/routes/publish.py`:
+  - POST /v1/publish/submit - Submit article for publishing
+  - GET /v1/publish/tasks/{task_id} - Get task status
+  - GET /v1/publish/tasks/{task_id}/screenshots - Get screenshots
+  - GET /v1/publish/tasks/{task_id}/logs - Get execution logs
+  - POST /v1/publish/retry/{task_id} - Retry failed task
+- `backend/src/api/schemas/publish.py`:
+  - PublishRequest schema (article_id, provider, options)
+  - PublishTaskResponse schema
+  - ExecutionLogResponse schema
+
+**Acceptance Criteria**:
+- All endpoints documented in OpenAPI spec
+- POST /v1/publish/submit triggers async publishing (returns task_id)
+- GET /v1/publish/tasks returns real-time status
+- Screenshots accessible via URLs in response
+- Execution logs returned in chronological order
+- Retry endpoint works for failed tasks
+
+**File Paths**:
+- `backend/src/api/routes/publish.py`
+- `backend/src/api/schemas/publish.py`
+- `backend/tests/api/test_publish_endpoints.py`
+
+---
+
+#### T3.13 Create Celery Publishing Tasks
+
+**Description**: Celery task for async article publishing
+
+**Dependencies**: T3.12
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/src/workers/tasks/publish_article.py`:
+  - Celery task: `publish_article_task(article_id, provider=None)`
+  - Wrapper around CMSPublisher
+  - Progress tracking (update publish_task status in real-time)
+  - Error handling with retry (max 3 attempts for transient errors)
+  - Screenshot storage to S3/local
+  - Execution logging to database
+  - Update article fields on success (published_at, cms_article_id, published_url)
+  - Send notification on completion/failure (email or webhook)
+
+**Acceptance Criteria**:
+- Task processes article successfully
+- Status updated in real-time: pending → running → completed/failed
+- Screenshots uploaded to storage
+- All execution logs saved to database
+- Article updated on success
+- Retries only transient errors (not login failures)
+- Task visible in Celery/Flower dashboard
+
+**File Paths**:
+- `backend/src/workers/tasks/publish_article.py`
+- `backend/tests/workers/test_publish_article.py`
+
+---
+
+#### T3.14 Error Handling & Retry Logic
+
+**Description**: Comprehensive error handling and retry strategy
+
+**Dependencies**: T3.13
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/src/services/cms_publisher/error_handler.py`:
+  - Classify errors:
+    - Transient: network timeout, rate limit, element not found (temporary)
+    - Permanent: wrong credentials, post already published, WordPress down
+  - Retry strategy:
+    - Transient errors: retry with exponential backoff (10s → 30s → 90s)
+    - Permanent errors: fail immediately, no retry
+  - Error reporting:
+    - Log all errors with context
+    - Include screenshot at error point
+    - Provide actionable error messages
+
+**Acceptance Criteria**:
+- Transient errors retried automatically
+- Permanent errors fail fast
+- All errors logged with context
+- Error screenshots captured
+- Error messages actionable (tell user what went wrong and how to fix)
+- Tested with simulated failures
+
+**File Paths**:
+- `backend/src/services/cms_publisher/error_handler.py`
+- `backend/tests/services/cms_publisher/test_error_handler.py`
+
+---
+
+**Phase 3 Checkpoint**: ✅ Multi-provider Computer Use working, 3 providers implemented, 8+ screenshots per task, 95%+ success rate
+
+---
+
+## Phase 4: Frontend & API Integration (2 weeks)
+
+**Goal**: Build React frontend for article management, SEO optimization, and publishing monitoring
+**Duration**: 2 weeks (Week 7-8)
+**Estimated Hours**: 80 hours
+**Status**: Not Started
+
+---
+
+### Week 7: Core UI Components
+
+#### T4.1 [P] Setup Frontend Project
+
+**Description**: Initialize React frontend project with all dependencies
+
+**Dependencies**: None
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Frontend project initialized with Vite
+- Dependencies installed:
+  - React 18.3, TypeScript 5.0
+  - React Router 6.0, React Query 5.0
+  - React Hook Form 7.0, Zod validation
+  - TailwindCSS 3.4, Headless UI
+  - Recharts 2.10 (for charts)
+  - date-fns (date formatting)
+- Project structure:
+  ```
+  frontend/
+  ├── src/
+  │   ├── components/
+  │   ├── pages/
+  │   ├── services/
+  │   ├── hooks/
+  │   ├── utils/
+  │   ├── types/
+  │   └── App.tsx
+  ├── public/
+  ├── package.json
+  └── vite.config.ts
+  ```
+- ESLint and Prettier configured
+- TailwindCSS configured with custom theme
+
+**Acceptance Criteria**:
+- `npm run dev` starts development server
+- TypeScript compilation works
+- TailwindCSS classes working
+- No console errors or warnings
+
+**File Paths**:
+- `frontend/package.json`
+- `frontend/vite.config.ts`
+- `frontend/tailwind.config.js`
+- `frontend/tsconfig.json`
+
+---
+
+#### T4.2 Build Article Import UI
+
+**Description**: UI for importing articles from CSV/JSON or manual entry
+
+**Dependencies**: T4.1
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `frontend/src/pages/ImportArticlePage.tsx`:
+  - Tab 1: Manual Entry (form with title, body, images, excerpt)
+  - Tab 2: CSV Upload (drag-and-drop file upload)
+  - Tab 3: JSON Import (paste JSON or upload file)
+- `frontend/src/components/ArticleImport/ManualEntryForm.tsx`:
+  - Form with React Hook Form
+  - Rich text editor for body (TipTap or similar)
+  - Image upload (featured + additional)
+  - Validation (title 10-500 chars, body min 100 words)
+- `frontend/src/components/ArticleImport/CSVUploadForm.tsx`:
+  - Drag-and-drop CSV upload
+  - CSV format help text
+  - Preview imported articles before confirming
+- `frontend/src/components/ArticleImport/JSONImportForm.tsx`:
+  - Textarea for JSON paste OR file upload
+  - JSON validation
+  - Preview articles
+
+**Acceptance Criteria**:
+- All 3 import methods working
+- Forms validate correctly
+- CSV import shows preview before confirming
+- Manual entry form submits successfully
+- API integration complete (calls POST /v1/articles/import)
+- Loading states and error handling
+- Success message after import
+
+**File Paths**:
+- `frontend/src/pages/ImportArticlePage.tsx`
+- `frontend/src/components/ArticleImport/ManualEntryForm.tsx`
+- `frontend/src/components/ArticleImport/CSVUploadForm.tsx`
+- `frontend/src/components/ArticleImport/JSONImportForm.tsx`
+- `frontend/src/services/api/articles.ts`
+
+---
+
+#### T4.3 Build Article List & Detail Pages
+
+**Description**: Pages for viewing and managing imported articles
+
+**Dependencies**: T4.2
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `frontend/src/pages/ArticlesListPage.tsx`:
+  - Table of articles with columns: Title, Status, Source, SEO Optimized, Published, Actions
+  - Filters: Status, Source, Date range
+  - Search by title
+  - Pagination (50 per page)
+  - Bulk actions: Delete, Analyze SEO, Publish
+- `frontend/src/pages/ArticleDetailPage.tsx`:
+  - Article title, body, excerpt
+  - Featured image and additional images
+  - Metadata (word count, source, created date)
+  - Actions: Edit, Analyze SEO, Publish, Delete
+  - SEO metadata section (if analyzed)
+  - Publishing history (if published)
+
+**Acceptance Criteria**:
+- Article list loads and displays correctly
+- Filters and search working
+- Pagination working
+- Bulk actions functional
+- Article detail page shows all info
+- API integration complete (GET /v1/articles)
+- Loading states and error handling
+
+**File Paths**:
+- `frontend/src/pages/ArticlesListPage.tsx`
+- `frontend/src/pages/ArticleDetailPage.tsx`
+- `frontend/src/components/Articles/ArticleTable.tsx`
+- `frontend/src/components/Articles/ArticleDetailCard.tsx`
+
+---
+
+#### T4.4 Build SEO Optimization UI
+
+**Description**: UI for triggering SEO analysis and editing metadata
+
+**Dependencies**: T4.3
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- `frontend/src/components/SEO/SEOAnalysisPanel.tsx`:
+  - "Analyze SEO" button (if not analyzed)
+  - Real-time progress indicator during analysis
+  - SEO metadata display after analysis:
+    - Meta title with character counter (50-60)
+    - Meta description with character counter (150-160)
+    - Focus keyword badge
+    - Primary keywords (3-5) as tags
+    - Secondary keywords (5-10) as tags
+    - Keyword density visualization (bar chart)
+    - Readability score (gauge chart)
+    - Optimization recommendations (list with icons)
+- `frontend/src/components/SEO/SEOEditForm.tsx`:
+  - Edit meta title (character counter, live preview)
+  - Edit meta description (character counter, live preview)
+  - Edit focus keyword
+  - Save button (tracks manual override)
+  - Reset to AI-generated button
+- `frontend/src/components/SEO/KeywordDensityChart.tsx`:
+  - Bar chart showing keyword density (Recharts)
+  - Target range indicator (0.5-3%)
+  - Color-coded (green=optimal, yellow=low, red=high)
+- `frontend/src/components/SEO/ReadabilityGauge.tsx`:
+  - Gauge chart for readability score
+  - Grade level indicator (target: 8-12)
+
+**Acceptance Criteria**:
+- "Analyze SEO" button triggers analysis
+- Progress indicator updates in real-time (polling)
+- SEO metadata displays correctly after analysis
+- Edit form allows changing title, description, focus keyword
+- Character counters update in real-time
+- Keyword density chart renders correctly
+- Readability gauge shows current score
+- Save button works (API: PUT /v1/seo/metadata/{id})
+- Manual overrides tracked
+
+**File Paths**:
+- `frontend/src/components/SEO/SEOAnalysisPanel.tsx`
+- `frontend/src/components/SEO/SEOEditForm.tsx`
+- `frontend/src/components/SEO/KeywordDensityChart.tsx`
+- `frontend/src/components/SEO/ReadabilityGauge.tsx`
+- `frontend/src/services/api/seo.ts`
+
+---
+
+### Week 8: Publishing & Monitoring
+
+#### T4.5 Build Publish Task UI
+
+**Description**: UI for submitting publishing tasks and monitoring progress
+
+**Dependencies**: T4.4
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- `frontend/src/components/Publishing/PublishModal.tsx`:
+  - Modal triggered from article detail page
+  - Provider selection dropdown (Anthropic, Gemini, Playwright)
+  - Provider info (cost estimate, speed estimate, success rate)
+  - Confirmation button
+  - Closes after submission, redirects to task monitoring
+- `frontend/src/components/Publishing/TaskProgress.tsx`:
+  - Real-time progress indicator
+  - Current step display (e.g., "Logging in to WordPress...")
+  - Progress bar (% complete)
+  - Estimated time remaining
+  - Cancel button (for pending tasks)
+- `frontend/src/components/Publishing/TaskStatusBadge.tsx`:
+  - Color-coded badge for task status
+  - Pending (gray), Running (blue), Completed (green), Failed (red)
+
+**Acceptance Criteria**:
+- Publish modal opens and displays provider options
+- Provider selection updates cost/speed estimates
+- Confirmation submits task (API: POST /v1/publish/submit)
+- Task progress updates in real-time (polling GET /v1/publish/tasks/{id})
+- Current step displays correctly
+- Status badge shows correct color and text
+- Cancel button works for pending tasks
+
+**File Paths**:
+- `frontend/src/components/Publishing/PublishModal.tsx`
+- `frontend/src/components/Publishing/TaskProgress.tsx`
+- `frontend/src/components/Publishing/TaskStatusBadge.tsx`
+- `frontend/src/services/api/publish.ts`
+
+---
+
+#### T4.6 Build Screenshot Gallery
+
+**Description**: UI for viewing publishing task screenshots
+
+**Dependencies**: T4.5
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `frontend/src/components/Publishing/ScreenshotGallery.tsx`:
+  - Grid of screenshot thumbnails
+  - Click to view full-size (lightbox)
+  - Screenshot name/step label
+  - Timestamp
+  - Download button for each screenshot
+- `frontend/src/components/Publishing/ScreenshotLightbox.tsx`:
+  - Full-size screenshot display
+  - Navigation (prev/next)
+  - Close button
+  - Download button
+
+**Acceptance Criteria**:
+- Screenshots load and display as thumbnails
+- Clicking thumbnail opens lightbox
+- Lightbox shows full-size screenshot
+- Navigation works (prev/next)
+- Download button downloads screenshot
+- Handles 8+ screenshots gracefully
+
+**File Paths**:
+- `frontend/src/components/Publishing/ScreenshotGallery.tsx`
+- `frontend/src/components/Publishing/ScreenshotLightbox.tsx`
+
+---
+
+#### T4.7 Build Task Monitoring Dashboard
+
+**Description**: Dashboard for monitoring all publishing tasks
+
+**Dependencies**: T4.6
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `frontend/src/pages/TasksMonitoringPage.tsx`:
+  - Table of all publishing tasks
+  - Columns: Article, Provider, Status, Started, Duration, Actions
+  - Filters: Status, Provider, Date range
+  - Real-time updates (WebSocket or polling)
+  - Click row to view details (screenshots, logs)
+- `frontend/src/components/Publishing/TaskDetailModal.tsx`:
+  - Task summary (article, provider, status, duration)
+  - Screenshot gallery
+  - Execution logs (chronological)
+  - Error message (if failed)
+  - Retry button (if failed)
+
+**Acceptance Criteria**:
+- Tasks table loads and displays all tasks
+- Filters working
+- Real-time updates (new tasks appear, status changes)
+- Click row opens detail modal
+- Detail modal shows screenshots and logs
+- Retry button works for failed tasks
+- API integration complete (GET /v1/publish/tasks)
+
+**File Paths**:
+- `frontend/src/pages/TasksMonitoringPage.tsx`
+- `frontend/src/components/Publishing/TaskDetailModal.tsx`
+- `frontend/src/components/Publishing/TasksTable.tsx`
+
+---
+
+#### T4.8 Build Provider Comparison Dashboard
+
+**Description**: Dashboard comparing performance of different providers
+
+**Dependencies**: T4.7
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `frontend/src/pages/ProviderComparisonPage.tsx`:
+  - Summary cards for each provider:
+    - Success rate (%)
+    - Average duration (seconds)
+    - Total cost (USD)
+    - Total tasks
+  - Charts:
+    - Success rate comparison (bar chart)
+    - Average duration comparison (bar chart)
+    - Cost per article (bar chart)
+    - Task count over time (line chart)
+  - Date range filter
+  - Recommendations (based on metrics)
+
+**Acceptance Criteria**:
+- Provider summary cards display correct metrics
+- Charts render correctly with real data
+- Date range filter updates charts
+- Recommendations based on data (e.g., "Playwright has highest success rate and zero cost")
+- API integration (GET /v1/publish/tasks with aggregation)
+
+**File Paths**:
+- `frontend/src/pages/ProviderComparisonPage.tsx`
+- `frontend/src/components/Analytics/ProviderComparisonCharts.tsx`
+- `frontend/src/services/api/analytics.ts`
+
+---
+
+#### T4.9 Implement Real-Time Updates
+
+**Description**: Real-time updates for task progress and status changes
+
+**Dependencies**: T4.8
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `frontend/src/hooks/useTaskUpdates.ts`:
+  - Custom hook for polling task status
+  - Polling interval: 2 seconds during execution, 10 seconds otherwise
+  - Automatic stop when task completes/fails
+- `frontend/src/hooks/useTaskList.ts`:
+  - Custom hook for refreshing task list
+  - Polling interval: 5 seconds
+- React Query configuration for automatic refetching
+
+**Acceptance Criteria**:
+- Task progress updates in real-time (< 3 second delay)
+- Task list refreshes automatically
+- Polling stops when tasks complete
+- No unnecessary API calls (efficient polling)
+- Works across all pages
+
+**File Paths**:
+- `frontend/src/hooks/useTaskUpdates.ts`
+- `frontend/src/hooks/useTaskList.ts`
+- `frontend/src/services/query-client.ts`
+
+---
+
+#### T4.10 Build Settings Page
+
+**Description**: Settings page for configuring CMS credentials and default provider
+
+**Dependencies**: None (can run parallel)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `frontend/src/pages/SettingsPage.tsx`:
+  - CMS Configuration section:
+    - CMS URL input
+    - Username input
+    - Password input (masked)
+    - Test connection button
+  - Default Provider section:
+    - Provider selection dropdown
+    - Provider info and recommendations
+  - Save button
+  - Success/error messages
+
+**Acceptance Criteria**:
+- Settings form loads current values
+- Test connection button validates CMS credentials
+- Save button persists settings
+- Password masked in UI
+- API integration (GET/PUT /v1/settings)
+
+**File Paths**:
+- `frontend/src/pages/SettingsPage.tsx`
+- `frontend/src/components/Settings/CMSConfigForm.tsx`
+- `frontend/src/services/api/settings.ts`
+
+---
+
+**Phase 4 Checkpoint**: ✅ Frontend complete, all workflows functional, real-time updates working
+
+---
+
+## Phase 5: Testing, Optimization & Deployment (2 weeks)
+
+**Goal**: Comprehensive testing, performance optimization, and production deployment
+**Duration**: 2 weeks (Week 9-10)
+**Estimated Hours**: 72 hours
+**Status**: Not Started
+
+---
+
+### Week 9: Testing & Quality Assurance
+
+#### T5.1 Unit Test Coverage
+
+**Description**: Achieve 90%+ unit test coverage for backend
+
+**Dependencies**: All Phase 1-4 tasks
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Unit tests for all services:
+  - Article importer components
+  - SEO analyzer components
+  - Computer Use providers
+  - CMS publisher service
+- Test coverage report
+- Fix any bugs found during testing
+
+**Acceptance Criteria**:
+- Unit test coverage ≥ 90% for backend
+- All tests pass
+- No critical bugs remaining
+- Coverage report generated
+
+**File Paths**:
+- `backend/tests/services/**/*.py`
+- `backend/coverage.xml` (coverage report)
+
+---
+
+#### T5.2 Integration Tests
+
+**Description**: End-to-end integration tests for all workflows
+
+**Dependencies**: T5.1
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- Integration tests:
+  - `test_full_workflow_anthropic.py`: Import → SEO → Publish (Anthropic)
+  - `test_full_workflow_playwright.py`: Import → SEO → Publish (Playwright)
+  - `test_batch_import_and_seo.py`: Batch import 100 articles → SEO analysis
+  - `test_concurrent_publishing.py`: 5 articles published concurrently
+  - `test_provider_fallback.py`: Playwright fails → Anthropic succeeds
+  - `test_manual_seo_edit.py`: Analyze → Edit → Publish with manual changes
+
+**Acceptance Criteria**:
+- All 6 integration tests pass
+- Tests use real test WordPress instance
+- Tests clean up after themselves
+- Tests run in < 10 minutes total
+
+**File Paths**:
+- `backend/tests/integration/test_full_workflow_*.py`
+
+---
+
+#### T5.3 End-to-End Tests
+
+**Description**: E2E tests using Playwright for frontend
+
+**Dependencies**: T5.2
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- E2E tests (Playwright for frontend):
+  - `test_article_import_ui.spec.ts`: Import article via UI
+  - `test_seo_analysis_ui.spec.ts`: Trigger SEO analysis and verify results
+  - `test_seo_edit_ui.spec.ts`: Edit SEO metadata
+  - `test_publish_ui.spec.ts`: Submit publish task and monitor progress
+  - `test_screenshot_gallery_ui.spec.ts`: View screenshots
+
+**Acceptance Criteria**:
+- All 5 E2E tests pass
+- Tests run against local development environment
+- Tests cover critical user journeys
+- Tests run in CI pipeline
+
+**File Paths**:
+- `frontend/tests/e2e/test_*.spec.ts`
+- `frontend/playwright.config.ts`
+
+---
+
+#### T5.4 Provider Comparison Testing
+
+**Description**: Systematic comparison of all 3 providers
+
+**Dependencies**: T5.3
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- Provider comparison test suite:
+  - Run 50 publishing tasks per provider
+  - Record: success rate, average duration, cost, screenshots captured
+  - Generate comparison report
+- Comparison report:
+  - Success rate by provider
+  - Average duration by provider
+  - Cost per article by provider
+  - Screenshot quality comparison
+  - Recommendations for which provider to use when
+
+**Acceptance Criteria**:
+- 150 total publishing tasks executed (50 per provider)
+- All metrics recorded
+- Comparison report generated
+- Report includes clear recommendations
+- Report published to `specs/001-cms-automation/provider-comparison-report.md`
+
+**File Paths**:
+- `backend/tests/comparison/test_provider_comparison.py`
+- `specs/001-cms-automation/provider-comparison-report.md`
+
+---
+
+#### T5.5 Security Testing
+
+**Description**: Security scan and vulnerability assessment
+
+**Dependencies**: T5.4
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Security scans:
+  - Bandit (Python SAST) - no MEDIUM+ issues
+  - Safety (dependency vulnerabilities) - no HIGH+ issues
+  - npm audit (frontend dependencies) - no HIGH+ issues
+  - Trivy (container scanning) - no HIGH/CRITICAL vulnerabilities
+  - gitleaks (secret scanning) - no secrets in repository
+- Security test:
+  - Test XSS prevention in article import
+  - Test SQL injection prevention
+  - Test CSRF protection
+  - Test authentication/authorization
+  - Test rate limiting
+- Security fixes for any issues found
+
+**Acceptance Criteria**:
+- Zero HIGH or CRITICAL vulnerabilities
+- All security scans pass
+- Security tests pass
+- Security scan report generated
+- Fixes implemented for all findings
+
+**File Paths**:
+- `backend/tests/security/test_security.py`
+- `SECURITY_SCAN_REPORT.md` (updated)
+
+---
+
+### Week 10: Optimization & Deployment
+
+#### T5.6 Performance Optimization
+
+**Description**: Optimize application performance to meet SLAs
+
+**Dependencies**: T5.5
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Backend optimizations:
+  - Database query optimization (EXPLAIN ANALYZE all slow queries)
+  - Add missing indexes
+  - Implement Redis caching for SEO keywords
+  - Optimize article import batch processing
+  - Connection pooling tuning
+- Frontend optimizations:
+  - Code splitting (lazy load routes)
+  - Image optimization
+  - Bundle size reduction
+  - React Query caching optimization
+- Performance benchmarks:
+  - API response time (p95) < 500ms
+  - SEO analysis < 30s (95th percentile)
+  - Publishing < 5 min (95th percentile)
+  - Import 100 articles < 5 min
+- Performance report
+
+**Acceptance Criteria**:
+- All SLA targets met
+- Performance improvements documented
+- Benchmarks meet requirements
+- No performance regressions
+
+**File Paths**:
+- `backend/tests/performance/test_performance.py`
+- `specs/001-cms-automation/performance-report.md`
+
+---
+
+#### T5.7 Cost Optimization
+
+**Description**: Optimize API costs and storage costs
+
+**Dependencies**: T5.6
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Cost optimization strategies:
+  - Cache SEO analysis results (avoid re-analysis)
+  - Compress screenshots (PNG → JPEG, reduce size)
+  - Implement 90-day screenshot retention (delete old screenshots)
+  - Use Playwright as default provider (free)
+  - Reserve Anthropic for fallback only
+- Cost tracking:
+  - Log all API costs in database
+  - Generate monthly cost report
+  - Alert if costs exceed budget
+- Cost optimization report:
+  - Current costs per article
+  - Optimized costs per article
+  - Projected monthly costs
+
+**Acceptance Criteria**:
+- Average cost per article < $0.25 (with Playwright default)
+- Screenshot storage < 100 GB per month
+- Cost tracking implemented
+- Cost optimization report generated
+
+**File Paths**:
+- `backend/src/services/cost_optimizer.py`
+- `specs/001-cms-automation/cost-optimization-report.md`
+
+---
+
+#### T5.8 Production Environment Setup
+
+**Description**: Setup production infrastructure on AWS
+
+**Dependencies**: T5.7
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- AWS infrastructure:
+  - RDS PostgreSQL 15 (Multi-AZ)
+  - ElastiCache Redis (cluster mode)
+  - S3 bucket for screenshots
+  - AWS Secrets Manager for credentials
+  - ECS Fargate for backend services
+  - Application Load Balancer
+  - CloudFront CDN for frontend
+  - Route53 DNS
+- Infrastructure as Code:
+  - Terraform scripts for all infrastructure
+  - Environment-specific configs (staging, production)
+- Database migration:
+  - Run all Alembic migrations on production DB
+  - Verify schema
+- Secrets migration:
+  - Move all secrets to AWS Secrets Manager
+  - Update application to fetch secrets at runtime
+
+**Acceptance Criteria**:
+- All infrastructure provisioned via Terraform
+- Production database initialized and migrations applied
+- All secrets stored in AWS Secrets Manager
+- Infrastructure documented
+
+**File Paths**:
+- `infrastructure/terraform/main.tf`
+- `infrastructure/terraform/variables.tf`
+- `infrastructure/terraform/outputs.tf`
+- `infrastructure/README.md`
+
+---
+
+#### T5.9 CI/CD Pipeline
+
+**Description**: Setup continuous integration and deployment pipeline
+
+**Dependencies**: T5.8
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- GitHub Actions workflows:
+  - `.github/workflows/backend-ci.yml`:
+    - Run unit tests
+    - Run integration tests
+    - Security scans (Bandit, Safety)
+    - Code coverage report
+    - Build Docker image
+  - `.github/workflows/frontend-ci.yml`:
+    - Run unit tests
+    - Run E2E tests
+    - Security scans (npm audit)
+    - Build production bundle
+  - `.github/workflows/deploy.yml`:
+    - Deploy backend to ECS
+    - Deploy frontend to S3/CloudFront
+    - Run smoke tests
+    - Rollback on failure
+- Deployment strategy:
+  - Blue-green deployment for zero downtime
+  - Automatic rollback on health check failure
+
+**Acceptance Criteria**:
+- CI pipeline runs on every PR
+- All tests and scans pass before merge
+- CD pipeline deploys on merge to main
+- Zero-downtime deployment
+- Automatic rollback works
+
+**File Paths**:
+- `.github/workflows/backend-ci.yml`
+- `.github/workflows/frontend-ci.yml`
+- `.github/workflows/deploy.yml`
+
+---
+
+#### T5.10 Monitoring & Alerting Setup
+
+**Description**: Setup production monitoring and alerting
+
+**Dependencies**: T5.9
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- Grafana dashboards:
+  - System health dashboard (CPU, memory, disk, network)
+  - Application metrics dashboard (API latency, error rate, throughput)
+  - Business metrics dashboard (articles imported, SEO analyzed, published)
+  - Provider performance dashboard (success rate, duration, cost)
+- Prometheus alerts:
+  - Critical: API error rate > 5%, publishing success < 80%, database down
+  - Warning: SEO analysis > 45s, screenshot storage > 400GB, queue depth > 50
+- Alert channels:
+  - PagerDuty for critical alerts
+  - Slack for warnings
+  - Email for daily summaries
+- Log aggregation:
+  - CloudWatch Logs or ELK stack
+  - Structured JSON logs
+  - Log retention: 90 days
+
+**Acceptance Criteria**:
+- All dashboards operational in Grafana
+- Alerts configured and tested (trigger test alerts)
+- Alert channels working (receive test alerts)
+- Log aggregation working
+- Runbook created for common alerts
+
+**File Paths**:
+- `monitoring/grafana/dashboards/`
+- `monitoring/prometheus/alerts.yml`
+- `monitoring/README.md` (runbook)
+
+---
+
+#### T5.11 Documentation Finalization
+
+**Description**: Finalize all documentation for handoff
+
+**Dependencies**: T5.10
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Updated documentation:
+  - `README.md`: Project overview, features, architecture
+  - `specs/001-cms-automation/quickstart.md`: Getting started guide
+  - `specs/001-cms-automation/api-spec.yaml`: Complete OpenAPI spec
+  - `specs/001-cms-automation/deployment.md`: Deployment guide
+  - `specs/001-cms-automation/monitoring.md`: Monitoring and alerting guide
+  - `specs/001-cms-automation/troubleshooting.md`: Common issues and solutions
+  - `specs/001-cms-automation/provider-guide.md`: When to use which provider
+- Video demos:
+  - Demo 1: Importing articles (3 methods)
+  - Demo 2: SEO analysis and editing
+  - Demo 3: Publishing with different providers
+  - Demo 4: Monitoring tasks and screenshots
+
+**Acceptance Criteria**:
+- All documentation complete and accurate
+- Documentation reviewed for clarity
+- Video demos recorded and uploaded
+- Documentation published
+
+**File Paths**:
+- `README.md`
+- `specs/001-cms-automation/*.md`
+- `docs/videos/` (demo recordings)
+
+---
+
+#### T5.12 Production Deployment
+
+**Description**: Execute production deployment and post-deployment validation
+
+**Dependencies**: T5.11
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Production deployment:
+  - Deploy backend to ECS
+  - Deploy frontend to S3/CloudFront
+  - Run database migrations
   - Verify all services healthy
-  - **Dependencies**: T301-T346 (all Phase 5 tasks complete)
-  - **Est**: 8 hours
-  - **Acceptance**: Zero downtime deployment, all services healthy, smoke tests pass
+- Smoke tests:
+  - Import test article
+  - Run SEO analysis
+  - Publish with Playwright
+  - Verify monitoring dashboards
+  - Test alerts
+- Post-deployment validation:
+  - All services responding
+  - Database connections working
+  - Redis caching working
+  - S3 uploads working
+  - Secrets Manager integration working
+- Go-live announcement
 
-- [ ] T348 [Phase 5] ⏳ **Monitoring and alerting setup**:
-  - Setup Grafana dashboards:
-    - Import throughput (articles/hour)
-    - SEO analysis throughput (articles/hour)
-    - Publishing success rate (%)
-    - Screenshot storage size (GB)
-    - API latency (p50, p95, p99)
-    - Celery queue depth
-  - Configure alerts (PagerDuty + Slack):
-    - Critical: Computer Use credential exposure detected, publishing success < 80%, API error rate > 5%
-    - Warning: SEO accuracy < 85%, screenshot storage > 400GB, queue depth > 50
-  - Setup log aggregation (CloudWatch or ELK)
-  - Create runbook for common operations
-  - **Dependencies**: T347 (deployed)
-  - **Est**: 6 hours
-  - **Acceptance**: Dashboards operational, alerts firing correctly (test with simulated failures), runbook validated
+**Acceptance Criteria**:
+- Zero-downtime deployment
+- All smoke tests pass
+- All services healthy
+- Monitoring dashboards showing data
+- No errors in logs
+- Go-live announcement sent
 
-**Week 9 Checkpoint**: Production deployment complete, monitoring active, system operational
+**File Paths**:
+- `DEPLOYMENT_CHECKLIST.md`
+- `CHANGELOG.md` (updated with v2.0.0 release notes)
 
 ---
 
-## Summary: Phase 5 Tasks
+**Phase 5 Checkpoint**: ✅ Production deployment complete, all tests passing, monitoring active, system operational
 
-**Total Tasks**: 48 (T301-T348)
-**Duration**: 8-9 weeks
-**Estimated Hours**: ~220 hours
+---
 
-### By Week:
-- **Week 1-2** (T301-T310): Database + Import - 10 tasks, 32 hours
-- **Week 3-4** (T311-T325): SEO Engine - 15 tasks, 58 hours
-- **Week 5-7** (T326-T342): Computer Use - 17 tasks, 83 hours
-- **Week 8** (T343-T346): Integration Testing - 4 tasks, 24 hours
-- **Week 9** (T347-T348): Deployment - 2 tasks, 14 hours
+## Summary
+
+**Total Tasks**: 58 tasks (48 core + 10 governance/deployment)
+**Total Duration**: 10.5 weeks (~52 business days)
+**Total Estimated Hours**: ~300 hours
+
+### By Phase:
+- **Phase 0**: Governance (continuous)
+- **Phase 1**: Database & Import (2 weeks, 10 tasks, 46 hours)
+- **Phase 2**: SEO Analysis (1.5 weeks, 9 tasks, 52 hours)
+- **Phase 3**: Computer Use (3 weeks, 14 tasks, 94 hours)
+- **Phase 4**: Frontend (2 weeks, 10 tasks, 80 hours)
+- **Phase 5**: Testing & Deployment (2 weeks, 12 tasks, 72 hours)
 
 ### By User Story:
-- **US2** (External Import): T307-T310 (4 tasks)
-- **US3** (SEO Optimization): T311-T325 (15 tasks)
-- **US4** (Computer Use Publishing): T326-T342 (17 tasks)
-- **Infrastructure**: T301-T306 (6 tasks)
-- **Integration**: T343-T346 (4 tasks)
-- **Deployment**: T347-T348 (2 tasks)
+- **US1** (Article Import): T1.5-T1.10 (6 tasks)
+- **US2** (SEO Analysis): T2.1-T2.9 (9 tasks)
+- **US3** (Multi-Provider Publishing): T3.1-T3.14 (14 tasks)
+- **US4** (Monitoring): T4.5-T4.7 (3 tasks)
+- **US5** (Provider Comparison): T4.8 (1 task)
 
 ### Critical Path:
-1. Database migration (T301-T306) → Blocks everything
-2. Import service (T307-T310) → Blocks import workflow tests
-3. SEO analyzer (T311-T318) → Blocks publishing
-4. Computer Use publisher (T326-T335) → Blocks publishing
-5. Integration tests (T343-T346) → Blocks production deployment
+1. Database migration (T1.1-T1.4) → Blocks all data operations
+2. Article import (T1.5-T1.10) → Blocks SEO testing
+3. SEO analyzer (T2.1-T2.9) → Blocks publishing
+4. Computer Use providers (T3.1-T3.14) → Blocks E2E tests
+5. Integration tests (T5.1-T5.5) → Blocks production deployment
 
 ### Parallel Work Opportunities:
-- CSV parser (T307-T308) can start before DB migration complete
-- SEO keyword extraction (T311) can start in parallel with import work
-- Chrome setup (T326) can start early
-- All [P] marked tasks can run in parallel
+- Frontend (Phase 4) can start once Phase 3 APIs are defined
+- Playwright provider (T3.5) can develop in parallel with Anthropic provider (T3.2)
+- Performance testing (T5.6) can start during Phase 4
+- All [P] marked tasks have no blocking dependencies
 
 ---
 
-## Dependencies Summary
-
-**External Dependencies**:
-- Anthropic Claude API (Messages API + Computer Use API)
-- WordPress test instance (for integration testing)
-- Chrome/Chromium browser (for Computer Use)
-- S3-compatible storage (for screenshot storage)
-
-**Internal Dependencies**:
-- Phase 1-4 must be complete before Phase 5 starts
-- Database migration (T301-T306) must complete before most Phase 5 work
-- SEO analysis must complete before publishing can include SEO fields
-- Computer Use environment setup before any publishing tests
-
----
-
-## Acceptance Criteria Summary
-
-**Phase 5 Complete When**:
-- ✅ Database extended with source, seo_optimized fields and 3 new tables
-- ✅ Can import 100 articles from CSV in < 5 minutes
-- ✅ SEO analysis achieves 85%+ keyword accuracy vs expert baseline
-- ✅ SEO metadata generation completes in < 30 seconds
-- ✅ Computer Use publishes to WordPress in < 5 minutes with 95%+ success rate
-- ✅ All 8 screenshots captured per publishing task
-- ✅ Zero WordPress credentials exposed in logs/screenshots
-- ✅ 3 E2E fusion workflow tests passing
-- ✅ Performance benchmarks met (all SLAs)
-- ✅ Production deployment successful with zero downtime
-- ✅ Monitoring dashboards operational
-
----
-
-*End of Tasks Document - AI-Powered CMS Automation with SEO Optimization (Fusion Architecture)*
+**End of Tasks Document - SEO Optimization & Multi-Provider Computer Use Publishing**
