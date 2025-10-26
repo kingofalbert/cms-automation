@@ -2,9 +2,25 @@ openapi: 3.0.3
 info:
   title: CMS Automation API
   description: |
-    API for AI-powered content management system automation.
-    Enables automated article generation, tagging, scheduling, and publishing workflows.
-  version: 1.0.0
+    API for AI-powered content management system automation with fusion architecture.
+
+    **Fusion Architecture**: Supports dual-source article workflows:
+    - **AI Generation**: Automated article generation from topics using Claude AI
+    - **External Import**: Import existing articles from CSV, JSON, or manual entry
+
+    Both sources flow through unified pipelines for:
+    - Intelligent tagging and categorization
+    - SEO optimization and metadata generation
+    - Computer Use API browser automation for WordPress publishing
+    - Scheduled publishing workflows
+    - Review and approval processes
+
+    **Version 2.0 Changes**:
+    - Added article import endpoints
+    - Added SEO analysis and optimization endpoints
+    - Added Computer Use publishing endpoints
+    - Extended Article model with `source` and `seo_optimized` fields
+  version: 2.0.0
   contact:
     name: CMS Automation Team
   license:
@@ -19,18 +35,24 @@ servers:
     description: Local development
 
 tags:
-  - name: Articles
-    description: Article generation and management
+  - name: Health
+    description: Service health and monitoring
   - name: Topics
-    description: Topic request submission and tracking
+    description: AI article generation topic requests
+  - name: Articles
+    description: Article management and operations
+  - name: Import
+    description: External article import (CSV, JSON, manual)
+  - name: SEO
+    description: SEO analysis and metadata optimization
+  - name: Publishing
+    description: Computer Use automated publishing to WordPress
   - name: Tags
     description: Tag and categorization management
   - name: Schedules
     description: Publishing schedule operations
   - name: Workflows
     description: Review and approval workflows
-  - name: Health
-    description: Service health and monitoring
 
 security:
   - BearerAuth: []
@@ -62,7 +84,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
 
   # ============================================================================
-  # TOPIC REQUESTS
+  # TOPIC REQUESTS (AI Generation)
   # ============================================================================
 
   /topics:
@@ -72,6 +94,7 @@ paths:
       description: |
         Submit a new topic for AI article generation. Supports single topics
         or batch submissions. Triggers async article generation workflow.
+        Generated articles will have source='ai_generated'.
       operationId: submitTopicRequest
       requestBody:
         required: true
@@ -164,7 +187,10 @@ paths:
     get:
       tags: [Articles]
       summary: List articles
-      description: Retrieve paginated list of articles with filtering and search
+      description: |
+        Retrieve paginated list of articles with filtering and search.
+        Articles can be from either AI generation (source='ai_generated') or
+        external import (source='imported').
       operationId: listArticles
       parameters:
         - $ref: '#/components/parameters/PageParam'
@@ -175,6 +201,17 @@ paths:
           schema:
             type: string
             enum: [draft, in-review, scheduled, published, failed]
+        - name: source
+          in: query
+          description: Filter by article source
+          schema:
+            type: string
+            enum: [ai_generated, imported]
+        - name: seo_optimized
+          in: query
+          description: Filter by SEO optimization status
+          schema:
+            type: boolean
         - name: tags
           in: query
           description: Filter by tag IDs (comma-separated)
@@ -202,7 +239,7 @@ paths:
     get:
       tags: [Articles]
       summary: Get article details
-      description: Retrieve complete article with metadata and workflow state
+      description: Retrieve complete article with metadata, SEO data, and workflow state
       operationId: getArticle
       parameters:
         - $ref: '#/components/parameters/ArticleIdParam'
@@ -265,6 +302,7 @@ paths:
       description: |
         Request AI to regenerate article with specific feedback.
         Creates new version while preserving history.
+        Only available for articles with source='ai_generated'.
       operationId: regenerateArticle
       parameters:
         - $ref: '#/components/parameters/ArticleIdParam'
@@ -313,6 +351,7 @@ paths:
       description: |
         Find articles with similar topics using semantic similarity (FR-018).
         Returns articles with similarity score > 0.85.
+        Works for both AI-generated and imported articles.
       operationId: findSimilarArticles
       parameters:
         - $ref: '#/components/parameters/ArticleIdParam'
@@ -342,6 +381,443 @@ paths:
                 $ref: '#/components/schemas/SimilarityResult'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # ARTICLE IMPORT (NEW - Fusion Architecture)
+  # ============================================================================
+
+  /articles/import:
+    post:
+      tags: [Import]
+      summary: Import external articles
+      description: |
+        Import articles from external sources (CSV, JSON, or manual entry).
+        Imported articles will have source='imported' and can flow through
+        the same SEO optimization and publishing pipelines as AI-generated articles.
+
+        **CSV Format**:
+        - Required columns: title, body
+        - Optional columns: author, tags (comma-separated), metadata (JSON string),
+          featured_image_url, excerpt, publish_date
+
+        **JSON Format**:
+        - Array of article objects with same fields as CSV
+
+        **Manual Entry**:
+        - Single article object
+
+        **Processing**:
+        - HTML sanitization applied to body content
+        - Validation of required fields
+        - Duplicate detection via semantic similarity
+        - Batch processing for CSV/JSON (async for >10 articles)
+
+        **Success Criteria**: Import 100 articles from CSV in < 5 minutes
+      operationId: importArticles
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: CSV or JSON file
+                skip_duplicates:
+                  type: boolean
+                  default: true
+                similarity_threshold:
+                  type: number
+                  format: float
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 0.85
+      responses:
+        '201':
+          description: Import completed (for small batches <10 articles)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportResponse'
+        '202':
+          description: Import accepted for async processing (for batches ≥10 articles)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportAsyncResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '413':
+          description: Payload too large (max 1000 articles per batch)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /articles/import/{importId}:
+    get:
+      tags: [Import]
+      summary: Get import status
+      description: |
+        Check status of async article import operation.
+        Returns progress, validation errors, and imported article IDs.
+      operationId: getImportStatus
+      parameters:
+        - name: importId
+          in: path
+          required: true
+          description: Import operation ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Import status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImportStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # SEO OPTIMIZATION (NEW - Fusion Architecture)
+  # ============================================================================
+
+  /seo/analyze/{articleId}:
+    post:
+      tags: [SEO]
+      summary: Trigger SEO analysis
+      description: |
+        Analyze article content to generate SEO metadata including:
+        - SEO title (50-60 characters)
+        - Meta description (150-160 characters)
+        - Focus keyword
+        - Primary keywords (3-5)
+        - Secondary keywords (5-10)
+        - Keyword density analysis
+        - Readability score
+        - Optimization recommendations
+
+        Works for both AI-generated and imported articles.
+        Sets article.seo_optimized = TRUE upon completion.
+
+        **Success Criteria**: Analysis completes in < 30 seconds for 1500-word article
+      operationId: analyzeSEO
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                focus_keyword_hint:
+                  type: string
+                  description: Optional keyword hint to guide analysis
+                  example: "OAuth2 authentication"
+      responses:
+        '200':
+          description: SEO analysis completed (synchronous for articles <2000 words)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SEOMetadata'
+        '202':
+          description: SEO analysis queued (async for articles ≥2000 words)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  analysis_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                    enum: [queued, processing]
+                  estimated_completion:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /seo/metadata/{articleId}:
+    get:
+      tags: [SEO]
+      summary: Get SEO metadata
+      description: |
+        Retrieve SEO metadata for an article. Returns 404 if SEO analysis
+        has not been performed yet.
+      operationId: getSEOMetadata
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      responses:
+        '200':
+          description: SEO metadata retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SEOMetadata'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [SEO]
+      summary: Update SEO metadata
+      description: |
+        Update SEO metadata with manual overrides. Original AI-generated values
+        are preserved, and manual changes are tracked with timestamps in
+        the manual_overrides JSONB field.
+      operationId: updateSEOMetadata
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SEOMetadataUpdate'
+      responses:
+        '200':
+          description: SEO metadata updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SEOMetadata'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /seo/batch-analyze:
+    post:
+      tags: [SEO]
+      summary: Batch SEO analysis
+      description: |
+        Trigger SEO analysis for multiple articles in a single request.
+        Useful for bulk processing imported articles.
+
+        Returns async task ID for tracking progress.
+      operationId: batchAnalyzeSEO
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - article_ids
+              properties:
+                article_ids:
+                  type: array
+                  items:
+                    type: integer
+                  minItems: 1
+                  maxItems: 100
+                  description: Article IDs to analyze (max 100)
+      responses:
+        '202':
+          description: Batch analysis queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batch_id:
+                    type: string
+                    format: uuid
+                  total_articles:
+                    type: integer
+                  estimated_completion:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ============================================================================
+  # COMPUTER USE PUBLISHING (NEW - Fusion Architecture)
+  # ============================================================================
+
+  /publish/submit:
+    post:
+      tags: [Publishing]
+      summary: Submit article for publishing
+      description: |
+        Submit article for automated publishing to WordPress using Claude Computer Use API.
+
+        **Prerequisites**:
+        - Article must have SEO metadata (seo_optimized = TRUE)
+        - Article status must be 'approved' or 'scheduled'
+
+        **Publishing Workflow**:
+        1. Login to WordPress admin
+        2. Create new post
+        3. Fill title and body content
+        4. Upload featured image (if present)
+        5. Populate SEO plugin fields (Yoast SEO or Rank Math)
+        6. Set categories and tags
+        7. Publish article
+        8. Verify article is live
+
+        **Screenshots Captured**:
+        - login_success.png
+        - editor_loaded.png
+        - content_filled.png
+        - image_uploaded.png (if applicable)
+        - seo_fields_filled.png
+        - taxonomy_set.png
+        - publish_clicked.png
+        - article_live.png
+
+        **Success Criteria**: Complete workflow in < 5 minutes, 95%+ success rate
+      operationId: submitPublishTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishTaskCreate'
+      responses:
+        '202':
+          description: Publishing task accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishTaskResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Article not ready for publishing (missing SEO metadata or not approved)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /publish/tasks/{taskId}:
+    get:
+      tags: [Publishing]
+      summary: Get publishing task status
+      description: |
+        Retrieve detailed status of publishing task including:
+        - Current status (pending, in_progress, completed, failed)
+        - Progress through workflow steps
+        - Screenshot URLs
+        - Execution logs
+        - Published article URL (if completed)
+        - Error details (if failed)
+      operationId: getPublishTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Publishing task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Publishing task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishTask'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /publish/tasks/{taskId}/screenshots:
+    get:
+      tags: [Publishing]
+      summary: Get task screenshots
+      description: |
+        Retrieve all screenshots captured during publishing workflow.
+        Returns array of screenshot metadata with pre-signed URLs for download.
+      operationId: getPublishTaskScreenshots
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Publishing task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Screenshots retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreenshotsResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /publish/tasks/{taskId}/retry:
+    post:
+      tags: [Publishing]
+      summary: Retry failed publishing task
+      description: |
+        Retry a failed publishing task. Increments retry_count.
+        Maximum retries configured per task (default: 3).
+      operationId: retryPublishTask
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Publishing task ID
+          schema:
+            type: integer
+      responses:
+        '202':
+          description: Retry task queued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishTaskResponse'
+        '400':
+          description: Cannot retry (max retries exceeded or task not failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /publish/tasks:
+    get:
+      tags: [Publishing]
+      summary: List publishing tasks
+      description: Retrieve paginated list of publishing tasks with filtering
+      operationId: listPublishTasks
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+        - name: status
+          in: query
+          description: Filter by task status
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, failed]
+        - name: article_id
+          in: query
+          description: Filter by article ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Publishing tasks retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishTaskList'
 
   # ============================================================================
   # TAGS
@@ -665,7 +1141,7 @@ components:
 
   schemas:
     # ========================================================================
-    # CORE ENTITIES
+    # TOPIC REQUESTS (AI Generation)
     # ========================================================================
 
     TopicRequestCreate:
@@ -770,6 +1246,10 @@ components:
           type: integer
           example: 8
 
+    # ========================================================================
+    # ARTICLES (Extended for Fusion Architecture)
+    # ========================================================================
+
     Article:
       type: object
       properties:
@@ -784,6 +1264,13 @@ components:
         body:
           type: string
           description: Article content (Markdown or HTML)
+        source:
+          type: string
+          enum: [ai_generated, imported]
+          description: Article source (NEW in v2.0)
+        seo_optimized:
+          type: boolean
+          description: Whether SEO analysis has been performed (NEW in v2.0)
         status:
           type: string
           enum: [draft, in-review, scheduled, published, failed]
@@ -810,6 +1297,14 @@ components:
         - $ref: '#/components/schemas/Article'
         - type: object
           properties:
+            seo_metadata:
+              $ref: '#/components/schemas/SEOMetadata'
+              nullable: true
+              description: SEO metadata (if seo_optimized=true)
+            publish_task:
+              $ref: '#/components/schemas/PublishTask'
+              nullable: true
+              description: Active or latest publishing task
             workflow_state:
               $ref: '#/components/schemas/WorkflowState'
             schedule:
@@ -830,7 +1325,7 @@ components:
                     format: date-time
                   change_type:
                     type: string
-                    enum: [manual_edit, ai_regeneration]
+                    enum: [manual_edit, ai_regeneration, imported]
                   user_id:
                     type: integer
 
@@ -899,6 +1394,431 @@ components:
           type: string
           format: date-time
 
+    # ========================================================================
+    # ARTICLE IMPORT (NEW - Fusion Architecture)
+    # ========================================================================
+
+    ImportRequest:
+      type: object
+      required:
+        - articles
+      properties:
+        articles:
+          type: array
+          items:
+            type: object
+            required:
+              - title
+              - body
+            properties:
+              title:
+                type: string
+                minLength: 10
+                maxLength: 500
+              body:
+                type: string
+                description: Article content (HTML or Markdown)
+              author:
+                type: string
+                nullable: true
+              tags:
+                type: array
+                items:
+                  type: string
+                description: Tag names (will be created if not exist)
+              metadata:
+                type: object
+                additionalProperties: true
+              featured_image_url:
+                type: string
+                format: uri
+                nullable: true
+              excerpt:
+                type: string
+                nullable: true
+              publish_date:
+                type: string
+                format: date-time
+                nullable: true
+          minItems: 1
+          maxItems: 1000
+          description: Articles to import (max 1000 per batch)
+        skip_duplicates:
+          type: boolean
+          default: true
+          description: Skip articles with similarity > threshold
+        similarity_threshold:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.85
+          description: Similarity threshold for duplicate detection
+
+    ImportResponse:
+      type: object
+      properties:
+        imported_count:
+          type: integer
+          description: Number of articles successfully imported
+        skipped_count:
+          type: integer
+          description: Number of articles skipped (duplicates)
+        failed_count:
+          type: integer
+          description: Number of articles that failed validation
+        article_ids:
+          type: array
+          items:
+            type: integer
+          description: IDs of imported articles
+        validation_errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row_index:
+                type: integer
+              title:
+                type: string
+              errors:
+                type: array
+                items:
+                  type: string
+        duplicates:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              similar_to_article_id:
+                type: integer
+              similarity_score:
+                type: number
+                format: float
+        duration_seconds:
+          type: number
+          format: float
+
+    ImportAsyncResponse:
+      type: object
+      properties:
+        import_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, processing]
+        total_articles:
+          type: integer
+        estimated_completion:
+          type: string
+          format: date-time
+
+    ImportStatusResponse:
+      type: object
+      properties:
+        import_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [queued, processing, completed, failed]
+        progress:
+          type: object
+          properties:
+            total:
+              type: integer
+            processed:
+              type: integer
+            imported:
+              type: integer
+            skipped:
+              type: integer
+            failed:
+              type: integer
+        result:
+          $ref: '#/components/schemas/ImportResponse'
+          nullable: true
+          description: Final import result (if completed)
+        error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    # ========================================================================
+    # SEO OPTIMIZATION (NEW - Fusion Architecture)
+    # ========================================================================
+
+    SEOMetadata:
+      type: object
+      properties:
+        id:
+          type: integer
+        article_id:
+          type: integer
+        seo_title:
+          type: string
+          minLength: 50
+          maxLength: 60
+          description: SEO-optimized title (50-60 chars)
+          example: "OAuth2 Authentication in Python: Complete Guide 2025"
+        meta_description:
+          type: string
+          minLength: 150
+          maxLength: 160
+          description: SEO meta description (150-160 chars)
+          example: "Learn OAuth2 authentication in Python with code examples, best practices, and security tips. Complete guide for developers building secure web applications."
+        focus_keyword:
+          type: string
+          description: Primary focus keyword
+          example: "OAuth2 authentication Python"
+        primary_keywords:
+          type: array
+          items:
+            type: string
+          minItems: 3
+          maxItems: 5
+          description: Primary keywords (3-5)
+          example: ["OAuth2", "Python authentication", "web security"]
+        secondary_keywords:
+          type: array
+          items:
+            type: string
+          minItems: 5
+          maxItems: 10
+          description: Secondary keywords (5-10)
+          example: ["access tokens", "authorization flow", "API security", "token refresh", "JWT"]
+        keyword_density:
+          type: object
+          additionalProperties: true
+          description: Keyword density analysis (JSONB)
+          example:
+            "OAuth2": 2.3
+            "authentication": 1.8
+            "Python": 1.5
+        optimization_recommendations:
+          type: array
+          items:
+            type: string
+          description: SEO improvement recommendations
+          example:
+            - "Increase focus keyword density to 2-3%"
+            - "Add more internal links to related articles"
+            - "Include multimedia content (images, diagrams)"
+        readability_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: Flesch reading ease score
+          example: 65.3
+        manual_overrides:
+          type: object
+          additionalProperties: true
+          description: User manual edits with timestamps (JSONB)
+          example:
+            seo_title:
+              original: "OAuth2 Authentication in Python: Complete Guide 2025"
+              override: "Master OAuth2 Authentication in Python [2025]"
+              timestamp: "2025-10-25T15:30:00Z"
+        generated_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SEOMetadataUpdate:
+      type: object
+      properties:
+        seo_title:
+          type: string
+          minLength: 50
+          maxLength: 60
+        meta_description:
+          type: string
+          minLength: 150
+          maxLength: 160
+        focus_keyword:
+          type: string
+        primary_keywords:
+          type: array
+          items:
+            type: string
+          minItems: 3
+          maxItems: 5
+        secondary_keywords:
+          type: array
+          items:
+            type: string
+          minItems: 5
+          maxItems: 10
+
+    # ========================================================================
+    # COMPUTER USE PUBLISHING (NEW - Fusion Architecture)
+    # ========================================================================
+
+    PublishTaskCreate:
+      type: object
+      required:
+        - article_id
+      properties:
+        article_id:
+          type: integer
+        cms_type:
+          type: string
+          enum: [wordpress]
+          default: wordpress
+          description: CMS platform (currently only WordPress supported)
+        max_retries:
+          type: integer
+          minimum: 0
+          maximum: 5
+          default: 3
+          description: Maximum retry attempts on failure
+
+    PublishTaskResponse:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        article_id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+        estimated_completion:
+          type: string
+          format: date-time
+        message:
+          type: string
+          example: "Publishing task queued successfully"
+
+    PublishTask:
+      type: object
+      properties:
+        id:
+          type: integer
+        article_id:
+          type: integer
+        cms_type:
+          type: string
+          enum: [wordpress]
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+          description: Task status
+        published_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Published article URL (if completed)
+        screenshots:
+          type: array
+          items:
+            type: object
+            properties:
+              step:
+                type: string
+                description: Workflow step name
+                example: "login_success"
+              url:
+                type: string
+                format: uri
+                description: Screenshot URL (pre-signed S3 or local path)
+              timestamp:
+                type: string
+                format: date-time
+          description: Screenshots captured during workflow
+        retry_count:
+          type: integer
+          description: Number of retry attempts
+        max_retries:
+          type: integer
+        error_message:
+          type: string
+          nullable: true
+          description: Error details (if failed)
+        created_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        duration_seconds:
+          type: number
+          format: float
+          nullable: true
+          description: Total execution time
+
+    PublishTaskList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublishTask'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total_pages:
+          type: integer
+
+    ScreenshotsResponse:
+      type: object
+      properties:
+        task_id:
+          type: integer
+        article_id:
+          type: integer
+        screenshots:
+          type: array
+          items:
+            type: object
+            properties:
+              step:
+                type: string
+                enum:
+                  - login_success
+                  - editor_loaded
+                  - content_filled
+                  - image_uploaded
+                  - seo_fields_filled
+                  - taxonomy_set
+                  - publish_clicked
+                  - article_live
+              url:
+                type: string
+                format: uri
+                description: Pre-signed download URL (expires in 1 hour)
+              timestamp:
+                type: string
+                format: date-time
+              file_size_bytes:
+                type: integer
+        total_screenshots:
+          type: integer
+
+    # ========================================================================
+    # TAGS
+    # ========================================================================
+
     Tag:
       type: object
       properties:
@@ -947,6 +1867,10 @@ components:
             $ref: '#/components/schemas/Tag'
         total:
           type: integer
+
+    # ========================================================================
+    # SCHEDULES
+    # ========================================================================
 
     Schedule:
       type: object
@@ -1024,6 +1948,10 @@ components:
           type: integer
         total_pages:
           type: integer
+
+    # ========================================================================
+    # WORKFLOWS
+    # ========================================================================
 
     WorkflowState:
       type: object
@@ -1111,6 +2039,10 @@ components:
           type: string
           description: Specific feedback for modification (required if request_modification=true)
 
+    # ========================================================================
+    # SIMILARITY
+    # ========================================================================
+
     SimilarityResult:
       type: object
       properties:
@@ -1153,7 +2085,7 @@ components:
           format: date-time
         version:
           type: string
-          example: "1.0.0"
+          example: "2.0.0"
         dependencies:
           type: object
           properties:

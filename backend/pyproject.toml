@@ -39,6 +39,8 @@ ruff = "^0.1.6"
 mypy = "^1.7.1"
 httpx = "^0.25.2"
 faker = "^20.1.0"
+safety = "^3.6.2"
+bandit = "^1.8.6"
 
 [tool.black]
 line-length = 100

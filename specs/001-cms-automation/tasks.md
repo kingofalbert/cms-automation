@@ -1,21 +1,25 @@
-# Tasks: AI-Powered CMS Automation
+# Tasks: AI-Powered CMS Automation with SEO Optimization (Fusion Architecture)
 
 **Input**: Design documents from `/specs/001-cms-automation/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/api-spec.yaml
+**Prerequisites**: plan.md v2.0, spec.md (updated), research.md, data-model.md (fusion), contracts/api-spec.yaml
+**Last Updated**: 2025-10-25
+**Architecture**: Dual-Source (AI Generation + Import) → Unified SEO → Computer Use Publishing
 
 **Tests**: Tests are OPTIONAL and not explicitly requested in the feature specification. This task list focuses on implementation only.
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+**Organization**: Tasks are grouped by phase and user story to enable independent implementation and testing.
 
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (US1, US2, US3, US4)
+- **[Story]**: Which user story this task belongs to (US1-US7)
+- **✅**: Completed tasks (Phases 1-4)
+- **⏳**: In Progress (Phase 5)
 - Include exact file paths in descriptions
 
 ## Path Conventions
 
-Based on plan.md, this project uses web application structure:
+Based on plan.md v2.0, this project uses web application structure:
 - **Backend**: `backend/src/`, `backend/tests/`, `backend/migrations/`
 - **Frontend**: `frontend/src/`, `frontend/tests/`
 
@@ -24,37 +28,37 @@ Based on plan.md, this project uses web application structure:
 ## Phase 1: Setup (Shared Infrastructure) ✅ COMPLETE
 
 **Purpose**: Project initialization and basic structure
+**Duration**: 1 week
+**Status**: Completed
 
 - [x] T001 Create backend project structure (backend/src/{models,services,api,workers,config}) per plan.md
 - [x] T002 Create frontend project structure (frontend/src/{components,services,hooks,utils}) per plan.md
-- [x] T003 [P] Initialize Python 3.11+ project with Poetry/uv in backend/
-- [x] T004 [P] Initialize React 18+ TypeScript project with Vite in frontend/
-- [x] T005 [P] Install backend dependencies: anthropic, fastapi, sqlalchemy, celery, redis, psycopg2, alembic
+- [x] T003 [P] Initialize Python 3.13.7 project with Poetry 2.2.0 in backend/
+- [x] T004 [P] Initialize React 18.3.1 TypeScript project with Vite in frontend/
+- [x] T005 [P] Install backend dependencies: anthropic 0.71.0+, fastapi, sqlalchemy 2.0, celery 5.5.3, redis, psycopg2, alembic, bleach ★NEW, pandas ★NEW
 - [x] T006 [P] Install frontend dependencies: react, react-query, react-hook-form, tailwind, date-fns
 - [x] T007 [P] Configure linting (ruff, mypy) and formatting (black, isort) for backend
 - [x] T008 [P] Configure linting (eslint, typescript) and formatting (prettier) for frontend
 - [x] T009 Create Docker Compose configuration in docker-compose.yml for postgres, redis, backend, frontend, workers
-- [x] T010 [P] Create .env.example template with required environment variables per quickstart.md
+- [x] T010 [P] Create .env.example template with required environment variables (including CMS_USERNAME, CMS_PASSWORD for Computer Use) ★UPDATED
 - [x] T011 [P] Setup README.md with project overview and setup instructions
 
 ---
 
-## Phase 2: Foundational (Blocking Prerequisites) ✅ COMPLETE
+## Phase 2: Foundational Infrastructure ✅ COMPLETE
 
-**Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
-
-**⚠️ CRITICAL**: No user story work can begin until this phase is complete
+**Purpose**: Core infrastructure for all user stories
+**Duration**: 2 weeks
+**Status**: Completed
 
 ### Database Foundation
-
-- [x] T012 Install and enable pgvector extension in PostgreSQL database
+- [x] T012 Install and enable pgvector extension in PostgreSQL 15 database
 - [x] T013 Initialize Alembic for database migrations in backend/migrations/
 - [x] T014 [P] Create base SQLAlchemy models infrastructure in backend/src/models/base.py
 - [x] T015 [P] Configure database connection pooling in backend/src/config/database.py
 - [x] T016 Create initial migration for base tables structure in backend/migrations/versions/
 
 ### API Foundation
-
 - [x] T017 Setup FastAPI application with CORS and middleware in backend/src/main.py
 - [x] T018 [P] Implement authentication middleware integration in backend/src/api/middleware/auth.py
 - [x] T019 [P] Implement error handling middleware in backend/src/api/middleware/error_handler.py
@@ -63,521 +67,695 @@ Based on plan.md, this project uses web application structure:
 - [x] T022 [P] Implement Pydantic base schemas for request/response validation in backend/src/api/schemas/base.py
 
 ### Task Queue Foundation
-
 - [x] T023 Configure Celery application with Redis broker in backend/src/workers/celery_app.py
 - [x] T024 [P] Setup Celery Beat for scheduled tasks in backend/src/workers/beat_schedule.py
 - [x] T025 [P] Create base task classes with retry logic in backend/src/workers/base_task.py
 - [x] T026 [P] Implement task monitoring configuration for Flower in backend/src/workers/monitoring.py
 
-### CMS Integration Foundation
-
-- [x] T027 Create abstract CMS adapter interface in backend/src/services/cms_adapter/base.py
-- [x] T028 Implement WordPress adapter in backend/src/services/cms_adapter/wordpress_adapter.py
-- [x] T029 [P] Add CMS authentication handling in backend/src/services/cms_adapter/auth.py
-- [x] T030 [P] Create CMS adapter factory in backend/src/services/cms_adapter/factory.py
-
 ### Configuration & Logging
-
-- [x] T031 [P] Implement configuration management in backend/src/config/settings.py
-- [x] T032 [P] Setup structured logging with JSON output in backend/src/config/logging.py
-- [x] T033 [P] Create environment-specific configs (dev, staging, prod) in backend/src/config/
+- [x] T027 [P] Implement configuration management in backend/src/config/settings.py
+- [x] T028 [P] Setup structured logging with JSON output in backend/src/config/logging.py
+- [x] T029 [P] Create environment-specific configs (dev, staging, prod) in backend/src/config/
 
 ### Frontend Foundation
+- [x] T030 Setup React Router with route definitions in frontend/src/routes.tsx
+- [x] T031 [P] Configure React Query client in frontend/src/services/query-client.ts
+- [x] T032 [P] Create API client with authentication in frontend/src/services/api-client.ts
+- [x] T033 [P] Implement Tailwind theme configuration in frontend/tailwind.config.js
+- [x] T034 [P] Create base UI components (Button, Input, Card) in frontend/src/components/ui/
 
-- [x] T034 Setup React Router with route definitions in frontend/src/routes.tsx
-- [x] T035 [P] Configure React Query client in frontend/src/services/query-client.ts
-- [x] T036 [P] Create API client with authentication in frontend/src/services/api-client.ts
-- [x] T037 [P] Implement Tailwind theme configuration in frontend/tailwind.config.js
-- [x] T038 [P] Create base UI components (Button, Input, Card) in frontend/src/components/ui/
-
-**Checkpoint**: ✅ Foundation ready - user story implementation can now begin in parallel
-
----
-
-## Phase 3: User Story 1 - Automated Article Creation (Priority: P1) 🎯 MVP
-
-**Goal**: Content managers can submit article topics and receive fully formatted, ready-to-publish articles within 3-5 minutes
-
-**Independent Test**: Submit an article topic through the UI, verify a complete article is generated with title, body, and formatting within 5 minutes
-
-### Data Models for US1
-
-- [x] T039 [P] [US1] Create TopicRequest model in backend/src/models/topic_request.py
-- [x] T040 [P] [US1] Create Article model with status enum in backend/src/models/article.py
-- [x] T041 [P] [US1] Create TopicEmbedding model for similarity detection in backend/src/models/topic_embedding.py
-- [x] T042 [US1] Create database migration for topic_requests, articles, topic_embeddings tables in backend/migrations/versions/
-- [x] T043 [US1] Add database indexes for articles.status and articles.author_id in migration
-
-### Claude API Integration for US1
-
-- [x] T044 [P] [US1] Implement Claude API client wrapper in backend/src/services/article_generator/claude_client.py
-- [ ] T045 [P] [US1] Create article generation prompts and templates in backend/src/services/article_generator/prompts.py
-- [x] T046 [US1] Implement ArticleGeneratorService with retry logic in backend/src/services/article_generator/generator.py
-- [ ] T047 [US1] Add content quality validation (word count, readability) in backend/src/services/article_generator/validator.py
-- [x] T048 [US1] Implement cost tracking for Claude API usage in backend/src/services/article_generator/cost_tracker.py
-
-### Semantic Similarity for US1 (DEFERRED TO PHASE 4)
-
-- [ ] T049 [P] [US1] **[Phase 4]** Implement embedding generation service in backend/src/services/similarity/embedding_service.py (Use Claude API embedding endpoint text-embedding-ada-002 equivalent, 1536-dimension vectors with L2 normalization before storage in pgvector)
-- [ ] T050 [US1] **[Phase 4]** Implement duplicate detection using pgvector cosine similarity in backend/src/services/similarity/duplicate_detector.py
-- [ ] T051 [US1] **[Phase 4]** Add similarity threshold configuration (0.85 default) in backend/src/config/similarity.py
-
-### Celery Tasks for US1
-
-- [x] T052 [US1] Create article generation Celery task in backend/src/workers/tasks/generate_article.py
-- [x] T053 [US1] Add task progress tracking and status updates in article generation task
-- [x] T054 [US1] Implement error handling and retry logic for API failures in generation task
-- [ ] T055 [US1] **[Phase 4]** Add embedding generation as async subtask in generation workflow
-
-### API Endpoints for US1
-
-- [x] T056 [P] [US1] Create TopicRequest schemas in backend/src/api/schemas/topic_request.py
-- [x] T057 [P] [US1] Create Article schemas in backend/src/api/schemas/article.py
-- [x] T058 [US1] Implement POST /v1/topics endpoint in backend/src/api/routes/topics.py
-- [x] T059 [US1] Implement GET /v1/topics endpoint with pagination in backend/src/api/routes/topics.py
-- [x] T060 [US1] Implement GET /v1/topics/{requestId} endpoint in backend/src/api/routes/topics.py
-- [ ] T061 [US1] Implement DELETE /v1/topics/{requestId} (cancel) in backend/src/api/routes/topics.py
-- [x] T062 [US1] Implement GET /v1/articles endpoint with filters in backend/src/api/routes/articles.py
-- [x] T063 [US1] Implement GET /v1/articles/{articleId} endpoint in backend/src/api/routes/articles.py
-- [ ] T064 [US1] **[Phase 4]** Implement GET /v1/articles/{articleId}/similarity endpoint in backend/src/api/routes/articles.py
-
-### Frontend UI for US1
-
-- [x] T065 [P] [US1] Create TopicSubmissionForm component in frontend/src/components/ArticleGenerator/TopicSubmissionForm.tsx
-- [ ] T066 [P] [US1] Create GenerationProgress component in frontend/src/components/ArticleGenerator/GenerationProgress.tsx
-- [x] T067 [P] [US1] Create ArticlePreview component in frontend/src/components/ArticleGenerator/ArticlePreview.tsx
-- [x] T068 [US1] Implement topic submission page in frontend/src/pages/ArticleGeneratorPage.tsx
-- [x] T069 [US1] Create React Query hooks for topic operations in frontend/src/hooks/useTopicRequests.ts
-- [x] T070 [US1] Create React Query hooks for article operations in frontend/src/hooks/useArticles.ts
-- [ ] T071 [US1] Add real-time progress polling for generation status in frontend/src/hooks/useGenerationProgress.ts
-
-### Integration & Error Handling for US1
-
-- [ ] T072 [US1] Implement batch topic submission handling in backend/src/api/routes/topics.py
-- [ ] T073 [US1] **[Phase 4]** Add duplicate detection check before topic submission in backend/src/api/routes/topics.py
-- [ ] T074 [US1] Implement article metadata extraction and storage in backend/src/services/article_generator/metadata_extractor.py
-- [ ] T075 [US1] Add error notification system for failed generations in backend/src/services/notifications/generator_notifications.py
-- [ ] T076 [US1] Create audit logging for article generation events in backend/src/services/audit/article_audit.py
-
-**Checkpoint**: User Story 1 complete - article generation fully functional and testable independently
+**Checkpoint**: ✅ Foundation ready
 
 ---
 
-## Phase 4: User Story 2 - Intelligent Tagging and Categorization (Priority: P2)
+## Phase 3: User Story 1 - AI Article Generation (Priority: P1) ✅ COMPLETE
 
-**Goal**: Articles are automatically tagged and categorized with 85%+ accuracy, ensuring consistent taxonomy and content discoverability
+**Goal**: Content managers can submit topics and receive fully formatted articles within 5 minutes
+**Duration**: 2 weeks
+**Status**: Completed - 6/6 E2E tests passing, 91.7% faster than SLA
 
-**Independent Test**: Provide pre-written articles (bypass generation), verify appropriate tags and categories are assigned with 85% accuracy
+### Data Models
+- [x] T035 [P] [US1] Create TopicRequest model in backend/src/models/topic_request.py
+- [x] T036 [P] [US1] Create Article model with status enum in backend/src/models/article.py
+- [x] T037 [US1] Create database migration for topic_requests and articles tables
 
-### Data Models for US2
+### Claude API Integration
+- [x] T038 [P] [US1] Implement Claude Messages API client wrapper in backend/src/services/article_generator/claude_client.py
+- [x] T039 [US1] Implement ArticleGeneratorService with retry logic in backend/src/services/article_generator/generator.py
+- [x] T040 [US1] Implement cost tracking for Claude API usage in backend/src/services/article_generator/cost_tracker.py
 
-- [ ] T077 [P] [US2] Create Tag model in backend/src/models/tag.py
-- [ ] T078 [P] [US2] Create ArticleTag association model in backend/src/models/article_tag.py
-- [ ] T079 [US2] Create database migration for tags and article_tags tables in backend/migrations/versions/
-- [ ] T080 [US2] Add database indexes for tags.name and article_tags.confidence in migration
-- [ ] T081 [US2] Add trigger for automatic tag usage_count updates in migration
+### Celery Tasks
+- [x] T041 [US1] Create article generation Celery task in backend/src/workers/tasks/generate_article.py
+- [x] T042 [US1] Add task progress tracking and status updates
+- [x] T043 [US1] Implement error handling and retry logic for API failures
 
-### Content Analysis Service for US2
+### API Endpoints
+- [x] T044 [P] [US1] Create TopicRequest schemas in backend/src/api/schemas/topic_request.py
+- [x] T045 [P] [US1] Create Article schemas in backend/src/api/schemas/article.py
+- [x] T046 [US1] Implement POST /v1/topics endpoint in backend/src/api/routes/topics.py
+- [x] T047 [US1] Implement GET /v1/topics/{requestId} endpoint
+- [x] T048 [US1] Implement GET /v1/articles/{articleId} endpoint in backend/src/api/routes/articles.py
 
-- [ ] T082 [P] [US2] Implement content analyzer using Claude API in backend/src/services/content_analyzer/analyzer.py
-- [ ] T083 [P] [US2] Create tag extraction logic from article content in backend/src/services/content_analyzer/tag_extractor.py
-- [ ] T084 [US2] Implement category assignment logic in backend/src/services/content_analyzer/category_assigner.py
-- [ ] T085 [US2] Add tag confidence scoring algorithm in backend/src/services/content_analyzer/confidence_scorer.py
-- [ ] T086 [US2] Implement tag normalization and synonym detection in backend/src/services/content_analyzer/tag_normalizer.py
+### Frontend UI
+- [x] T049 [P] [US1] Create TopicSubmissionForm component in frontend/src/components/ArticleGenerator/TopicSubmissionForm.tsx
+- [x] T050 [P] [US1] Create ArticlePreview component in frontend/src/components/ArticleGenerator/ArticlePreview.tsx
+- [x] T051 [US1] Implement topic submission page in frontend/src/pages/ArticleGeneratorPage.tsx
+- [x] T052 [US1] Create React Query hooks for topic/article operations in frontend/src/hooks/
 
-### Tag Management for US2
-
-- [ ] T087 [P] [US2] Create TagService for CRUD operations in backend/src/services/tag_service.py
-- [ ] T088 [US2] Implement existing tag matching (case-insensitive) in backend/src/services/tag_service.py
-- [ ] T089 [US2] Add automatic tag creation for new topics in backend/src/services/tag_service.py
-- [ ] T090 [US2] Implement tag merging for synonyms in backend/src/services/tag_service.py
-
-### Integration with Article Generation for US2
-
-- [ ] T091 [US2] Add tagging step to article generation workflow in backend/src/workers/tasks/generate_article.py
-- [ ] T092 [US2] Implement automatic tagging for manually created articles in backend/src/api/routes/articles.py
-- [ ] T093 [US2] Add tag override capability for content managers in backend/src/api/routes/articles.py
-
-### API Endpoints for US2
-
-- [ ] T094 [P] [US2] Create Tag schemas in backend/src/api/schemas/tag.py
-- [ ] T095 [US2] Implement GET /v1/tags endpoint with filters in backend/src/api/routes/tags.py
-- [ ] T096 [US2] Implement POST /v1/tags endpoint (manual tag creation) in backend/src/api/routes/tags.py
-- [ ] T097 [US2] Add tag assignment to PATCH /v1/articles/{articleId} endpoint in backend/src/api/routes/articles.py
-
-### Frontend UI for US2
-
-- [ ] T098 [P] [US2] Create TagDisplay component in frontend/src/components/Tags/TagDisplay.tsx
-- [ ] T099 [P] [US2] Create TagEditor component for manual tagging in frontend/src/components/Tags/TagEditor.tsx
-- [ ] T100 [P] [US2] Create TagConfidenceIndicator component in frontend/src/components/Tags/TagConfidenceIndicator.tsx
-- [ ] T101 [US2] Add tag display to ArticlePreview component in frontend/src/components/ArticleGenerator/ArticlePreview.tsx
-- [ ] T102 [US2] Create React Query hooks for tag operations in frontend/src/hooks/useTags.ts
-- [ ] T103 [US2] Implement tag filtering and search in article list in frontend/src/pages/ArticleListPage.tsx
-
-### Accuracy Tracking for US2
-
-- [ ] T104 [US2] Implement tagging accuracy tracking system in backend/src/services/content_analyzer/accuracy_tracker.py
-- [ ] T105 [US2] Create comparison logic against manual baseline in backend/src/services/content_analyzer/baseline_comparator.py
-- [ ] T106 [US2] Add metrics endpoint for tagging accuracy in backend/src/api/routes/metrics.py
-
-**Checkpoint**: User Story 2 complete - automated tagging functional, can be tested independently from generation
+**Checkpoint**: ✅ US1 complete - AI generation functional
 
 ---
 
-## Phase 5: User Story 3 - Scheduling and Publishing Workflow (Priority: P3)
+## Phase 4: Testing & Validation ✅ COMPLETE
 
-**Goal**: Content managers can schedule articles for future publication with 99% success rate and ±1 minute accuracy
+**Duration**: 1 week
+**Status**: Completed - 6/6 E2E tests passed (100%)
 
-**Independent Test**: Schedule pre-created articles for future publication, verify they publish at correct time with proper status transitions
+### E2E Tests
+- [x] T053 E2E Test 1: Topic Submission workflow
+- [x] T054 E2E Test 2: Article Generation Pipeline (25s average, 91.7% faster than 300s SLA)
+- [x] T055 E2E Test 3: Article Display & Retrieval
+- [x] T056 E2E Test 4: Error Handling (100% coverage)
+- [x] T057 E2E Test 5: Concurrent Requests (3+ simultaneous)
+- [x] T058 E2E Test 6: SLA Compliance validation
 
-### Data Models for US3
+### Production Deployment
+- [x] T059 Create production Docker configurations
+- [x] T060 Create deployment documentation (DEPLOYMENT.md)
 
-- [ ] T107 [P] [US3] Create Schedule model in backend/src/models/schedule.py
-- [ ] T108 [US3] Create database migration for schedules table in backend/migrations/versions/
-- [ ] T109 [US3] Add database indexes for schedules.scheduled_time and schedules.status in migration
-
-### Scheduling Service for US3
-
-- [ ] T110 [P] [US3] Implement ScheduleService for CRUD operations in backend/src/services/scheduler/schedule_service.py
-- [ ] T111 [US3] Add schedule validation (future time, article status checks) in backend/src/services/scheduler/validator.py
-- [ ] T112 [US3] Implement retry configuration handling in backend/src/services/scheduler/retry_handler.py
-- [ ] T113 [US3] Create schedule conflict detection (same time, resource limits) in backend/src/services/scheduler/conflict_detector.py
-
-### Publishing Service for US3
-
-- [ ] T114 [P] [US3] Implement article publishing logic via CMS adapter in backend/src/services/cms_adapter/publisher.py
-- [ ] T115 [US3] Add pre-publication validation checks in backend/src/services/cms_adapter/publication_validator.py
-- [ ] T116 [US3] Implement dependency verification (images, metadata) in backend/src/services/cms_adapter/dependency_checker.py
-- [ ] T117 [US3] Add rollback mechanism for failed publications in backend/src/services/cms_adapter/rollback_handler.py
-
-### Celery Beat Tasks for US3
-
-- [ ] T118 [US3] Create scheduled publication Celery Beat task in backend/src/workers/tasks/publish_scheduled.py
-- [ ] T119 [US3] Implement periodic schedule scanner (runs every minute) in backend/src/workers/beat_schedule.py
-- [ ] T120 [US3] Add publication status update after success/failure in backend/src/workers/tasks/publish_scheduled.py
-- [ ] T121 [US3] Implement retry logic with exponential backoff in backend/src/workers/tasks/publish_scheduled.py
-
-### API Endpoints for US3
-
-- [ ] T122 [P] [US3] Create Schedule schemas in backend/src/api/schemas/schedule.py
-- [ ] T123 [US3] Implement POST /v1/schedules endpoint in backend/src/api/routes/schedules.py
-- [ ] T124 [US3] Implement GET /v1/schedules endpoint with date filters in backend/src/api/routes/schedules.py
-- [ ] T125 [US3] Implement GET /v1/schedules/{scheduleId} endpoint in backend/src/api/routes/schedules.py
-- [ ] T126 [US3] Implement PATCH /v1/schedules/{scheduleId} (update time) in backend/src/api/routes/schedules.py
-- [ ] T127 [US3] Implement DELETE /v1/schedules/{scheduleId} (cancel) in backend/src/api/routes/schedules.py
-- [ ] T128 [US3] Implement POST /v1/articles/{articleId}/rollback endpoint in backend/src/api/routes/articles.py
-
-### Frontend UI for US3
-
-- [ ] T129 [P] [US3] Create ScheduleCalendar component in frontend/src/components/ScheduleManager/ScheduleCalendar.tsx
-- [ ] T130 [P] [US3] Create ScheduleForm component in frontend/src/components/ScheduleManager/ScheduleForm.tsx
-- [ ] T131 [P] [US3] Create ScheduleList component in frontend/src/components/ScheduleManager/ScheduleList.tsx
-- [ ] T132 [US3] Implement scheduling page in frontend/src/pages/ScheduleManagerPage.tsx
-- [ ] T133 [US3] Create React Query hooks for schedule operations in frontend/src/hooks/useSchedules.ts
-- [ ] T134 [US3] Add schedule status indicators and notifications in frontend/src/components/ScheduleManager/ScheduleStatus.tsx
-
-### Monitoring & Notifications for US3
-
-- [ ] T135 [US3] Implement publication success/failure notifications in backend/src/services/notifications/publication_notifications.py
-- [ ] T136 [US3] Add schedule accuracy tracking and metrics in backend/src/services/scheduler/metrics_tracker.py
-- [ ] T137 [US3] Create publication audit logging in backend/src/services/audit/publication_audit.py
-
-**Checkpoint**: User Story 3 complete - scheduling and publishing functional, can be tested independently
+**Checkpoint**: ✅ System production-ready
 
 ---
 
-## Phase 6: User Story 4 - Content Review and Approval (Priority: P4)
+## Phase 5: Fusion Architecture Extensions (In Progress ⏳)
 
-**Goal**: Content managers can review AI-generated content, approve/reject, and request modifications through hybrid workflow
-
-**Independent Test**: Generate articles, place in review status, test approval/rejection workflows with different user permission levels
-
-### Data Models for US4
-
-- [ ] T138 [P] [US4] Create WorkflowState model in backend/src/models/workflow_state.py
-- [ ] T139 [US4] Create database migration for workflow_states table in backend/migrations/versions/
-- [ ] T140 [US4] Add database indexes for workflow_states.current_status and workflow_states.article_id in migration
-- [ ] T141 [US4] Add trigger for automatic workflow_states.updated_at in migration
-
-### Workflow Service for US4
-
-- [ ] T142 [P] [US4] Implement WorkflowService for state management in backend/src/services/workflow/workflow_service.py
-- [ ] T143 [US4] Add reviewer assignment logic in backend/src/services/workflow/reviewer_assigner.py
-- [ ] T143.1 [US4] Implement automatic reviewer assignment based on article category, editor availability, and load-balancing heuristics in backend/src/services/workflow/reviewer_assigner.py
-- [ ] T144 [US4] Implement permission validation for approvals in backend/src/services/workflow/permission_validator.py
-- [ ] T145 [US4] Create approval history tracking in backend/src/services/workflow/history_tracker.py
-- [ ] T146 [US4] Add modification request handling in backend/src/services/workflow/modification_handler.py
-
-### Article Modification for US4
-
-- [ ] T147 [P] [US4] Implement manual edit tracking in backend/src/services/article_generator/edit_tracker.py
-- [ ] T148 [US4] Create article regeneration with feedback in backend/src/workers/tasks/regenerate_article.py
-- [ ] T149 [US4] Add version control for article modifications in backend/src/services/article_generator/version_control.py
-- [ ] T150 [US4] Implement modification history export in backend/src/services/article_generator/history_exporter.py
-
-### API Endpoints for US4
-
-- [ ] T151 [P] [US4] Create WorkflowState schemas in backend/src/api/schemas/workflow.py
-- [ ] T152 [US4] Implement GET /v1/workflows/{articleId} endpoint in backend/src/api/routes/workflows.py
-- [ ] T153 [US4] Implement POST /v1/workflows/{articleId}/approve endpoint in backend/src/api/routes/workflows.py
-- [ ] T154 [US4] Implement POST /v1/workflows/{articleId}/reject endpoint in backend/src/api/routes/workflows.py
-- [ ] T155 [US4] Implement POST /v1/articles/{articleId}/regenerate endpoint in backend/src/api/routes/articles.py
-- [ ] T156 [US4] Implement PATCH /v1/articles/{articleId} for manual edits in backend/src/api/routes/articles.py
-
-### Frontend UI for US4
-
-- [ ] T157 [P] [US4] Create ReviewPanel component in frontend/src/components/ReviewWorkflow/ReviewPanel.tsx
-- [ ] T158 [P] [US4] Create ApprovalButtons component in frontend/src/components/ReviewWorkflow/ApprovalButtons.tsx
-- [ ] T159 [P] [US4] Create FeedbackForm component for rejection/modification in frontend/src/components/ReviewWorkflow/FeedbackForm.tsx
-- [ ] T160 [P] [US4] Create ModificationHistory component in frontend/src/components/ReviewWorkflow/ModificationHistory.tsx
-- [ ] T161 [US4] Implement article review page in frontend/src/pages/ArticleReviewPage.tsx
-- [ ] T162 [US4] Create React Query hooks for workflow operations in frontend/src/hooks/useWorkflow.ts
-- [ ] T163 [US4] Add inline editing capability in ArticlePreview component in frontend/src/components/ArticleGenerator/ArticlePreview.tsx
-
-### Notifications for US4
-
-- [ ] T164 [US4] Implement review assignment notifications in backend/src/services/notifications/workflow_notifications.py
-- [ ] T165 [US4] Add approval/rejection notifications in backend/src/services/notifications/workflow_notifications.py
-- [ ] T166 [US4] Create modification request notifications in backend/src/services/notifications/workflow_notifications.py
-
-**Checkpoint**: User Story 4 complete - review and approval workflow functional, all user stories independently testable
+**Purpose**: Add external article import, unified SEO optimization, and Computer Use publishing while preserving AI generation
+**Duration**: 8-9 weeks
+**Status**: In Progress
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+### Week 1-2: Database Extensions + Article Import (10 tasks)
 
-**Purpose**: Improvements and quality enhancements that affect multiple user stories
+#### Database Migration (T301-T306)
 
-### Health & Monitoring
+- [ ] T301 [P] [Phase 5] ⏳ **Extend articles table** with new columns in backend/migrations/versions/xxx_fusion_extensions.py:
+  - Add `source VARCHAR(20) NOT NULL DEFAULT 'ai_generated'` CHECK (source IN ('ai_generated', 'imported'))
+  - Add `seo_optimized BOOLEAN NOT NULL DEFAULT FALSE`
+  - Add indexes: `idx_articles_source`, `idx_articles_seo_optimized`
+  - **Dependencies**: None
+  - **Est**: 2 hours
+  - **Acceptance**: Migration runs successfully, existing articles have source='ai_generated', new columns indexed
 
-- [ ] T167 [P] Implement health check endpoint GET /v1/health in backend/src/api/routes/health.py
-- [ ] T168 [P] Add dependency health checks (database, redis, claude_api, cms_api) in backend/src/services/health/
-- [ ] T169 [P] Create metrics collection for queue depth, generation time, API latency in backend/src/services/metrics/
-- [ ] T170 [P] Implement Prometheus metrics exporter in backend/src/services/metrics/prometheus_exporter.py
+- [ ] T302 [P] [Phase 5] ⏳ **Create seo_metadata table** in same migration:
+  - Columns: id, article_id (FK), seo_title VARCHAR(60), meta_description VARCHAR(160), focus_keyword, primary_keywords TEXT[], secondary_keywords TEXT[], keyword_density JSONB, optimization_recommendations TEXT[], manual_overrides JSONB, readability_score DECIMAL(4,2), generated_at, updated_at
+  - Constraints: CHECK seo_title length 50-60, CHECK meta_description length 150-160, CHECK primary_keywords array length 3-5, CHECK secondary_keywords array length 5-10
+  - Indexes: `idx_seo_metadata_article`, `idx_seo_metadata_focus_keyword`
+  - **Dependencies**: T301
+  - **Est**: 2 hours
+  - **Acceptance**: Table created with all constraints, foreign keys working
 
-### Audit & Compliance
+- [ ] T303 [P] [Phase 5] ⏳ **Create publish_tasks table** in same migration:
+  - Columns: id, article_id (FK), cms_type VARCHAR(50) DEFAULT 'wordpress', status VARCHAR(20) DEFAULT 'pending', screenshots JSONB DEFAULT '[]', retry_count INT DEFAULT 0, max_retries INT DEFAULT 3, error_message TEXT, started_at, completed_at, duration_seconds INT, created_at
+  - Constraints: CHECK max_retries > 0, CHECK retry_count <= max_retries, CHECK status IN ('pending', 'in_progress', 'completed', 'failed', 'cancelled')
+  - Indexes: `idx_publish_tasks_article`, `idx_publish_tasks_status`, `idx_publish_tasks_pending`
+  - **Dependencies**: T301
+  - **Est**: 2 hours
+  - **Acceptance**: Table created with all constraints
 
-- [ ] T171 [P] Create AuditLog model in backend/src/models/audit_log.py
-- [ ] T172 Create database migration for audit_logs table with partitioning in backend/migrations/versions/
-- [ ] T173 [P] Implement audit logging triggers for all entity changes in backend/migrations/versions/
-- [ ] T174 [P] Create audit log query API in backend/src/api/routes/audit.py
+- [ ] T304 [Phase 5] ⏳ **Create execution_logs table with partitioning** in same migration:
+  - Partitioned table by timestamp (monthly)
+  - Columns: id BIGSERIAL, publish_task_id (FK), action VARCHAR(50), target_element TEXT, payload JSONB, result VARCHAR(20), error_details TEXT, timestamp
+  - Constraints: CHECK action IN ('navigate', 'click', 'type', 'upload', 'screenshot', 'verify', 'wait', 'scroll'), CHECK result IN ('success', 'failure', 'retry')
+  - Indexes: `idx_execution_logs_task`, `idx_execution_logs_timestamp`, `idx_execution_logs_action`
+  - Create first partition: execution_logs_2025_10
+  - **Dependencies**: T303
+  - **Est**: 3 hours
+  - **Acceptance**: Partitioned table created, can insert logs to current month partition
 
-### Performance Optimization
+- [ ] T305 [Phase 5] ⏳ **Deploy database triggers** for SEO and audit logging:
+  - Trigger: `update_seo_optimized_status` on INSERT seo_metadata → UPDATE articles SET seo_optimized=TRUE
+  - Trigger: `update_updated_at` on UPDATE seo_metadata → SET updated_at=NOW()
+  - Trigger: `log_article_changes` on INSERT/UPDATE/DELETE articles → INSERT audit_logs
+  - **Dependencies**: T302
+  - **Est**: 2 hours
+  - **Acceptance**: All triggers fire correctly, tested with sample data
 
-- [ ] T175 [P] Implement database query optimization (indexes, connection pooling) in backend/src/config/database.py
-- [ ] T176 [P] Add Redis caching for frequently accessed data in backend/src/services/cache/
-- [ ] T177 [P] Optimize API response times with pagination and filtering in backend/src/api/routes/
-- [ ] T178 [P] Implement rate limiting middleware in backend/src/api/middleware/rate_limiter.py
+- [ ] T306 [Phase 5] ⏳ **Backfill existing data** and validate migration:
+  - Update all existing articles: SET source='ai_generated', seo_optimized=FALSE
+  - Verify all foreign keys and constraints
+  - Run ANALYZE on all new tables/indexes
+  - **Dependencies**: T301-T305
+  - **Est**: 1 hour
+  - **Acceptance**: All existing data migrated correctly, performance benchmarks met
 
-### Security
+#### Article Importer Service (T307-T310)
 
-- [ ] T179 [P] Add input validation and sanitization across all endpoints in backend/src/api/schemas/
-- [ ] T180 [P] Implement API key rotation mechanism in backend/src/services/auth/key_rotation.py
-- [ ] T181 [P] Add HTTPS enforcement and security headers in backend/src/main.py
-- [ ] T182 [P] Create secrets management integration in backend/src/config/secrets.py
+- [ ] T307 [P] [US2] ⏳ **Implement CSV parser with validation** in backend/src/services/article_importer/csv_parser.py:
+  - Use pandas for CSV parsing
+  - Required columns: title, body
+  - Optional columns: images (comma-separated URLs), excerpt, metadata
+  - Validate: title 10-500 chars, body min 100 words
+  - Return list of validated article dictionaries
+  - **Dependencies**: None (can start parallel with T301)
+  - **Est**: 4 hours
+  - **Acceptance**: Parse CSV with 100 articles in < 30 seconds, validation catches all errors
 
-### Documentation
+- [ ] T308 [P] [US2] ⏳ **Implement HTML sanitization** in backend/src/services/article_importer/sanitizer.py:
+  - Use bleach library for XSS prevention
+  - Allowed tags: p, h1-h6, ul, ol, li, a, strong, em, code, pre, blockquote, img
+  - Allowed attributes: href (for a), src/alt (for img), class
+  - Strip all scripts, iframes, and dangerous tags
+  - **Dependencies**: None
+  - **Est**: 3 hours
+  - **Acceptance**: 100% XSS prevention (tested with OWASP XSS vectors), preserves safe formatting
 
-- [ ] T183 [P] Generate OpenAPI documentation endpoint in backend/src/main.py
-- [ ] T184 [P] Create API reference documentation in docs/api-reference.md
-- [ ] T185 [P] Document deployment procedures in docs/deployment.md
-- [ ] T186 [P] Create troubleshooting guide in docs/troubleshooting.md
+- [ ] T309 [US2] ⏳ **Implement ArticleImporterService** in backend/src/services/article_importer/importer.py:
+  - Method: `import_csv(file_path, user_id) -> List[Article]`
+  - Method: `import_json(data, user_id) -> List[Article]`
+  - Method: `import_single(title, body, images, user_id) -> Article`
+  - For each article: sanitize HTML, validate images URLs, set source='imported', store to DB
+  - Batch insert for performance (100 articles in one transaction)
+  - Return list of created article IDs
+  - **Dependencies**: T306 (DB ready), T307 (CSV parser), T308 (sanitizer)
+  - **Est**: 6 hours
+  - **Acceptance**: Import 100 articles from CSV in < 5 minutes, 100% data integrity, transaction rollback on errors
 
-### Testing Infrastructure
+- [ ] T310 [US2] ⏳ **Implement import API endpoints**:
+  - POST /v1/articles/import endpoint in backend/src/api/routes/articles.py
+  - Request schema: multipart/form-data with CSV file OR JSON array
+  - Response schema: {article_ids: List[int], imported_count: int, failed_count: int, errors: List}
+  - Add progress tracking for large batches (return task_id if > 50 articles)
+  - **Dependencies**: T309
+  - **Est**: 4 hours
+  - **Acceptance**: API accepts CSV/JSON, returns correct counts, handles errors gracefully
 
-- [ ] T187 [P] Setup pytest configuration in backend/pytest.ini
-- [ ] T188 [P] Create test fixtures and factories in backend/tests/fixtures/
-- [ ] T189 [P] Setup Playwright configuration in frontend/playwright.config.ts
-- [ ] T190 [P] Create E2E test helpers in frontend/tests/helpers/
-
-### Deployment Readiness
-
-- [ ] T191 [P] Create production Dockerfile for backend in backend/Dockerfile
-- [ ] T192 [P] Create production Dockerfile for frontend in frontend/Dockerfile
-- [ ] T193 [P] Setup CI/CD pipeline configuration in .github/workflows/
-- [ ] T194 [P] Create database backup and restore scripts in backend/scripts/
-- [ ] T195 [P] Implement zero-downtime deployment strategy in docs/deployment.md
-- [ ] T196 Run quickstart.md validation to ensure setup instructions work
-
----
-
-## Dependencies & Execution Order
-
-### Phase Dependencies
-
-- **Setup (Phase 1)**: No dependencies - can start immediately
-- **Foundational (Phase 2)**: Depends on Setup completion - BLOCKS all user stories
-- **User Story 1 (Phase 3)**: Depends on Foundational completion - MVP target
-- **User Story 2 (Phase 4)**: Depends on Foundational completion - Independent of US1 but integrates with generation
-- **User Story 3 (Phase 5)**: Depends on Foundational completion - Independent of US1/US2 but uses their outputs
-- **User Story 4 (Phase 6)**: Depends on Foundational completion - Independent of other stories but enhances workflow
-- **Polish (Phase 7)**: Depends on all desired user stories being complete
-
-### User Story Dependencies
-
-- **User Story 1 (P1)**: Can start after Foundational (Phase 2) - No dependencies on other stories ✅ MVP READY
-- **User Story 2 (P2)**: Can start after Foundational (Phase 2) - Integrates with US1 generation but independently testable
-- **User Story 3 (P3)**: Can start after Foundational (Phase 2) - Uses articles from US1 but independently testable
-- **User Story 4 (P4)**: Can start after Foundational (Phase 2) - Enhances all stories but independently testable
-
-### Within Each User Story
-
-**General Pattern**:
-1. Data models and migrations (can run in parallel within story)
-2. Service layer implementation (depends on models)
-3. Celery tasks (depends on services)
-4. API endpoints (depends on services)
-5. Frontend components (can run in parallel)
-6. Frontend pages (depends on components)
-7. Integration and error handling
-
-### Parallel Opportunities
-
-**Setup Phase (Phase 1)**:
-- T003-T008: All dependency installation and configuration tasks
-- T010-T011: Documentation tasks
-
-**Foundational Phase (Phase 2)**:
-- T014-T015: Database setup
-- T018-T022: API middleware (different files)
-- T024-T026: Celery configuration
-- T029, T030: CMS adapter helpers
-- T031-T033: Configuration
-- T035-T038: Frontend foundation
-
-**User Story 1 (Phase 3)**:
-- T039-T041: All models (different files)
-- T044-T045, T048: Article generator components
-- T049, T051: Similarity components
-- T056-T057: API schemas
-- T065-T067: Frontend components
-
-**User Story 2 (Phase 4)**:
-- T077-T078: Models
-- T082-T083: Analyzer components
-- T087: Tag service
-- T094: Schemas
-- T098-T100: Frontend components
-
-**User Story 3 (Phase 5)**:
-- T107: Schedule model
-- T110-T111: Scheduler components
-- T114-T115: Publishing components
-- T122: Schemas
-- T129-T131: Frontend components
-
-**User Story 4 (Phase 6)**:
-- T138: Workflow model
-- T142-T143: Workflow components
-- T147-T148: Modification handlers
-- T151: Schemas
-- T157-T160: Frontend components
-
-**Polish Phase (Phase 7)**:
-- T167-T170: Health and monitoring
-- T171, T174: Audit (T173 depends on T172)
-- T175-T178: Performance
-- T179-T182: Security
-- T183-T186: Documentation
-- T187-T190: Testing infrastructure
-- T191-T195: Deployment
+**Week 1-2 Checkpoint**: Database extended, import functionality working, can import 100 articles in < 5 minutes
 
 ---
 
-## Parallel Example: User Story 1
+### Week 3-4: SEO Optimization Engine (15 tasks)
 
-```bash
-# Phase 1: All models for US1 can start together:
-Task T039: "Create TopicRequest model in backend/src/models/topic_request.py"
-Task T040: "Create Article model with status enum in backend/src/models/article.py"
-Task T041: "Create TopicEmbedding model for similarity detection in backend/src/models/topic_embedding.py"
+#### SEO Analyzer Service (T311-T318)
 
-# Phase 2: Generator components (after models complete):
-Task T044: "Implement Claude API client wrapper in backend/src/services/article_generator/claude_client.py"
-Task T045: "Create article generation prompts in backend/src/services/article_generator/prompts.py"
-Task T048: "Implement cost tracking in backend/src/services/article_generator/cost_tracker.py"
+- [ ] T311 [P] [US3] ⏳ **Implement keyword extraction** in backend/src/services/seo_analyzer/keyword_extractor.py:
+  - Use Claude Messages API with specialized SEO prompt
+  - Extract: 1 focus keyword, 3-5 primary keywords, 5-10 secondary keywords
+  - Calculate keyword density for each (count / total_words * 100)
+  - Store in JSONB format: {"keyword": {"count": N, "density": X.X}}
+  - **Dependencies**: None (can start parallel)
+  - **Est**: 6 hours
+  - **Acceptance**: Extract keywords from 1500-word article in < 20 seconds, 85%+ accuracy vs expert baseline (tested on 20 articles)
 
-# Phase 3: API schemas can start in parallel:
-Task T056: "Create TopicRequest schemas in backend/src/api/schemas/topic_request.py"
-Task T057: "Create Article schemas in backend/src/api/schemas/article.py"
+- [ ] T312 [P] [US3] ⏳ **Implement SEO metadata generation** in backend/src/services/seo_analyzer/metadata_generator.py:
+  - Use Claude Messages API to generate SEO title (50-60 chars) and meta description (150-160 chars)
+  - Include focus keyword in title and description
+  - Follow Google Search Console best practices
+  - Auto-truncate if exceeds length limits
+  - **Dependencies**: T311 (needs focus keyword)
+  - **Est**: 4 hours
+  - **Acceptance**: Generated titles 100% within 50-60 chars, descriptions 100% within 150-160 chars, include focus keyword
 
-# Phase 4: Frontend components can start together:
-Task T065: "Create TopicSubmissionForm component in frontend/src/components/ArticleGenerator/TopicSubmissionForm.tsx"
-Task T066: "Create GenerationProgress component in frontend/src/components/ArticleGenerator/GenerationProgress.tsx"
-Task T067: "Create ArticlePreview component in frontend/src/components/ArticleGenerator/ArticlePreview.tsx"
-```
+- [ ] T313 [P] [US3] ⏳ **Implement readability scoring** in backend/src/services/seo_analyzer/readability_scorer.py:
+  - Calculate Flesch-Kincaid Grade Level
+  - Formula: 0.39 * (total_words / total_sentences) + 11.8 * (total_syllables / total_words) - 15.59
+  - Use pyphen library for syllable counting
+  - Target grade level: 8-12 (readable but professional)
+  - **Dependencies**: None
+  - **Est**: 3 hours
+  - **Acceptance**: Score 1500-word article in < 1 second, scores match manual calculations
+
+- [ ] T314 [US3] ⏳ **Implement optimization recommendations generator** in backend/src/services/seo_analyzer/recommendations_generator.py:
+  - Check title length (warn if > 60 chars)
+  - Check description length (warn if > 160 chars)
+  - Check keyword density (warn if focus keyword < 0.5% or > 3%)
+  - Check readability (warn if grade level < 8 or > 14)
+  - Check image alt tags (if article has images)
+  - Return array of actionable recommendations
+  - **Dependencies**: T311-T313
+  - **Est**: 4 hours
+  - **Acceptance**: Generate 3-7 relevant recommendations per article, tested on 20 diverse articles
+
+- [ ] T315 [US3] ⏳ **Implement SEO Analyzer orchestrator** in backend/src/services/seo_analyzer/analyzer.py:
+  - Method: `analyze_article(article_id) -> SEOMetadata`
+  - Orchestrate: keyword extraction → metadata generation → readability scoring → recommendations
+  - Create SEOMetadata record in database
+  - Update article.seo_optimized = TRUE
+  - Return complete SEO metadata object
+  - **Dependencies**: T311-T314, T306 (DB ready)
+  - **Est**: 5 hours
+  - **Acceptance**: Complete analysis of 1500-word article in < 30 seconds, all fields populated correctly
+
+- [ ] T316 [US3] ⏳ **Implement batch SEO analysis** in backend/src/services/seo_analyzer/batch_analyzer.py:
+  - Method: `analyze_batch(article_ids: List[int]) -> BatchResult`
+  - Process articles in parallel (using Celery tasks)
+  - Track progress for each article
+  - Return summary: {total, completed, failed, errors}
+  - **Dependencies**: T315
+  - **Est**: 4 hours
+  - **Acceptance**: Analyze 100 articles in < 50 minutes (30s each), handle failures gracefully
+
+- [ ] T317 [P] [US3] ⏳ **Implement manual override tracking** in backend/src/services/seo_analyzer/override_tracker.py:
+  - Method: `record_override(seo_metadata_id, field, old_value, new_value, editor_id, reason)`
+  - Append to manual_overrides JSONB array with timestamp
+  - Update seo_metadata.updated_at
+  - Track which fields were edited by humans
+  - **Dependencies**: T306 (DB ready)
+  - **Est**: 3 hours
+  - **Acceptance**: Override records stored correctly, history preserved
+
+- [ ] T318 [US3] ⏳ **Create Celery task for async SEO analysis** in backend/src/workers/tasks/analyze_seo.py:
+  - Wrapper for SEO Analyzer
+  - Progress tracking (update task status)
+  - Error handling with retry (max 3 attempts)
+  - Update article status: draft → seo_optimizing → seo_complete
+  - **Dependencies**: T315
+  - **Est**: 3 hours
+  - **Acceptance**: Task completes successfully, retries on transient errors, updates article status
+
+#### SEO API Endpoints (T319-T323)
+
+- [ ] T319 [P] [US3] ⏳ **Create SEOMetadata schemas** in backend/src/api/schemas/seo_metadata.py:
+  - Schema: SEOMetadataCreate, SEOMetadataUpdate, SEOMetadataResponse
+  - Include all fields: seo_title, meta_description, keywords, density, recommendations
+  - Validation: title 50-60 chars, description 150-160 chars
+  - **Dependencies**: None
+  - **Est**: 2 hours
+  - **Acceptance**: Schemas validate correctly, match DB model
+
+- [ ] T320 [US3] ⏳ **Implement POST /v1/seo/analyze/{article_id}** endpoint in backend/src/api/routes/seo.py:
+  - Trigger SEO analysis for specific article
+  - Return task_id for async tracking OR immediate result if sync
+  - Check article exists and is not already seo_optimized (or allow re-analysis)
+  - **Dependencies**: T318 (Celery task), T319 (schemas)
+  - **Est**: 3 hours
+  - **Acceptance**: Endpoint triggers analysis, returns task_id, handles errors (article not found, etc.)
+
+- [ ] T321 [US3] ⏳ **Implement GET /v1/seo/metadata/{article_id}** endpoint in backend/src/api/routes/seo.py:
+  - Retrieve SEO metadata for article
+  - Return 404 if not analyzed yet
+  - Include manual_overrides in response
+  - **Dependencies**: T319 (schemas)
+  - **Est**: 2 hours
+  - **Acceptance**: Returns metadata correctly, handles missing data
+
+- [ ] T322 [US3] ⏳ **Implement PUT /v1/seo/metadata/{article_id}** endpoint in backend/src/api/routes/seo.py:
+  - Allow manual editing of SEO fields
+  - Accept: seo_title, meta_description, focus_keyword (only these editable)
+  - Record override using T317 override tracker
+  - **Dependencies**: T317 (override tracker), T319 (schemas)
+  - **Est**: 3 hours
+  - **Acceptance**: Updates saved, overrides tracked, validation enforced
+
+- [ ] T323 [US3] ⏳ **Implement POST /v1/seo/analyze/batch** endpoint in backend/src/api/routes/seo.py:
+  - Accept list of article_ids OR filter (e.g., all articles with seo_optimized=FALSE)
+  - Trigger batch analysis using T316
+  - Return batch_task_id for progress tracking
+  - **Dependencies**: T316 (batch analyzer)
+  - **Est**: 3 hours
+  - **Acceptance**: Triggers batch analysis, returns task_id, limits batch size to 1000
+
+#### SEO Testing (T324-T325)
+
+- [ ] T324 [US3] ⏳ **Create SEO accuracy benchmark test** in backend/tests/services/seo_analyzer/test_accuracy.py:
+  - Collect 20 test articles with expert-written SEO metadata (baseline)
+  - Run SEO analyzer on each article
+  - Compare keywords: count matches / total * 100 (target: 85%+)
+  - Report accuracy metrics
+  - **Dependencies**: T315 (analyzer ready)
+  - **Est**: 6 hours
+  - **Acceptance**: Accuracy report generated, 85%+ keyword match vs expert baseline
+
+- [ ] T325 [US3] ⏳ **Create SEO performance test** in backend/tests/services/seo_analyzer/test_performance.py:
+  - Test analysis duration for various article lengths (500, 1000, 1500, 2000 words)
+  - Verify 95% of articles analyzed in < 30 seconds
+  - Test batch processing (100 articles in < 50 minutes)
+  - **Dependencies**: T315 (analyzer), T316 (batch)
+  - **Est**: 4 hours
+  - **Acceptance**: Performance SLA met, no degradation with load
+
+**Week 3-4 Checkpoint**: SEO analysis working, 85%+ accuracy, < 30s per article, batch processing functional
 
 ---
 
-## Implementation Strategy
+### Week 5-7: Computer Use Integration (17 tasks)
 
-### MVP First (User Story 1 Only) - RECOMMENDED
+#### Computer Use Publisher Service (T326-T335)
 
-1. ✅ Complete **Phase 1: Setup** (T001-T011)
-2. ✅ Complete **Phase 2: Foundational** (T012-T038) - CRITICAL BLOCKER
-3. ✅ Complete **Phase 3: User Story 1** (T039-T076) - MVP READY
-4. **STOP and VALIDATE**: Test User Story 1 independently
-   - Submit article topics through UI
-   - Verify articles generated within 5 minutes
-   - Test batch submissions
-   - Verify duplicate detection works
-   - Confirm all 3 acceptance scenarios pass
-5. Deploy/demo if ready - **THIS IS YOUR MINIMUM VIABLE PRODUCT**
+- [ ] T326 [P] [US4] ⏳ **Setup Chrome/Chromium environment** for Computer Use:
+  - Install Chrome/Chromium in Docker container
+  - Configure headless mode
+  - Setup sandbox environment (isolated from host)
+  - Test basic Claude Computer Use API connectivity
+  - **Dependencies**: None
+  - **Est**: 4 hours
+  - **Acceptance**: Chrome launches in container, Computer Use API can control it
 
-**MVP Scope**: 76 tasks for complete article generation workflow
+- [ ] T327 [P] [US4] ⏳ **Implement WordPress login automation** in backend/src/services/computer_use_publisher/wordpress_login.py:
+  - Method: `login(url, username, password) -> Session`
+  - Navigate to /wp-admin
+  - Fill username and password fields
+  - Click login button
+  - Verify success (check for dashboard URL or welcome message)
+  - Capture screenshot: login_success.png
+  - Handle failures: wrong credentials (retry 3 times), CAPTCHA (fail and alert)
+  - **Dependencies**: T326 (Chrome ready)
+  - **Est**: 6 hours
+  - **Acceptance**: Successfully logs into test WordPress, captures screenshot, handles login failures
 
-### Incremental Delivery (Add Stories Sequentially)
+- [ ] T328 [US4] ⏳ **Implement post creation workflow** in backend/src/services/computer_use_publisher/post_creator.py:
+  - Method: `create_post(session) -> PostEditor`
+  - Navigate to /wp-admin/post-new.php
+  - Wait for editor to load (Gutenberg or Classic)
+  - Detect editor type (check for .block-editor vs .wp-editor)
+  - Return editor context
+  - Capture screenshot: editor_loaded.png
+  - **Dependencies**: T327 (logged in session)
+  - **Est**: 4 hours
+  - **Acceptance**: Navigates to new post, detects editor type, screenshot captured
 
-1. Foundation + User Story 1 → Test → Deploy (MVP with article generation)
-2. Add User Story 2 → Test → Deploy (MVP + automated tagging)
-3. Add User Story 3 → Test → Deploy (Full automation with scheduling)
-4. Add User Story 4 → Test → Deploy (Complete with review workflow)
-5. Polish Phase → Production-ready
+- [ ] T329 [US4] ⏳ **Implement content filling** in backend/src/services/computer_use_publisher/content_filler.py:
+  - Method: `fill_content(editor, title, body) -> None`
+  - Fill title field (usually #post-title-0 or .editor-post-title__input)
+  - Fill body content (Gutenberg: add paragraph blocks, Classic: paste into editor)
+  - Handle HTML formatting (preserve headings, lists, bold, italic)
+  - Verify content filled (check field values)
+  - Capture screenshot: content_filled.png
+  - **Dependencies**: T328 (post created)
+  - **Est**: 6 hours
+  - **Acceptance**: Title and body filled correctly, HTML formatting preserved, screenshot shows filled content
 
-Each story adds value without breaking previous stories.
+- [ ] T330 [US4] ⏳ **Implement image upload automation** in backend/src/services/computer_use_publisher/image_uploader.py:
+  - Method: `upload_featured_image(session, image_url) -> ImageID`
+  - Click "Set featured image" button
+  - Navigate to Upload tab
+  - Download image from URL to temp file
+  - Upload file via file input
+  - Wait for upload complete
+  - Select uploaded image
+  - Set as featured image
+  - Capture screenshot: image_uploaded.png
+  - **Dependencies**: T328 (post created)
+  - **Est**: 8 hours
+  - **Acceptance**: Featured image uploaded and set, handles multiple images, screenshot verification
 
-### Parallel Team Strategy
+- [ ] T331 [US4] ⏳ **Implement SEO plugin field population** in backend/src/services/computer_use_publisher/seo_plugin_filler.py:
+  - Method: `fill_yoast_seo(seo_metadata) -> None` (for Yoast SEO)
+  - Method: `fill_rankmath_seo(seo_metadata) -> None` (for Rank Math)
+  - Detect installed SEO plugin (check for plugin meta boxes)
+  - Fill SEO title field
+  - Fill meta description field
+  - Fill focus keyword field
+  - Add primary keywords (tags or separate field depending on plugin)
+  - Capture screenshot: seo_fields_filled.png
+  - **Dependencies**: T328 (post created)
+  - **Est**: 8 hours (most critical and complex)
+  - **Acceptance**: SEO fields populated correctly for both Yoast and Rank Math, screenshot shows filled fields
 
-With multiple developers:
+- [ ] T332 [US4] ⏳ **Implement category and tag assignment** in backend/src/services/computer_use_publisher/taxonomy_setter.py:
+  - Method: `set_categories(categories: List[str]) -> None`
+  - Method: `set_tags(tags: List[str]) -> None`
+  - Open category panel (usually in sidebar)
+  - Check existing categories or create new
+  - Open tag panel
+  - Type tags (comma-separated) or add individually
+  - Capture screenshot: taxonomy_set.png
+  - **Dependencies**: T328 (post created)
+  - **Est**: 5 hours
+  - **Acceptance**: Categories and tags assigned, new ones created if needed, screenshot verification
 
-1. **Team completes Setup + Foundational together** (T001-T038)
-2. **Once Foundational is done, parallel development**:
-   - **Developer Team A**: User Story 1 (T039-T076) - Article Generation
-   - **Developer Team B**: User Story 2 (T077-T106) - Tagging System
-   - **Developer Team C**: User Story 3 (T107-T137) - Scheduling System
-   - **Developer Team D**: User Story 4 (T138-T166) - Review Workflow
-3. Stories complete and integrate independently
-4. Polish phase after all stories complete
+- [ ] T333 [US4] ⏳ **Implement publish action** in backend/src/services/computer_use_publisher/publisher.py:
+  - Method: `publish_post(session) -> PostURL`
+  - Click "Publish" button (may require 2 clicks in Gutenberg)
+  - Wait for success notification
+  - Extract post ID from URL or response
+  - Navigate to live post URL
+  - Verify post is published (check for content visibility)
+  - Capture screenshots: publish_clicked.png, article_live.png
+  - **Dependencies**: T329-T332 (all content filled)
+  - **Est**: 5 hours
+  - **Acceptance**: Post published successfully, post ID retrieved, live URL verified, screenshots captured
+
+- [ ] T334 [US4] ⏳ **Implement retry logic with exponential backoff** in backend/src/services/computer_use_publisher/retry_handler.py:
+  - Detect transient failures: network timeout, element not found (temporary), slow loading
+  - Retry strategy: 10s delay → 30s delay → 90s delay (max 3 retries)
+  - Track retry count in publish_tasks table
+  - Log each retry attempt to execution_logs
+  - Stop retrying on permanent failures: login failure after 3 attempts, post already published
+  - **Dependencies**: None (used by all previous tasks)
+  - **Est**: 4 hours
+  - **Acceptance**: Retries transient errors correctly, exponential backoff working, permanent errors fail fast
+
+- [ ] T335 [US4] ⏳ **Implement Computer Use Publisher orchestrator** in backend/src/services/computer_use_publisher/publisher_service.py:
+  - Method: `publish_article(article_id) -> PublishResult`
+  - Orchestrate full workflow:
+    1. Login (T327)
+    2. Create post (T328)
+    3. Fill content (T329)
+    4. Upload images if present (T330)
+    5. Fill SEO fields (T331)
+    6. Set categories/tags (T332)
+    7. Publish (T333)
+  - Log each step to execution_logs table
+  - Capture all 8 screenshots
+  - Store screenshots to S3/local storage
+  - Update publish_tasks status throughout
+  - Handle errors at each step with retry logic (T334)
+  - Return: {success: bool, post_id: str, post_url: str, duration_seconds: int, screenshots: List}
+  - **Dependencies**: T327-T334
+  - **Est**: 8 hours
+  - **Acceptance**: Complete workflow executes successfully, all screenshots captured, errors handled gracefully
+
+#### Execution Logging & Storage (T336-T338)
+
+- [ ] T336 [P] [US4] ⏳ **Implement execution logging service** in backend/src/services/computer_use_publisher/execution_logger.py:
+  - Method: `log_action(task_id, action, target_element, payload, result) -> LogID`
+  - Insert into execution_logs table (automatically partitioned by month)
+  - Include timestamp, action type, target element, payload (JSONB), result (success/failure/retry)
+  - Never log WordPress credentials (sanitize payload)
+  - **Dependencies**: T304 (execution_logs table ready)
+  - **Est**: 3 hours
+  - **Acceptance**: Logs inserted correctly into current month partition, credentials never logged
+
+- [ ] T337 [P] [US4] ⏳ **Implement screenshot storage service** in backend/src/services/computer_use_publisher/screenshot_storage.py:
+  - Method: `store_screenshot(task_id, step_name, screenshot_data) -> URL`
+  - Support local filesystem storage (default for dev)
+  - Support S3-compatible storage (MinIO or AWS S3 for production)
+  - Filename format: `screenshots/task_{task_id}/{step_name}_{timestamp}.png`
+  - Store URLs in publish_tasks.screenshots JSONB
+  - **Dependencies**: None
+  - **Est**: 4 hours
+  - **Acceptance**: Screenshots stored to configured backend, URLs returned correctly, accessible via HTTP
+
+- [ ] T338 [US4] ⏳ **Implement credential sanitization** in backend/src/services/computer_use_publisher/credential_sanitizer.py:
+  - Method: `sanitize_payload(payload: dict) -> dict`
+  - Remove keys: password, secret, token, api_key, credential
+  - Redact values: replace with "***REDACTED***"
+  - Never log CMS_PASSWORD in any logs or screenshots
+  - **Dependencies**: None
+  - **Est**: 2 hours
+  - **Acceptance**: All credential fields removed from logs, tested with various payloads
+
+#### Publishing API Endpoints (T339-T342)
+
+- [ ] T339 [P] [US4] ⏳ **Create PublishTask schemas** in backend/src/api/schemas/publish_task.py:
+  - Schema: PublishTaskCreate, PublishTaskResponse, PublishTaskUpdate
+  - Include: task_id, article_id, status, screenshots, retry_count, error_message, duration_seconds
+  - **Dependencies**: None
+  - **Est**: 2 hours
+  - **Acceptance**: Schemas match DB model, validation working
+
+- [ ] T340 [US4] ⏳ **Implement POST /v1/publish/submit** endpoint in backend/src/api/routes/publish.py:
+  - Accept article_id in request body
+  - Validate article exists and has SEO metadata
+  - Create publish_task in database (status='pending')
+  - Trigger Computer Use Publisher Celery task (T342)
+  - Return task_id for tracking
+  - **Dependencies**: T339 (schemas), T303 (publish_tasks table)
+  - **Est**: 3 hours
+  - **Acceptance**: Creates task, triggers async publishing, returns task_id
+
+- [ ] T341 [US4] ⏳ **Implement GET /v1/publish/tasks/{task_id}** endpoint in backend/src/api/routes/publish.py:
+  - Retrieve publish task by ID
+  - Return status, progress, error_message if failed
+  - Include screenshot URLs
+  - Include duration_seconds if completed
+  - **Dependencies**: T339 (schemas)
+  - **Est**: 2 hours
+  - **Acceptance**: Returns task details, handles missing tasks (404)
+
+- [ ] T342 [US4] ⏳ **Create Celery task for async publishing** in backend/src/workers/tasks/publish_article.py:
+  - Wrapper for Computer Use Publisher (T335)
+  - Update publish_task status: pending → in_progress → completed/failed
+  - Track progress for each step
+  - Store screenshots to S3/local
+  - Log all actions to execution_logs
+  - Update article.cms_article_id with WordPress post ID
+  - Update article.published_at timestamp
+  - Send notification on completion/failure
+  - **Dependencies**: T335 (publisher ready), T336 (logging), T337 (storage)
+  - **Est**: 5 hours
+  - **Acceptance**: Task completes successfully, updates all fields, handles failures with retry
+
+**Week 5-7 Checkpoint**: Computer Use publishing working, 8 screenshots captured, success rate 95%+
 
 ---
 
-## Task Count Summary
+### Week 8: Integration Testing & Optimization (4 tasks)
 
-- **Phase 1 (Setup)**: 11 tasks
-- **Phase 2 (Foundational)**: 27 tasks - BLOCKING ALL STORIES
-- **Phase 3 (User Story 1 - MVP)**: 38 tasks
-- **Phase 4 (User Story 2)**: 30 tasks
-- **Phase 5 (User Story 3)**: 31 tasks
-- **Phase 6 (User Story 4)**: 30 tasks
-- **Phase 7 (Polish)**: 30 tasks
+#### E2E Fusion Workflow Tests (T343-T346)
 
-**Total**: 197 tasks
+- [ ] T343 [Phase 5] ⏳ **E2E Test 1: AI Generation → SEO → Publishing** in backend/tests/e2e/test_fusion_ai_workflow.py:
+  - Step 1: Submit topic via POST /v1/topics
+  - Step 2: Wait for article generation (poll GET /v1/topics/{id})
+  - Step 3: Trigger SEO analysis POST /v1/seo/analyze/{article_id}
+  - Step 4: Verify SEO metadata GET /v1/seo/metadata/{article_id}
+  - Step 5: Submit publish task POST /v1/publish/submit
+  - Step 6: Wait for publishing (poll GET /v1/publish/tasks/{task_id})
+  - Step 7: Verify WordPress post published (check post URL)
+  - Step 8: Verify all 8 screenshots captured
+  - **Dependencies**: T310 (import), T323 (SEO API), T342 (publish task)
+  - **Est**: 6 hours
+  - **Acceptance**: Complete workflow passes, article published to WordPress, all steps verified
 
-**MVP Scope** (Setup + Foundational + US1): 76 tasks
-**Full Feature** (All User Stories): 167 tasks
-**Production Ready** (Full + Polish): 197 tasks
+- [ ] T344 [Phase 5] ⏳ **E2E Test 2: Import → SEO → Publishing** in backend/tests/e2e/test_fusion_import_workflow.py:
+  - Step 1: Import article from CSV POST /v1/articles/import
+  - Step 2: Verify article imported with source='imported'
+  - Step 3-8: Same as T343 (SEO → Publishing)
+  - Verify imported articles work through full pipeline
+  - **Dependencies**: T310 (import), T323 (SEO API), T342 (publish task)
+  - **Est**: 5 hours
+  - **Acceptance**: Imported article published successfully, no errors specific to imported content
+
+- [ ] T345 [Phase 5] ⏳ **E2E Test 3: Concurrent publishing (3+ tasks)** in backend/tests/e2e/test_concurrent_publishing.py:
+  - Create 3 articles (AI-generated or imported)
+  - Trigger SEO analysis for all 3 in parallel
+  - Submit all 3 for publishing simultaneously
+  - Verify all 3 publish successfully
+  - Check for race conditions, resource conflicts
+  - **Dependencies**: T342 (publish task)
+  - **Est**: 5 hours
+  - **Acceptance**: All 3 articles publish successfully, no conflicts, screenshots for all tasks
+
+- [ ] T346 [Phase 5] ⏳ **Performance optimization and benchmarking** in backend/tests/performance/:
+  - Database query optimization: EXPLAIN ANALYZE all SEO and publishing queries
+  - API response time tuning: p95 < 500ms for all endpoints
+  - Celery worker scaling: test with 10 concurrent tasks
+  - Screenshot storage optimization: test S3 upload speeds
+  - Generate performance report
+  - **Dependencies**: All Phase 5 tasks
+  - **Est**: 8 hours (includes optimization work)
+  - **Acceptance**: All SLAs met (SEO < 30s, publishing < 5min, API < 500ms), performance report generated
+
+**Week 8 Checkpoint**: All E2E tests passing, performance optimized, system ready for production
 
 ---
 
-## Notes
+### Week 9: Production Deployment (2 tasks)
 
-- **[P] tasks**: Different files, no dependencies - can run in parallel
-- **[Story] label**: Maps task to specific user story for traceability
-- **Each user story is independently testable**: Can validate each story works without others
-- **MVP strategy**: Complete just User Story 1 for fastest time-to-value
-- **Incremental delivery**: Add one story at a time, test, deploy
-- **Parallel execution**: Once Foundational is done, all user stories can proceed simultaneously
-- **File paths**: All paths specified for immediate implementation
-- **No tests included**: Tests not explicitly requested in specification, focus on implementation
+#### Production Deployment (T347-T348)
 
-**Format Validation**: ✅ All tasks follow required format: `- [ ] [TaskID] [P?] [Story?] Description with file path`
+- [ ] T347 [Phase 5] ⏳ **Production deployment execution**:
+  - Build production Docker images
+  - Run database migration (Phase 5 schema) on production DB
+  - Deploy backend services (API, Celery workers with Computer Use)
+  - Deploy frontend build
+  - Configure Nginx reverse proxy
+  - Setup S3/MinIO for screenshot storage
+  - Run smoke tests in production
+  - Verify all services healthy
+  - **Dependencies**: T301-T346 (all Phase 5 tasks complete)
+  - **Est**: 8 hours
+  - **Acceptance**: Zero downtime deployment, all services healthy, smoke tests pass
+
+- [ ] T348 [Phase 5] ⏳ **Monitoring and alerting setup**:
+  - Setup Grafana dashboards:
+    - Import throughput (articles/hour)
+    - SEO analysis throughput (articles/hour)
+    - Publishing success rate (%)
+    - Screenshot storage size (GB)
+    - API latency (p50, p95, p99)
+    - Celery queue depth
+  - Configure alerts (PagerDuty + Slack):
+    - Critical: Computer Use credential exposure detected, publishing success < 80%, API error rate > 5%
+    - Warning: SEO accuracy < 85%, screenshot storage > 400GB, queue depth > 50
+  - Setup log aggregation (CloudWatch or ELK)
+  - Create runbook for common operations
+  - **Dependencies**: T347 (deployed)
+  - **Est**: 6 hours
+  - **Acceptance**: Dashboards operational, alerts firing correctly (test with simulated failures), runbook validated
+
+**Week 9 Checkpoint**: Production deployment complete, monitoring active, system operational
+
+---
+
+## Summary: Phase 5 Tasks
+
+**Total Tasks**: 48 (T301-T348)
+**Duration**: 8-9 weeks
+**Estimated Hours**: ~220 hours
+
+### By Week:
+- **Week 1-2** (T301-T310): Database + Import - 10 tasks, 32 hours
+- **Week 3-4** (T311-T325): SEO Engine - 15 tasks, 58 hours
+- **Week 5-7** (T326-T342): Computer Use - 17 tasks, 83 hours
+- **Week 8** (T343-T346): Integration Testing - 4 tasks, 24 hours
+- **Week 9** (T347-T348): Deployment - 2 tasks, 14 hours
+
+### By User Story:
+- **US2** (External Import): T307-T310 (4 tasks)
+- **US3** (SEO Optimization): T311-T325 (15 tasks)
+- **US4** (Computer Use Publishing): T326-T342 (17 tasks)
+- **Infrastructure**: T301-T306 (6 tasks)
+- **Integration**: T343-T346 (4 tasks)
+- **Deployment**: T347-T348 (2 tasks)
+
+### Critical Path:
+1. Database migration (T301-T306) → Blocks everything
+2. Import service (T307-T310) → Blocks import workflow tests
+3. SEO analyzer (T311-T318) → Blocks publishing
+4. Computer Use publisher (T326-T335) → Blocks publishing
+5. Integration tests (T343-T346) → Blocks production deployment
+
+### Parallel Work Opportunities:
+- CSV parser (T307-T308) can start before DB migration complete
+- SEO keyword extraction (T311) can start in parallel with import work
+- Chrome setup (T326) can start early
+- All [P] marked tasks can run in parallel
+
+---
+
+## Dependencies Summary
+
+**External Dependencies**:
+- Anthropic Claude API (Messages API + Computer Use API)
+- WordPress test instance (for integration testing)
+- Chrome/Chromium browser (for Computer Use)
+- S3-compatible storage (for screenshot storage)
+
+**Internal Dependencies**:
+- Phase 1-4 must be complete before Phase 5 starts
+- Database migration (T301-T306) must complete before most Phase 5 work
+- SEO analysis must complete before publishing can include SEO fields
+- Computer Use environment setup before any publishing tests
+
+---
+
+## Acceptance Criteria Summary
+
+**Phase 5 Complete When**:
+- ✅ Database extended with source, seo_optimized fields and 3 new tables
+- ✅ Can import 100 articles from CSV in < 5 minutes
+- ✅ SEO analysis achieves 85%+ keyword accuracy vs expert baseline
+- ✅ SEO metadata generation completes in < 30 seconds
+- ✅ Computer Use publishes to WordPress in < 5 minutes with 95%+ success rate
+- ✅ All 8 screenshots captured per publishing task
+- ✅ Zero WordPress credentials exposed in logs/screenshots
+- ✅ 3 E2E fusion workflow tests passing
+- ✅ Performance benchmarks met (all SLAs)
+- ✅ Production deployment successful with zero downtime
+- ✅ Monitoring dashboards operational
+
+---
+
+*End of Tasks Document - AI-Powered CMS Automation with SEO Optimization (Fusion Architecture)*
