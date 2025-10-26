@@ -1,0 +1,128 @@
+# Alertmanager Configuration for CMS Automation
+# Version: 1.0.0
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'alerts@your-domain.com'
+  smtp_auth_username: 'alerts@your-domain.com'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+# Alert routing
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  receiver: 'default'
+
+  routes:
+    # Critical alerts - immediate notification
+    - match:
+        severity: critical
+      receiver: 'critical'
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning alerts - less urgent
+    - match:
+        severity: warning
+      receiver: 'warning'
+      group_wait: 1m
+      repeat_interval: 2h
+
+    # Cost-related alerts
+    - match:
+        component: cost
+      receiver: 'finance'
+      group_wait: 5m
+      repeat_interval: 24h
+
+# Receivers configuration
+receivers:
+  - name: 'default'
+    email_configs:
+      - to: 'team@your-domain.com'
+        headers:
+          Subject: '[CMS Automation] {{ .GroupLabels.alertname }}'
+        html: |
+          <h2>Alert: {{ .GroupLabels.alertname }}</h2>
+          <b>Severity:</b> {{ .CommonLabels.severity }}<br>
+          <b>Component:</b> {{ .CommonLabels.component }}<br>
+          <b>Summary:</b> {{ .CommonAnnotations.summary }}<br>
+          <b>Description:</b> {{ .CommonAnnotations.description }}<br>
+          <b>Time:</b> {{ .StartsAt }}<br>
+
+  - name: 'critical'
+    email_configs:
+      - to: 'oncall@your-domain.com, team@your-domain.com'
+        headers:
+          Subject: '[CRITICAL] CMS Automation Alert'
+        html: |
+          <h1 style="color:red;">CRITICAL ALERT</h1>
+          <h2>{{ .GroupLabels.alertname }}</h2>
+          <b>Component:</b> {{ .CommonLabels.component }}<br>
+          <b>Summary:</b> {{ .CommonAnnotations.summary }}<br>
+          <b>Description:</b> {{ .CommonAnnotations.description }}<br>
+          <b>Time:</b> {{ .StartsAt }}<br>
+          <p><b>Action Required:</b> Immediate attention needed!</p>
+
+    # Slack webhook (optional)
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#cms-alerts'
+        title: 'CRITICAL: {{ .GroupLabels.alertname }}'
+        text: |
+          *Component:* {{ .CommonLabels.component }}
+          *Summary:* {{ .CommonAnnotations.summary }}
+          *Description:* {{ .CommonAnnotations.description }}
+        send_resolved: true
+
+  - name: 'warning'
+    email_configs:
+      - to: 'team@your-domain.com'
+        headers:
+          Subject: '[WARNING] CMS Automation Alert'
+        html: |
+          <h2 style="color:orange;">WARNING</h2>
+          <h3>{{ .GroupLabels.alertname }}</h3>
+          <b>Component:</b> {{ .CommonLabels.component }}<br>
+          <b>Summary:</b> {{ .CommonAnnotations.summary }}<br>
+          <b>Description:</b> {{ .CommonAnnotations.description }}<br>
+          <b>Time:</b> {{ .StartsAt }}<br>
+
+  - name: 'finance'
+    email_configs:
+      - to: 'finance@your-domain.com, team@your-domain.com'
+        headers:
+          Subject: '[COST ALERT] CMS Automation'
+        html: |
+          <h2>Cost Alert</h2>
+          <h3>{{ .GroupLabels.alertname }}</h3>
+          <b>Summary:</b> {{ .CommonAnnotations.summary }}<br>
+          <b>Description:</b> {{ .CommonAnnotations.description }}<br>
+          <b>Time:</b> {{ .StartsAt }}<br>
+
+# Inhibition rules - suppress certain alerts when others are firing
+inhibit_rules:
+  # If API is down, don't alert on high error rates
+  - source_match:
+      alertname: 'APIDown'
+    target_match:
+      alertname: 'HighAPIErrorRate'
+    equal: ['service']
+
+  # If database is down, suppress connection pool alerts
+  - source_match:
+      alertname: 'DatabaseDown'
+    target_match:
+      alertname: 'DatabaseConnectionPoolHigh'
+    equal: ['service']
+
+  # If Redis is down, suppress Celery queue alerts
+  - source_match:
+      alertname: 'RedisDown'
+    target_match:
+      alertname: 'HighCeleryQueueLength'
+    equal: ['service']

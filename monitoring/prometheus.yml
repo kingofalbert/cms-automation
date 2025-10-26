@@ -1,0 +1,85 @@
+# Prometheus Configuration for CMS Automation
+# Version: 1.0.0
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'cms-automation'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Rule files
+rule_files:
+  - 'alerts.yml'
+
+# Scrape configurations
+scrape_configs:
+  # FastAPI Backend Metrics
+  - job_name: 'fastapi-backend'
+    static_configs:
+      - targets: ['backend:8000']
+        labels:
+          service: 'api'
+          component: 'backend'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Celery Worker Metrics
+  - job_name: 'celery-workers'
+    static_configs:
+      - targets: ['celery_exporter:9540']
+        labels:
+          service: 'workers'
+          component: 'celery'
+    scrape_interval: 15s
+
+  # PostgreSQL Metrics
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres_exporter:9187']
+        labels:
+          service: 'database'
+          component: 'postgres'
+    scrape_interval: 15s
+
+  # Redis Metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis_exporter:9121']
+        labels:
+          service: 'cache'
+          component: 'redis'
+    scrape_interval: 15s
+
+  # Node Exporter (System Metrics)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node_exporter:9100']
+        labels:
+          service: 'system'
+          component: 'node'
+    scrape_interval: 15s
+
+  # Nginx Metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx_exporter:9113']
+        labels:
+          service: 'proxy'
+          component: 'nginx'
+    scrape_interval: 15s
+
+  # Prometheus Self-Monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'monitoring'
+          component: 'prometheus'

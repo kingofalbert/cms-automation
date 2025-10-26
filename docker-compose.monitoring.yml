@@ -1,0 +1,149 @@
+version: '3.8'
+
+# Monitoring Stack for CMS Automation
+# Includes: Prometheus, Grafana, Alertmanager, and Exporters
+
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cms-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    networks:
+      - cms_network
+      - monitoring_network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cms-grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=https://grafana.your-domain.com
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    ports:
+      - "3001:3000"
+    networks:
+      - monitoring_network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: cms-alertmanager
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    ports:
+      - "9093:9093"
+    networks:
+      - monitoring_network
+    restart: unless-stopped
+
+  # PostgreSQL Exporter
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: cms-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/cms_automation_prod?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - cms_network
+      - monitoring_network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Redis Exporter
+  redis_exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: cms-redis-exporter
+    environment:
+      REDIS_ADDR: "redis:6379"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+    ports:
+      - "9121:9121"
+    networks:
+      - cms_network
+      - monitoring_network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Node Exporter (System Metrics)
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: cms-node-exporter
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+    ports:
+      - "9100:9100"
+    networks:
+      - monitoring_network
+    restart: unless-stopped
+
+  # Nginx Exporter
+  nginx_exporter:
+    image: nginx/nginx-prometheus-exporter:latest
+    container_name: cms-nginx-exporter
+    command:
+      - '-nginx.scrape-uri=http://nginx:8080/stub_status'
+    ports:
+      - "9113:9113"
+    networks:
+      - cms_network
+      - monitoring_network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Celery Exporter
+  celery_exporter:
+    image: danihodovic/celery-exporter:latest
+    container_name: cms-celery-exporter
+    environment:
+      CELERY_BROKER_URL: "${CELERY_BROKER_URL}"
+      CELERY_RESULT_BACKEND: "${CELERY_RESULT_BACKEND}"
+    ports:
+      - "9540:9540"
+    networks:
+      - cms_network
+      - monitoring_network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+networks:
+  cms_network:
+    external: true
+  monitoring_network:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:

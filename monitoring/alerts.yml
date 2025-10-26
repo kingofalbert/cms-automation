@@ -1,0 +1,222 @@
+# Prometheus Alert Rules for CMS Automation
+# Version: 1.0.0
+
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # High API Error Rate
+      - alert: HighAPIErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High API error rate detected"
+          description: "API error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # API Response Time SLA Violation
+      - alert: APIResponseTimeHigh
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 300
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API response time exceeds SLA"
+          description: "95th percentile response time is {{ $value }}s (SLA: 300s)"
+
+      # API Down
+      - alert: APIDown
+        expr: up{job="fastapi-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API is down"
+          description: "FastAPI backend has been down for more than 2 minutes"
+
+  - name: worker_alerts
+    interval: 30s
+    rules:
+      # High Celery Queue Length
+      - alert: HighCeleryQueueLength
+        expr: celery_queue_length{queue="article_generation"} > 100
+        for: 10m
+        labels:
+          severity: warning
+          component: workers
+        annotations:
+          summary: "High Celery queue length"
+          description: "Article generation queue has {{ $value }} pending tasks"
+
+      # Celery Worker Down
+      - alert: CeleryWorkerDown
+        expr: celery_workers_online < 5
+        for: 5m
+        labels:
+          severity: critical
+          component: workers
+        annotations:
+          summary: "Celery workers below minimum"
+          description: "Only {{ $value }} workers online (minimum: 5)"
+
+      # Task Failure Rate High
+      - alert: HighTaskFailureRate
+        expr: rate(celery_task_failed_total[10m]) / rate(celery_task_total[10m]) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: workers
+        annotations:
+          summary: "High task failure rate"
+          description: "Task failure rate is {{ $value | humanizePercentage }}"
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # Database Connection Pool Exhaustion
+      - alert: DatabaseConnectionPoolHigh
+        expr: pg_stat_activity_count / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Database connection pool usage high"
+          description: "Connection pool at {{ $value | humanizePercentage }} capacity"
+
+      # Database Down
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "Database has been unreachable for more than 2 minutes"
+
+      # Long Running Queries
+      - alert: LongRunningQueries
+        expr: pg_stat_activity_max_tx_duration > 300
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Long running database queries detected"
+          description: "Queries running longer than {{ $value }}s"
+
+  - name: redis_alerts
+    interval: 30s
+    rules:
+      # Redis Memory Usage High
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis memory at {{ $value | humanizePercentage }} capacity"
+
+      # Redis Down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been unreachable for more than 2 minutes"
+
+  - name: cost_alerts
+    interval: 1h
+    rules:
+      # Daily Cost Exceeds Budget
+      - alert: DailyCostHigh
+        expr: sum(increase(article_generation_cost_total[24h])) > 50
+        for: 1h
+        labels:
+          severity: warning
+          component: cost
+        annotations:
+          summary: "Daily generation cost exceeds budget"
+          description: "Daily cost is ${{ $value }} (budget: $50)"
+
+      # Article Generation Cost Spike
+      - alert: ArticleCostSpike
+        expr: rate(article_generation_cost_total[1h]) > rate(article_generation_cost_total[24h] offset 1d) * 2
+        for: 2h
+        labels:
+          severity: warning
+          component: cost
+        annotations:
+          summary: "Article generation cost spike detected"
+          description: "Cost increased by {{ $value | humanizePercentage }} compared to yesterday"
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}%"
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}%"
+
+      # Disk Space Low
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Disk space remaining: {{ $value }}%"
+
+  - name: sla_alerts
+    interval: 1m
+    rules:
+      # SLA Violation
+      - alert: SLAViolation
+        expr: histogram_quantile(0.95, rate(article_generation_duration_seconds_bucket[1h])) > 300
+        for: 30m
+        labels:
+          severity: critical
+          component: sla
+        annotations:
+          summary: "SLA violation: Article generation time"
+          description: "95th percentile generation time is {{ $value }}s (SLA: 300s)"
+
+      # Low Success Rate
+      - alert: LowSuccessRate
+        expr: rate(article_generation_success_total[1h]) / rate(article_generation_total[1h]) < 0.95
+        for: 30m
+        labels:
+          severity: critical
+          component: sla
+        annotations:
+          summary: "Low article generation success rate"
+          description: "Success rate is {{ $value | humanizePercentage }} (target: 95%)"
