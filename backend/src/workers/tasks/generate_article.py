@@ -28,6 +28,10 @@ def generate_article_task(self, topic_request_id: int) -> dict:
         Exception: If generation fails after retries
     """
     import asyncio
+    import nest_asyncio
+
+    # Allow nested event loops (for Celery + asyncio)
+    nest_asyncio.apply()
 
     logger.info(
         "generate_article_task_started",
@@ -37,19 +41,25 @@ def generate_article_task(self, topic_request_id: int) -> dict:
 
     async def _generate():
         """Async generation logic."""
-        db_config = get_db_config()
-        async with db_config.session() as session:
-            generator = await create_article_generator(session)
-            article = await generator.generate_article(topic_request_id)
-            return {
-                "article_id": article.id,
-                "title": article.title,
-                "word_count": article.word_count,
-                "status": "completed",
-            }
+        # Create fresh db_config for this async context
+        from src.config.database import DatabaseConfig
+
+        db_config = DatabaseConfig()
+        try:
+            async with db_config.session() as session:
+                generator = await create_article_generator(session)
+                article = await generator.generate_article(topic_request_id)
+                return {
+                    "article_id": article.id,
+                    "title": article.title,
+                    "word_count": article.word_count,
+                    "status": "completed",
+                }
+        finally:
+            await db_config.close()
 
     try:
-        # Run async generation
+        # Run async generation with new event loop
         result = asyncio.run(_generate())
 
         logger.info(
