@@ -1,8 +1,44 @@
 # SEO Analysis Integration Guide
 
+> **⚠️ 功能定位说明 | Feature Scope**
+>
+> 本文档描述的是**批量SEO分析功能**，专门用于为"外部导入的历史文章"生成SEO metadata。
+>
+> **This document describes the Batch SEO Analysis feature**, specifically for generating SEO metadata for externally imported historical articles.
+>
+> ---
+>
+> ### 🔍 与新文章校对工作流的区别
+>
+> 如果您要了解**新文章的校对+SEO优化工作流**，请参考以下文档：
+> - 📄 [`article_proofreading_seo_workflow.md`](article_proofreading_seo_workflow.md) - 完整的新文章校对和优化工作流（v2.0 单一Prompt架构）
+> - 📄 [`single_prompt_design.md`](single_prompt_design.md) - 单一Prompt综合分析架构设计
+> - 📄 [`user_experience_workflow.md`](user_experience_workflow.md) - 新文章工作流的用户体验说明
+>
+> ### 📊 两个功能的对比
+>
+> | 功能 | SEO Analysis（本文档） | 校对+SEO工作流 |
+> |------|----------------------|--------------|
+> | **目标文章** | 导入的历史文章（IMPORTED状态） | 新建文章（用户撰写） |
+> | **触发方式** | 手动API调用批量处理 | 用户提交新文章自动触发 |
+> | **处理内容** | 仅SEO metadata生成 | 450条校对规则 + Meta + 关键词 + FAQ |
+> | **用户交互** | 后台自动，无交互 | 用户审核、编辑、确认 |
+> | **版本管理** | 无版本管理 | 三版本管理（原始/建议/最终） |
+> | **工作流** | IMPORTED → SEO_OPTIMIZED | 原始 → 建议 → 最终 → 发布 |
+> | **使用场景** | 迁移旧文章、批量优化 | 日常新闻发布流程 |
+> | **AI架构** | 独立SEO分析调用 | 单一Prompt综合分析（v2.0） |
+>
+> **简单来说：**
+> - **SEO Analysis**: 为已有的导入文章补充SEO信息
+> - **校对工作流**: 新文章从撰写到发布的完整质量控制流程
+>
+> ---
+
 ## Overview
 
 The SEO Analysis Integration automatically generates SEO metadata for imported articles using Claude AI. Articles with status `IMPORTED` can be batch-analyzed or individually optimized.
+
+**Use Case**: This feature is designed for bulk processing of externally imported articles (e.g., migrating content from legacy systems) that need SEO metadata generation without the full proofreading workflow.
 
 ## Features
 

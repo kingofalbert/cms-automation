@@ -1,11 +1,15 @@
 # CMS自动化系统 - 文章校对功能需求文档
 
-**版本:** 2.0.0
+**版本:** 3.1.0
 **创建日期:** 2025-10-26
 **更新日期:** 2025-10-27
 **参考标准:**
 - 《大纪元、新唐人总部写作风格指南》(2023/11/08版)
 - 《WordPress 上稿要求细节》
+
+**v3.1.0 更新说明:**
+- 实现方式更新为单一Prompt综合分析架构
+- 详见 `single_prompt_design.md` 和 `article_proofreading_seo_workflow.md` v2.0
 
 ---
 
@@ -2278,6 +2282,189 @@ GET /api/v1/proofreading/history/{article_id}
 
 **预计开发时间:** 2周
 
+### 7.5 文稿解析和版本管理（⭐新增 - v3.0.0）
+
+**目标:** 实现文章三部分解析和多版本管理系统
+
+#### 7.5.1 文稿格式解析
+
+**功能需求:**
+1. **三部分结构识别**
+   - 正文内容（主体）
+   - Meta描述（标记：`Meta描述:`）
+   - SEO关键词（标记：`SEO关键词:`）
+
+2. **固定标记检测**
+   - 严格匹配固定标记（中文全角冒号）
+   - 支持标记顺序灵活
+   - 处理不完整文稿（缺少Meta或关键词）
+
+3. **格式验证**
+   - 检测格式异常并警告
+   - 验证Meta长度（建议150-160字符）
+   - 验证关键词数量（建议3-8个）
+
+**相关文档:** 详见 `article_proofreading_seo_workflow.md` 第3节
+
+**预计开发时间:** 3天
+
+#### 7.5.2 三版本管理系统
+
+**版本定义:**
+1. **原始版本（Original）**
+   - 用户输入的原始内容
+   - 永久保存，不可修改
+   - 包含：正文、Meta描述、SEO关键词
+
+2. **建议版本（Suggested）**
+   - AI校对和优化后的内容
+   - 系统生成，不可修改
+   - 包含：优化后的三部分 + 校对问题 + 段落建议 + FAQ Schema方案
+
+3. **最终版本（Final）**
+   - 用户审核确认的发布版本
+   - 用户可编辑
+   - 包含：最终三部分 + 用户选择记录 + FAQ Schema
+
+**数据库扩展字段:**
+```sql
+-- 原始版本
+original_content TEXT
+original_meta_description TEXT
+original_seo_keywords JSONB
+
+-- 建议版本
+suggested_content TEXT
+suggested_meta_description TEXT
+suggested_seo_keywords JSONB
+paragraph_suggestions JSONB
+faq_schema_proposals JSONB
+proofreading_issues JSONB
+
+-- 最终版本
+final_content TEXT
+final_meta_description TEXT
+final_seo_keywords JSONB
+final_faq_schema JSONB
+user_accepted_suggestions JSONB
+user_manual_edits JSONB
+```
+
+**相关文档:** 详见 `database_schema_updates.md`
+
+**预计开发时间:** 1周
+
+#### 7.5.3 版本状态机
+
+**状态流转:**
+```
+pending → parsing → analyzing → suggested →
+user_reviewing ↔ user_editing → confirmed →
+publishing → published
+```
+
+**状态定义:**
+- `pending`: 待处理
+- `parsing`: 解析中
+- `analyzing`: 校对分析中
+- `suggested`: 已生成建议
+- `user_reviewing`: 用户审核中
+- `user_editing`: 用户编辑中
+- `confirmed`: 已确认
+- `publishing`: 发布中
+- `published`: 已发布
+
+**预计开发时间:** 2天
+
+### 7.6 结构化数据生成（⭐新增 - v3.0.0）
+
+**目标:** 实现FAQ Schema自动生成，提升SEO效果
+
+#### 7.6.1 FAQ Schema生成器
+
+**核心功能:**
+1. **AI问题生成**
+   - 基于5W1H原则（What, Who, When, Where, Why, How）
+   - 分析用户搜索意图
+   - 按重要性排序
+
+2. **AI答案提取**
+   - 从文章中提取相关段落
+   - 概括和改写答案
+   - 控制答案长度（50-400字）
+
+3. **多方案生成**
+   - 简洁版：3个问答
+   - 标准版：5个问答
+   - 详细版：7个问答
+
+4. **Schema.org格式输出**
+   - 生成标准JSON-LD格式
+   - 符合Google Rich Results要求
+   - 自动验证格式正确性
+
+**相关文档:** 详见 `structured_data_faq_schema.md`
+
+**预计开发时间:** 1周
+
+#### 7.6.2 FAQ编辑器UI
+
+**界面功能:**
+1. **方案选择**
+   - 单选：3问答/5问答/7问答/不使用
+   - 方案对比视图
+   - SEO评分显示
+
+2. **问答编辑**
+   - 逐项编辑问题和答案
+   - 添加/删除问答
+   - 调整顺序（拖拽）
+
+3. **质量检查**
+   - 实时字数统计
+   - 质量评分显示
+   - 优化建议提示
+
+4. **JSON-LD预览**
+   - 代码高亮显示
+   - 一键复制
+   - 在线验证链接
+
+**相关文档:** 详见 `structured_data_faq_schema.md` 第6节
+
+**预计开发时间:** 1周
+
+#### 7.6.3 WordPress集成
+
+**集成方式:**
+1. **Post Meta存储**
+   ```php
+   add_post_meta($post_id, 'faq_schema', json_encode($faq_data));
+   ```
+
+2. **JSON-LD注入**
+   - 在`<head>`标签中注入
+   - 使用`application/ld+json`类型
+
+3. **HTML展示（可选）**
+   - 在文章末尾显示FAQ区块
+   - 使用Accordion折叠样式
+   - 移动端友好
+
+**相关文档:** 详见 `structured_data_faq_schema.md` 第7节
+
+**预计开发时间:** 3天
+
+#### 7.6.4 SEO价值
+
+**预期效果:**
+- 搜索结果点击率提升：**25-35%**
+- Featured Snippet展示率提升：**3-5倍**
+- 移动搜索曝光率提升：**40%**
+- 语音搜索覆盖率提升：**显著**
+
+**相关文档:** 详见 `structured_data_faq_schema.md` 第3节
+
 ---
 
 ## 8. 技术实现建议
@@ -2529,21 +2716,92 @@ async def proofread_article(
 
 **文档结束**
 
-**版本更新说明（v2.0.0）:**
+---
+
+## 版本历史
+
+### v3.0.0（2025-10-26）
+
+**重大更新：文章校对+SEO优化完整工作流**
+
+#### 新增功能
+- ✅ **文稿格式解析**（7.5.1）
+  - 三部分结构识别（正文、Meta描述、SEO关键词）
+  - 固定标记检测（`Meta描述:` `SEO关键词:`）
+  - 不完整文稿处理
+
+- ✅ **三版本管理系统**（7.5.2）
+  - 原始版本（Original）：永久保存用户输入
+  - 建议版本（Suggested）：AI优化后的内容
+  - 最终版本（Final）：用户确认的发布版本
+
+- ✅ **版本状态机**（7.5.3）
+  - 9个状态：pending → parsing → analyzing → suggested → user_reviewing ↔ user_editing → confirmed → publishing → published
+  - 完整状态转换管理
+
+- ✅ **FAQ Schema生成器**（7.6.1）
+  - AI驱动的问答生成（基于5W1H原则）
+  - 多方案生成（3/5/7问答）
+  - Schema.org标准JSON-LD输出
+
+- ✅ **FAQ编辑器UI**（7.6.2）
+  - 方案选择和对比
+  - 问答逐项编辑
+  - 质量检查和JSON-LD预览
+
+- ✅ **WordPress集成**（7.6.3）
+  - Post Meta存储
+  - JSON-LD自动注入
+  - HTML FAQ区块展示
+
+#### 数据库扩展
+- 原始版本字段：`original_content`, `original_meta_description`, `original_seo_keywords`
+- 建议版本字段：`suggested_content`, `suggested_meta_description`, `suggested_seo_keywords`, `paragraph_suggestions`, `faq_schema_proposals`, `proofreading_issues`
+- 最终版本字段：`final_content`, `final_meta_description`, `final_seo_keywords`, `final_faq_schema`, `user_accepted_suggestions`, `user_manual_edits`
+- 状态字段：`proofreading_status`
+
+#### 配套文档
+- 📄 `article_proofreading_seo_workflow.md`（3000行）- 完整工作流需求
+- 📄 `structured_data_faq_schema.md`（800行）- FAQ Schema专项文档
+- 📄 `database_schema_updates.md` - 数据库模型扩展说明
+
+#### SEO价值预期
+- 搜索结果点击率提升：**25-35%**
+- Featured Snippet展示率提升：**3-5倍**
+- 移动搜索曝光率提升：**40%**
+
+---
+
+### v2.0.0（2025-10-27）
+
+**重大更新：发布合规与呈现检查**
+
+#### 新增功能
 - ✅ 新增 F 类规则：发布合规与呈现检查（20条规则）
 - ✅ 更新规则分类：从 A-E 扩展到 A-F
 - ✅ 更新总规则数：从约430条增加到约450条
 - ✅ 新增 ValidationRuleEngine 发布验证引擎
 - ✅ 新增 PublishValidationResult 发布验证结果模型
 - ✅ 新增 ArticleMetadata 和 ImageMetadata 元数据模型
+
+#### 系统增强
 - ✅ 更新 API 设计：支持发布前强制验证
 - ✅ 更新数据库表设计：支持发布阻断标记
 - ✅ 更新实现优先级：将F类规则纳入第二和第三阶段
 - ✅ 完全无遗漏地整合了v2版本的所有内容
 
+---
+
 **下一步行动:**
-1. ✅ 审核本需求文档（v2.0.0完整版）
-2. 确定第一阶段实现范围
-3. 开始后端服务开发（包括ValidationRuleEngine）
-4. 实现发布前强制验证流程
-5. 补充前端交互需求（特别是发布验证界面）
+1. ✅ 完成v3.0.0需求文档集
+2. 审核和批准需求文档
+3. 开始后端服务开发：
+   - ArticleParser（文稿解析器）
+   - ProofreadingEngine（校对引擎）
+   - FAQSchemaGenerator（FAQ生成器）
+   - 三版本数据库模型
+4. 开始前端UI开发：
+   - 对比审核页面
+   - FAQ编辑器
+   - Diff高亮组件
+5. 集成测试和优化
