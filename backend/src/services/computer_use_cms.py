@@ -36,6 +36,7 @@ class ComputerUseCMSService:
         cms_username: str,
         cms_password: str,
         cms_type: str = "wordpress",
+        article_images: list[dict] = None,
     ) -> dict[str, Any]:
         """Publish article to CMS using Computer Use API.
 
@@ -47,6 +48,7 @@ class ComputerUseCMSService:
             cms_username: CMS username
             cms_password: CMS password or application password
             cms_type: CMS platform type (wordpress, strapi, etc.)
+            article_images: List of image metadata dicts with local_path for upload
 
         Returns:
             dict: Publishing result with status, URL, metadata
@@ -81,6 +83,7 @@ class ComputerUseCMSService:
                 article_title=article_title,
                 article_body=article_body,
                 seo_data=seo_data,
+                article_images=article_images or [],
             )
 
             # Initialize Computer Use tools
@@ -251,6 +254,7 @@ class ComputerUseCMSService:
         article_title: str,
         article_body: str,
         seo_data: SEOMetadata,
+        article_images: list[dict],
     ) -> str:
         """Build Computer Use instructions for CMS publishing.
 
@@ -262,13 +266,14 @@ class ComputerUseCMSService:
             article_title: Article title
             article_body: Article body
             seo_data: SEO metadata
+            article_images: List of image metadata with local paths
 
         Returns:
             str: Detailed instructions for Claude
         """
         if cms_type == "wordpress":
             return self._build_wordpress_instructions(
-                cms_url, cms_username, cms_password, article_title, article_body, seo_data
+                cms_url, cms_username, cms_password, article_title, article_body, seo_data, article_images
             )
         else:
             raise ValueError(f"Unsupported CMS type: {cms_type}")
@@ -281,6 +286,7 @@ class ComputerUseCMSService:
         title: str,
         body: str,
         seo_data: SEOMetadata,
+        article_images: list[dict],
     ) -> str:
         """Build WordPress-specific instructions.
 
@@ -291,6 +297,7 @@ class ComputerUseCMSService:
             title: Article title
             body: Article body
             seo_data: SEO metadata
+            article_images: List of article images with local paths
 
         Returns:
             str: WordPress publishing instructions
@@ -298,15 +305,24 @@ class ComputerUseCMSService:
         # Truncate body for instruction (full body will be pasted via editor tool)
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
+        # Prepare image upload instructions
+        has_images = len(article_images) > 0
+        image_info = ""
+        if has_images:
+            image_info = "\n**Article Images to Upload:**\n"
+            for idx, img in enumerate(article_images, 1):
+                image_info += f"  {idx}. {img['filename']} (local path: {img['local_path']})\n"
+
         instructions = f"""You are an AI assistant helping to publish an article to a WordPress website with proper SEO configuration.
 
 **Your Task:**
 1. Navigate to the WordPress admin dashboard
 2. Log in if needed
 3. Create a new post
-4. Set up the article content and SEO metadata
-5. Publish the article
-6. Return the published article URL and ID
+4. {'Upload article images to WordPress media library' if has_images else 'Skip image upload (no images)'}
+5. Set up the article content and SEO metadata
+6. Publish the article
+7. Return the published article URL and ID
 
 **WordPress Details:**
 - Admin URL: {cms_url}/wp-admin
@@ -316,7 +332,7 @@ class ComputerUseCMSService:
 **Article Content:**
 Title: {title}
 Body Preview: {body_preview}
-[Full body content will be provided when needed]
+[Full body content will be provided when needed]{image_info}
 
 **SEO Configuration (use Yoast SEO or Rank Math if available):**
 - Meta Title: {seo_data.meta_title}
@@ -353,13 +369,24 @@ Body Preview: {body_preview}
    - Enter title: {title}
    - Take a screenshot
 
-5. **Add Article Content**
+{"5. **Upload Article Images to WordPress Media Library**" + '''
+   - For each image file provided in the article images list above:
+     a. Click "+ Add Block" or the Insert Media button
+     b. Click "Upload" or "Media Library"
+     c. Use the computer tool to upload the image file from its local path
+     d. Wait for upload to complete
+     e. Note the image URL from WordPress media library
+   - After all images are uploaded, you can insert them into the article content
+   - Take a screenshot showing uploaded media
+   - IMPORTANT: Replace any Google Drive image references in the article body with the WordPress media URLs
+
+6. ''' if has_images else "5. "}**Add Article Content**
    - Click on the content area
    - Use the text editor tool to paste the full article body
-   - Format the content appropriately (headings, paragraphs, etc.)
+   - {"Insert the uploaded images at appropriate locations in the content" if has_images else "Format the content appropriately (headings, paragraphs, etc.)"}
    - Take a screenshot
 
-6. **Configure Yoast SEO / Rank Math (if available)**
+{"7" if has_images else "6"}. **Configure Yoast SEO / Rank Math (if available)**
    - Scroll down to the SEO meta box (usually below the editor or in sidebar)
    - Set Focus Keyword: {seo_data.focus_keyword}
    - Edit Meta Title to: {seo_data.meta_title}
@@ -367,18 +394,18 @@ Body Preview: {body_preview}
    - Verify SEO score is green/acceptable
    - Take a screenshot of SEO settings
 
-7. **Publish Article**
+{"8" if has_images else "7"}. **Publish Article**
    - Click the "Publish" button (top right)
    - If prompted, click "Publish" again to confirm
    - Wait for "Post published" confirmation
    - Take a screenshot of the success message
 
-8. **Capture Article URL and ID**
+{"9" if has_images else "8"}. **Capture Article URL and ID**
    - Look for the "View Post" link or the article URL in the success message
    - Note the post ID (usually in the URL as ?post=123)
    - Take a final screenshot
 
-9. **Return Results**
+{"10" if has_images else "9"}. **Return Results**
    - Provide the article URL and post ID in your final response
    - Format: {{"article_url": "...", "article_id": "..."}}
 

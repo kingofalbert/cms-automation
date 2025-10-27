@@ -99,6 +99,16 @@ class Settings(BaseSettings):
         description="Maximum tokens for Claude responses",
     )
 
+    # Google Drive Storage Configuration
+    GOOGLE_DRIVE_CREDENTIALS_PATH: str = Field(
+        default="",
+        description="Path to Google Drive service account credentials JSON file",
+    )
+    GOOGLE_DRIVE_FOLDER_ID: str = Field(
+        default="",
+        description="Google Drive folder ID for file uploads",
+    )
+
     # CMS Integration
     CMS_TYPE: Literal["wordpress", "strapi", "contentful", "ghost"] = Field(
         default="wordpress",

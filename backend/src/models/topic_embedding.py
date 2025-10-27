@@ -1,6 +1,6 @@
 """TopicEmbedding model for semantic similarity detection."""
 
-from sqlalchemy import ForeignKey, Integer, Text
+from sqlalchemy import Float, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -35,7 +35,7 @@ class TopicEmbedding(Base, TimestampMixin):
     # Note: We use ARRAY for SQLAlchemy compatibility, but this will be
     # a vector column in the actual database through pgvector
     embedding: Mapped[list[float]] = mapped_column(
-        ARRAY(float),
+        ARRAY(Float),
         nullable=False,
         comment="Vector embedding for semantic similarity",
     )

@@ -35,6 +35,10 @@ class PublishArticleRequest(BaseModel):
         default="wordpress",
         description="CMS platform type",
     )
+    publishing_strategy: str = Field(
+        default="auto",
+        description="Publishing strategy: auto, computer_use, playwright, cost_optimized, quality_optimized",
+    )
 
 
 class PublishArticleResponse(BaseModel):
@@ -97,6 +101,7 @@ async def publish_article_with_computer_use(
         cms_username=cms_username,
         cms_password=cms_password,
         cms_type=request.cms_type,
+        publishing_strategy=request.publishing_strategy,
     )
 
     logger.info(

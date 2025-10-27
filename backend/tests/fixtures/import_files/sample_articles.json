@@ -1,0 +1,35 @@
+{
+  "articles": [
+    {
+      "title": "Getting Started with Docker Containers for Developers",
+      "body": "Docker revolutionizes application deployment by packaging software in portable containers. This tutorial guides developers through Docker fundamentals, from basic commands to multi-container orchestration with Docker Compose.",
+      "author_id": "dev001",
+      "status": "imported",
+      "seo": {
+        "meta_title": "Docker Containers Tutorial Complete Developer Guide 2025",
+        "meta_description": "Learn Docker container fundamentals for developers. Master containerization, Docker Compose, image management, and deployment best practices for modern apps.",
+        "focus_keyword": "docker containers tutorial",
+        "primary_keywords": ["docker tutorial", "containerization", "docker compose"],
+        "secondary_keywords": ["docker images", "container orchestration", "docker deployment", "microservices architecture", "devops practices"],
+        "readability_score": 78.3,
+        "seo_score": 91.5
+      }
+    },
+    {
+      "title": "TypeScript Advanced Features and Best Practices Guide",
+      "body": "TypeScript enhances JavaScript with static typing and advanced features. Explore generics, decorators, utility types, and architectural patterns that make TypeScript indispensable for large-scale applications.",
+      "author_id": "dev002",
+      "status": "draft",
+      "featured_image_path": "/images/typescript-cover.jpg",
+      "seo": {
+        "meta_title": "Advanced TypeScript Features Best Practices Guide 2025",
+        "meta_description": "Master advanced TypeScript features and best practices. Learn generics, decorators, utility types, and design patterns for scalable enterprise applications.",
+        "focus_keyword": "typescript advanced features",
+        "primary_keywords": ["typescript generics", "typescript decorators", "typescript patterns"],
+        "secondary_keywords": ["utility types", "type inference", "typescript architecture", "enterprise typescript", "typescript best practices"],
+        "readability_score": 74.8,
+        "seo_score": 87.9
+      }
+    }
+  ]
+}

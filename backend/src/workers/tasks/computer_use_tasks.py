@@ -10,6 +10,8 @@ from src.config import get_logger
 from src.config.database import get_async_session
 from src.models import Article, ArticleStatus
 from src.services.computer_use_cms import ComputerUseCMSService
+from src.services.drive_image_retriever import create_drive_image_retriever
+from src.services.hybrid_publisher import create_hybrid_publisher
 from src.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
@@ -28,6 +30,7 @@ def publish_article_with_computer_use_task(
     cms_username: str,
     cms_password: str,
     cms_type: str = "wordpress",
+    publishing_strategy: str = "auto",
 ) -> dict[str, Any]:
     """Publish article using Computer Use API (Celery task).
 
@@ -57,6 +60,7 @@ def publish_article_with_computer_use_task(
                 cms_username=cms_username,
                 cms_password=cms_password,
                 cms_type=cms_type,
+                publishing_strategy=publishing_strategy,
             )
         )
 
@@ -88,6 +92,7 @@ async def _publish_article_async(
     cms_username: str,
     cms_password: str,
     cms_type: str,
+    publishing_strategy: str = "auto",
 ) -> dict[str, Any]:
     """Async helper for publishing article via Computer Use.
 
@@ -150,19 +155,49 @@ async def _publish_article_async(
 
         seo_data = SEOMetadata(**seo_data_dict)
 
-        # Initialize Computer Use service
-        computer_use_service = ComputerUseCMSService()
+        # Retrieve article images from Google Drive
+        image_retriever = await create_drive_image_retriever(session)
+        article_images = []
 
-        # Publish article with Computer Use
-        publish_result = await computer_use_service.publish_article_with_seo(
-            article_title=article.title,
-            article_body=article.body,
-            seo_data=seo_data,
-            cms_url=cms_url,
-            cms_username=cms_username,
-            cms_password=cms_password,
-            cms_type=cms_type,
-        )
+        try:
+            article_images = await image_retriever.get_article_images(article_id)
+
+            if article_images:
+                logger.info(
+                    "article_images_downloaded_from_drive",
+                    article_id=article_id,
+                    image_count=len(article_images),
+                )
+
+            # Initialize Hybrid Publisher
+            # Check if Playwright config exists
+            playwright_config_path = "/app/config/wordpress_selectors.json"
+            import os
+            if not os.path.exists(playwright_config_path):
+                playwright_config_path = None
+                logger.info("playwright_config_not_found_using_computer_use_only")
+
+            hybrid_publisher = await create_hybrid_publisher(
+                strategy=publishing_strategy,
+                playwright_config_path=playwright_config_path,
+            )
+
+            # Publish article using hybrid strategy
+            publish_result = await hybrid_publisher.publish_article(
+                cms_url=cms_url,
+                username=cms_username,
+                password=cms_password,
+                article_title=article.title,
+                article_body=article.body,
+                seo_data=seo_data,
+                article_images=article_images,
+                article_metadata=article.article_metadata or {},
+            )
+
+        finally:
+            # Always cleanup temp files
+            image_retriever.cleanup()
+            logger.debug("cleaned_up_article_images", article_id=article_id)
 
         # Update article if publishing succeeded
         if publish_result.get("success"):
