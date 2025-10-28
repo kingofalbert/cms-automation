@@ -141,6 +141,85 @@ class Settings(BaseSettings):
         return [origin.strip() for origin in self.cors_origins.split(',')]
 
 
+class SelectorConfig:
+    """
+    选择器配置封装类
+    用于 Playwright Provider 访问选择器
+    """
+
+    def __init__(self, selectors: Dict[str, Any]):
+        """
+        Args:
+            selectors: 选择器配置字典
+        """
+        self.selectors = selectors
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        获取选择器配置
+
+        Args:
+            key: 选择器键名
+            default: 默认值
+
+        Returns:
+            选择器字符串或列表
+        """
+        return self.selectors.get(key, default)
+
+    def get_all_selectors(self, key: str) -> list[str]:
+        """
+        获取所有备选选择器（支持多选择器）
+
+        Args:
+            key: 选择器键名
+
+        Returns:
+            选择器列表
+        """
+        value = self.get(key)
+        if value is None:
+            return []
+        return value if isinstance(value, list) else [value]
+
+    def validate(self) -> bool:
+        """
+        验证配置完整性
+
+        Returns:
+            是否验证通过
+        """
+        required_keys = [
+            'new_post_title', 'content_textarea', 'add_media_button',
+            'save_draft', 'publish'
+        ]
+        missing = [key for key in required_keys if key not in self.selectors]
+        if missing:
+            raise ValueError(f"Missing required selectors: {missing}")
+        return True
+
+    @classmethod
+    def load_from_file(cls, file_path: str) -> 'SelectorConfig':
+        """
+        从 YAML 文件加载配置
+
+        Args:
+            file_path: 配置文件路径
+
+        Returns:
+            SelectorConfig 实例
+        """
+        full_path = Path(file_path)
+
+        if not full_path.exists():
+            raise FileNotFoundError(f'Selector config not found: {file_path}')
+
+        with open(full_path, 'r', encoding='utf-8') as f:
+            config_dict = yaml.safe_load(f)
+
+        return cls(config_dict)
+
+
 class ConfigLoader:
     """配置加载器"""
 
@@ -155,6 +234,7 @@ class ConfigLoader:
         self._settings: Optional[Settings] = None
         self._selectors: Optional[Dict[str, Any]] = None
         self._instructions: Optional[Dict[str, Any]] = None
+        self._selector_config: Optional[SelectorConfig] = None
 
     @property
     def settings(self) -> Settings:
@@ -169,6 +249,13 @@ class ConfigLoader:
         if self._selectors is None:
             self._selectors = self.load_yaml_config(self.settings.selectors_config_path)
         return self._selectors
+
+    @property
+    def selector_config(self) -> SelectorConfig:
+        """获取选择器配置对象 (懒加载)"""
+        if self._selector_config is None:
+            self._selector_config = SelectorConfig(self.selectors)
+        return self._selector_config
 
     @property
     def instructions(self) -> Dict[str, Any]:
@@ -338,3 +425,19 @@ def get_instruction(*keys: str) -> Optional[str]:
 def format_instruction(*keys: str, **kwargs) -> Optional[str]:
     """格式化指令 (全局快捷方式)"""
     return config.format_instruction(*keys, **kwargs)
+
+
+def load_selector_config(config_path: Optional[str] = None) -> SelectorConfig:
+    """
+    加载选择器配置
+
+    Args:
+        config_path: 配置文件路径，默认使用 config/selectors.yaml
+
+    Returns:
+        SelectorConfig 实例
+    """
+    if config_path is None:
+        return config.selector_config
+    else:
+        return SelectorConfig.load_from_file(config_path)
