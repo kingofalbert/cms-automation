@@ -317,6 +317,97 @@ class PublishResult(BaseModel):
         }
 
 
+class ComputerUseAction(BaseModel):
+    """Computer Use 操作模型"""
+
+    action_type: str = Field(..., description="操作类型", pattern="^(key|type|mouse_move|left_click|right_click|screenshot|cursor_position)$")
+    text: Optional[str] = Field(None, description="输入文本（type 操作）")
+    coordinate: Optional[List[int]] = Field(None, description="坐标 [x, y]（mouse 操作）")
+
+    @field_validator('coordinate')
+    @classmethod
+    def validate_coordinate(cls, v: Optional[List[int]]) -> Optional[List[int]]:
+        """验证坐标格式"""
+        if v is None:
+            return v
+
+        if len(v) != 2:
+            raise ValueError('坐标必须包含 2 个元素 [x, y]')
+
+        x, y = v
+        if x < 0 or y < 0:
+            raise ValueError('坐标不能为负数')
+
+        if x > 10000 or y > 10000:
+            raise ValueError('坐标超出合理范围 (0-10000)')
+
+        return v
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "action_type": "left_click",
+                "coordinate": [500, 300]
+            }
+        }
+
+
+class ComputerUseResponse(BaseModel):
+    """Computer Use API 响应模型"""
+
+    content: str = Field(..., description="API 返回的文本内容")
+    tool_calls: List[dict] = Field(default_factory=list, description="工具调用列表")
+    stop_reason: Optional[str] = Field(None, description="停止原因")
+    usage: Optional[dict] = Field(None, description="使用量统计")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "content": "我已经点击了'新增文章'按钮",
+                "tool_calls": [{"type": "computer_20241022", "action": "left_click"}],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 150, "output_tokens": 20}
+            }
+        }
+
+
+class ConversationMessage(BaseModel):
+    """对话消息模型"""
+
+    role: str = Field(..., description="消息角色", pattern="^(user|assistant)$")
+    content: str | List[dict] = Field(..., description="消息内容")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "role": "user",
+                "content": "请点击新增文章按钮"
+            }
+        }
+
+
+class ComputerUseSession(BaseModel):
+    """Computer Use 会话模型"""
+
+    session_id: str = Field(..., description="会话唯一标识符")
+    conversation_history: List[ConversationMessage] = Field(default_factory=list, description="对话历史")
+    current_url: Optional[str] = Field(None, description="当前页面 URL")
+    screenshot_count: int = Field(default=0, ge=0, description="截图计数")
+    total_tokens_used: int = Field(default=0, ge=0, description="累计使用的 token 数")
+
+    class Config:
+        arbitrary_types_allowed = True
+        json_schema_extra = {
+            "example": {
+                "session_id": "cu-20251027-123456",
+                "conversation_history": [],
+                "current_url": "https://admin.epochtimes.com/wp-admin",
+                "screenshot_count": 5,
+                "total_tokens_used": 1250
+            }
+        }
+
+
 # 类型别名（用于类型提示）
 from typing import TypeAlias
 
