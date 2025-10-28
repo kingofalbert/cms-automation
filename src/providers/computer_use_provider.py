@@ -33,6 +33,8 @@ from src.models import (
 )
 from src.config.computer_use_loader import InstructionTemplate
 from src.utils.logger import get_logger
+from src.utils.retry import async_retry, RetryConfig, RetryableOperation
+from src.utils.token_manager import TokenManager, TokenBudget
 
 
 class ComputerUseProvider(IPublishingProvider):
@@ -48,7 +50,8 @@ class ComputerUseProvider(IPublishingProvider):
         api_key: str,
         instructions: InstructionTemplate,
         display_width: int = 1920,
-        display_height: int = 1080
+        display_height: int = 1080,
+        retry_config: Optional[RetryConfig] = None
     ):
         """
         初始化 Computer Use Provider
@@ -58,6 +61,7 @@ class ComputerUseProvider(IPublishingProvider):
             instructions: 指令模板对象
             display_width: 显示宽度（像素）
             display_height: 显示高度（像素）
+            retry_config: 重试配置，如果为 None 则使用默认配置
         """
         self.logger = get_logger('ComputerUseProvider')
         self.api_key = api_key
@@ -78,6 +82,22 @@ class ComputerUseProvider(IPublishingProvider):
         # API 配置
         self.model = "claude-3-5-sonnet-20241022"
         self.max_tokens = 4096
+
+        # 重试配置
+        self.retry_config = retry_config or RetryConfig(
+            max_retries=3,
+            initial_delay=2.0,
+            max_delay=30.0,
+            exponential_base=2.0
+        )
+
+        # Token 管理器
+        self.token_manager = TokenManager(
+            budget=TokenBudget(
+                per_session_limit=100_000,
+                per_operation_limit=10_000
+            )
+        )
 
     async def initialize(self) -> None:
         """初始化 Provider"""
@@ -113,16 +133,26 @@ class ComputerUseProvider(IPublishingProvider):
                 f"Tokens: {self.session.total_tokens_used}"
             )
 
+        # 生成 Token 使用报告
+        report = self.token_manager.generate_report()
+        self.logger.info(f"\n{report}")
+
         # 无需特殊清理，API 调用是无状态的
         self.logger.info("Computer Use Provider 清理完成")
 
+    @async_retry(
+        max_retries=3,
+        initial_delay=2.0,
+        max_delay=30.0,
+        exceptions=(anthropic.APIError, anthropic.APIConnectionError, anthropic.RateLimitError)
+    )
     async def _execute_instruction(
         self,
         instruction: str,
         expect_screenshot: bool = True
     ) -> Dict[str, Any]:
         """
-        执行 Computer Use 指令
+        执行 Computer Use 指令（带自动重试）
 
         Args:
             instruction: 自然语言指令
@@ -136,7 +166,7 @@ class ComputerUseProvider(IPublishingProvider):
             - usage: Token 使用统计
 
         Raises:
-            Exception: API 调用失败
+            Exception: API 调用失败（重试后仍失败）
         """
         self.logger.debug(f"执行指令: {instruction[:100]}...")
 
@@ -187,8 +217,17 @@ class ComputerUseProvider(IPublishingProvider):
                     "input_tokens": response.usage.input_tokens,
                     "output_tokens": response.usage.output_tokens
                 }
+
+                # 更新会话统计
                 self.session.total_tokens_used += (
                     response.usage.input_tokens + response.usage.output_tokens
+                )
+
+                # 记录到 Token Manager
+                self.token_manager.record_usage(
+                    operation="api_call",
+                    input_tokens=response.usage.input_tokens,
+                    output_tokens=response.usage.output_tokens
                 )
 
             # 更新对话历史
