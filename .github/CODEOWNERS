@@ -1,0 +1,10 @@
+# Keep these team mappings aligned with AGENTS.md contributor guidelines.
+
+# Default: both backend/API and frontend/UI teams review shared changes.
+* @cms-automation/backend-api @cms-automation/frontend-ui
+
+# Backend services, workers, and tests.
+/backend/ @cms-automation/backend-api
+
+# Frontend application and tests.
+/frontend/ @cms-automation/frontend-ui

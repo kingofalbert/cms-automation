@@ -1,0 +1,129 @@
+# WordPress Publishing Service - Test Environment
+# 此文件定义了完整的 WordPress 测试环境
+# 使用方式: docker-compose -f docker-compose.test.yml up -d
+
+version: '3.8'
+
+services:
+  # ==================== MySQL 数据库 ====================
+  db:
+    image: mysql:8.0
+    container_name: cms_test_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: wordpress
+      MYSQL_ROOT_PASSWORD: rootpassword
+    volumes:
+      - test_db_data:/var/lib/mysql
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==================== WordPress ====================
+  wordpress:
+    image: wordpress:latest
+    container_name: cms_test_wordpress
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8001:80"
+    environment:
+      # 数据库配置
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+
+      # WordPress 配置
+      WORDPRESS_DEBUG: 'true'
+      WORDPRESS_CONFIG_EXTRA: |
+        /* 启用经典编辑器 */
+        define('CLASSIC_EDITOR_REPLACE', true);
+        define('ALLOW_UNFILTERED_UPLOADS', true);
+
+        /* 调试配置 */
+        define('WP_DEBUG_LOG', true);
+        define('WP_DEBUG_DISPLAY', false);
+
+        /* 内存限制 */
+        define('WP_MEMORY_LIMIT', '256M');
+        define('WP_MAX_MEMORY_LIMIT', '512M');
+
+        /* 自动保存间隔 (秒) */
+        define('AUTOSAVE_INTERVAL', 300);
+
+        /* 禁用文件编辑 */
+        define('DISALLOW_FILE_EDIT', false);
+    volumes:
+      - test_wordpress_data:/var/www/html
+      # 挂载自定义配置 (如果需要)
+      # - ./tests/docker/wordpress/plugins:/var/www/html/wp-content/plugins/custom:ro
+    networks:
+      - test_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/wp-login.php"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ==================== WP-CLI (WordPress 命令行工具) ====================
+  wp-cli:
+    image: wordpress:cli-2.10
+    container_name: cms_test_wpcli
+    user: "33:33"  # www-data user in WordPress container
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    volumes:
+      - test_wordpress_data:/var/www/html
+      - ./tests/docker/wordpress/setup.sh:/setup.sh:ro
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    networks:
+      - test_network
+    entrypoint: /bin/sh
+    command: -c "sleep 60 && /setup.sh"
+    restart: "no"
+
+  # ==================== phpMyAdmin (可选，用于数据库管理) ====================
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: cms_test_phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: rootpassword
+    networks:
+      - test_network
+    profiles:
+      - debug
+
+# ==================== 网络配置 ====================
+networks:
+  test_network:
+    driver: bridge
+    name: cms_test_network
+
+# ==================== 数据卷配置 ====================
+volumes:
+  test_db_data:
+    name: cms_test_mysql_data
+  test_wordpress_data:
+    name: cms_test_wordpress_data

@@ -1,0 +1,322 @@
+# WordPress Publishing Service - CSS Selectors Configuration
+# 此配置文件定义了 Playwright Provider 使用的所有 CSS 选择器
+# 版本: 1.0.0
+# 更新日期: 2025-10-27
+
+# ==================== 登录相关选择器 ====================
+login:
+  # 用户名输入框
+  username_input: "#user_login"
+  # 密码输入框
+  password_input: "#user_pass"
+  # 登录按钮
+  submit_button: "#wp-submit"
+  # 记住我复选框
+  remember_checkbox: "#rememberme"
+  # 登录错误消息
+  error_message: "#login_error"
+
+# ==================== 导航菜单选择器 ====================
+navigation:
+  # 文章菜单
+  posts_menu: "#menu-posts"
+  # 新建文章 (需要先 hover posts_menu 展开子菜单)
+  new_post: "a[href=\"post-new.php\"]"
+  # 所有文章
+  all_posts: "#menu-posts a[href='edit.php']"
+  # 媒体库
+  media_library: "#menu-media"
+  # 新建媒体
+  upload_media: "#menu-media a[href='media-new.php']"
+
+# ==================== 文章编辑器选择器 ====================
+editor:
+  # 经典编辑器相关
+  classic:
+    # 标题输入框
+    title_input: "#title"
+    # 内容编辑器 (TinyMCE iframe)
+    content_iframe: "#content_ifr"
+    # 内容编辑器 body (iframe 内部)
+    content_body: "#tinymce"
+    # 可视化编辑器按钮
+    visual_tab: "#content-tmce"
+    # 文本编辑器按钮
+    text_tab: "#content-html"
+    # 文本编辑器 textarea
+    text_editor: "#content"
+
+  # Gutenberg 编辑器相关 (备用，如果使用块编辑器)
+  gutenberg:
+    # 标题输入框
+    title_input: ".editor-post-title__input"
+    # 内容编辑器
+    content_editor: ".block-editor-writing-flow"
+    # 段落块
+    paragraph_block: ".wp-block-paragraph"
+
+# ==================== 文章元数据选择器 ====================
+metadata:
+  # 摘要
+  excerpt:
+    # 摘要文本框
+    textarea: "#excerpt"
+
+  # 分类
+  categories:
+    # 分类面板
+    panel: "#categorydiv"
+    # 分类列表
+    checklist: "#categorychecklist"
+    # 分类复选框 (需要动态查找)
+    checkbox_template: "#in-category-{id}"
+    # 新建分类按钮
+    add_new_button: "#category-add-toggle"
+    # 新分类名称输入
+    new_name_input: "#newcategory"
+    # 新分类父级选择
+    new_parent_select: "#newcategory_parent"
+    # 添加新分类按钮
+    add_submit: "#category-add-submit"
+
+  # 标签
+  tags:
+    # 标签面板
+    panel: "#tagsdiv-post_tag"
+    # 标签输入框
+    input: "#new-tag-post_tag"
+    # 添加标签按钮
+    add_button: ".tagadd"
+    # 已添加的标签列表
+    list: ".tagchecklist"
+    # 移除标签按钮
+    remove_button: ".ntdelbutton"
+
+  # 特色图片
+  featured_image:
+    # 特色图片容器
+    container: "#postimagediv"
+    # 设置特色图片链接
+    set_link: "#set-post-thumbnail"
+    # 移除特色图片链接
+    remove_link: "#remove-post-thumbnail"
+    # 特色图片预览
+    preview: "#postimagediv img"
+
+# ==================== 媒体库选择器 ====================
+media:
+  # 媒体库模态框
+  modal:
+    # 模态框容器
+    container: ".media-modal"
+    # 关闭按钮
+    close_button: ".media-modal-close"
+
+  # 上传区域
+  upload:
+    # 上传文件按钮
+    select_files: ".browser"
+    # 拖放区域
+    drop_zone: ".uploader-inline-content"
+    # 上传进度条
+    progress_bar: ".media-progress-bar"
+
+  # 媒体库网格
+  library:
+    # 媒体项列表
+    items: ".attachments-browser .attachment"
+    # 选中的媒体项
+    selected_item: ".attachment.selected"
+    # 媒体项缩略图
+    thumbnail: ".attachment-preview img"
+
+  # 附件详情
+  details:
+    # 详情面板
+    panel: ".attachment-details"
+    # 标题输入
+    title_input: ".attachment-details .setting[data-setting='title'] input"
+    # 替代文字输入
+    alt_input: ".attachment-details .setting[data-setting='alt'] input"
+    # 说明文字输入
+    caption_input: ".attachment-details .setting[data-setting='caption'] textarea"
+    # 描述输入
+    description_input: ".attachment-details .setting[data-setting='description'] textarea"
+
+  # 操作按钮
+  actions:
+    # 选择按钮 (用于特色图片)
+    select_button: ".media-button-select"
+    # 插入到文章按钮
+    insert_button: ".media-button-insert"
+
+# ==================== Yoast SEO 选择器 ====================
+yoast_seo:
+  # Yoast 面板
+  panel: "#wpseo_meta"
+
+  # 焦点关键字
+  focus_keyword:
+    # 输入框
+    input: "#yoast_wpseo_focuskw_text_input"
+
+  # SEO 标题
+  meta_title:
+    # 输入框
+    input: "#yoast_wpseo_title"
+    # 字符计数
+    counter: ".yoast-field-group__title .yoast-field-group__counter"
+
+  # Meta 描述
+  meta_description:
+    # 输入框
+    textarea: "#yoast_wpseo_metadesc"
+    # 字符计数
+    counter: ".yoast-field-group__description .yoast-field-group__counter"
+
+  # SEO 分析
+  analysis:
+    # 分析面板
+    panel: ".wpseo-meta-section"
+    # 分析结果
+    results: ".yoast-seo__traffic-light"
+    # 问题列表
+    problems: ".yoast-seo__problems"
+    # 改进建议
+    improvements: ".yoast-seo__improvements"
+    # 良好项
+    good_results: ".yoast-seo__good-results"
+
+# ==================== 发布相关选择器 ====================
+publish:
+  # 发布面板
+  panel: "#submitdiv"
+
+  # 发布按钮
+  publish_button: "#publish"
+
+  # 保存草稿按钮
+  save_draft: "#save-post"
+
+  # 预览按钮
+  preview_button: "#post-preview"
+
+  # 状态
+  status:
+    # 状态显示
+    display: "#post-status-display"
+    # 编辑状态链接
+    edit_link: ".edit-post-status"
+    # 状态选择下拉
+    select: "#post_status"
+    # 确认按钮
+    ok_button: ".save-post-status"
+
+  # 可见性
+  visibility:
+    # 可见性显示
+    display: "#post-visibility-display"
+    # 编辑可见性链接
+    edit_link: ".edit-visibility"
+    # 公开单选按钮
+    public_radio: "#visibility-radio-public"
+    # 密码保护单选按钮
+    password_radio: "#visibility-radio-password"
+    # 密码输入框
+    password_input: "#post_password"
+    # 私密单选按钮
+    private_radio: "#visibility-radio-private"
+    # 确认按钮
+    ok_button: ".save-post-visibility"
+
+  # 发布日期
+  schedule:
+    # 发布日期显示
+    display: "#timestamp"
+    # 编辑日期链接
+    edit_link: ".edit-timestamp"
+    # 月份选择
+    month_select: "#mm"
+    # 日期输入
+    day_input: "#jj"
+    # 年份输入
+    year_input: "#aa"
+    # 小时输入
+    hour_input: "#hh"
+    # 分钟输入
+    minute_input: "#mn"
+    # 确认按钮
+    ok_button: ".save-timestamp"
+    # 取消按钮
+    cancel_button: ".cancel-timestamp"
+
+# ==================== 通知消息选择器 ====================
+notices:
+  # 成功消息
+  success: ".notice.notice-success"
+  # 错误消息
+  error: ".notice.notice-error"
+  # 警告消息
+  warning: ".notice.notice-warning"
+  # 信息消息
+  info: ".notice.notice-info"
+  # 消息文本
+  message_text: ".notice p"
+  # 关闭按钮
+  dismiss_button: ".notice-dismiss"
+
+  # 发布成功消息
+  post_published:
+    container: "#message.updated"
+    view_post_link: "#message.updated a"
+
+# ==================== 等待和状态检查 ====================
+wait_for:
+  # 页面加载完成
+  page_loaded: "body.wp-admin"
+  # 编辑器就绪
+  editor_ready: "#post"
+  # 媒体库就绪
+  media_ready: ".media-frame"
+  # Ajax 请求完成 (WordPress spinner)
+  ajax_complete: "body:not(.wp-admin-ajax)"
+  # 自动保存完成
+  autosave_complete: "#autosave"
+
+# ==================== 备用选择器 (降级使用) ====================
+fallback:
+  # 通用按钮
+  submit_button: "button[type='submit']"
+  # 通用输入框
+  text_input: "input[type='text']"
+  # 通用文本域
+  textarea: "textarea"
+  # 通用链接
+  link: "a[href]"
+
+# ==================== 选择器验证配置 ====================
+validation:
+  # 关键选择器 (必须存在)
+  critical:
+    - login.username_input
+    - login.password_input
+    - login.submit_button
+    - editor.classic.title_input
+    - editor.classic.content_iframe
+    - yoast_seo.focus_keyword.input
+    - yoast_seo.meta_title.input
+    - yoast_seo.meta_description.textarea
+    - publish.publish_button
+
+  # 重要选择器 (应该存在)
+  important:
+    - metadata.categories.panel
+    - metadata.tags.panel
+    - metadata.featured_image.container
+    - media.modal.container
+    - notices.success
+
+  # 可选选择器 (可能不存在)
+  optional:
+    - editor.gutenberg.title_input
+    - yoast_seo.analysis.panel

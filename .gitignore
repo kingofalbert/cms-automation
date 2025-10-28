@@ -88,6 +88,14 @@ frontend/dist/
 frontend/build/
 frontend/.vite/
 
+# WordPress Publishing Service specific
+uploads/
+logs/
+tests/reports/
+tests/fixtures/images/
+.pytest_cache/
+*.log
+
 # Documentation backups
 *.backup
 

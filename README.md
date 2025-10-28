@@ -102,6 +102,9 @@ poetry run celery -A src.workers.celery_app worker --loglevel=info
 poetry run celery -A src.workers.celery_app beat --loglevel=info
 ```
 
+## Contributor Guide
+For conventions, local workflows, and review expectations, read [`AGENTS.md`](AGENTS.md).
+
 #### Frontend
 
 ```bash

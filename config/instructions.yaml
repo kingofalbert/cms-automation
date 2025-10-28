@@ -1,0 +1,339 @@
+# WordPress Publishing Service - Computer Use Instructions
+# 此配置文件定义了 Computer Use Provider 使用的自然语言指令模板
+# 版本: 1.0.0
+# 更新日期: 2025-10-27
+
+# ==================== 登录相关指令 ====================
+login:
+  navigate_to_login:
+    instruction: |
+      Navigate to the WordPress login page at {wordpress_url}/wp-admin.
+      Wait for the page to fully load.
+
+  enter_credentials:
+    instruction: |
+      On the WordPress login page:
+      1. Find the username field (usually labeled "Username or Email Address")
+      2. Click on it and type: {username}
+      3. Find the password field (usually labeled "Password")
+      4. Click on it and type: {password}
+
+  submit_login:
+    instruction: |
+      Click the "Log In" button to submit the login form.
+      Wait for the WordPress dashboard to load completely.
+
+  verify_login:
+    instruction: |
+      Verify that login was successful by checking:
+      1. The page URL should contain "wp-admin"
+      2. You should see the WordPress dashboard with navigation menu on the left
+      If login failed, you will see an error message near the login form.
+
+# ==================== 导航相关指令 ====================
+navigation:
+  go_to_new_post:
+    instruction: |
+      From the WordPress dashboard:
+      1. Look for "Posts" in the left sidebar menu
+      2. Hover over "Posts" to reveal the submenu
+      3. Click on "Add New" to create a new post
+      Wait for the post editor page to load.
+
+  go_to_media_library:
+    instruction: |
+      From the WordPress admin panel:
+      1. Find "Media" in the left sidebar menu
+      2. Click on "Media" or "Library" to open the media library
+      Wait for the media library page to load.
+
+# ==================== 文章创建相关指令 ====================
+article:
+  enter_title:
+    instruction: |
+      On the post editor page:
+      1. Find the title input field at the top (usually says "Add title" or similar)
+      2. Click on the title field
+      3. Type the article title: {title}
+
+  enter_content:
+    instruction: |
+      In the post editor:
+      1. Find the main content editor area
+      2. Click inside the content editor
+      3. If using Classic Editor: paste or type the content
+      4. If using Block Editor (Gutenberg): add a paragraph block first, then enter content
+      Content to enter: {content}
+
+  switch_to_visual_editor:
+    instruction: |
+      If you see tabs labeled "Visual" and "Text" above the editor:
+      1. Click on the "Visual" tab to switch to visual editing mode
+
+  switch_to_text_editor:
+    instruction: |
+      If you see tabs labeled "Visual" and "Text" above the editor:
+      1. Click on the "Text" tab to switch to HTML/text editing mode
+
+# ==================== 分类和标签相关指令 ====================
+taxonomy:
+  add_categories:
+    instruction: |
+      On the right sidebar of the post editor:
+      1. Scroll down to find the "Categories" section
+      2. Check the boxes next to these categories: {categories}
+      3. If a category doesn't exist, click "Add New Category", type the name, and click "Add New Category" button
+
+  add_tags:
+    instruction: |
+      On the right sidebar of the post editor:
+      1. Find the "Tags" section
+      2. In the tag input field, type: {tag}
+      3. Press Enter or click "Add" to add the tag
+      4. Repeat for each tag: {tags}
+
+  enter_excerpt:
+    instruction: |
+      On the post editor page:
+      1. Look for "Excerpt" section (might need to scroll down on the right sidebar)
+      2. If you don't see it, click "Screen Options" at the top and enable "Excerpt"
+      3. Click in the excerpt text area
+      4. Type the excerpt: {excerpt}
+
+# ==================== 媒体上传相关指令 ====================
+media:
+  open_media_library:
+    instruction: |
+      To open the media library modal:
+      1. Look for "Set featured image" or "Add Media" button
+      2. Click it to open the media upload/library modal
+      Wait for the modal to appear.
+
+  upload_image:
+    instruction: |
+      In the media library modal:
+      1. If not already on "Upload Files" tab, click it
+      2. Click the "Select Files" button
+      3. In the file picker dialog, navigate to: {file_path}
+      4. Select the image file and click "Open"
+      5. Wait for the upload progress bar to complete
+
+  set_image_metadata:
+    instruction: |
+      After uploading or selecting an image:
+      1. On the right side, find the "Attachment Details" panel
+      2. Fill in the following fields:
+         - Title: {title}
+         - Alt Text: {alt_text}
+         - Caption: {caption}
+         - Description: {description}
+
+  select_uploaded_image:
+    instruction: |
+      In the media library:
+      1. Find the image you just uploaded (it should be the first one)
+      2. Click on it to select it
+      3. Verify it's selected (should have a checkmark or blue border)
+
+  set_as_featured_image:
+    instruction: |
+      After selecting the image:
+      1. Click the blue "Set featured image" button at the bottom right
+      2. Wait for the modal to close
+      3. Verify the featured image appears in the "Featured Image" section
+
+# ==================== Yoast SEO 相关指令 ====================
+yoast_seo:
+  scroll_to_yoast:
+    instruction: |
+      Scroll down on the post editor page until you see the "Yoast SEO" section.
+      This is usually below the content editor.
+
+  set_focus_keyword:
+    instruction: |
+      In the Yoast SEO section:
+      1. Find the "Focus keyphrase" or "Focus keyword" field
+      2. Click on it
+      3. Type: {focus_keyword}
+      4. Press Tab or click outside to save
+
+  set_seo_title:
+    instruction: |
+      In the Yoast SEO section:
+      1. Find the "SEO title" field
+      2. Click to edit it
+      3. Clear any existing content
+      4. Type: {meta_title}
+      5. Verify the character count is between 50-60 characters (shown in green)
+
+  set_meta_description:
+    instruction: |
+      In the Yoast SEO section:
+      1. Find the "Meta description" field
+      2. Click to edit it
+      3. Clear any existing content
+      4. Type: {meta_description}
+      5. Verify the character count is between 150-160 characters (shown in green)
+
+  check_seo_analysis:
+    instruction: |
+      In the Yoast SEO section:
+      1. Look for the SEO analysis traffic light (red, orange, or green)
+      2. Click on "SEO" tab if not already selected
+      3. Review any problems (red bullets) or improvements (orange bullets)
+      4. Aim for a green light, but orange is acceptable
+
+# ==================== 发布相关指令 ====================
+publish:
+  set_status_draft:
+    instruction: |
+      In the "Publish" panel on the right sidebar:
+      1. Click "Edit" next to "Status"
+      2. Select "Draft" from the dropdown
+      3. Click "OK"
+
+  set_status_pending:
+    instruction: |
+      In the "Publish" panel on the right sidebar:
+      1. Click "Edit" next to "Status"
+      2. Select "Pending Review" from the dropdown
+      3. Click "OK"
+
+  schedule_publish:
+    instruction: |
+      In the "Publish" panel on the right sidebar:
+      1. Click "Edit" next to "Publish immediately"
+      2. Set the publish date:
+         - Month: {month}
+         - Day: {day}
+         - Year: {year}
+         - Hour: {hour}
+         - Minute: {minute}
+      3. Click "OK"
+      4. The "Publish" button should now say "Schedule"
+
+  publish_immediately:
+    instruction: |
+      To publish the post immediately:
+      1. Find the "Publish" button in the top right corner or right sidebar
+      2. Click it once
+      3. If a confirmation appears, click "Publish" again
+      4. Wait for the success message: "Post published"
+
+  save_draft:
+    instruction: |
+      To save the post as a draft:
+      1. Find the "Save Draft" button (usually near the top)
+      2. Click it
+      3. Wait for "Draft saved" message to appear
+
+  verify_published:
+    instruction: |
+      After publishing, verify success:
+      1. Look for a success message at the top: "Post published" or "Post updated"
+      2. You should see a "View Post" link - copy this URL
+      3. The publish button should now say "Update" instead of "Publish"
+
+# ==================== 错误处理相关指令 ====================
+error_handling:
+  check_for_errors:
+    instruction: |
+      Check the page for any error messages:
+      1. Look for red notification boxes at the top of the page
+      2. Check for yellow warning boxes
+      3. If you see Yoast SEO problems (red bullets), note them but continue
+      4. If you see WordPress errors, stop and report them
+
+  retry_save:
+    instruction: |
+      If save/publish failed:
+      1. Wait 3 seconds
+      2. Click the "Save Draft" or "Publish" button again
+      3. If it fails again after 2 retries, report the error
+
+  handle_autosave_conflict:
+    instruction: |
+      If you see an "autosave" warning or conflict message:
+      1. Look for options like "Keep this version" or "Restore autosave"
+      2. Usually choose "Keep this version" to keep your changes
+      3. Click to dismiss the warning
+
+# ==================== 清理相关指令 ====================
+cleanup:
+  close_modal:
+    instruction: |
+      To close any modal dialog:
+      1. Look for an "X" button in the top right corner
+      2. Click it to close the modal
+      3. Alternatively, press the Escape key
+
+  clear_notifications:
+    instruction: |
+      To clear notification messages:
+      1. Look for "X" or "Dismiss" buttons on notification boxes
+      2. Click them to clear the notifications
+
+# ==================== 截图和验证相关指令 ====================
+verification:
+  take_screenshot:
+    instruction: |
+      Take a screenshot of the current state for audit trail.
+      Focus on: {focus_area}
+
+  verify_element_visible:
+    instruction: |
+      Verify that the following element is visible on the page: {element_description}
+      If you cannot find it, describe what you see instead.
+
+  read_text_content:
+    instruction: |
+      Find and read the text content of: {element_description}
+      Report the exact text you see.
+
+# ==================== 复杂操作组合 ====================
+workflows:
+  complete_article_creation:
+    instruction: |
+      Complete the article creation process:
+      1. Enter the title: {title}
+      2. Enter the content in the editor
+      3. Add categories: {categories}
+      4. Add tags: {tags}
+      5. Set featured image
+      6. Fill in Yoast SEO fields:
+         - Focus keyword: {focus_keyword}
+         - SEO title: {meta_title}
+         - Meta description: {meta_description}
+      7. Review for any errors
+      8. Click Publish
+      Wait for confirmation after each major step.
+
+  upload_and_set_featured_image:
+    instruction: |
+      Upload and set the featured image:
+      1. Click "Set featured image"
+      2. Click "Upload files" tab
+      3. Select and upload: {file_path}
+      4. Set alt text: {alt_text}
+      5. Set title: {title}
+      6. Click "Set featured image" button
+      Verify the image appears in the Featured Image section.
+
+# ==================== 通用指令模板 ====================
+generic:
+  click_element:
+    instruction: |
+      Click on the element described as: {element_description}
+
+  type_text:
+    instruction: |
+      Type the following text: {text}
+
+  wait_for_element:
+    instruction: |
+      Wait for the following element to appear: {element_description}
+      Timeout after {timeout} seconds if not found.
+
+  scroll_to_element:
+    instruction: |
+      Scroll the page until you can see: {element_description}
