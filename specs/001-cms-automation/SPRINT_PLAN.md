@@ -1,29 +1,49 @@
-# WordPress 视觉自动化发布 - Sprint 执行计划
+# WordPress 视觉自动化发布 - Sprint 执行计划 (两阶段策略)
 
-**策略**: 稳健生产版（5 周）
+**策略**: Computer Use MVP → Playwright 混合优化
 **创建日期**: 2025-10-27
-**项目周期**: 2025-11-04 ~ 2025-12-06 (5 周)
+**最后更新**: 2025-10-27
+**项目周期**: 2025-11-04 ~ 2025-12-13 (6 周)
 **团队配置**: 1 后端开发 + 0.5 测试工程师
 
 ---
 
-## 📋 总体规划
+## 📋 总体规划 (两阶段)
 
 ```
-Sprint 1 (Week 1)     ████████░░░░░░░░░░░░  基础设施 + 环境准备
-Sprint 2 (Week 2-3)   ░░░░░░░░████████████  Playwright 核心实现
-Sprint 3 (Week 3-4)   ░░░░░░░░░░░░████████  Computer Use + 降级
-Sprint 4 (Week 4-5)   ░░░░░░░░░░░░░░░░████  测试 + 优化 + API
-Sprint 5 (Week 5)     ░░░░░░░░░░░░░░░░░░██  部署 + 文档
+┌─────────────────── Phase 1: Computer Use MVP (3周) ───────────────────┐
+│                                                                         │
+│  Sprint 1 (Week 1)   ████████░░░░░░░░░░  基础设施 + 指令模板          │
+│  Sprint 2 (Week 2)   ░░░░░░░░████████░░  Computer Use Provider 实现   │
+│  Sprint 3 (Week 3)   ░░░░░░░░░░░░████░░  测试 + 部署 MVP              │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
+         ⬇️ MVP 验收通过，进入 Phase 2
+
+┌────────────────── Phase 2: Playwright 混合优化 (3周) ──────────────────┐
+│                                                                         │
+│  Sprint 4 (Week 4)   ░░░░░░░░░░░░░░████  选择器配置 + Playwright 实现 │
+│  Sprint 5 (Week 5)   ░░░░░░░░░░░░░░░░██  混合架构 + 降级机制          │
+│  Sprint 6 (Week 6)   ░░░░░░░░░░░░░░░░░█  性能优化 + 生产部署          │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+
                       ────────────────────
-                      5 Sprints, 5 Weeks
+                      6 Sprints, 6 Weeks
 ```
 
 ### 里程碑
-- **Week 1 结束**: 基础设施完成，可以开始编码
-- **Week 3 中**: MVP 完成（仅 Playwright）
-- **Week 4 中**: 生产版完成（含降级机制）
-- **Week 5 结束**: 部署上线
+
+#### Phase 1 里程碑
+- **Week 1 结束**: 基础设施 + 指令模板完成
+- **Week 2 结束**: Computer Use Provider 完成
+- **Week 3 结束**: 🎉 **MVP 上线**（Computer Use Only）
+
+#### Phase 2 里程碑
+- **Week 4 结束**: Playwright Provider 完成
+- **Week 5 结束**: 混合架构完成
+- **Week 6 结束**: 🚀 **生产版上线**（成本降低 80-90%）
 
 ---
 
@@ -1122,180 +1142,237 @@ fill_content: |
 
 ---
 
-## 🏃 Sprint 2: Playwright 核心实现 (Week 2-3)
+## 🏃 Sprint 2: Computer Use Provider 实现 (Week 2)
 
-**时间**: 2025-11-11 ~ 2025-11-22 (2 周)
-**目标**: 完成 Playwright Provider 所有功能，实现 MVP
+**时间**: 2025-11-11 ~ 2025-11-15 (1 周)
+**目标**: 完成 Computer Use Provider，实现核心发布流程
 **团队**: 1 后端开发
 
 ### Sprint 目标
-✅ Playwright Provider 完整实现
+✅ Computer Use Provider 完整实现
 ✅ 能发布完整文章（文本 + 图片 + SEO）
 ✅ 核心流程集成测试通过
-✅ MVP 可演示
+✅ MVP 功能完整
 
 ---
 
-### Week 2 Day 1 (Monday) - Playwright 基础方法
+### Week 2 Day 1 (Monday) - Computer Use 基础实现
 
-**任务**: 2.1 Playwright Provider - 基础方法 (P0, 12h，分 2 天完成)
+**任务**: 2.1 Computer Use Provider - 基础方法 (P0, 10h，分 2 天)
 
-**创建文件**: `src/providers/playwright_provider.py`
+**创建文件**: `src/providers/computer_use_provider.py`
 
-**今日目标** (6h):
-- 实现初始化和关闭
-- 实现导航方法
-- 实现基础元素交互
+**今日目标** (5h):
+- 实现 Anthropic API 集成
+- 实现基础指令执行
+- 实现对话历史管理
+- 实现截图捕获
 
 **核心代码框架**:
 ```python
-from playwright.async_api import async_playwright, Page, Browser, Playwright
-from typing import Optional, List, Dict
+import anthropic
+from typing import Optional, List, Dict, Any
 from src.providers.base_provider import IPublishingProvider
-from src.config.config_manager import SelectorConfig
-import asyncio
+from src.config.config_manager import InstructionTemplate
 import logging
+import base64
 
 logger = logging.getLogger(__name__)
 
 
-class PlaywrightProvider(IPublishingProvider):
-    """基于 Playwright 的发布提供者"""
+class ComputerUseProvider(IPublishingProvider):
+    """基于 Anthropic Computer Use 的发布提供者"""
 
-    def __init__(self, selectors: SelectorConfig):
-        self.selectors = selectors
-        self.browser: Optional[Browser] = None
-        self.page: Optional[Page] = None
-        self.playwright: Optional[Playwright] = None
+    def __init__(self, api_key: str, instructions: InstructionTemplate):
+        self.client = anthropic.Anthropic(api_key=api_key)
+        self.instructions = instructions
+        self.conversation_history: List[Dict] = []
+        self.session_id: Optional[str] = None
         self.base_url: str = ""
 
     async def initialize(self, base_url: str, **kwargs) -> None:
-        """初始化浏览器"""
-        logger.info("Initializing Playwright provider")
+        """初始化 Computer Use 会话"""
+        logger.info("Initializing Computer Use provider")
 
-        self.playwright = await async_playwright().start()
-
-        # 启动浏览器
-        self.browser = await self.playwright.chromium.launch(
-            headless=True,
-            args=[
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-blink-features=AutomationControlled'
-            ]
-        )
-
-        # 创建上下文
-        context = await self.browser.new_context(
-            viewport={'width': 1920, 'height': 1080},
-            user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            locale='zh-TW',
-            timezone_id='Asia/Taipei'
-        )
-
-        # 如果提供了 cookies，恢复会话
-        if 'cookies' in kwargs:
-            await context.add_cookies(kwargs['cookies'])
-            logger.info("Restored browser cookies")
-
-        self.page = await context.new_page()
-        self.page.set_default_timeout(30000)
         self.base_url = base_url
+        self.session_id = self._generate_session_id()
 
-        logger.info(f"Playwright initialized with base URL: {base_url}")
+        # 初始化对话（设置上下文）
+        self.conversation_history = [{
+            "role": "user",
+            "content": f"""You are automating WordPress publishing tasks.
+            WordPress URL: {base_url}
+            Language: Traditional Chinese (zh-TW)
+            Editor: WordPress Classic Editor
+
+            Please follow instructions precisely and confirm each step."""
+        }]
+
+        logger.info(f"Computer Use initialized for: {base_url}")
 
     async def close(self) -> None:
-        """关闭浏览器"""
-        if self.browser:
-            await self.browser.close()
-            logger.info("Browser closed")
-        if self.playwright:
-            await self.playwright.stop()
+        """关闭会话"""
+        logger.info("Closing Computer Use session")
+        self.conversation_history = []
+        self.session_id = None
+
+    async def _execute_instruction(
+        self,
+        instruction: str,
+        expect_output: bool = False
+    ) -> Dict[str, Any]:
+        """
+        执行 Computer Use 指令
+
+        Args:
+            instruction: 自然语言指令
+            expect_output: 是否期待输出结果
+
+        Returns:
+            执行结果字典
+        """
+        logger.info(f"Executing instruction: {instruction[:100]}...")
+
+        # 添加用户消息
+        self.conversation_history.append({
+            "role": "user",
+            "content": instruction
+        })
+
+        try:
+            # 调用 Anthropic API
+            response = self.client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=4096,
+                tools=[{
+                    "type": "computer_20241022",
+                    "name": "computer",
+                    "display_width_px": 1920,
+                    "display_height_px": 1080,
+                    "display_number": 1
+                }],
+                messages=self.conversation_history
+            )
+
+            # 处理工具使用
+            tool_results = []
+            for content_block in response.content:
+                if content_block.type == "tool_use":
+                    # Computer Use 工具调用
+                    logger.debug(f"Tool use: {content_block.name}")
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": content_block.id,
+                        "content": "executed"  # 实际执行由 API 处理
+                    })
+
+            # 添加助手响应到历史
+            self.conversation_history.append({
+                "role": "assistant",
+                "content": response.content
+            })
+
+            # 提取文本响应
+            text_response = ""
+            for block in response.content:
+                if hasattr(block, 'text'):
+                    text_response += block.text
+
+            return {
+                "success": True,
+                "response": text_response,
+                "tool_use": len(tool_results) > 0
+            }
+
+        except Exception as e:
+            logger.error(f"Instruction execution failed: {e}")
+            raise ComputerUseError(str(e))
 
     async def capture_screenshot(self) -> bytes:
-        """捕获截图"""
-        if not self.page:
-            raise RuntimeError("Page not initialized")
-        screenshot = await self.page.screenshot(full_page=True)
-        logger.debug(f"Screenshot captured ({len(screenshot)} bytes)")
-        return screenshot
+        """捕获当前屏幕截图"""
+        # Computer Use 通过 API 自动截图
+        # 这里可以通过特殊指令请求截图
+        result = await self._execute_instruction(
+            "Take a screenshot of the current state."
+        )
+        # 实际实现需要从 API 响应中提取截图
+        return b""  # 占位符
 
     async def get_cookies(self) -> List[Dict]:
-        """获取 cookies"""
-        if not self.page:
-            raise RuntimeError("Page not initialized")
-        return await self.page.context.cookies()
+        """获取浏览器 cookies（Computer Use 不直接支持）"""
+        # Computer Use 会话状态由 API 管理
+        logger.warning("Computer Use does not support direct cookie access")
+        return []
 
-    # 导航方法
+    # ==================== 导航操作 ====================
+
     async def navigate_to(self, url: str) -> None:
         """导航到 URL"""
-        logger.info(f"Navigating to: {url}")
-        await self.page.goto(url, wait_until='networkidle')
+        instruction = self.instructions.get(
+            "navigate_to_url",
+            url=url
+        )
+        await self._execute_instruction(instruction)
 
     async def navigate_to_new_post(self) -> None:
-        """导航到新增文章"""
-        logger.info("Navigating to new post page")
-        await self.navigate_to(f"{self.base_url}/wp-admin/post-new.php")
-        await self.wait_for_element("new_post_title")
+        """导航到新增文章页面"""
+        instruction = self.instructions.get("navigate_to_new_post")
+        await self._execute_instruction(instruction)
 
-    # 元素交互方法
+    # ==================== 元素交互操作 ====================
+
     async def fill_input(self, field_name: str, value: str) -> None:
         """填充输入框"""
-        logger.info(f"Filling input '{field_name}' with value")
-        selector = self.selectors.get(field_name)
-        await self._fill_by_selector(selector, value)
+        instruction = self.instructions.get(
+            f"fill_{field_name}",
+            value=value
+        )
+        await self._execute_instruction(instruction)
+
+    async def fill_textarea(self, field_name: str, value: str) -> None:
+        """填充文本区域"""
+        instruction = self.instructions.get(
+            f"fill_{field_name}_textarea",
+            content=value
+        )
+        await self._execute_instruction(instruction)
 
     async def click_button(self, button_name: str) -> None:
         """点击按钮"""
-        logger.info(f"Clicking button '{button_name}'")
-        selector = self.selectors.get(button_name)
-        await self._click_by_selector(selector)
+        instruction = self.instructions.get(f"click_{button_name}")
+        await self._execute_instruction(instruction)
 
     async def wait_for_element(self, element_name: str, timeout: int = 30) -> None:
-        """等待元素"""
-        logger.debug(f"Waiting for element '{element_name}'")
-        selector = self.selectors.get(element_name)
-        await self.page.wait_for_selector(selector, timeout=timeout * 1000)
+        """等待元素出现"""
+        instruction = self.instructions.get(
+            "wait_for_element",
+            element=element_name,
+            timeout=timeout
+        )
+        await self._execute_instruction(instruction)
 
-    # 辅助方法
-    async def _click_by_selector(self, selector: str) -> None:
-        """通过选择器点击（支持多选择器）"""
-        selectors = selector if isinstance(selector, list) else [selector]
+    async def wait_for_success_message(self, message_text: str) -> None:
+        """等待成功消息"""
+        instruction = f"Wait for a success message containing '{message_text}' to appear."
+        await self._execute_instruction(instruction)
 
-        for sel in selectors:
-            try:
-                element = self.page.locator(sel).first
-                if await element.is_visible(timeout=5000):
-                    await element.click()
-                    logger.debug(f"Clicked element with selector: {sel}")
-                    return
-            except Exception as e:
-                logger.debug(f"Selector '{sel}' failed: {e}")
-                continue
+    # ==================== 内容编辑操作 ====================
 
-        raise ElementNotFoundError(f"Could not find clickable element with selectors: {selectors}")
+    async def clean_html_entities(self) -> None:
+        """清理 HTML 实体"""
+        instruction = "Review the content and clean up any HTML entities like &nbsp; if present."
+        await self._execute_instruction(instruction)
 
-    async def _fill_by_selector(self, selector: str, value: str) -> None:
-        """通过选择器填充（支持多选择器）"""
-        selectors = selector if isinstance(selector, list) else [selector]
+    # ... 其他接口方法实现 ...
 
-        for sel in selectors:
-            try:
-                element = self.page.locator(sel).first
-                if await element.is_visible(timeout=5000):
-                    await element.fill(value)
-                    logger.debug(f"Filled element with selector: {sel}")
-                    return
-            except Exception as e:
-                logger.debug(f"Selector '{sel}' failed: {e}")
-                continue
-
-        raise ElementNotFoundError(f"Could not find fillable element with selectors: {selectors}")
+    def _generate_session_id(self) -> str:
+        """生成会话 ID"""
+        import uuid
+        return f"cu_{uuid.uuid4().hex[:12]}"
 
 
-class ElementNotFoundError(Exception):
-    """元素未找到错误"""
+class ComputerUseError(Exception):
+    """Computer Use 执行错误"""
     pass
 ```
 

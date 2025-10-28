@@ -8,11 +8,16 @@
 
 ## 概述
 
-本功能实现通过视觉自动化方法将文章和图片发布到 WordPress 后台（经典编辑器）。优先使用 **Playwright + Chrome DevTools** 进行浏览器自动化，当遇到问题（元素定位失败、页面结构变化等）时，降级使用 **Anthropic Computer Use** 作为备选方案。
+本功能实现通过视觉自动化方法将文章和图片发布到 WordPress 后台（经典编辑器）。采用**两阶段实施策略**：
+
+- **Phase 1 (MVP)**: 优先使用 **Anthropic Computer Use** 快速验证核心流程，确保功能完整性
+- **Phase 2 (优化)**: 引入 **Playwright + Chrome DevTools** 进行成本优化，Computer Use 作为智能降级备选
 
 ### 核心价值
 
-- **双重保障**: Playwright（快速、稳定）+ Computer Use（智能、适应性强）
+- **快速上线**: Computer Use 自然语言控制，无需复杂选择器配置
+- **智能适应**: AI 视觉理解，自动应对页面变化
+- **成本优化**: Phase 2 引入 Playwright 降低运行成本
 - **完整流程**: 覆盖从登录到发布的所有 WordPress 后台操作
 - **元数据完整性**: 支持 SEO 插件（Yoast SEO）、标签、分类、特色图片等
 - **图片处理**: 自动上传、元数据填写、多尺寸裁切（缩略图、Facebook 分享图等）
@@ -22,40 +27,70 @@
 
 ## 技术选型决策
 
-### 主方案：Playwright + Chrome DevTools Protocol (CDP)
+### 两阶段实施策略
+
+#### 🚀 Phase 1: Computer Use MVP（优先实现）
+
+**主方案：Anthropic Computer Use**
 
 **选择理由**:
-- ✅ **性能优越**: 本地浏览器控制，响应速度快
-- ✅ **稳定可靠**: 基于 DOM 选择器，精确定位元素
-- ✅ **成本低**: 无需调用外部 AI API，运行成本几乎为零
-- ✅ **调试友好**: 丰富的调试工具（Trace Viewer、Inspector、Visual Debugger）
-- ✅ **代码可维护**: 结构化代码，易于版本控制和团队协作
+- ✅ **快速验证**: 自然语言指令，无需预先探测选择器
+- ✅ **智能适应**: 通过视觉识别和自然语言理解适应页面变化
+- ✅ **容错能力强**: 即使页面结构变化，仍能通过屏幕截图理解界面
+- ✅ **开发效率高**: 直接编写指令模板，大幅缩短开发周期
+- ✅ **功能完整**: 适合处理复杂的图片裁切等视觉化操作
 
 **适用场景**:
-- WordPress 后台结构稳定
-- 元素选择器可预测
-- 常规操作流程
+- MVP 阶段快速验证核心流程
+- 图片裁切等需要视觉判断的操作
+- WordPress 后台可能频繁更新的环境
+- 多站点支持（不同主题/插件配置）
 
-### 备选方案：Anthropic Computer Use
+**成本考量**:
+- API 调用成本可控（单篇文章约 $0.10-0.30）
+- 通过批量处理和缓存优化成本
+- Phase 1 重点在功能验证，成本优化留待 Phase 2
 
-**选择理由**:
-- ✅ **智能适应**: 通过视觉识别和自然语言理解适应页面变化
-- ✅ **容错能力强**: 即使选择器失效，仍能通过屏幕截图理解界面
-- ✅ **开发速度快**: 自然语言指令，无需编写复杂的选择器逻辑
+#### 📊 Phase 2: Playwright 混合优化（成本优化）
 
-**启用条件**（任一满足即切换）:
+**优化方案：Playwright + Computer Use 混合架构**
+
+**引入 Playwright 的理由**:
+- ✅ **成本极低**: 本地浏览器控制，运行成本几乎为零
+- ✅ **性能优越**: 响应速度快，适合高频率操作
+- ✅ **稳定可靠**: 基于 DOM 选择器，精确定位元素
+- ✅ **代码可维护**: 结构化代码，易于版本控制
+
+**混合策略**:
+```
+┌─────────────────────────────────────────┐
+│  默认使用 Playwright（成本优化）          │
+└─────────────────────────────────────────┘
+                  │
+                  ▼
+          [Playwright 执行]
+                  │
+             [成功?]
+              /      \
+            Yes       No（3次重试失败）
+             │         │
+             ▼         ▼
+        [继续]    [降级到 Computer Use]
+                       │
+                       ▼
+                  [智能恢复]
+```
+
+**降级触发条件**（Phase 2）:
 1. Playwright 连续 3 次尝试后仍无法定位关键元素
-2. WordPress 后台界面发生重大更新（如新版本、主题变更）
-3. 出现非预期的弹窗或警告（如插件冲突、浏览器兼容性提示）
-4. 用户在配置中明确指定使用 Computer Use
+2. WordPress 后台界面发生重大更新
+3. 出现非预期的弹窗或警告
+4. 选择器验证失败率超过阈值
 
-**回退机制**:
-```
-Playwright 执行 → 失败 → 重试（最多 2 次）→ 仍失败
-    → 记录失败原因和截图
-    → 切换到 Computer Use
-    → 从失败步骤继续执行
-```
+**成本优化效果**:
+- 预计降低 80-90% 的运行成本
+- 仅在必要时使用 Computer Use
+- 保持功能完整性和可靠性
 
 ---
 
@@ -534,66 +569,155 @@ await page.waitForSelector('#message p:has-text("文章已排程")');
 
 ---
 
-## 降级与容错策略
+## 两阶段实施策略详解
 
-### 从 Playwright 降级到 Computer Use 的触发条件
+### Phase 1: Computer Use MVP 实施
 
-1. **元素定位失败**:
-   - 连续 3 次尝试无法找到目标元素
-   - 记录失败的选择器和截图
-   - 切换到 Computer Use，使用自然语言指令重新执行
-
-2. **操作超时**:
-   - 某个操作（如上传图片）超过 60 秒仍未完成
-   - 检查网络连接和服务器状态
-   - 如果网络正常，切换到 Computer Use 诊断问题
-
-3. **非预期的弹窗或错误**:
-   - 出现 JavaScript 警告框
-   - WordPress 插件冲突提示
-   - 浏览器兼容性警告
-   - Computer Use 更擅长处理这类非预期情况
-
-### 降级执行流程
+#### 架构设计
 
 ```python
 class WordPressPublisher:
-    def __init__(self):
-        self.playwright_provider = PlaywrightProvider()
-        self.computer_use_provider = ComputerUseProvider()
-        self.current_provider = self.playwright_provider
+    """Phase 1: 纯 Computer Use 实现"""
 
-    async def execute_step(self, step_name, step_function, *args):
-        """执行单个步骤，失败时自动降级"""
+    def __init__(self, api_key: str, instructions: InstructionTemplate):
+        self.computer_use_provider = ComputerUseProvider(api_key, instructions)
+        self.current_provider = self.computer_use_provider
+        self.audit_logger = AuditLogger()
+
+    async def publish_article(
+        self,
+        article: Article,
+        images: List[ImageAsset],
+        metadata: ArticleMetadata
+    ) -> PublishResult:
+        """发布文章主入口（MVP）"""
+        task_id = self._generate_task_id()
+
+        try:
+            # 初始化 Computer Use
+            await self.current_provider.initialize(wordpress_url)
+
+            # 执行 5 个阶段
+            await self._execute_phase("login", ...)
+            await self._execute_phase("content", ...)
+            await self._execute_phase("images", ...)
+            await self._execute_phase("metadata", ...)
+            await self._execute_phase("publish", ...)
+
+            return PublishResult(success=True, ...)
+
+        except Exception as e:
+            self.audit_logger.log_failure(task_id, str(e))
+            raise
+
+    async def _execute_phase(self, phase_name: str, phase_func, context):
+        """执行阶段（MVP：无需降级逻辑）"""
         max_retries = 3
 
         for attempt in range(max_retries):
             try:
-                result = await step_function(*args)
-                self.log_success(step_name, attempt)
-                return result
-            except ElementNotFoundError as e:
-                self.log_failure(step_name, attempt, str(e))
-                if attempt < max_retries - 1:
-                    continue
-                else:
-                    # 降级到 Computer Use
-                    return await self.fallback_to_computer_use(step_name, *args)
-
-    async def fallback_to_computer_use(self, step_name, *args):
-        """降级到 Computer Use"""
-        self.current_provider = self.computer_use_provider
-        self.log_info(f"Falling back to Computer Use for step: {step_name}")
-
-        # 获取当前屏幕截图
-        screenshot = await self.playwright_provider.get_screenshot()
-
-        # 使用 Computer Use 执行
-        instruction = self.get_computer_use_instruction(step_name, *args)
-        result = await self.computer_use_provider.execute(instruction, screenshot)
-
-        return result
+                # 执行 Computer Use 指令
+                await phase_func(self.current_provider, context)
+                self.audit_logger.log_phase_success(context.task_id, phase_name, attempt)
+                return
+            except Exception as e:
+                self.audit_logger.log_phase_failure(context.task_id, phase_name, attempt, str(e))
+                if attempt >= max_retries - 1:
+                    raise
+                await asyncio.sleep(2)
 ```
+
+#### MVP 验收标准
+
+**功能完整性**:
+- ✅ 能登录 WordPress 后台
+- ✅ 能创建文章并填充内容
+- ✅ 能上传图片并设置元数据
+- ✅ 能设置特色图片并裁切
+- ✅ 能配置标签、分类、SEO
+- ✅ 能成功发布文章
+
+**性能要求**:
+- 单篇文章发布时间：≤ 5 分钟
+- 成功率：≥ 95%
+- 审计日志完整
+
+### Phase 2: Playwright 混合优化
+
+#### 升级策略
+
+```python
+class WordPressPublisher:
+    """Phase 2: Playwright + Computer Use 混合架构"""
+
+    def __init__(
+        self,
+        playwright_provider: PlaywrightProvider,
+        computer_use_provider: ComputerUseProvider,
+        config: PublishingConfig
+    ):
+        # Phase 2: 默认使用 Playwright（成本优化）
+        self.primary_provider = playwright_provider
+        self.fallback_provider = computer_use_provider
+        self.current_provider = playwright_provider
+        self.config = config
+
+    async def _execute_phase(self, phase_name: str, phase_func, context):
+        """执行阶段（Phase 2：带智能降级）"""
+        max_retries = self.config.max_retries
+        retry_count = 0
+
+        while retry_count < max_retries:
+            try:
+                # 使用当前 Provider 执行
+                await phase_func(self.current_provider, context)
+                self.audit_logger.log_phase_success(context.task_id, phase_name, retry_count)
+                return
+
+            except (ElementNotFoundError, TimeoutError) as e:
+                retry_count += 1
+                self.audit_logger.log_phase_failure(context.task_id, phase_name, retry_count, str(e))
+
+                if retry_count >= max_retries:
+                    # Playwright 失败，降级到 Computer Use
+                    if self.current_provider == self.primary_provider:
+                        logger.warning(f"Playwright 失败，降级到 Computer Use")
+                        await self._fallback_to_computer_use(context)
+                        retry_count = 0  # 重置计数
+                    else:
+                        raise  # Computer Use 也失败，抛出异常
+
+                await asyncio.sleep(self.config.retry_delay)
+
+    async def _fallback_to_computer_use(self, context):
+        """降级到 Computer Use（Phase 2）"""
+        # 关闭 Playwright
+        await self.current_provider.close()
+
+        # 切换到 Computer Use
+        self.current_provider = self.fallback_provider
+
+        # 重新初始化（尝试复用会话）
+        await self.current_provider.initialize(
+            context.wordpress_url,
+            cookies=context.browser_cookies  # 传递 cookies
+        )
+
+        self.audit_logger.log_provider_switch(context.task_id, "computer_use")
+```
+
+#### 成本优化指标
+
+**Phase 1 (Computer Use Only)**:
+- 预估成本：$0.10-0.30 / 文章
+- 发布速度：3-5 分钟 / 文章
+- 成功率：95%
+
+**Phase 2 (Playwright + Computer Use)**:
+- 预估成本：$0.01-0.05 / 文章（降低 80-90%）
+- 发布速度：1.5-3 分钟 / 文章（提升 40-50%）
+- 成功率：98%（混合架构更可靠）
+- Computer Use 调用率：< 5%（仅降级时使用）
 
 ---
 
@@ -729,18 +853,49 @@ class WordPressPublisher:
 
 ## 成功指标
 
-### 业务指标
+### Phase 1 (MVP) 指标
 
-- **发布速度提升**: 相比手动操作快 **10 倍**（手动 30 分钟 vs 自动化 3 分钟）
-- **人工成本降低**: 每篇文章节省 **27 分钟人工时间**
-- **错误率降低**: SEO 元数据遗漏率从 30% 降至 < 1%
+#### 业务指标
+- **功能完整性**: 100%（所有核心功能可用）
+- **发布成功率**: ≥ 95%
+- **发布速度**: ≤ 5 分钟 / 文章
+- **人工成本降低**: 每篇文章节省 **25 分钟人工时间**
 
-### 技术指标
+#### 技术指标
+- **API 调用成功率**: ≥ 95%
+- **审计日志完整性**: 100%（所有关键步骤有截图）
+- **代码覆盖率**: ≥ 75%
+- **部署成功**: 能在生产环境稳定运行 1 周
 
-- **代码覆盖率**: ≥ 80%
+### Phase 2 (优化) 指标
+
+#### 业务指标
+- **成本降低**: 80-90%（$0.20 → $0.02 / 文章）
+- **发布速度提升**: 40-50%（5分钟 → 2-3分钟）
+- **发布成功率**: ≥ 98%（混合架构更可靠）
+- **错误率降低**: SEO 元数据遗漏率 < 1%
+
+#### 技术指标
+- **代码覆盖率**: ≥ 85%
 - **选择器准确率**: ≥ 95%
-- **降级触发率**: ≤ 5%
+- **降级触发率**: ≤ 5%（大多数情况用 Playwright）
 - **平均故障恢复时间**: ≤ 2 分钟
+- **Playwright 使用率**: ≥ 95%
+
+### ROI 分析
+
+**Phase 1 投入**:
+- 开发时间：2 周
+- API 成本：$0.20 / 文章 × 100 文章/月 = $20/月
+
+**Phase 2 投入**:
+- 开发时间：2 周（增量）
+- API 成本：$0.02 / 文章 × 100 文章/月 = $2/月（节省 $18/月）
+
+**预期回报**:
+- 人工成本节省：25 分钟 × 100 文章/月 = 2500 分钟/月（约 42 小时）
+- 质量提升：SEO 完整性从 70% 提升到 99%
+- Phase 2 额外收益：运行成本降低 90%
 
 ---
 

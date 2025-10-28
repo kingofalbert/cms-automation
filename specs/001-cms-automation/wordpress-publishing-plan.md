@@ -26,31 +26,71 @@
 
 ## 架构设计
 
-### 整体架构
+### 两阶段实施架构
+
+#### Phase 1: Computer Use MVP 架构
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                     WordPress Publishing Service                 │
+│                     WordPress Publishing Service (MVP)           │
 └─────────────────────────────────────────────────────────────────┘
                                  │
                                  ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Publishing Orchestrator                     │
+│                    Publishing Orchestrator (Simple)              │
 │  • Task Management                                               │
-│  • Provider Selection                                            │
-│  • Fallback Logic                                                │
+│  • Instruction Execution                                         │
 │  • Audit Trail                                                   │
+│  • Retry Logic                                                   │
+└─────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │  Computer Use Provider   │
+                    │  (Anthropic Claude)      │
+                    │  • Vision Understanding  │
+                    │  • Natural Instructions  │
+                    └──────────────────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────┐
+                    │  Browser Layer   │
+                    │  (Chrome/CDP)    │
+                    └──────────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────┐
+                    │  WordPress Site  │
+                    └──────────────────┘
+```
+
+#### Phase 2: Playwright 混合优化架构
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 WordPress Publishing Service (Optimized)         │
+└─────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Publishing Orchestrator (Advanced)             │
+│  • Task Management                                               │
+│  • Provider Selection (Playwright First)                         │
+│  • Intelligent Fallback                                          │
+│  • Audit Trail                                                   │
+│  • Cost Optimization                                             │
 └─────────────────────────────────────────────────────────────────┘
                     │                              │
           ┌─────────┴─────────┐         ┌─────────┴─────────┐
-          ▼                   ▼         ▼                   ▼
-┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
-│  Playwright      │  │  Computer Use    │  │  Gemini          │
-│  Provider        │  │  Provider        │  │  Computer Use    │
-│                  │  │  (Anthropic)     │  │  Provider        │
-└──────────────────┘  └──────────────────┘  └──────────────────┘
-          │                   │                       │
-          └───────────────────┴───────────────────────┘
+          ▼ (Primary, 95%)    ▼         ▼ (Fallback, 5%)   ▼
+┌──────────────────┐  ┌──────────────────┐
+│  Playwright      │  │  Computer Use    │
+│  Provider        │  │  Provider        │
+│  • Fast          │  │  • Intelligent   │
+│  • Low Cost      │  │  • Adaptive      │
+└──────────────────┘  └──────────────────┘
+          │                   │
+          └───────────────────┴───────────
                               │
                               ▼
                     ┌──────────────────┐
@@ -66,15 +106,17 @@
 
 ### 架构原则
 
-1. **Provider Abstraction（提供者抽象）**:
-   - 定义统一的 `IPublishingProvider` 接口
-   - 各 Provider 实现相同的接口，支持热切换
-   - 配置驱动选择，无需修改业务代码
+#### Phase 1 (MVP) 原则
 
-2. **Fail-Fast with Graceful Degradation（快速失败 + 优雅降级）**:
-   - Playwright 快速失败（3 次重试，每次 5 秒超时）
-   - 自动切换到 Computer Use
-   - 保持已完成步骤的状态，从失败点继续
+1. **Simplicity First（简单优先）**:
+   - 单一 Provider（Computer Use），架构简单
+   - 专注功能完整性，暂不考虑成本优化
+   - 快速验证核心流程的可行性
+
+2. **Instruction-Driven（指令驱动）**:
+   - 自然语言指令模板
+   - AI 视觉理解，无需精确选择器
+   - 适应性强，容错能力高
 
 3. **Idempotency（幂等性）**:
    - 每个步骤可重复执行而不产生副作用
@@ -86,16 +128,40 @@
    - 关键节点截图存档
    - 实时监控执行进度和健康状态
 
+#### Phase 2 (优化) 原则
+
+1. **Cost-Performance Balance（成本性能平衡）**:
+   - 优先使用 Playwright（低成本、高性能）
+   - 仅在必要时降级到 Computer Use
+   - 目标：降低 80-90% 运行成本
+
+2. **Provider Abstraction（提供者抽象）**:
+   - 定义统一的 `IPublishingProvider` 接口
+   - 各 Provider 实现相同的接口，支持热切换
+   - 配置驱动选择，无需修改业务代码
+
+3. **Intelligent Fallback（智能降级）**:
+   - Playwright 快速失败（3 次重试）
+   - 自动切换到 Computer Use
+   - 保持已完成步骤的状态，从失败点继续
+
+4. **Adaptive Selection（自适应选择）**:
+   - 监控选择器准确率
+   - 自动调整 Provider 选择策略
+   - 持续优化成本效益比
+
 ---
 
 ## 核心组件
 
 ### 1. Publishing Orchestrator（发布协调器）
 
+#### Phase 1 实现（MVP）
+
 **职责**:
 - 管理发布任务的生命周期
-- 协调各个 Provider 的调用
-- 处理降级逻辑
+- 执行 Computer Use 指令
+- 处理重试逻辑
 - 生成审计日志
 
 **接口设计**:
@@ -103,20 +169,48 @@
 ```python
 class PublishingOrchestrator:
     """
-    发布协调器 - 负责整个发布流程的编排
+    发布协调器 (Phase 1: Computer Use Only)
     """
 
     def __init__(
         self,
-        primary_provider: IPublishingProvider,
-        fallback_provider: Optional[IPublishingProvider] = None,
+        computer_use_provider: ComputerUseProvider,
         config: PublishingConfig = None
     ):
-        self.primary = primary_provider
-        self.fallback = fallback_provider
+        self.provider = computer_use_provider
         self.config = config or PublishingConfig()
         self.audit_logger = AuditLogger()
-        self.current_provider = primary_provider
+        self.state_manager = TaskStateManager()
+
+#### Phase 2 实现（优化版）
+
+**职责**:
+- 管理发布任务的生命周期
+- 协调各个 Provider 的调用（Playwright 优先）
+- 处理智能降级逻辑
+- 生成审计日志和成本报告
+
+**接口设计**:
+
+```python
+class PublishingOrchestrator:
+    """
+    发布协调器 (Phase 2: Playwright + Computer Use)
+    """
+
+    def __init__(
+        self,
+        playwright_provider: PlaywrightProvider,
+        computer_use_provider: ComputerUseProvider,
+        config: PublishingConfig = None
+    ):
+        # Phase 2: Playwright 为主，Computer Use 为备
+        self.primary = playwright_provider
+        self.fallback = computer_use_provider
+        self.config = config or PublishingConfig()
+        self.audit_logger = AuditLogger()
+        self.current_provider = playwright_provider
+        self.cost_tracker = CostTracker()
 
     async def publish_article(
         self,
