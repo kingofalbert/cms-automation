@@ -17,12 +17,18 @@ External Articles (Existing Content)
     ↓
 [1] Article Import (CSV/JSON/Manual)
     ↓
-[2] SEO Analysis (Claude Messages API)
-    ├─ Meta Title Generation (50-60 chars)
-    ├─ Meta Description (150-160 chars)
-    ├─ Keyword Extraction (Focus + Primary + Secondary)
-    ├─ Keyword Density Analysis
-    └─ Optimization Recommendations
+[2] Proofreading & SEO Analysis
+    ├─ Single Prompt (Claude Messages API)
+    │   ├─ A–F 规则检查（返回 issue 列表 + rule_coverage）
+    │   ├─ Suggested Content / Meta / Keywords / FAQ
+    │   └─ Processing notes（ai_rationale, confidence）
+    ├─ Deterministic Rule Engine (Python)
+    │   ├─ F 类强制：图片宽度 / 标题层级 / 授权字段
+    │   └─ 高置信度规则库（B2-002、A1-001 等，可扩展）
+    └─ Result Merger
+        ├─ 比对 AI vs Script，统一 schema（ProofreadingIssue）
+        ├─ source_breakdown（ai/script/merged）
+        └─ F 类阻断 → `critical_issues_count`
     ↓
 [3] Human Review & Manual Adjustments (Optional)
     ↓
@@ -49,6 +55,7 @@ Published Article with SEO ✅
 - **Reliable Publishing**: Computer Use automation with fallback options
 - **Complete Audit Trail**: Screenshot verification at every step
 - **Future-Proof Architecture**: Provider abstraction enables easy integration of new Computer Use APIs
+- **Deterministic Guard Rails**: Scripted F 类校验防止 AI 幻觉遗漏关键合规项
 
 ---
 
@@ -473,6 +480,52 @@ Published Article with SEO ✅
 **Implementation Priority**: P0 (Critical) - Blocks end-to-end user workflow
 **Estimated Effort**: 312 hours (6 weeks with 2 frontend engineers + 1 backend engineer)
 **Current Status**: 0% complete (analysis phase completed 2025-10-27)
+
+---
+
+#### Google Drive Automation & Worklist (FR-071 to FR-087) 🆕
+
+**Status**: 🆕 New Requirements Added (2025-10-27)
+**Reference**: See [Google Drive Automation Analysis](../../docs/GOOGLE_DRIVE_AUTOMATION_ANALYSIS.md)
+
+**Overview**: The following requirements add automated document ingestion from Google Drive and a comprehensive worklist UI for tracking document processing status.
+
+##### Google Drive Integration (FR-071 to FR-075)
+
+- **FR-071**: System MUST integrate with Google Drive API using OAuth 2.0 or Service Account for authentication
+- **FR-072**: System MUST periodically scan a configured Google Drive folder for new Google Docs (default: every 5 minutes, configurable 1-60 minutes)
+- **FR-073**: System MUST automatically read Google Doc content including text formatting and image references
+- **FR-074**: System MUST mark processed documents by moving to "Processed" subfolder OR adding metadata tag to prevent duplicate processing
+- **FR-075**: System MUST handle Google Drive API errors with retry logic (exponential backoff) and credential refresh for expired tokens
+
+##### Worklist UI (FR-076 to FR-083)
+
+- **FR-076**: System MUST provide a Worklist page (`/worklist`) displaying all documents in the processing pipeline
+- **FR-077**: Worklist MUST display document metadata: title, source (Google Drive filename), creation time, current status, assigned user
+- **FR-078**: Worklist MUST support 7 document statuses with visual indicators:
+  - **Pending** ⏳ (imported, awaiting proofreading)
+  - **Proofreading** 🟡 (AI analysis in progress)
+  - **Under Review** 🔵 (awaiting human review)
+  - **Ready to Publish** 🟢 (confirmed, awaiting publication)
+  - **Publishing** 🔄 (publishing to WordPress in progress)
+  - **Published** ✅ (successfully published)
+  - **Failed** ❌ (processing failed with error details)
+- **FR-079**: Worklist MUST support filtering by status, date range, and keyword search (title/content)
+- **FR-080**: Worklist MUST support sorting by creation time (default: newest first), update time, and status
+- **FR-081**: Clicking a document in Worklist MUST open detail view showing: full content, status history, operation logs, and action buttons
+- **FR-082**: Worklist MUST update in real-time using WebSocket OR polling (every 5 seconds) to reflect status changes and new documents
+- **FR-083**: Worklist MUST support batch operations: delete multiple, retry failed, mark as pending
+
+##### Status Tracking & History (FR-084 to FR-087)
+
+- **FR-084**: System MUST record all document status transitions to `article_status_history` table with timestamp, old status, new status, and operator (user or system)
+- **FR-085**: System MUST log all document operations (who did what, when, with what result) for audit trail
+- **FR-086**: System MUST support status rollback: if publishing fails, automatically revert to "Ready to Publish" status with error context preserved
+- **FR-087**: System MUST calculate and display processing duration metrics: per-stage duration, total duration (import to publish), and average duration statistics
+
+**Implementation Priority**: P0 (Critical) - Core automation feature
+**Estimated Effort**: 200 hours (5 weeks with 1 frontend engineer + 1 backend engineer)
+**Dependencies**: Requires FR-046 to FR-070 (base UI) to be implemented first
 
 ---
 

@@ -763,7 +763,7 @@ def strip_html(html: str) -> str:
 
 ---
 
-## Phase 2: SEO Analysis Engine (1.5 weeks)
+## Phase 2: Proofreading & SEO Engine (1.5 weeks)
 
 **Goal**: Implement intelligent SEO metadata generation using Claude Messages API
 **Duration**: 1.5 weeks (Week 3-4)
@@ -772,7 +772,85 @@ def strip_html(html: str) -> str:
 
 ---
 
-### Week 3: SEO Analyzer Implementation
+### Week 3: Proofreading Single Prompt & Merge
+
+#### T2A.1 [US2] Publish Rule Manifest JSON
+Description: Convert A–F 规则表到机器可读 `catalog.json`，包含版本、rule_id、severity、blocks_publish 信息，并记录 source 文档。
+Dependencies: T1.4 (rules整理)
+Estimated Hours: 4h
+Deliverables:
+  - `backend/src/services/proofreading/rules/catalog.json`
+  - `docs/proofreading_rule_manifest.md` 摘要与生成脚本
+Acceptance Criteria:
+  - Manifest 通过 JSON Schema 校验
+  - 覆盖 6 个大类，记录 rule_count 与 fingerprint
+  - 在 PromptBuilder 单元测试中引用成功
+File Paths:
+  - `backend/src/services/proofreading/rules/catalog.json`
+  - `backend/tests/services/proofreading/test_manifest.py`
+
+#### T2A.2 [US2] Proofreading Prompt Builder
+Description: 实现 `ProofreadingPromptBuilder` 生成 system/user prompts，插入规则表、输出 schema、rule_coverage 指令。
+Dependencies: T2A.1
+Estimated Hours: 8h
+Deliverables:
+  - `backend/src/services/proofreading/ai_prompt_builder.py`
+  - Unit tests: prompt包含 manifest version/hash、sections、metadata
+Acceptance Criteria:
+  - PromptBuilder 可接受 ArticlePayload → 返回 dict(system,user)
+  - 测试断言：输出 schema 片段存在；rule manifest 表格行数与 JSON 相符
+  - 常见 article payload（含图片、关键词）渲染无异常
+File Paths:
+  - `backend/src/services/proofreading/ai_prompt_builder.py`
+  - `backend/tests/services/proofreading/test_prompt_builder.py`
+
+#### T2A.3 [US2] Deterministic Rule Engine v1
+Description: 构建脚本规则评估器（B2-002、F1-002、F2-001），输出 `ProofreadingIssue` 列表。
+Dependencies: T2A.1
+Estimated Hours: 10h
+Deliverables:
+  - `backend/src/services/proofreading/deterministic_engine.py`
+  - Tests: 正例/反例覆盖、blocks_publish 行为
+Acceptance Criteria:
+  - `run()` 返回 list，字段 `source=script`、`confidence=1.0`
+  - F 类命中设置 `blocks_publish=True`
+  - 误报率控制：常见合法文本不触发
+File Paths:
+  - `backend/src/services/proofreading/deterministic_engine.py`
+  - `backend/tests/services/proofreading/test_rule_engine.py`
+
+#### T2A.4 [US2] Result Merger & Schema
+Description: 实现 `ProofreadingResultMerger`，合并 AI 与脚本结果，去重并汇总统计。
+Dependencies: T2A.2, T2A.3
+Estimated Hours: 8h
+Deliverables:
+  - `backend/src/services/proofreading/merger.py`
+  - 更新 `api/contracts/api-spec.yaml`：`ProofreadingIssue.source`、`statistics.source_breakdown`
+Acceptance Criteria:
+  - 同 rule_id 双方命中 → `source=merged` 且保留脚本 severity
+  - 生成 `statistics`：total/ai/script/blocking/source_breakdown
+  - API schema 更新通过 `speccheck`
+File Paths:
+  - `backend/src/services/proofreading/merger.py`
+  - `specs/001-cms-automation/contracts/api-spec.yaml`
+
+#### T2A.5 [US2] ProofreadingAnalysisService Orchestration
+Description: 组合 PromptBuilder + AsyncAnthropic + RuleEngine + Merger，返回统一 `ProofreadingResult`。
+Dependencies: T2A.2, T2A.3, T2A.4
+Estimated Hours: 10h
+Deliverables:
+  - `backend/src/services/proofreading/service.py`
+  - Integration tests：mock AI 响应 + 脚本命中 → 校验合并、metadata
+  - Logging：`prompt_hash`、token usage、latency
+Acceptance Criteria:
+  - 异常处理：AI JSON 解析失败时抛自定义错误并记录
+  - `processing_metadata` 包含 model、latency、rule_manifest_version
+  - 阶段性指标写入 `ProofreadingResult.statistics`
+File Paths:
+  - `backend/src/services/proofreading/service.py`
+  - `backend/tests/services/proofreading/test_service_integration.py`
+
+### Week 3b: SEO Analyzer Implementation
 
 #### T2.1 [P] Design SEO Analysis Prompt
 
@@ -3182,11 +3260,758 @@ That document contains:
 
 ---
 
+## Phase 6: Google Drive Automation & Worklist 🆕 (5 weeks)
+
+**Goal**: Enable automated document ingestion from Google Drive and provide comprehensive worklist UI
+**Duration**: Week 11-15 (5 weeks)
+**Estimated Hours**: 200 hours
+**Status**: ⏳ Planned (Added 2025-10-27)
+**Reference**: [Google Drive Automation Analysis](../../docs/GOOGLE_DRIVE_AUTOMATION_ANALYSIS.md)
+
+---
+
+### Week 11-12: Google Drive Integration
+
+#### T6.1 [P0] [US6] Setup Google Drive API Integration
+
+**Description**: Configure Google Drive API access with OAuth 2.0 or Service Account authentication
+
+**Dependencies**: None
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- Google Drive API credentials configured
+- Service account JSON key (if using service account)
+- OAuth 2.0 client ID/secret (if using OAuth)
+- Environment variables configured
+- Test connection script
+
+**Acceptance Criteria**:
+- [ ] Google Drive API enabled in Google Cloud Console
+- [ ] Credentials stored securely in environment variables
+- [ ] Test script successfully lists files from configured folder
+- [ ] Credentials never logged or exposed
+- [ ] Documentation for credential setup process
+
+**File Paths**:
+- `backend/.env` (add GOOGLE_DRIVE_FOLDER_ID, GOOGLE_CREDENTIALS_PATH)
+- `backend/config/google_drive.py` (configuration loader)
+- `docs/GOOGLE_DRIVE_SETUP.md` (setup guide)
+
+---
+
+#### T6.2 [P0] [US6] Implement GoogleDriveMonitor Service
+
+**Description**: Create service class that monitors Google Drive folder for new documents
+
+**Dependencies**: T6.1
+
+**Estimated Hours**: 16 hours
+
+**Deliverables**:
+- `backend/src/services/google_drive_monitor.py`
+- `GoogleDriveMonitor` class with methods:
+  - `scan_for_new_documents(since: datetime) -> List[Dict]`
+  - `read_document_content(doc_id: str) -> str`
+  - `mark_as_processed(doc_id: str) -> None`
+- Unit tests with mocked Google API
+
+**Acceptance Criteria**:
+- [ ] Can scan Google Drive folder and return list of new docs
+- [ ] Can read Google Doc content and return plain text
+- [ ] Can mark documents as processed (move to subfolder or add metadata)
+- [ ] Handles API rate limits with exponential backoff
+- [ ] Refreshes expired OAuth tokens automatically
+- [ ] Unit tests achieve 90% coverage
+
+**File Paths**:
+- `backend/src/services/google_drive_monitor.py`
+- `backend/tests/unit/services/test_google_drive_monitor.py`
+
+**Code Example**:
+```python
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+
+class GoogleDriveMonitor:
+    def __init__(self, credentials: Credentials, folder_id: str):
+        self.service = build('drive', 'v3', credentials=credentials)
+        self.docs_service = build('docs', 'v1', credentials=credentials)
+        self.folder_id = folder_id
+
+    def scan_for_new_documents(self, since: datetime) -> List[Dict]:
+        query = (
+            f"'{self.folder_id}' in parents "
+            f"and mimeType = 'application/vnd.google-apps.document' "
+            f"and createdTime > '{since.isoformat()}' "
+            f"and trashed = false"
+        )
+        results = self.service.files().list(q=query, pageSize=100).execute()
+        return results.get('files', [])
+```
+
+---
+
+#### T6.3 [P0] [US6] Create Database Migrations for Google Drive Tables
+
+**Description**: Create Alembic migrations for new tables: `google_drive_documents` and `article_status_history`, and modify `articles` table
+
+**Dependencies**: None (can run in parallel)
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Migration file: `backend/migrations/versions/YYYYMMDD_google_drive_automation.py`
+- Rollback logic tested
+
+**Acceptance Criteria**:
+- [ ] Migration creates `google_drive_documents` table with all fields
+- [ ] Migration creates `article_status_history` table with all fields
+- [ ] Migration adds new columns to `articles` table
+- [ ] All indexes created (google_doc_id unique, article_id foreign key, status index)
+- [ ] Migration runs successfully on empty database
+- [ ] Migration runs successfully on database with existing data
+- [ ] Rollback restores original schema
+
+**File Paths**:
+- `backend/migrations/versions/YYYYMMDD_google_drive_automation.py`
+
+**Code Example**:
+```python
+def upgrade():
+    # Create google_drive_documents table
+    op.create_table(
+        'google_drive_documents',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('google_doc_id', sa.String(255), unique=True, nullable=False),
+        sa.Column('file_name', sa.String(500), nullable=False),
+        sa.Column('folder_id', sa.String(255)),
+        sa.Column('article_id', sa.Integer(), sa.ForeignKey('articles.id')),
+        sa.Column('status', sa.String(20), server_default='discovered'),
+        sa.Column('discovered_at', sa.DateTime(), server_default=sa.func.now()),
+        sa.Column('processed_at', sa.DateTime()),
+        sa.Column('error_message', sa.Text()),
+        sa.Column('retry_count', sa.Integer(), server_default='0'),
+        sa.Column('metadata', JSONB),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now()),
+        sa.Column('updated_at', sa.DateTime(), server_default=sa.func.now())
+    )
+
+    # Create article_status_history table
+    op.create_table(
+        'article_status_history',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('article_id', sa.Integer(), sa.ForeignKey('articles.id', ondelete='CASCADE'), nullable=False),
+        sa.Column('old_status', sa.String(30)),
+        sa.Column('new_status', sa.String(30), nullable=False),
+        sa.Column('changed_by', sa.String(100)),
+        sa.Column('change_reason', sa.String(500)),
+        sa.Column('metadata', JSONB),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.func.now())
+    )
+
+    # Modify articles table
+    op.add_column('articles', sa.Column('source_type', sa.String(20), server_default='manual'))
+    op.add_column('articles', sa.Column('google_drive_doc_id', sa.String(255)))
+    op.add_column('articles', sa.Column('current_status', sa.String(30), server_default='pending'))
+    op.add_column('articles', sa.Column('status_updated_at', sa.DateTime(), server_default=sa.func.now()))
+    op.add_column('articles', sa.Column('processing_started_at', sa.DateTime()))
+    op.add_column('articles', sa.Column('processing_completed_at', sa.DateTime()))
+    op.add_column('articles', sa.Column('total_processing_duration_seconds', sa.Integer()))
+```
+
+---
+
+#### T6.4 [P0] [US6] Implement Celery Scheduled Tasks
+
+**Description**: Create Celery tasks for automatic Google Drive scanning and document import
+
+**Dependencies**: T6.2, T6.3
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- `backend/src/tasks/google_drive_tasks.py`
+- Two Celery tasks:
+  - `scan_google_drive_for_new_documents()`
+  - `import_google_drive_document(google_doc_id: int)`
+- Celery Beat configuration
+
+**Acceptance Criteria**:
+- [ ] `scan_google_drive_for_new_documents` runs every 5 minutes via Celery Beat
+- [ ] New documents are saved to `google_drive_documents` table with status='discovered'
+- [ ] `import_google_drive_document` reads content and creates `articles` record
+- [ ] Failed imports retry up to 3 times with exponential backoff
+- [ ] Task logs include correlation IDs for debugging
+- [ ] Test with mock Google Drive API
+
+**File Paths**:
+- `backend/src/tasks/google_drive_tasks.py`
+- `backend/config/celery_config.py` (update beat_schedule)
+- `backend/tests/integration/test_google_drive_workflow.py`
+
+**Code Example**:
+```python
+@shared_task(name="scan_google_drive_for_new_documents")
+def scan_google_drive_for_new_documents():
+    monitor = GoogleDriveMonitor(...)
+    new_documents = monitor.scan_for_new_documents()
+
+    for doc in new_documents:
+        google_doc = GoogleDriveDocument.create(
+            google_doc_id=doc['id'],
+            file_name=doc['name'],
+            status='discovered'
+        )
+        import_google_drive_document.delay(google_doc.id)
+
+@shared_task(bind=True, max_retries=3)
+def import_google_drive_document(self, google_doc_id: int):
+    try:
+        google_doc = GoogleDriveDocument.get_by_id(google_doc_id)
+        monitor = GoogleDriveMonitor(...)
+        content = monitor.read_document_content(google_doc.google_doc_id)
+
+        article = Article.create(
+            title=parse_title(content),
+            content=parse_content(content),
+            source_type='google_drive',
+            google_drive_doc_id=google_doc.google_doc_id,
+            current_status='pending'
+        )
+
+        google_doc.update(article_id=article.id, status='imported')
+        trigger_proofreading_workflow.delay(article.id)
+
+    except Exception as e:
+        google_doc.update(status='failed', error_message=str(e))
+        raise self.retry(exc=e, countdown=2 ** self.request.retries)
+```
+
+---
+
+#### T6.5 [P0] [US6] Implement Content Parser
+
+**Description**: Parse Google Doc content to extract title, body, meta description, and keywords
+
+**Dependencies**: T6.2
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- `backend/src/utils/google_doc_parser.py`
+- Parsing functions for structured content
+
+**Acceptance Criteria**:
+- [ ] Parses three-part format: 正文 / Meta描述 / SEO关键词
+- [ ] Extracts title from first heading or first line
+- [ ] Handles missing sections gracefully (use defaults)
+- [ ] Preserves basic formatting (paragraphs, bold, lists)
+- [ ] Extracts image references
+- [ ] Unit tests with sample Google Doc formats
+
+**File Paths**:
+- `backend/src/utils/google_doc_parser.py`
+- `backend/tests/unit/utils/test_google_doc_parser.py`
+
+---
+
+#### T6.6 [P1] [US6] Implement Article Status Tracker
+
+**Description**: Service that records all article status changes to audit trail
+
+**Dependencies**: T6.3
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- `backend/src/services/article_status_tracker.py`
+- `ArticleStatusTracker` class with methods:
+  - `record_status_change(article_id, old_status, new_status, changed_by, reason)`
+  - `get_status_history(article_id) -> List[StatusChange]`
+  - `rollback_status(article_id, reason) -> bool`
+
+**Acceptance Criteria**:
+- [ ] Every article status change recorded to `article_status_history`
+- [ ] Includes timestamp, old/new status, operator (user or 'system')
+- [ ] Can retrieve full status history for an article
+- [ ] Can rollback to previous status on failure
+- [ ] Integrated into existing workflow triggers
+- [ ] Unit tests achieve 90% coverage
+
+**File Paths**:
+- `backend/src/services/article_status_tracker.py`
+- `backend/tests/unit/services/test_article_status_tracker.py`
+
+---
+
+#### T6.7 [P1] [US6] Google Drive Integration Tests
+
+**Description**: End-to-end integration tests for Google Drive workflow
+
+**Dependencies**: T6.1-T6.6
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- Integration test suite
+- Test fixtures with sample Google Docs
+
+**Acceptance Criteria**:
+- [ ] Test: Create test Google Doc → Scanner discovers it → Import triggers → Article created
+- [ ] Test: Google API rate limit → Exponential backoff works
+- [ ] Test: Invalid document format → Fails gracefully with error message
+- [ ] Test: Duplicate document → Detects and skips
+- [ ] All tests run in CI/CD pipeline
+- [ ] Tests clean up after themselves (delete test docs)
+
+**File Paths**:
+- `backend/tests/integration/test_google_drive_workflow.py`
+- `backend/tests/fixtures/sample_google_doc.json`
+
+---
+
+**Week 11-12 Checkpoint**: ✅ Google Drive integration complete, documents auto-importing, status tracking operational
+
+---
+
+### Week 13-14: Worklist UI
+
+#### T6.8 [P0] [US6] Create Worklist Page Component
+
+**Description**: Main Worklist page showing all documents in the processing pipeline
+
+**Dependencies**: None (can start in parallel with backend)
+
+**Estimated Hours**: 16 hours
+
+**Deliverables**:
+- `frontend/src/pages/WorklistPage.tsx`
+- `frontend/src/components/Worklist/WorklistTable.tsx`
+- `frontend/src/components/Worklist/WorklistFilters.tsx`
+- `frontend/src/components/Worklist/WorklistStatistics.tsx`
+
+**Acceptance Criteria**:
+- [ ] Page accessible via `/worklist` route
+- [ ] Table displays: ID, Title, Source, Status, Created Time, Actions
+- [ ] Filters: Status dropdown, Date range picker, Keyword search
+- [ ] Sorting: Created Time, Updated Time, Status
+- [ ] Pagination: 20/50/100 items per page
+- [ ] Responsive design (desktop, tablet, mobile)
+- [ ] Loading skeleton while fetching data
+- [ ] Empty state when no documents
+
+**File Paths**:
+- `frontend/src/pages/WorklistPage.tsx`
+- `frontend/src/components/Worklist/WorklistTable.tsx`
+- `frontend/src/components/Worklist/WorklistFilters.tsx`
+- `frontend/src/components/Worklist/WorklistStatistics.tsx`
+
+---
+
+#### T6.9 [P0] [US6] Implement Status Badge Component
+
+**Description**: Reusable status badge component with 7 variants
+
+**Dependencies**: None
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `frontend/src/components/Worklist/StatusBadge.tsx`
+- 7 status variants styled with colors and icons
+
+**Acceptance Criteria**:
+- [ ] Supports 7 statuses: pending, proofreading, under_review, ready_to_publish, publishing, published, failed
+- [ ] Color-coded: Gray, Yellow, Blue, Green, Blue(pulse), DarkGreen, Red
+- [ ] Icons for each status (from Heroicons or similar)
+- [ ] Pulse animation for "publishing" status
+- [ ] TypeScript types defined
+- [ ] Storybook story created
+
+**File Paths**:
+- `frontend/src/components/Worklist/StatusBadge.tsx`
+- `frontend/src/components/Worklist/StatusBadge.stories.tsx`
+
+---
+
+#### T6.10 [P0] [US6] Create Worklist Detail Drawer
+
+**Description**: Side drawer showing full document details and status history
+
+**Dependencies**: T6.8
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- `frontend/src/components/Worklist/WorklistDetailDrawer.tsx`
+- `frontend/src/components/Worklist/StatusHistoryTimeline.tsx`
+- `frontend/src/components/Worklist/OperationLogs.tsx`
+
+**Acceptance Criteria**:
+- [ ] Drawer slides in from right (480px wide)
+- [ ] Displays full document content (scrollable)
+- [ ] Status history timeline (vertical, with timestamps)
+- [ ] Operation logs with timestamps
+- [ ] Action buttons: Edit, Delete, Retry (if failed), View in Google Drive
+- [ ] Close button (X) in top-right
+- [ ] Click outside to close
+- [ ] Smooth slide animation (300ms)
+
+**File Paths**:
+- `frontend/src/components/Worklist/WorklistDetailDrawer.tsx`
+- `frontend/src/components/Worklist/StatusHistoryTimeline.tsx`
+- `frontend/src/components/Worklist/OperationLogs.tsx`
+
+---
+
+#### T6.11 [P0] [US6] Implement Real-time Updates with WebSocket
+
+**Description**: WebSocket integration for real-time Worklist updates
+
+**Dependencies**: T6.8, T6.14 (backend WebSocket)
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- `frontend/src/hooks/useWorklistRealtime.ts`
+- WebSocket connection management
+- Fallback to polling
+
+**Acceptance Criteria**:
+- [ ] Connects to WebSocket endpoint `/api/v1/worklist/ws`
+- [ ] Handles `status_update` messages (updates existing row)
+- [ ] Handles `new_article` messages (adds new row to top)
+- [ ] Automatically reconnects on disconnect
+- [ ] Falls back to polling (every 5s) if WebSocket unavailable
+- [ ] Shows connection status indicator
+- [ ] Updates happen instantly (<2s latency)
+
+**File Paths**:
+- `frontend/src/hooks/useWorklistRealtime.ts`
+- `frontend/src/services/websocket.ts`
+
+**Code Example**:
+```typescript
+export function useWorklistRealtime() {
+  const [articles, setArticles] = useState([]);
+
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/api/v1/worklist/ws');
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+
+      if (message.type === 'status_update') {
+        setArticles(prev =>
+          prev.map(article =>
+            article.id === message.article_id
+              ? { ...article, current_status: message.new_status }
+              : article
+          )
+        );
+      } else if (message.type === 'new_article') {
+        setArticles(prev => [message.article, ...prev]);
+      }
+    };
+
+    return () => ws.close();
+  }, []);
+
+  return { articles, setArticles };
+}
+```
+
+---
+
+#### T6.12 [P1] [US6] Implement Statistics Dashboard
+
+**Description**: Statistics cards showing document counts by status
+
+**Dependencies**: T6.8
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `frontend/src/components/Worklist/WorklistStatistics.tsx`
+- Statistics cards component
+
+**Acceptance Criteria**:
+- [ ] Displays 7 cards (one per status)
+- [ ] Shows count for each status
+- [ ] Color-coded to match status badges
+- [ ] Auto-updates when statuses change
+- [ ] Clickable to filter by that status
+- [ ] Responsive grid layout
+
+**File Paths**:
+- `frontend/src/components/Worklist/WorklistStatistics.tsx`
+
+---
+
+#### T6.13 [P1] [US6] Implement Batch Operations
+
+**Description**: Batch operations for multiple documents (delete, retry, mark pending)
+
+**Dependencies**: T6.8
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Checkbox selection in table
+- Batch action dropdown
+- Confirmation dialog
+
+**Acceptance Criteria**:
+- [ ] Checkbox in table header (select all)
+- [ ] Checkbox in each row
+- [ ] Batch action dropdown appears when items selected
+- [ ] Actions: Delete, Retry (failed only), Mark as Pending
+- [ ] Confirmation dialog before executing
+- [ ] Progress indicator for batch operation
+- [ ] Success/failure feedback toast
+
+**File Paths**:
+- `frontend/src/components/Worklist/BatchOperations.tsx`
+
+---
+
+#### T6.14 [P0] [US6] Backend Worklist APIs
+
+**Description**: Implement backend API endpoints for Worklist
+
+**Dependencies**: T6.3 (database tables)
+
+**Estimated Hours**: 16 hours
+
+**Deliverables**:
+- `backend/src/api/routes/worklist.py`
+- API endpoints for Worklist operations
+- WebSocket handler
+
+**Acceptance Criteria**:
+- [ ] `GET /api/v1/worklist` - List documents with filtering/sorting/pagination
+- [ ] `GET /api/v1/worklist/{article_id}` - Get document with status history
+- [ ] `POST /api/v1/worklist/batch-action` - Batch operations
+- [ ] WebSocket `/api/v1/worklist/ws` - Real-time updates
+- [ ] All endpoints authenticated (JWT)
+- [ ] OpenAPI documentation updated
+- [ ] Unit tests achieve 90% coverage
+
+**File Paths**:
+- `backend/src/api/routes/worklist.py`
+- `backend/tests/unit/api/test_worklist.py`
+
+**Code Example**:
+```python
+@router.get("/v1/worklist")
+async def get_worklist(
+    status: Optional[str] = None,
+    keyword: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+    sort_by: str = 'created_at',
+    order: str = 'desc',
+    current_user: User = Depends(get_current_user)
+) -> WorklistResponse:
+    query = Article.query
+
+    if status and status != 'all':
+        query = query.filter(Article.current_status == status)
+
+    if keyword:
+        query = query.filter(
+            or_(
+                Article.title.ilike(f'%{keyword}%'),
+                Article.content.ilike(f'%{keyword}%')
+            )
+        )
+
+    query = query.order_by(getattr(Article, sort_by).desc() if order == 'desc' else getattr(Article, sort_by).asc())
+
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    return WorklistResponse(
+        items=[article.to_dict() for article in items],
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=(total + page_size - 1) // page_size
+    )
+```
+
+---
+
+#### T6.15 [P1] [US6] Worklist UI Tests
+
+**Description**: E2E tests for Worklist functionality
+
+**Dependencies**: T6.8-T6.14
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Playwright E2E tests for Worklist
+
+**Acceptance Criteria**:
+- [ ] Test: Navigate to Worklist page → Table displays
+- [ ] Test: Filter by status → Filtered results shown
+- [ ] Test: Search by keyword → Matching articles shown
+- [ ] Test: Click row → Detail drawer opens
+- [ ] Test: Real-time update → New article appears
+- [ ] Test: Batch select and delete → Articles deleted
+- [ ] All tests pass in CI/CD
+
+**File Paths**:
+- `frontend/tests/e2e/worklist.spec.ts`
+
+---
+
+**Week 13-14 Checkpoint**: ✅ Worklist UI complete, real-time updates working, batch operations functional
+
+---
+
+### Week 15: Integration & Testing
+
+#### T6.16 [P0] [US6] End-to-End Workflow Integration Test
+
+**Description**: Test complete workflow from Google Drive to published article
+
+**Dependencies**: T6.1-T6.15
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- Comprehensive E2E test suite
+- Test report
+
+**Acceptance Criteria**:
+- [ ] Test: Create Google Doc → Auto-discovered → Imported → Status pending
+- [ ] Test: Trigger proofread → Status proofreading → Status under_review
+- [ ] Test: Approve → Status ready_to_publish → Publish → Status publishing → Status published
+- [ ] Test: Check Worklist at each step → Status updated in real-time
+- [ ] Test: View status history → All transitions recorded
+- [ ] Test: Failure scenario → Status failed → Rollback works
+- [ ] Test runs end-to-end in <10 minutes
+
+**File Paths**:
+- `backend/tests/e2e/test_google_drive_to_publish.py`
+
+---
+
+#### T6.17 [P0] [US6] Performance Testing
+
+**Description**: Load testing with large number of documents
+
+**Dependencies**: T6.1-T6.15
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Performance test suite
+- Performance report
+
+**Acceptance Criteria**:
+- [ ] Test: Worklist with 1000+ documents loads <1 second
+- [ ] Test: Concurrent Google Drive scans (5 documents) complete <30 seconds
+- [ ] Test: 100 status updates via WebSocket process <5 seconds
+- [ ] Database queries optimized (add indexes if needed)
+- [ ] No memory leaks in WebSocket connections
+- [ ] Performance metrics logged to monitoring
+
+**File Paths**:
+- `backend/tests/performance/test_worklist_performance.py`
+
+---
+
+#### T6.18 [P0] [US6] Error Handling & Recovery Tests
+
+**Description**: Test error scenarios and recovery mechanisms
+
+**Dependencies**: T6.1-T6.15
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Error scenario test suite
+
+**Acceptance Criteria**:
+- [ ] Test: Google API rate limit → Exponential backoff → Retry succeeds
+- [ ] Test: Network timeout during import → Retry succeeds
+- [ ] Test: Invalid Google Doc format → Error recorded → Status failed
+- [ ] Test: Publish failure → Status rollback to ready_to_publish
+- [ ] Test: WebSocket disconnect → Reconnect succeeds → Updates resume
+- [ ] All errors logged with context
+- [ ] No uncaught exceptions
+
+**File Paths**:
+- `backend/tests/integration/test_error_scenarios.py`
+
+---
+
+#### T6.19 [P0] [US6] Documentation
+
+**Description**: Create user and developer documentation for Google Drive feature
+
+**Dependencies**: T6.1-T6.18
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `docs/GOOGLE_DRIVE_SETUP.md` - Setup guide
+- `docs/WORKLIST_USER_GUIDE.md` - User guide
+- Updated API documentation
+
+**Acceptance Criteria**:
+- [ ] Setup guide covers Google API credentials configuration
+- [ ] User guide explains Worklist features with screenshots
+- [ ] API docs updated with new endpoints
+- [ ] Troubleshooting section for common issues
+- [ ] Reviewed and approved by team
+
+**File Paths**:
+- `docs/GOOGLE_DRIVE_SETUP.md`
+- `docs/WORKLIST_USER_GUIDE.md`
+- `docs/API_DOCUMENTATION.md` (update)
+
+---
+
+#### T6.20 [P0] [US6] Bug Fixes & Final Polish
+
+**Description**: Address issues found during testing and polish UI
+
+**Dependencies**: T6.16-T6.19
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- Bug fixes
+- UI polish
+- Final review
+
+**Acceptance Criteria**:
+- [ ] All bugs from testing addressed
+- [ ] UI polish: animations smooth, loading states clear, error messages helpful
+- [ ] Code review completed
+- [ ] All tests passing
+- [ ] Ready for production deployment
+
+**File Paths**:
+- Various (bug fixes across codebase)
+
+---
+
+**Phase 6 Checkpoint**: ✅ Google Drive automation operational, Worklist UI complete, full workflow tested, ready for production
+
+---
+
 ## Summary
 
-**Total Tasks**: 58 tasks (48 core + 10 governance/deployment)
-**Total Duration**: 10.5 weeks (~52 business days)
-**Total Estimated Hours**: ~300 hours
+**Total Tasks**: 78 tasks (48 core + 10 governance/deployment + 20 Google Drive automation)
+**Total Duration**: 15.5 weeks (~77 business days)
+**Total Estimated Hours**: ~500 hours
 
 ### By Phase:
 - **Phase 0**: Governance (continuous)
@@ -3195,6 +4020,7 @@ That document contains:
 - **Phase 3**: Computer Use (3 weeks, 14 tasks, 94 hours)
 - **Phase 4**: Frontend (2 weeks, 10 tasks, 80 hours)
 - **Phase 5**: Testing & Deployment (2 weeks, 12 tasks, 72 hours)
+- **Phase 6**: 🆕 Google Drive & Worklist (5 weeks, 20 tasks, 200 hours)
 
 ### By User Story:
 - **US1** (Article Import): T1.5-T1.10 (6 tasks)
@@ -3202,6 +4028,7 @@ That document contains:
 - **US3** (Multi-Provider Publishing): T3.1-T3.14 (14 tasks)
 - **US4** (Monitoring): T4.5-T4.7 (3 tasks)
 - **US5** (Provider Comparison): T4.8 (1 task)
+- **US6** 🆕 (Google Drive Automation): T6.1-T6.20 (20 tasks)
 
 ### Critical Path:
 1. Database migration (T1.1-T1.4) → Blocks all data operations
@@ -3209,13 +4036,24 @@ That document contains:
 3. SEO analyzer (T2.1-T2.9) → Blocks publishing
 4. Computer Use providers (T3.1-T3.14) → Blocks E2E tests
 5. Integration tests (T5.1-T5.5) → Blocks production deployment
+6. 🆕 Google Drive integration (T6.1-T6.7) → Blocks Worklist backend
+7. 🆕 Worklist backend APIs (T6.14) → Blocks Worklist UI real-time updates
 
 ### Parallel Work Opportunities:
 - Frontend (Phase 4) can start once Phase 3 APIs are defined
 - Playwright provider (T3.5) can develop in parallel with Anthropic provider (T3.2)
 - Performance testing (T5.6) can start during Phase 4
+- 🆕 Google Drive backend (T6.1-T6.7) can develop in parallel with Worklist UI skeleton (T6.8-T6.10)
+- 🆕 Worklist frontend (T6.8-T6.13) can start once backend APIs are defined
 - All [P] marked tasks have no blocking dependencies
+
+### Phase 6 Highlights:
+- **Automated Document Ingestion**: Google Drive monitoring every 5 minutes
+- **Worklist UI**: Comprehensive dashboard with 7 status types
+- **Real-time Updates**: WebSocket for instant status changes
+- **Status Tracking**: Complete audit trail for all document transitions
+- **Batch Operations**: Delete/retry/mark multiple documents at once
 
 ---
 
-**End of Tasks Document - SEO Optimization & Multi-Provider Computer Use Publishing**
+**End of Tasks Document - SEO Optimization, Multi-Provider Computer Use Publishing & Google Drive Automation**

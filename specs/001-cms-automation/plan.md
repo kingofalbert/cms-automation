@@ -14,12 +14,13 @@ This plan outlines the implementation of an automated content management system 
 
 ### Key Architectural Decisions
 
-1. **Core Workflow**: Article Import → SEO Analysis → Computer Use Publishing
+1. **Core Workflow**: Article Import → Single-Prompt Proofreading & SEO → Deterministic Merge → Computer Use Publishing
 2. **Multi-Provider Pattern**: Abstract provider interface supports Anthropic, Gemini, and Playwright
-3. **Cost Optimization**: Start with Playwright (free), fallback to AI providers when needed
-4. **CDP Enhancement**: Playwright provider enhanced with Chrome DevTools Protocol for performance monitoring, visual regression testing, and network optimization (67-80% cost savings vs Anthropic)
-5. **Observability**: Screenshot audit trail + comprehensive logging for all operations
-6. **Security**: Encrypted credentials, sanitized HTML, complete audit logs
+3. **Proofreading Guard Rails**: AI 一次调用 + Python Rule Engine（F 类强制 + 高置信度规则），合并结果失衡自动告警
+4. **Cost Optimization**: Start with Playwright (free), fallback to AI providers when needed
+5. **CDP Enhancement**: Playwright provider enhanced with Chrome DevTools Protocol for performance monitoring, visual regression testing, and network optimization (67-80% cost savings vs Anthropic)
+6. **Observability**: Screenshot audit trail + comprehensive logging for all operations（含 source_breakdown 指标）
+7. **Security**: Encrypted credentials, sanitized HTML, complete audit logs
 
 ### Project Phases
 
@@ -27,12 +28,13 @@ This plan outlines the implementation of an automated content management system 
 |-------|-------|----------|--------|
 | **Phase 0** | Governance & Compliance Gate | Continuous | ✅ Ongoing |
 | **Phase 1** | Database Refactor & Article Import | 2 weeks | ⏳ Planned |
-| **Phase 2** | SEO Analysis Engine | 1.5 weeks | ⏳ Planned |
+| **Phase 2** | Proofreading & SEO Engine | 1.5 weeks | ⏳ Planned |
 | **Phase 3** | Multi-Provider Computer Use Framework | 3 weeks | ⏳ Planned |
 | **Phase 4** | Frontend & API Integration | 2 weeks | ⏳ Planned |
 | **Phase 5** | Testing, Optimization & Deployment | 2 weeks | ⏳ Planned |
+| **Phase 6** | 🆕 Google Drive Automation & Worklist | 5 weeks | ⏳ Planned |
 
-**Total Duration**: 10.5 weeks (~52 business days)
+**Total Duration**: 15.5 weeks (~77 business days)
 
 ---
 
@@ -419,7 +421,7 @@ sequenceDiagram
 
 ---
 
-## 3. Phase 2 – SEO Analysis Engine (1.5 weeks)
+## 3. Phase 2 – Proofreading & SEO Engine (1.5 weeks)
 
 ### 3.1 Goals
 
@@ -431,7 +433,41 @@ sequenceDiagram
 
 ### 3.2 Tasks
 
-#### Week 3: SEO Analyzer Implementation
+#### Week 3: Proofreading Single Prompt & Merge
+
+**T2A.1 - Publish Rule Manifest (JSON)** (4h)
+- Extract A–F 规则元数据，转换为 `catalog.json`
+- 字段：`rule_id`, `category`, `severity`, `blocks_publish`, `can_auto_fix`, `summary`, `source_doc`
+- 生成 `fingerprint` 用于 prompt & 监控
+- **Deliverable**: `backend/src/services/proofreading/rules/catalog.json`
+
+**T2A.2 - Prompt Builder & Schema Enforcement** (8h)
+- 实现 `ProofreadingPromptBuilder`（system+user 双段模板）
+- prompt 中嵌入规则表、输出 schema、`processing_notes.rule_coverage`
+- 单元测试：mock payload → prompt 中包含 manifest version/hash
+- **Deliverable**: `backend/src/services/proofreading/ai_prompt_builder.py`
+
+**T2A.3 - Deterministic Rule Engine v1** (10h)
+- 实现脚本规则：B2-002 半角逗号、F1-002 特色图横向、F2-001 标题层级
+- 接口：`run(ArticlePayload) -> List[ProofreadingIssue]`
+- 记录 `RuleSource.SCRIPT`、`blocks_publish`、`confidence`
+- 单元测试覆盖典型命中/非命中案例
+- **Deliverable**: `backend/src/services/proofreading/deterministic_engine.py` + tests
+
+**T2A.4 - Result Merger & API Contract** (8h)
+- 合并策略：脚本优先、`source_breakdown` 统计、`critical_issues_count`
+- 扩展 `ProofreadingResult` schema，包含 `processing_metadata`
+- 更新 API contract (`api-spec.yaml`) + 前端 response type
+- **Deliverable**: `backend/src/services/proofreading/merger.py`, `ProofreadingResponse` schema
+
+**T2A.5 - ProofreadingAnalysisService Orchestration** (10h)
+- 组合 PromptBuilder + AsyncAnthropic + RuleEngine + Merger
+- 记录 `prompt_hash`、token usage、latency
+- 错误处理：AI JSON 解析失败、脚本异常（返回 500 并记录）
+- 集成测试：mock AI 响应 + 脚本命中 → 验证合并结果
+- **Deliverable**: `backend/src/services/proofreading/service.py`
+
+#### Week 3b: SEO Analyzer Implementation
 
 **T2.1 - Design SEO Analysis Prompt** (6h)
 - Research SEO best practices: keyword density (0.5-3%), meta description CTR optimization
@@ -1077,7 +1113,304 @@ The tasks below are kept for historical reference, but the new document provides
 
 ---
 
-## 7. Risk Management
+## 7. Phase 6 – Google Drive Automation & Worklist 🆕 (5 weeks)
+
+**Status**: 🆕 New Phase Added (2025-10-27)
+**Reference**: See [Google Drive Automation Analysis](../../docs/GOOGLE_DRIVE_AUTOMATION_ANALYSIS.md)
+**Duration**: Week 11-15 (5 weeks)
+**Goal**: Enable automated document ingestion from Google Drive and provide comprehensive worklist UI for tracking document processing status
+
+### 7.1 Overview
+
+This phase adds a critical automation layer that eliminates manual article submission. Instead of users copy-pasting content into the UI, the system automatically discovers and imports new Google Docs from a configured Google Drive folder.
+
+**Key Components**:
+1. **Google Drive Monitor**: Celery scheduled task that scans Google Drive every 5 minutes
+2. **Google Docs Reader**: Service that extracts content from Google Docs
+3. **Worklist UI**: Comprehensive dashboard showing all documents and their processing status
+4. **Status Tracking System**: Records all document state transitions with full audit trail
+
+**User Value**:
+- 🚀 **Zero manual input**: Writers save to Google Drive, system auto-processes
+- 👀 **Full visibility**: Worklist shows all documents and their progress
+- 📊 **Status tracking**: See exactly where each document is in the pipeline
+- 🔄 **Real-time updates**: WebSocket pushes status changes instantly
+
+### 7.2 Architecture Changes
+
+#### New Components
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Google Drive Integration Layer (NEW)                        │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  ┌──────────────────┐    ┌──────────────────┐             │
+│  │ Google Drive     │◄───┤ Celery Beat      │             │
+│  │ Monitor          │    │ (Every 5 min)    │             │
+│  │ - scan_for_new() │    └──────────────────┘             │
+│  │ - mark_processed()│                                     │
+│  └─────────┬────────┘                                      │
+│            │                                                │
+│            ▼                                                │
+│  ┌──────────────────┐                                      │
+│  │ Google Docs      │                                      │
+│  │ Reader           │                                      │
+│  │ - read_content() │                                      │
+│  │ - parse_format() │                                      │
+│  └─────────┬────────┘                                      │
+│            │                                                │
+│            ▼                                                │
+│  ┌──────────────────┐                                      │
+│  │ Article Importer │ (Existing, extended)                │
+│  │ - create_article()│                                     │
+│  │ - trigger_workflow│                                     │
+│  └──────────────────┘                                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+#### New Database Tables
+
+**`google_drive_documents`**:
+```sql
+CREATE TABLE google_drive_documents (
+    id SERIAL PRIMARY KEY,
+    google_doc_id VARCHAR(255) UNIQUE NOT NULL,
+    file_name VARCHAR(500) NOT NULL,
+    folder_id VARCHAR(255),
+    article_id INTEGER REFERENCES articles(id),
+    status VARCHAR(20) DEFAULT 'discovered',
+    discovered_at TIMESTAMP DEFAULT NOW(),
+    processed_at TIMESTAMP,
+    error_message TEXT,
+    retry_count INTEGER DEFAULT 0,
+    metadata JSONB
+);
+```
+
+**`article_status_history`**:
+```sql
+CREATE TABLE article_status_history (
+    id SERIAL PRIMARY KEY,
+    article_id INTEGER NOT NULL REFERENCES articles(id),
+    old_status VARCHAR(30),
+    new_status VARCHAR(30) NOT NULL,
+    changed_by VARCHAR(100),
+    change_reason VARCHAR(500),
+    metadata JSONB,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+**Modified `articles` table**:
+```sql
+ALTER TABLE articles
+    ADD COLUMN source_type VARCHAR(20) DEFAULT 'manual',
+    ADD COLUMN google_drive_doc_id VARCHAR(255),
+    ADD COLUMN current_status VARCHAR(30) DEFAULT 'pending',
+    ADD COLUMN status_updated_at TIMESTAMP DEFAULT NOW(),
+    ADD COLUMN processing_started_at TIMESTAMP,
+    ADD COLUMN processing_completed_at TIMESTAMP,
+    ADD COLUMN total_processing_duration_seconds INTEGER;
+```
+
+#### New API Endpoints
+
+**Google Drive API**:
+```
+POST   /api/v1/google-drive/scan             # Trigger manual scan
+GET    /api/v1/google-drive/documents        # List Google Drive docs
+GET    /api/v1/google-drive/documents/{id}   # Get doc details
+POST   /api/v1/google-drive/documents/{id}/import  # Manual import
+POST   /api/v1/google-drive/documents/{id}/sync    # Re-sync content
+```
+
+**Worklist API**:
+```
+GET    /api/v1/worklist                      # List all documents
+GET    /api/v1/worklist/{article_id}         # Get document with history
+POST   /api/v1/worklist/batch-action         # Batch operations
+WS     /api/v1/worklist/ws                   # WebSocket real-time updates
+```
+
+### 7.3 Week-by-Week Plan
+
+#### Week 11-12: Google Drive Integration (80 hours)
+
+**T6.1** [P0] Setup Google Drive API (12h)
+- Configure OAuth 2.0 / Service Account
+- Store credentials in environment variables
+- Test API connection
+
+**T6.2** [P0] Implement GoogleDriveMonitor Service (16h)
+- Create `GoogleDriveMonitor` class
+- `scan_for_new_documents()` method
+- `read_document_content()` method
+- `mark_as_processed()` method
+
+**T6.3** [P0] Create Database Migrations (8h)
+- Alembic migration for `google_drive_documents`
+- Alembic migration for `article_status_history`
+- Modify `articles` table
+
+**T6.4** [P0] Implement Celery Tasks (12h)
+- `scan_google_drive_for_new_documents` task
+- `import_google_drive_document` task
+- Configure Celery Beat (every 5 minutes)
+
+**T6.5** [P0] Implement Content Parser (10h)
+- Parse Google Doc structure
+- Extract title, content, formatting
+- Handle images
+
+**T6.6** [P1] Implement Status Tracker (12h)
+- `ArticleStatusTracker` service
+- Record transitions to history table
+- Status rollback logic
+
+**T6.7** [P1] Unit & Integration Tests (10h)
+- Mock Google Drive API
+- Test scan/import workflow
+- Error handling tests
+
+**Deliverables**:
+- ✅ Google Drive integration working
+- ✅ Automatic document discovery
+- ✅ Status tracking system operational
+- ✅ 80% test coverage
+
+#### Week 13-14: Worklist UI (80 hours)
+
+**T6.8** [P0] Create Worklist Page (16h)
+- `WorklistPage.tsx` route (`/worklist`)
+- Table with columns: ID, Title, Source, Status, Created, Actions
+- Filters: Status, Date Range, Keyword
+- Sorting: Time, Status
+- Pagination (20/50/100 per page)
+
+**T6.9** [P0] Implement Status Badges (4h)
+- `StatusBadge` component
+- 7 status variants with colors/icons:
+  - ⏳ Pending (Gray)
+  - 🟡 Proofreading (Yellow)
+  - 🔵 Under Review (Blue)
+  - 🟢 Ready to Publish (Green)
+  - 🔄 Publishing (Blue, pulsing)
+  - ✅ Published (Dark Green)
+  - ❌ Failed (Red)
+
+**T6.10** [P0] Create Detail View (12h)
+- `WorklistDetailDrawer.tsx` (slides from right)
+- Display full content
+- Status history timeline
+- Operation logs
+- Action buttons (Edit, Delete, Retry)
+
+**T6.11** [P0] Implement Real-time Updates (12h)
+- WebSocket connection to `/api/v1/worklist/ws`
+- Handle `status_update` messages
+- Handle `new_article` messages
+- Fallback to polling (every 5s) if WebSocket fails
+
+**T6.12** [P1] Statistics Dashboard (8h)
+- Count cards for each status
+- Display at top of Worklist page
+- Auto-update with status changes
+
+**T6.13** [P1] Batch Operations (8h)
+- Checkbox selection (select all)
+- Batch actions: Delete, Retry, Mark as Pending
+- Confirmation dialog
+
+**T6.14** [P0] Backend Worklist APIs (16h)
+- `GET /api/v1/worklist` with filtering/sorting/pagination
+- `GET /api/v1/worklist/{article_id}` with status history
+- `POST /api/v1/worklist/batch-action`
+- WebSocket handler
+
+**T6.15** [P1] UI Tests (4h)
+- Playwright E2E tests for Worklist
+- Filter/sort tests
+- Real-time update tests
+
+**Deliverables**:
+- ✅ Worklist UI fully functional
+- ✅ Real-time status updates working
+- ✅ Batch operations implemented
+- ✅ Responsive design (mobile-friendly)
+
+#### Week 15: Integration & Testing (40 hours)
+
+**T6.16** [P0] End-to-End Workflow Test (12h)
+- Test: Google Drive → Import → Proofread → Review → Publish
+- Verify all status transitions
+- Verify Worklist updates
+
+**T6.17** [P0] Performance Testing (8h)
+- Load test with 1000+ documents in Worklist
+- Test concurrent Google Drive scans (5+ docs)
+- Optimize slow queries
+
+**T6.18** [P0] Error Scenarios (8h)
+- Google API rate limiting
+- Network timeouts
+- Document parsing errors
+- Status rollback on failure
+
+**T6.19** [P0] Documentation (6h)
+- Google Drive setup guide
+- Worklist user guide
+- API documentation updates
+
+**T6.20** [P0] Bug Fixes & Polish (6h)
+- Address issues from testing
+- UI polish and refinements
+- Final code review
+
+**Deliverables**:
+- ✅ Full workflow tested end-to-end
+- ✅ Performance optimized
+- ✅ Error handling robust
+- ✅ Documentation complete
+
+### 7.4 Success Criteria (Phase 6)
+
+- [ ] Google Drive scanner runs every 5 minutes without errors
+- [ ] New documents auto-imported within 5 minutes of creation
+- [ ] Worklist loads <1 second with 100 documents
+- [ ] Real-time updates have <2 second latency
+- [ ] All 7 document statuses tracked correctly
+- [ ] Status history records all transitions with timestamps
+- [ ] Batch operations work on 50+ documents
+- [ ] 90%+ test coverage for new code
+- [ ] Google API errors handled gracefully with retry
+- [ ] Documentation complete and reviewed
+
+### 7.5 Dependencies
+
+**Prerequisites**:
+- Phase 1-5 completed (database, SEO, publishing, UI base)
+- Google Drive API credentials configured
+- Celery Beat enabled in production
+
+**Blockers**:
+- Google Drive API access approval
+- Service account credentials provisioning
+
+### 7.6 Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Google API rate limits hit | Medium | Medium | Implement exponential backoff; cache results |
+| WebSocket connection unstable | Medium | Low | Fallback to polling; reconnect logic |
+| Large documents (>10MB) timeout | Low | Medium | Stream content; implement chunking |
+| Status history table grows large | Medium | Low | Partition by month; archive old records |
+| Google Doc format changes | Low | High | Version parsing logic; alert on failures |
+
+---
+
+## 8. Risk Management
 
 ### 7.1 Risk Register
 
@@ -1346,4 +1679,5 @@ Week 9-10: Phase 5 - Testing & Deployment
 **Version History**:
 - v1.0 (2025-10-25): Initial AI generation architecture
 - v2.0 (2025-10-25): Fusion architecture (AI + Import + SEO)
-- v3.0 (2025-10-26): **Multi-provider refactor** (current)
+- v3.0 (2025-10-26): Multi-provider refactor
+- v4.0 (2025-10-27): **Google Drive automation & Worklist** (current)
