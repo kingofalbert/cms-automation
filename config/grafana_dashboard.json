@@ -1,0 +1,189 @@
+{
+  "dashboard": {
+    "title": "WordPress Publishing System Dashboard",
+    "tags": ["wordpress", "publishing", "automation"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "发布成功率",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(rate(article_published_total{status=\"success\"}[5m])) / sum(rate(article_published_total[5m]))",
+            "legendFormat": "成功率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.9, "color": "yellow"},
+                {"value": 0.95, "color": "green"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "发布速度（P95）",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(article_publish_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95 耗时"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 120, "color": "yellow"},
+                {"value": 180, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "降级次数",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(provider_fallback_total)",
+            "legendFormat": "总降级次数"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "none",
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "green"},
+                {"value": 10, "color": "yellow"},
+                {"value": 50, "color": "red"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "缓存命中率",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(selector_cache_hits_total[5m]) / (rate(selector_cache_hits_total[5m]) + rate(selector_cache_misses_total[5m]))",
+            "legendFormat": "命中率"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "thresholds": {
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.5, "color": "yellow"},
+                {"value": 0.8, "color": "green"}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "发布趋势",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(article_published_total{status=\"success\"}[5m]))",
+            "legendFormat": "成功"
+          },
+          {
+            "expr": "sum(rate(article_published_total{status=\"failed\"}[5m]))",
+            "legendFormat": "失败"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      },
+      {
+        "id": 6,
+        "title": "Provider 使用分布",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum(article_published_total) by (provider)",
+            "legendFormat": "{{provider}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8}
+      },
+      {
+        "id": 7,
+        "title": "成本追踪",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "sum(rate(cost_estimate_dollars[1h])) by (provider)",
+            "legendFormat": "{{provider}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD"
+          }
+        },
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8}
+      },
+      {
+        "id": 8,
+        "title": "操作耗时（按类型）",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "sum(rate(provider_operation_duration_seconds_bucket[5m])) by (operation, le)",
+            "legendFormat": "{{operation}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+      },
+      {
+        "id": 9,
+        "title": "任务队列状态",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "task_queue_size{status=\"pending\"}",
+            "legendFormat": "待处理"
+          },
+          {
+            "expr": "task_queue_size{status=\"running\"}",
+            "legendFormat": "运行中"
+          },
+          {
+            "expr": "task_queue_size{status=\"completed\"}",
+            "legendFormat": "已完成"
+          },
+          {
+            "expr": "task_queue_size{status=\"failed\"}",
+            "legendFormat": "已失败"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}
+      }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1
+  }
+}

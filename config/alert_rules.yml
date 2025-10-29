@@ -1,0 +1,131 @@
+# Prometheus 告警规则
+# 监控 WordPress 发布系统的健康状态
+
+groups:
+  - name: publishing_alerts
+    interval: 30s
+    rules:
+      # 发布成功率低于 90%
+      - alert: LowPublishSuccessRate
+        expr: |
+          (
+            sum(rate(article_published_total{status="success"}[5m]))
+            /
+            sum(rate(article_published_total[5m]))
+          ) < 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "发布成功率低于 90%"
+          description: "最近 5 分钟的发布成功率为 {{ $value | humanizePercentage }}，低于阈值 90%"
+
+      # 发布时间过长
+      - alert: HighPublishDuration
+        expr: |
+          histogram_quantile(0.95, rate(article_publish_duration_seconds_bucket[5m])) > 180
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "发布时间过长"
+          description: "95% 的发布操作耗时超过 3 分钟（当前: {{ $value | humanizeDuration }}）"
+
+      # Provider 降级频繁
+      - alert: FrequentProviderFallback
+        expr: rate(provider_fallback_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Provider 降级频繁"
+          description: "最近 5 分钟内降级频率为 {{ $value }} 次/秒，可能存在选择器失效问题"
+
+      # Provider 操作错误率高
+      - alert: HighProviderErrorRate
+        expr: |
+          (
+            sum(rate(provider_operation_errors_total[5m]))
+            /
+            sum(rate(provider_operation_duration_seconds_count[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Provider 操作错误率高于 5%"
+          description: "Provider 操作错误率为 {{ $value | humanizePercentage }}，请检查日志"
+
+      # 选择器缓存命中率低
+      - alert: LowCacheHitRate
+        expr: |
+          (
+            rate(selector_cache_hits_total[5m])
+            /
+            (rate(selector_cache_hits_total[5m]) + rate(selector_cache_misses_total[5m]))
+          ) < 0.5
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "选择器缓存命中率低于 50%"
+          description: "缓存命中率为 {{ $value | humanizePercentage }}，考虑增加缓存 TTL 或容量"
+
+      # API 响应时间过长
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.95, rate(api_request_duration_seconds_bucket[5m])) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 响应时间过长"
+          description: "95% 的 API 请求耗时超过 10 秒（当前: {{ $value | humanizeDuration }}）"
+
+      # 任务队列积压
+      - alert: TaskQueueBacklog
+        expr: task_queue_size{status="pending"} > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "任务队列积压"
+          description: "待处理任务数量为 {{ $value }}，超过阈值 10"
+
+      # 成本异常
+      - alert: HighCostSpike
+        expr: rate(cost_estimate_dollars[1h]) > 1
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "成本异常增长"
+          description: "最近 1 小时成本增长率为 ${{ $value }}/小时，请检查是否过度使用 Computer Use"
+
+  - name: system_health
+    interval: 1m
+    rules:
+      # 服务不可用
+      - alert: ServiceDown
+        expr: up{job="wordpress-publisher-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "WordPress Publisher 服务不可用"
+          description: "服务已停止响应超过 1 分钟"
+
+      # 高错误率（5xx）
+      - alert: HighServerErrorRate
+        expr: |
+          (
+            sum(rate(api_requests_total{status_code=~"5.."}[5m]))
+            /
+            sum(rate(api_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "服务器错误率高于 5%"
+          description: "5xx 错误率为 {{ $value | humanizePercentage }}"

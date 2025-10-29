@@ -423,6 +423,57 @@ Published Article with SEO ✅
 - **FR-044**: System MUST track API costs for Anthropic and Gemini providers in `publish_tasks.cost_usd`
 - **FR-045**: System MUST send webhook notification on task completion (success or failure)
 
+#### Frontend UI/UX Requirements (FR-046 to FR-070)
+
+**Status**: 🔴 Critical Gap Identified (2025-10-27)
+**Reference**: See [UI Gaps Analysis](../../docs/UI_GAPS_ANALYSIS.md) and [UI Implementation Tasks](./UI_IMPLEMENTATION_TASKS.md)
+
+**Overview**: The following UI requirements are currently **not implemented** (0% complete). Implementation is required to enable end-to-end user workflows.
+
+##### Article Import UI (FR-046 to FR-052)
+
+- **FR-046**: System MUST provide a web UI for CSV file upload with drag-and-drop support (max 500 articles, 10MB)
+- **FR-047**: System MUST provide a web UI for JSON file upload with schema validation
+- **FR-048**: System MUST provide a manual article entry form with rich text editor (TipTap or Quill)
+- **FR-049**: System MUST provide image upload widget supporting featured image (1 required) and additional images (max 10, 5MB each)
+- **FR-050**: System MUST display real-time validation errors with row number, field name, and error message
+- **FR-051**: System MUST show batch import progress indicator (X/Y articles processed)
+- **FR-052**: System MUST provide downloadable CSV template with correct column headers
+
+##### SEO Optimization UI (FR-053 to FR-060)
+
+- **FR-053**: System MUST provide SEO optimizer panel displaying AI-generated metadata with edit capability
+- **FR-054**: System MUST provide Meta Title editor with real-time character counter (50-60 chars, color-coded validation)
+- **FR-055**: System MUST provide Meta Description editor with character counter (150-160 chars)
+- **FR-056**: System MUST provide keyword editor supporting Focus (1), Primary (3-5), and Secondary (5-10) keywords with tag-based UI
+- **FR-057**: System MUST visualize keyword density using bar chart (Recharts) with reference lines at 0.5% and 3%
+- **FR-058**: System MUST display readability score using gauge chart (Flesch-Kincaid Grade Level, target 8-10)
+- **FR-059**: System MUST display optimization recommendations as bulleted list with icons
+- **FR-060**: System MUST provide "Re-analyze SEO" button to trigger new analysis and "Save" button to persist manual edits
+
+##### Multi-Provider Publishing UI (FR-061 to FR-065)
+
+- **FR-061**: System MUST provide publish button with dropdown to select provider (Anthropic/Gemini/Playwright) showing cost and duration estimates
+- **FR-062**: System MUST show confirmation dialog before publishing, displaying article title, selected provider, estimated cost, and estimated time
+- **FR-063**: System MUST display real-time publish progress modal polling task status every 2 seconds with progress bar, current step description, and elapsed/estimated time
+- **FR-064**: System MUST display screenshot gallery in 3-column grid layout with lightbox viewer for full-size images
+- **FR-065**: System MUST display publish success card with article URL, duration, and screenshot count OR error card with error message and failure screenshot
+
+##### Task Monitoring UI (FR-066 to FR-068)
+
+- **FR-066**: System MUST provide task list page with table showing article title, provider, status badge (color-coded), duration, cost, and "View Details" button
+- **FR-067**: System MUST provide task detail drawer showing full execution logs, 8+ screenshots with timestamps, and final result (success URL or error)
+- **FR-068**: System MUST provide task filters by status (pending/running/completed/failed) and provider with pagination (20 items per page)
+
+##### Provider Comparison Dashboard (FR-069 to FR-070)
+
+- **FR-069**: System MUST provide provider comparison page with metrics table (success rate, avg duration, avg cost, total tasks) highlighting best values in green
+- **FR-070**: System MUST visualize provider performance using line chart (success rate over time), bar chart (cost comparison), and pie chart (task distribution)
+
+**Implementation Priority**: P0 (Critical) - Blocks end-to-end user workflow
+**Estimated Effort**: 312 hours (6 weeks with 2 frontend engineers + 1 backend engineer)
+**Current Status**: 0% complete (analysis phase completed 2025-10-27)
+
 ---
 
 ### Non-Functional Requirements

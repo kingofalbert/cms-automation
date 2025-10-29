@@ -2257,12 +2257,62 @@ class PlaywrightProvider(ComputerUseProvider):
 
 ---
 
-## Phase 4: Frontend & API Integration (2 weeks)
+## Phase 4: Frontend & API Integration (2 weeks → **6 weeks revised**)
 
-**Goal**: Build React frontend for article management, SEO optimization, and publishing monitoring
-**Duration**: 2 weeks (Week 7-8)
-**Estimated Hours**: 80 hours
-**Status**: Not Started
+**⚠️ CRITICAL UPDATE (2025-10-27): UI Implementation Gap Identified**
+
+**Original Estimate**: 2 weeks, 80 hours
+**Revised Estimate**: **6 weeks, 312 hours**
+**Current Status**: 🔴 **0% Complete** - No UI implementation exists
+**Impact**: End-to-end user workflow is completely blocked
+
+---
+
+### Gap Analysis Summary
+
+| Aspect | Original Plan | Reality | Gap |
+|--------|--------------|---------|-----|
+| **Modules** | 6 (implied) | 0 | 6 modules missing |
+| **Components** | ~15 (estimated) | 5 (wrong direction) | 48 components needed |
+| **Work Hours** | 80h | 0h actual | 312h required |
+| **Team Size** | Not specified | Need 2 FE + 1 BE | Team gap |
+
+---
+
+### 🚨 ACTION REQUIRED
+
+**The tasks below (T4.1-T4.10) are insufficient and do not reflect the actual work required.**
+
+**For complete, production-ready task breakdown, see:**
+
+📋 **[UI Implementation Tasks](./UI_IMPLEMENTATION_TASKS.md)** - **USE THIS DOCUMENT**
+
+That document contains:
+- ✅ 48 detailed UI component tasks (T-UI-1.1.1 through T-UI-3.4.1)
+- ✅ Acceptance criteria for each component
+- ✅ Code structure examples and best practices
+- ✅ API integration guides
+- ✅ Dependency mapping and critical path
+- ✅ 6-week sprint plan with milestones
+- ✅ Backend API requirements (56 hours)
+- ✅ E2E testing strategy (20 hours)
+
+**Cross-References**:
+- 📊 [UI Gaps Analysis](../../docs/UI_GAPS_ANALYSIS.md) - Detailed gap analysis
+- 📈 [Executive Summary](../../docs/EXECUTIVE_SUMMARY_UI_GAPS.md) - Decision guide
+- 📘 [Updated spec.md](./spec.md) - See FR-046 to FR-070 (UI requirements)
+- 📘 [Updated plan.md](./plan.md) - See Phase 4 revised timeline
+
+---
+
+### Historical Tasks (Reference Only)
+
+**⚠️ The tasks below are kept for historical reference but are INCOMPLETE. Use [UI_IMPLEMENTATION_TASKS.md](./UI_IMPLEMENTATION_TASKS.md) instead.**
+
+**Original Goal**: Build React frontend for article management, SEO optimization, and publishing monitoring
+**Original Duration**: 2 weeks (Week 7-8)
+**Original Estimated Hours**: 80 hours
+**Original Status**: Not Started
 
 ---
 

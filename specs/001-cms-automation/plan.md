@@ -743,18 +743,61 @@ sequenceDiagram
 
 ---
 
-## 5. Phase 4 – Frontend & API Integration (2 weeks)
+## 5. Phase 4 – Frontend & API Integration (2 weeks → **6 weeks revised**)
 
-### 5.1 Goals
+**⚠️ CRITICAL UPDATE (2025-10-27): UI Implementation Gap Identified**
 
-- Build React frontend for article import, SEO optimization, and publishing
-- Implement real-time task monitoring UI
-- Create admin dashboard for provider comparison
-- Integrate with backend APIs using React Query
+**Current Status**: 🔴 **0% Complete** - Frontend UI has not been implemented
+**Impact**: End-to-end user workflow is blocked
+**Required Action**: Implement 48 UI components across 6 modules (see revised timeline below)
+
+**Gap Analysis**:
+- **Expected**: Full-featured React UI for article import, SEO optimization, and publishing
+- **Actual**: Only article generation UI exists (different product direction)
+- **Gap**: 6 modules, 48 components, 312 hours of work
+
+**Detailed Documentation**:
+- 📊 [UI Gaps Analysis Report](../../docs/UI_GAPS_ANALYSIS.md) - Comprehensive gap analysis
+- 📋 [UI Implementation Tasks](./UI_IMPLEMENTATION_TASKS.md) - Detailed task breakdown (312 hours)
+- 📈 [Executive Summary](../../docs/EXECUTIVE_SUMMARY_UI_GAPS.md) - Decision-making guide
+
+**Revised Timeline**: 6 weeks (was 2 weeks) with 2 frontend engineers + 1 backend engineer
+
+---
+
+### 5.1 Goals (Updated)
+
+**Phase 4A: Core UI (Week 1-4)** - Critical Priority
+- Module 1: Article Import UI (CSV/JSON/Manual, Rich Text Editor, Image Upload)
+- Module 2: SEO Optimization UI (Meta Fields, Keywords, Charts, Recommendations)
+- Module 3: Multi-Provider Publishing UI (Provider Selection, Progress Modal, Screenshots)
+- Module 4: Task Monitoring UI (Task List, Filters, Detail Drawer, Logs)
+
+**Phase 4B: Enhancement UI (Week 5-6)** - Medium Priority
+- Module 5: Provider Comparison Dashboard (Metrics, Charts, Recommendations)
+- Module 6: Settings Page (Provider Config, CMS Config, Cost Limits)
+
+**Backend API Support** (Parallel to UI work)
+- New APIs: `/v1/articles/*`, `/v1/seo/*`, `/v1/metrics/provider-comparison`
+- Integrate existing: `/v1/publish/*`, `/v1/tasks/*`
 
 ### 5.2 Tasks
 
-#### Week 7: Core UI Components
+**⚠️ NOTE**: The tasks below (T4.1-T4.10) were originally planned but **not implemented**. For the **complete revised task breakdown** including all 48 UI components and 312 hours of detailed tasks, see:
+
+👉 **[UI Implementation Tasks Document](./UI_IMPLEMENTATION_TASKS.md)** 👈
+
+The tasks below are kept for historical reference, but the new document provides:
+- Granular task breakdown (T-UI-1.1.1 through T-UI-3.4.1)
+- Detailed acceptance criteria for each component
+- Code structure examples
+- API integration guides
+- Dependency mapping
+- 6-week sprint plan
+
+---
+
+#### Week 7: Core UI Components (Historical Reference)
 
 **T4.1 - Setup Frontend Project** (4h)
 - Initialize Vite + React + TypeScript project
