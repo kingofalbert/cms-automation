@@ -1134,6 +1134,357 @@ async def get_monthly_costs() -> MonthlyCostsResponse:
 
 ---
 
+## Phase 3: 🆕 Google Drive 自动化 + Worklist (Week 7-10)
+
+**Duration**: 4 weeks
+**Total Hours**: 152 hours (68h frontend + 84h backend)
+
+### Week 7-8: Google Drive Backend Integration
+
+**Note**: Google Drive 后端实现详见 `tasks.md` Phase 6 (T6.1-T6.7)
+
+**关键组件**:
+- GoogleDriveMonitor Service (16h)
+- Celery Scheduled Tasks (12h)
+- Database Migrations (8h)
+- Article Status Tracker (12h)
+- Integration Tests (10h)
+
+---
+
+### Week 9-10: Module 7 - Worklist UI
+
+**Goal**: 实现 Worklist 文档处理面板
+
+#### Task Group 4.1: Worklist Core UI - 48 hours
+
+##### T-UI-4.1.1 [P0] WorklistPage Component
+
+**Priority**: 🔴 Critical
+**Estimated Hours**: 16 hours
+**Dependencies**: None
+
+**Description**:
+创建 Worklist 主页面，显示所有文档的列表和状态
+
+**Deliverables**:
+- `frontend/src/pages/WorklistPage.tsx`
+- `frontend/src/components/Worklist/WorklistTable.tsx`
+- `frontend/src/components/Worklist/WorklistFilters.tsx`
+- `frontend/src/components/Worklist/WorklistStatistics.tsx`
+
+**Acceptance Criteria**:
+- [ ] Page accessible via `/worklist` route
+- [ ] Table displays: ID, Title, Source, Status, Created Time, Actions
+- [ ] Filters: Status dropdown, Date range picker, Keyword search
+- [ ] Sorting: Created Time (default desc), Updated Time, Status
+- [ ] Pagination: 20/50/100 items per page
+- [ ] Responsive design (desktop, tablet, mobile)
+- [ ] Loading skeleton while fetching data
+- [ ] Empty state when no documents
+
+**Code Structure**:
+```typescript
+// frontend/src/pages/WorklistPage.tsx
+
+export default function WorklistPage() {
+  const [filters, setFilters] = useState({ status: 'all', keyword: '' });
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['worklist', filters, pagination],
+    queryFn: () => fetchWorklist(filters, pagination)
+  });
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">文稿工作列表</h1>
+      <WorklistStatistics data={data?.statistics} />
+      <WorklistFilters filters={filters} onFiltersChange={setFilters} />
+      <WorklistTable documents={data?.items || []} isLoading={isLoading} />
+      <Pagination page={pagination.page} total={data?.total || 0} pageSize={pagination.pageSize} />
+    </div>
+  );
+}
+```
+
+---
+
+##### T-UI-4.1.2 [P0] StatusBadge Component
+
+**Priority**: 🔴 Critical
+**Estimated Hours**: 4 hours
+**Dependencies**: None
+
+**Description**:
+创建状态徽章组件，支持 7 种文档状态
+
+**Deliverables**:
+- `frontend/src/components/Worklist/StatusBadge.tsx`
+- 7 status variants with colors and icons
+
+**7 Document Statuses**:
+1. **pending** ⏳ - 待处理 (Gray)
+2. **proofreading** 🟡 - 校对中 (Yellow)
+3. **under_review** 🔵 - 审核中 (Blue)
+4. **ready_to_publish** 🟢 - 待发布 (Green)
+5. **publishing** 🔄 - 发布中 (Blue, pulsing)
+6. **published** ✅ - 已发布 (Dark Green)
+7. **failed** ❌ - 失败 (Red)
+
+**Code Example**:
+```typescript
+// frontend/src/components/Worklist/StatusBadge.tsx
+
+const STATUS_CONFIG = {
+  pending: { label: '待处理', color: 'bg-gray-100 text-gray-800', icon: ClockIcon },
+  proofreading: { label: '校对中', color: 'bg-yellow-100 text-yellow-800', icon: FileSearchIcon },
+  under_review: { label: '审核中', color: 'bg-blue-100 text-blue-800', icon: EyeIcon },
+  ready_to_publish: { label: '待发布', color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
+  publishing: { label: '发布中', color: 'bg-blue-100 text-blue-800 animate-pulse', icon: RocketIcon },
+  published: { label: '已发布', color: 'bg-green-600 text-white', icon: CheckDoubleIcon },
+  failed: { label: '失败', color: 'bg-red-100 text-red-800', icon: XCircleIcon }
+};
+
+export function StatusBadge({ status }: { status: Status }) {
+  const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+      <Icon className="w-4 h-4 mr-1" />
+      {config.label}
+    </span>
+  );
+}
+```
+
+---
+
+##### T-UI-4.1.3 [P0] WorklistDetailDrawer Component
+
+**Priority**: 🔴 Critical
+**Estimated Hours**: 12 hours
+**Dependencies**: T-UI-4.1.1, T-UI-4.1.2
+
+**Description**:
+创建详情抽屉，从右侧滑入，显示文档完整信息
+
+**Deliverables**:
+- `frontend/src/components/Worklist/WorklistDetailDrawer.tsx`
+- `frontend/src/components/Worklist/StatusHistoryTimeline.tsx`
+- `frontend/src/components/Worklist/OperationLogs.tsx`
+
+**Acceptance Criteria**:
+- [ ] Drawer slides in from right (480px wide)
+- [ ] Displays full document content (scrollable)
+- [ ] Status history timeline (vertical, with timestamps)
+- [ ] Operation logs with timestamps
+- [ ] Action buttons: Edit, Delete, Retry (if failed), View Google Doc
+- [ ] Close button (X) in top-right
+- [ ] Click outside to close
+- [ ] Smooth slide animation (300ms)
+
+---
+
+##### T-UI-4.1.4 [P0] Real-time Updates with WebSocket
+
+**Priority**: 🔴 Critical
+**Estimated Hours**: 12 hours
+**Dependencies**: T-UI-4.1.1, Backend WebSocket (T-BE-4.2.1)
+
+**Description**:
+实现 WebSocket 实时更新功能
+
+**Deliverables**:
+- `frontend/src/hooks/useWorklistRealtime.ts`
+- WebSocket connection management
+- Fallback to polling (every 5s)
+
+**Acceptance Criteria**:
+- [ ] Connects to WebSocket endpoint `/api/v1/worklist/ws`
+- [ ] Handles `status_update` messages (updates existing row)
+- [ ] Handles `new_article` messages (adds new row to top)
+- [ ] Automatically reconnects on disconnect (3s delay)
+- [ ] Falls back to polling if WebSocket unavailable
+- [ ] Shows connection status indicator
+- [ ] Updates happen instantly (<2s latency)
+
+**Code Example**:
+```typescript
+// frontend/src/hooks/useWorklistRealtime.ts
+
+export function useWorklistRealtime() {
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+
+  useEffect(() => {
+    const ws = new WebSocket('ws://localhost:8000/api/v1/worklist/ws');
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'status_update') {
+        setArticles(prev =>
+          prev.map(a => a.id === message.article_id ? { ...a, current_status: message.new_status } : a)
+        );
+      } else if (message.type === 'new_article') {
+        setArticles(prev => [message.article, ...prev]);
+      }
+    };
+
+    return () => ws.close();
+  }, []);
+
+  return { articles, setArticles, isConnected };
+}
+```
+
+---
+
+##### T-UI-4.1.5 [P1] Statistics Dashboard
+
+**Priority**: 🟡 High
+**Estimated Hours**: 4 hours
+**Dependencies**: T-UI-4.1.1
+
+**Description**:
+创建统计卡片，显示各状态文档数量
+
+**Deliverables**:
+- `frontend/src/components/Worklist/WorklistStatistics.tsx`
+
+**Acceptance Criteria**:
+- [ ] Displays 7 cards (one per status)
+- [ ] Shows count for each status
+- [ ] Color-coded to match status badges
+- [ ] Auto-updates when statuses change
+- [ ] Clickable to filter by that status
+- [ ] Responsive grid layout (2-3-4 columns)
+
+---
+
+#### Task Group 4.2: Worklist Backend APIs - 20 hours
+
+##### T-BE-4.2.1 [P0] Worklist REST APIs
+
+**Priority**: 🔴 Critical
+**Estimated Hours**: 16 hours
+**Dependencies**: Database tables (google_drive_documents, article_status_history)
+
+**Description**:
+实现 Worklist 的后端 API 端点
+
+**Deliverables**:
+- `backend/src/api/routes/worklist.py`
+- API endpoints for Worklist operations
+- WebSocket handler for real-time updates
+
+**API Endpoints**:
+
+```python
+# List worklist items with filters
+@router.get("/v1/worklist")
+async def get_worklist(
+    status: Optional[str] = None,
+    keyword: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+    sort_by: str = 'created_at',
+    order: str = 'desc',
+    current_user: User = Depends(get_current_user)
+) -> WorklistResponse:
+    """获取工作列表"""
+    query = Article.query
+
+    if status and status != 'all':
+        query = query.filter(Article.current_status == status)
+
+    if keyword:
+        query = query.filter(
+            or_(Article.title.ilike(f'%{keyword}%'), Article.content.ilike(f'%{keyword}%'))
+        )
+
+    query = query.order_by(getattr(Article, sort_by).desc() if order == 'desc' else asc())
+
+    total = query.count()
+    items = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    return WorklistResponse(items=items, total=total, page=page, page_size=page_size)
+
+# Get worklist item detail with status history
+@router.get("/v1/worklist/{article_id}")
+async def get_worklist_detail(article_id: int) -> WorklistDetailResponse:
+    """获取文档详情（含状态历史）"""
+    article = Article.get_or_404(article_id)
+    status_history = ArticleStatusHistory.get_by_article_id(article_id)
+    google_drive_info = GoogleDriveDocument.get_by_article_id(article_id)
+
+    return WorklistDetailResponse(
+        article=article,
+        status_history=status_history,
+        google_drive_info=google_drive_info
+    )
+
+# Batch operations
+@router.post("/v1/worklist/batch-action")
+async def worklist_batch_action(action: BatchAction) -> BatchActionResponse:
+    """批量操作（删除/重试/标记）"""
+    # action.type: "delete" | "retry" | "mark_as_pending"
+    # action.article_ids: List[int]
+    pass
+```
+
+**WebSocket Handler**:
+```python
+# backend/src/api/websocket/worklist.py
+
+@app.websocket("/api/v1/worklist/ws")
+async def worklist_websocket(websocket: WebSocket):
+    await websocket.accept()
+
+    try:
+        while True:
+            # Listen for article status changes from Redis pubsub
+            message = await redis.pubsub.get_message()
+
+            if message and message['type'] == 'status_update':
+                await websocket.send_json({
+                    "type": "status_update",
+                    "article_id": message['article_id'],
+                    "new_status": message['new_status']
+                })
+    except WebSocketDisconnect:
+        pass
+```
+
+**Acceptance Criteria**:
+- [ ] All endpoints authenticated (JWT)
+- [ ] Pagination works correctly
+- [ ] Filtering and sorting work as expected
+- [ ] WebSocket connects and sends updates
+- [ ] OpenAPI documentation updated
+- [ ] Unit tests achieve 90% coverage
+
+---
+
+##### T-BE-4.2.2 [P1] Backend Integration Tests
+
+**Priority**: 🟡 High
+**Estimated Hours**: 4 hours
+**Dependencies**: T-BE-4.2.1
+
+**Description**:
+集成测试 Worklist APIs 和 Google Drive 工作流
+
+**Test Scenarios**:
+- [ ] Test: GET /v1/worklist → Returns paginated list
+- [ ] Test: GET /v1/worklist?status=pending → Filters correctly
+- [ ] Test: GET /v1/worklist/{id} → Returns detail with history
+- [ ] Test: POST /v1/worklist/batch-action → Deletes multiple articles
+- [ ] Test: WebSocket connection → Receives status updates
+- [ ] Test: Google Drive doc created → Auto-imported → Appears in Worklist
+
+---
+
 ## 总结
 
 ### 工时分布
@@ -1146,14 +1497,26 @@ async def get_monthly_costs() -> MonthlyCostsResponse:
 | Module 4: Monitoring UI | 44h | - | - | 44h |
 | Module 5: Comparison Dashboard | 30h | 16h | - | 46h |
 | Module 6: Settings | 22h | - | - | 22h |
+| **Module 7: 🆕 Worklist UI** | **48h** | **20h** | **4h** | **72h** |
+| **Google Drive Backend (Phase 6)** | **-** | **80h** | **10h** | **90h** |
 | E2E Testing | - | - | 20h | 20h |
-| **总计** | **236h** | **56h** | **20h** | **312h** |
+| **总计** | **284h** | **156h** | **54h** | **494h** |
 
 **团队配置**:
-- 2 名前端工程师 × 6 周 = 240 小时
-- 1 名后端工程师 × 6 周 = 240 小时（其他时间用于维护）
-- QA 工程师兼职测试
+- 2 名前端工程师 × 10 周 = 400 小时
+- 1 名后端工程师 × 10 周 = 400 小时（含 Google Drive 集成）
+- QA 工程师兼职测试（3 周）
+
+**新增功能亮点** (Module 7):
+- ✅ 7 种状态追踪（pending → proofreading → under_review → ready_to_publish → publishing → published/failed）
+- ✅ WebSocket 实时更新（<2s 延迟）
+- ✅ 完整状态历史记录
+- ✅ 批量操作支持
+- ✅ Google Drive 自动导入
 
 ---
 
-**下一步**: 开始实施 Phase 1 Week 1 任务（Article Import UI）
+**下一步**:
+1. Phase 1-2 (Week 1-6): 实施 Module 1-6（核心 UI）
+2. Phase 3 (Week 7-10): 实施 Google Drive + Worklist（自动化层）
+3. Phase 4 (Week 11): 集成测试和上线准备

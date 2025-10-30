@@ -738,6 +738,404 @@ const getRecommendation = (metrics) => {
 
 ---
 
+### 2.7 Module 7: Worklist UI - Document Processing Dashboard 🆕 🔴 Critical
+
+**规格来源**: Google Drive Automation Analysis (Added 2025-10-27)
+**状态**: 🆕 New Module - Phase 6 Addition
+
+#### 业务价值
+
+Worklist UI 是 Google Drive 自动化功能的**核心控制面板**，提供：
+- **全局可见性**: 一眼看到所有文档的处理状态
+- **进度追踪**: 实时显示每个文档在哪个阶段
+- **故障排查**: 快速定位失败的文档和原因
+- **批量管理**: 高效处理多个文档
+
+**用户场景**:
+- 内容编辑查看今天有哪些文档需要审核
+- 团队负责人监控整体处理进度
+- 发现并重试失败的文档
+- 批量删除测试文档
+
+#### 缺失组件列表
+
+| 组件 ID | 组件名称 | 功能描述 | 优先级 | 预估工时 |
+|--------|---------|---------|--------|---------|
+| **WL-7.1** | `WorklistPage.tsx` | Worklist 主页面 | 🔴 Critical | 16h |
+| **WL-7.2** | `WorklistTable.tsx` | 文档表格组件 | 🔴 Critical | 8h |
+| **WL-7.3** | `WorklistFilters.tsx` | 筛选器组件 | 🔴 Critical | 6h |
+| **WL-7.4** | `StatusBadge.tsx` | 状态徽章组件（7 种状态） | 🔴 Critical | 4h |
+| **WL-7.5** | `WorklistDetailDrawer.tsx` | 详情抽屉组件 | 🔴 Critical | 12h |
+| **WL-7.6** | `StatusHistoryTimeline.tsx` | 状态历史时间线 | 🟡 High | 6h |
+| **WL-7.7** | `WorklistStatistics.tsx` | 统计卡片组件 | 🟡 High | 4h |
+| **WL-7.8** | `BatchOperations.tsx` | 批量操作组件 | 🟡 High | 4h |
+| **WL-7.9** | `useWorklistRealtime.ts` | 实时更新 Hook | 🔴 Critical | 6h |
+| **WL-7.10** | `WorklistEmpty.tsx` | 空状态组件 | 🟢 Medium | 2h |
+
+**总工时**: 68 小时
+
+#### WL-7.1: WorklistPage.tsx
+
+**描述**: Worklist 主页面，显示所有文档列表
+
+**功能点**:
+- 路由: `/worklist`
+- 顶部统计卡片（按状态分组计数）
+- 筛选栏（状态、日期、关键词）
+- 文档表格（可排序、可分页）
+- 响应式布局
+
+**技术栈**:
+- React + TypeScript
+- TailwindCSS
+- React Query（数据获取）
+
+**API 依赖**:
+```typescript
+GET /api/v1/worklist?status=all&page=1&page_size=20&sort_by=created_at&order=desc
+```
+
+**代码示例**:
+```typescript
+// frontend/src/pages/WorklistPage.tsx
+
+export default function WorklistPage() {
+  const [filters, setFilters] = useState<WorklistFilters>({
+    status: 'all',
+    keyword: '',
+    dateRange: null
+  });
+
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 20 });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['worklist', filters, pagination],
+    queryFn: () => fetchWorklist(filters, pagination)
+  });
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-6">文稿工作列表</h1>
+
+      <WorklistStatistics data={data?.statistics} />
+
+      <WorklistFilters
+        filters={filters}
+        onFiltersChange={setFilters}
+      />
+
+      <WorklistTable
+        documents={data?.items || []}
+        isLoading={isLoading}
+        onRowClick={(doc) => setSelectedDoc(doc)}
+      />
+
+      <Pagination
+        page={pagination.page}
+        total={data?.total || 0}
+        pageSize={pagination.pageSize}
+        onPageChange={(page) => setPagination({ ...pagination, page })}
+      />
+    </div>
+  );
+}
+```
+
+#### WL-7.4: StatusBadge.tsx
+
+**描述**: 显示文档状态的徽章组件，支持 7 种状态
+
+**7 种状态**:
+1. **Pending** ⏳ (待处理) - Gray
+2. **Proofreading** 🟡 (校对中) - Yellow
+3. **Under Review** 🔵 (审核中) - Blue
+4. **Ready to Publish** 🟢 (待发布) - Green
+5. **Publishing** 🔄 (发布中) - Blue with pulse animation
+6. **Published** ✅ (已发布) - Dark Green
+7. **Failed** ❌ (失败) - Red
+
+**代码示例**:
+```typescript
+// frontend/src/components/Worklist/StatusBadge.tsx
+
+type Status = 'pending' | 'proofreading' | 'under_review' | 'ready_to_publish' |
+              'publishing' | 'published' | 'failed';
+
+interface StatusBadgeProps {
+  status: Status;
+  className?: string;
+}
+
+const STATUS_CONFIG: Record<Status, { label: string; color: string; icon: React.FC }> = {
+  pending: { label: '待处理', color: 'bg-gray-100 text-gray-800', icon: ClockIcon },
+  proofreading: { label: '校对中', color: 'bg-yellow-100 text-yellow-800', icon: FileSearchIcon },
+  under_review: { label: '审核中', color: 'bg-blue-100 text-blue-800', icon: EyeIcon },
+  ready_to_publish: { label: '待发布', color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
+  publishing: { label: '发布中', color: 'bg-blue-100 text-blue-800 animate-pulse', icon: RocketIcon },
+  published: { label: '已发布', color: 'bg-green-600 text-white', icon: CheckDoubleIcon },
+  failed: { label: '失败', color: 'bg-red-100 text-red-800', icon: XCircleIcon }
+};
+
+export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color} ${className}`}>
+      <Icon className="w-4 h-4 mr-1" />
+      {config.label}
+    </span>
+  );
+}
+```
+
+#### WL-7.5: WorklistDetailDrawer.tsx
+
+**描述**: 从右侧滑入的抽屉，显示文档完整详情
+
+**功能点**:
+- 文档完整内容（可滚动）
+- 状态历史时间线
+- 操作日志列表
+- 操作按钮（编辑、删除、重试、查看 Google Doc）
+- 关闭按钮 + 点击外部关闭
+
+**代码示例**:
+```typescript
+// frontend/src/components/Worklist/WorklistDetailDrawer.tsx
+
+interface WorklistDetailDrawerProps {
+  articleId: number | null;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function WorklistDetailDrawer({ articleId, isOpen, onClose }: WorklistDetailDrawerProps) {
+  const { data: article, isLoading } = useQuery({
+    queryKey: ['worklist-detail', articleId],
+    queryFn: () => fetchWorklistDetail(articleId!),
+    enabled: !!articleId
+  });
+
+  return (
+    <Drawer open={isOpen} onClose={onClose} position="right" width={480}>
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold">文档详情 #{articleId}</h2>
+            <button onClick={onClose}>
+              <XMarkIcon className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {isLoading ? (
+            <LoadingSpinner />
+          ) : (
+            <>
+              {/* Basic Info */}
+              <div className="mb-6">
+                <h3 className="text-lg font-medium mb-2">{article.title}</h3>
+                <StatusBadge status={article.current_status} />
+                <p className="text-sm text-gray-500 mt-2">
+                  来源: {article.source_type === 'google_drive' ? 'Google Drive' : '手动输入'}
+                </p>
+                <p className="text-sm text-gray-500">
+                  创建时间: {formatDate(article.created_at)}
+                </p>
+              </div>
+
+              {/* Content Preview */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-2">文章内容</h4>
+                <div className="prose prose-sm max-w-none">
+                  {article.content.substring(0, 500)}...
+                </div>
+              </div>
+
+              {/* Status History */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-2">状态历史</h4>
+                <StatusHistoryTimeline history={article.status_history} />
+              </div>
+
+              {/* Operation Logs */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-2">操作日志</h4>
+                <OperationLogs logs={article.operation_logs} />
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="px-6 py-4 border-t flex gap-2">
+          <button className="btn btn-primary">编辑</button>
+          <button className="btn btn-secondary">删除</button>
+          {article?.current_status === 'failed' && (
+            <button className="btn btn-secondary">重试</button>
+          )}
+        </div>
+      </div>
+    </Drawer>
+  );
+}
+```
+
+#### WL-7.9: useWorklistRealtime.ts
+
+**描述**: 自定义 Hook，实现 WebSocket 实时更新
+
+**功能点**:
+- 连接到 `/api/v1/worklist/ws`
+- 处理 `status_update` 消息
+- 处理 `new_article` 消息
+- 自动重连机制
+- 降级到轮询（如果 WebSocket 不可用）
+
+**代码示例**:
+```typescript
+// frontend/src/hooks/useWorklistRealtime.ts
+
+export function useWorklistRealtime() {
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+
+  useEffect(() => {
+    const connectWebSocket = () => {
+      const ws = new WebSocket('ws://localhost:8000/api/v1/worklist/ws');
+
+      ws.onopen = () => {
+        console.log('WebSocket connected');
+        setIsConnected(true);
+      };
+
+      ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+
+        if (message.type === 'status_update') {
+          // Update existing article status
+          setArticles(prev =>
+            prev.map(article =>
+              article.id === message.article_id
+                ? { ...article, current_status: message.new_status }
+                : article
+            )
+          );
+        } else if (message.type === 'new_article') {
+          // Add new article to top of list
+          setArticles(prev => [message.article, ...prev]);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected, reconnecting...');
+        setIsConnected(false);
+        // Reconnect after 3 seconds
+        setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        ws.close();
+      };
+
+      wsRef.current = ws;
+    };
+
+    connectWebSocket();
+
+    // Cleanup
+    return () => {
+      wsRef.current?.close();
+    };
+  }, []);
+
+  return { articles, setArticles, isConnected };
+}
+```
+
+#### 后端 API 依赖
+
+**新增 API 端点**:
+
+```typescript
+// Worklist APIs
+GET    /api/v1/worklist                   // 列表（筛选、排序、分页）
+GET    /api/v1/worklist/{article_id}      // 详情（含状态历史）
+POST   /api/v1/worklist/batch-action      // 批量操作
+WS     /api/v1/worklist/ws                // WebSocket 实时更新
+```
+
+**API 响应示例**:
+
+```json
+// GET /api/v1/worklist
+{
+  "items": [
+    {
+      "id": 123,
+      "title": "中共病毒最新消息",
+      "source_type": "google_drive",
+      "google_drive_doc_id": "1abc...",
+      "current_status": "under_review",
+      "created_at": "2025-10-27T10:30:00Z",
+      "updated_at": "2025-10-27T10:35:00Z",
+      "processing_duration_seconds": 300
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "page_size": 20,
+  "total_pages": 8
+}
+
+// GET /api/v1/worklist/123
+{
+  "article": { ... },
+  "status_history": [
+    {
+      "old_status": "pending",
+      "new_status": "proofreading",
+      "changed_by": "system",
+      "created_at": "2025-10-27T10:31:00Z"
+    },
+    {
+      "old_status": "proofreading",
+      "new_status": "under_review",
+      "changed_by": "system",
+      "created_at": "2025-10-27T10:33:00Z"
+    }
+  ],
+  "google_drive_info": {
+    "file_name": "2025-10-27-covid-news.gdoc",
+    "discovered_at": "2025-10-27T10:30:00Z"
+  }
+}
+```
+
+#### 技术要求
+
+**性能**:
+- Worklist 加载时间 <1 秒（100 条文档）
+- WebSocket 延迟 <2 秒
+- 支持 1000+ 文档无性能下降
+
+**无障碍**:
+- 键盘导航支持
+- 屏幕阅读器兼容
+- WCAG 2.1 AA 标准
+
+**测试**:
+- Unit Tests: 每个组件 ≥80% 覆盖率
+- E2E Tests: 完整的 Worklist 工作流
+
+---
+
 ## 第三部分：后端 API 支持评估
 
 ### 3.1 已实现的 API 端点（基于 src/api/）
@@ -830,7 +1228,26 @@ GET    /v1/metrics/costs/monthly          // 月度成本统计
 - [ ] E2E 测试 - 20h
 - [ ] **总工时**: 88 小时 ≈ 2 周（2 人团队）
 
-**总计**: 6 周，332 小时（2 人前端 + 1 人后端）
+#### Phase 3: 🆕 Google Drive 自动化 + Worklist（5 周）
+
+**Week 7-8: Google Drive 集成**
+- [ ] Google Drive API 集成和监控服务 - 80h（后端）
+- [ ] 数据库表迁移和状态追踪系统 - 详见 tasks.md Phase 6
+
+**Week 9-10: Worklist UI**
+- [ ] 实现 Module 7 所有组件 (WL-7.1 to WL-7.10) - 68h（前端）
+- [ ] Worklist 后端 APIs + WebSocket - 16h（后端）
+- [ ] **总工时**: 84 小时 ≈ 2 周（2 人前端 + 1 人后端）
+
+**Week 11: 集成测试**
+- [ ] E2E 工作流测试 - 12h
+- [ ] 性能测试 - 8h
+- [ ] 错误处理测试 - 8h
+- [ ] 文档更新 - 6h
+- [ ] Bug 修复 - 6h
+- [ ] **总工时**: 40 小时 ≈ 1 周
+
+**总计**: 11 周，544 小时（2 人前端 + 1 人后端）
 
 ---
 
