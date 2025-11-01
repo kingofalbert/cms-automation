@@ -7288,6 +7288,1053 @@ class F4_003_InternalLinkRule(DeterministicRule):
 
 
 # ============================================================================
+# F1 Extended - Additional Image Rules
+# ============================================================================
+
+
+class F1_008_ImageCompressionRule(DeterministicRule):
+    """Check image compression quality (F1-008)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F1-008",
+            category="F",
+            subcategory="F1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        # 占位符：需要实际图片数据才能检查压缩质量
+        # 建议：使用图片分析工具检查压缩率
+        return issues
+
+
+class F1_009_ImageAspectRatioRule(DeterministicRule):
+    """Check image aspect ratio consistency (F1-009)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F1-009",
+            category="F",
+            subcategory="F1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        # 占位符：需要实际图片数据才能检查宽高比
+        # 建议：常见宽高比 16:9, 4:3, 1:1
+        return issues
+
+
+class F1_010_ImageNamingRule(DeterministicRule):
+    """Check image file naming convention (F1-010)."""
+
+    IMAGE_REF_PATTERN = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F1-010",
+            category="F",
+            subcategory="F1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.IMAGE_REF_PATTERN.finditer(content):
+            img_url = match.group(2)
+            filename = img_url.split('/')[-1].split('?')[0]
+
+            # 检查文件名是否有意义（避免随机字符）
+            if len(filename) > 50 or any(char in filename for char in ['%', '&', '=', '?']):
+                snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"图片文件名可能不够规范：'{filename}'。",
+                        suggestion="使用有意义的文件名，如 'feature-image-title.jpg'。",
+                        severity=self.severity,
+                        confidence=0.6,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F1_010_ImageNamingRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+# ============================================================================
+# F2 Extended - Additional Content Structure Rules
+# ============================================================================
+
+
+class F2_007_HeadingLengthRule(DeterministicRule):
+    """Check heading length (F2-007)."""
+
+    HEADING_PATTERN = re.compile(r'^(#{1,6})\s+(.+)$', re.MULTILINE)
+    MAX_LENGTH = 60
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F2-007",
+            category="F",
+            subcategory="F2",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.HEADING_PATTERN.finditer(content):
+            heading_text = match.group(2).strip()
+            if len(heading_text) > self.MAX_LENGTH:
+                snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"标题过长：{len(heading_text)} 字符，超过建议长度 {self.MAX_LENGTH} 字符。",
+                        suggestion="缩短标题以提高可读性和 SEO 效果。",
+                        severity=self.severity,
+                        confidence=0.9,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F2_007_HeadingLengthRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+class F2_008_FirstParagraphLengthRule(DeterministicRule):
+    """Check first paragraph length (F2-008)."""
+
+    MIN_LENGTH = 50
+    MAX_LENGTH = 200
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F2-008",
+            category="F",
+            subcategory="F2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 获取第一段（去除标题）
+        lines = content.split('\n')
+        first_para = None
+        for line in lines:
+            stripped = line.strip()
+            if stripped and not stripped.startswith('#'):
+                first_para = stripped
+                break
+
+        if first_para:
+            length = len(first_para)
+            if length < self.MIN_LENGTH:
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"首段过短：仅 {length} 字符，建议至少 {self.MIN_LENGTH} 字符。",
+                        suggestion="扩充首段内容以更好地吸引读者。",
+                        severity=self.severity,
+                        confidence=0.8,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F2_008_FirstParagraphLengthRule",
+                        location={},
+                        evidence=first_para[:100],
+                    )
+                )
+            elif length > self.MAX_LENGTH:
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"首段过长：{length} 字符，建议不超过 {self.MAX_LENGTH} 字符。",
+                        suggestion="缩短首段以快速传达核心信息。",
+                        severity=self.severity,
+                        confidence=0.7,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F2_008_FirstParagraphLengthRule",
+                        location={},
+                        evidence=first_para[:100],
+                    )
+                )
+        return issues
+
+
+class F2_009_ContentSegmentationRule(DeterministicRule):
+    """Check content segmentation with headings (F2-009)."""
+
+    HEADING_PATTERN = re.compile(r'^#{2,6}\s+.+$', re.MULTILINE)
+    MIN_HEADINGS = 2
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F2-009",
+            category="F",
+            subcategory="F2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 计算中文字符数
+        chinese_chars = len([c for c in content if "\u4e00" <= c <= "\u9fff"])
+
+        # 统计二级及以下标题数量
+        headings = self.HEADING_PATTERN.findall(content)
+        heading_count = len(headings)
+
+        # 如果文章较长但标题较少
+        if chinese_chars > 800 and heading_count < self.MIN_HEADINGS:
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"长文章缺少分段标题：文章 {chinese_chars} 字，仅 {heading_count} 个标题。",
+                    suggestion="添加更多二级标题以改善文章结构和可读性。",
+                    severity=self.severity,
+                    confidence=0.8,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F2_009_ContentSegmentationRule",
+                    location={},
+                    evidence=f"Characters: {chinese_chars}, Headings: {heading_count}",
+                )
+            )
+        return issues
+
+
+class F2_010_BlockquoteFormatRule(DeterministicRule):
+    """Check blockquote format (F2-010)."""
+
+    BLOCKQUOTE_PATTERN = re.compile(r'^>\s*(.+)$', re.MULTILINE)
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F2-010",
+            category="F",
+            subcategory="F2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.BLOCKQUOTE_PATTERN.finditer(content):
+            quote_text = match.group(1).strip()
+
+            # 检查引用是否过短（可能误用）
+            if len(quote_text) < 10:
+                snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"引用块过短：'{quote_text}'。",
+                        suggestion="引用块通常用于较长的引用内容，短文本可考虑使用引号。",
+                        severity=self.severity,
+                        confidence=0.6,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F2_010_BlockquoteFormatRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+# ============================================================================
+# F3 Extended - Additional Content Quality Rules
+# ============================================================================
+
+
+class F3_004_SensitiveContentRule(DeterministicRule):
+    """Check for potentially sensitive content (F3-004)."""
+
+    # 敏感词列表（示例）
+    SENSITIVE_PATTERNS = [
+        r'暴力',
+        r'血腥',
+        r'恐怖',
+        r'仇恨',
+        r'歧视',
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F3-004",
+            category="F",
+            subcategory="F3",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for pattern in self.SENSITIVE_PATTERNS:
+            if re.search(pattern, content):
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"检测到可能的敏感内容：'{pattern}'。",
+                        suggestion="请确认内容符合发布规范，必要时调整表达方式。",
+                        severity=self.severity,
+                        confidence=0.5,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F3_004_SensitiveContentRule",
+                        location={},
+                        evidence=f"Pattern: {pattern}",
+                    )
+                )
+                break  # 只报告一次
+        return issues
+
+
+class F3_005_DuplicateContentRule(DeterministicRule):
+    """Check for duplicate content sections (F3-005)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F3-005",
+            category="F",
+            subcategory="F3",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 将内容分段
+        paragraphs = [p.strip() for p in content.split('\n\n') if p.strip() and not p.strip().startswith('#')]
+
+        # 检查重复段落
+        seen = {}
+        for i, para in enumerate(paragraphs):
+            if len(para) > 50:  # 只检查较长的段落
+                if para in seen:
+                    issues.append(
+                        ProofreadingIssue(
+                            rule_id=self.rule_id,
+                            category=self.category,
+                            subcategory=self.subcategory,
+                            message=f"检测到重复段落（第 {seen[para]+1} 段和第 {i+1} 段）。",
+                            suggestion="删除或重写重复内容以提高原创性。",
+                            severity=self.severity,
+                            confidence=0.9,
+                            can_auto_fix=self.can_auto_fix,
+                            blocks_publish=self.blocks_publish,
+                            source=RuleSource.SCRIPT,
+                            attributed_by="F3_005_DuplicateContentRule",
+                            location={},
+                            evidence=para[:100],
+                        )
+                    )
+                    break  # 只报告第一个重复
+                else:
+                    seen[para] = i
+        return issues
+
+
+class F3_006_ExternalLinkQualityRule(DeterministicRule):
+    """Check external link quality (F3-006)."""
+
+    LINK_PATTERN = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
+    SUSPICIOUS_DOMAINS = ['.cn', '.ru', '.tk', '.ml', '.ga']  # 示例
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F3-006",
+            category="F",
+            subcategory="F3",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.LINK_PATTERN.finditer(content):
+            url = match.group(2)
+
+            # 检查外链（以 http 开头）
+            if url.startswith('http'):
+                # 检查是否是可疑域名
+                if any(domain in url for domain in self.SUSPICIOUS_DOMAINS):
+                    snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+                    issues.append(
+                        ProofreadingIssue(
+                            rule_id=self.rule_id,
+                            category=self.category,
+                            subcategory=self.subcategory,
+                            message=f"外链域名需审查：'{url}'。",
+                            suggestion="确认链接的可信度和相关性。",
+                            severity=self.severity,
+                            confidence=0.6,
+                            can_auto_fix=self.can_auto_fix,
+                            blocks_publish=self.blocks_publish,
+                            source=RuleSource.SCRIPT,
+                            attributed_by="F3_006_ExternalLinkQualityRule",
+                            location={"offset": match.start()},
+                            evidence=snippet,
+                        )
+                    )
+        return issues
+
+
+class F3_007_ReadabilityRule(DeterministicRule):
+    """Check content readability (F3-007)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F3-007",
+            category="F",
+            subcategory="F3",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 计算平均句子长度
+        sentences = re.split(r'[。！？]', content)
+        sentences = [s.strip() for s in sentences if s.strip()]
+
+        if sentences:
+            avg_length = sum(len(s) for s in sentences) / len(sentences)
+
+            # 句子过长影响可读性
+            if avg_length > 50:
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"平均句子过长：{avg_length:.1f} 字符。",
+                        suggestion="适当缩短句子长度以提高可读性（建议 20-40 字符）。",
+                        severity=self.severity,
+                        confidence=0.7,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F3_007_ReadabilityRule",
+                        location={},
+                        evidence=f"Average sentence length: {avg_length:.1f}",
+                    )
+                )
+        return issues
+
+
+class F3_008_TimelinessRule(DeterministicRule):
+    """Check content timeliness indicators (F3-008)."""
+
+    DATE_PATTERNS = [
+        r'20\d{2}年',
+        r'\d{4}-\d{2}-\d{2}',
+        r'最新',
+        r'今日',
+        r'昨日',
+        r'本月',
+        r'今年',
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F3-008",
+            category="F",
+            subcategory="F3",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 检查是否包含时间相关信息
+        has_date = any(re.search(pattern, content) for pattern in self.DATE_PATTERNS)
+
+        if not has_date and len(content) > 500:
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="文章缺少时间信息。",
+                    suggestion="添加发布日期或时间背景以提高内容时效性。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F3_008_TimelinessRule",
+                    location={},
+                    evidence="No date information found",
+                )
+            )
+        return issues
+
+
+class F3_009_FactCheckPromptRule(DeterministicRule):
+    """Prompt for fact-checking on data claims (F3-009)."""
+
+    CLAIM_PATTERNS = [
+        r'\d+%',
+        r'\d+亿',
+        r'\d+万',
+        r'研究显示',
+        r'数据表明',
+        r'报告指出',
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F3-009",
+            category="F",
+            subcategory="F3",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 检查是否有数据或研究引用
+        claims_found = 0
+        for pattern in self.CLAIM_PATTERNS:
+            if re.search(pattern, content):
+                claims_found += 1
+
+        # 如果有多个数据声明，提示核实
+        if claims_found >= 3:
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"文章包含 {claims_found} 个数据或研究引用。",
+                    suggestion="建议核实所有数据和引用的准确性，并提供来源。",
+                    severity=self.severity,
+                    confidence=0.8,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F3_009_FactCheckPromptRule",
+                    location={},
+                    evidence=f"Claims found: {claims_found}",
+                )
+            )
+        return issues
+
+
+class F3_010_CitationFormatRule(DeterministicRule):
+    """Check citation format consistency (F3-010)."""
+
+    CITATION_PATTERNS = [
+        r'\[[0-9]+\]',  # [1], [2]
+        r'\(\d{4}\)',  # (2023)
+        r'et al\.',  # academic citations
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F3-010",
+            category="F",
+            subcategory="F3",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 检测不同的引用格式
+        formats_used = []
+        for i, pattern in enumerate(self.CITATION_PATTERNS):
+            if re.search(pattern, content):
+                formats_used.append(i)
+
+        # 如果使用了多种引用格式，建议统一
+        if len(formats_used) > 1:
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="检测到多种引用格式。",
+                    suggestion="统一使用一种引用格式以保持一致性。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F3_010_CitationFormatRule",
+                    location={},
+                    evidence=f"Multiple citation formats detected",
+                )
+            )
+        return issues
+
+
+# ============================================================================
+# F4 Extended - Additional SEO Optimization Rules
+# ============================================================================
+
+
+class F4_004_TitleSEORule(DeterministicRule):
+    """Check title SEO optimization (F4-004)."""
+
+    TITLE_PATTERN = re.compile(r'^#\s+(.+)$', re.MULTILINE)
+    OPTIMAL_LENGTH = (30, 60)
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F4-004",
+            category="F",
+            subcategory="F4",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+
+        # 使用 payload 的 title 字段
+        title = payload.title if hasattr(payload, 'title') and payload.title else None
+
+        if not title:
+            # 如果没有 title 字段，从内容中提取
+            content = payload.original_content
+            match = self.TITLE_PATTERN.search(content)
+            if match:
+                title = match.group(1).strip()
+
+        if title:
+            length = len(title)
+
+            if length < self.OPTIMAL_LENGTH[0]:
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"标题过短：{length} 字符，建议 {self.OPTIMAL_LENGTH[0]}-{self.OPTIMAL_LENGTH[1]} 字符。",
+                        suggestion="扩充标题以包含更多关键词，提高 SEO 效果。",
+                        severity=self.severity,
+                        confidence=0.8,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F4_004_TitleSEORule",
+                        location={},
+                        evidence=title,
+                    )
+                )
+            elif length > self.OPTIMAL_LENGTH[1]:
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"标题过长：{length} 字符，建议 {self.OPTIMAL_LENGTH[0]}-{self.OPTIMAL_LENGTH[1]} 字符。",
+                        suggestion="缩短标题以避免在搜索结果中被截断。",
+                        severity=self.severity,
+                        confidence=0.8,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F4_004_TitleSEORule",
+                        location={},
+                        evidence=title,
+                    )
+                )
+        return issues
+
+
+class F4_005_KeywordDensityRule(DeterministicRule):
+    """Check keyword density (F4-005)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F4-005",
+            category="F",
+            subcategory="F4",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+
+        # 如果 payload 有 seo_keywords，检查密度
+        if hasattr(payload, 'seo_keywords') and payload.seo_keywords:
+            content = payload.original_content.lower()
+
+            for keyword in payload.seo_keywords[:3]:  # 检查前3个关键词
+                keyword_lower = keyword.lower()
+                count = content.count(keyword_lower)
+
+                # 计算关键词密度
+                words = len(content.split())
+                if words > 0:
+                    density = (count / words) * 100
+
+                    # 理想密度 1-3%
+                    if density > 5:
+                        issues.append(
+                            ProofreadingIssue(
+                                rule_id=self.rule_id,
+                                category=self.category,
+                                subcategory=self.subcategory,
+                                message=f"关键词 '{keyword}' 密度过高：{density:.1f}%（出现 {count} 次）。",
+                                suggestion="减少关键词使用以避免过度优化，建议密度 1-3%。",
+                                severity=self.severity,
+                                confidence=0.8,
+                                can_auto_fix=self.can_auto_fix,
+                                blocks_publish=self.blocks_publish,
+                                source=RuleSource.SCRIPT,
+                                attributed_by="F4_005_KeywordDensityRule",
+                                location={},
+                                evidence=f"Keyword: {keyword}, Density: {density:.1f}%",
+                            )
+                        )
+                    elif density < 0.5 and words > 300:
+                        issues.append(
+                            ProofreadingIssue(
+                                rule_id=self.rule_id,
+                                category=self.category,
+                                subcategory=self.subcategory,
+                                message=f"关键词 '{keyword}' 密度过低：{density:.1f}%（出现 {count} 次）。",
+                                suggestion="适当增加关键词使用以提高 SEO 效果。",
+                                severity=self.severity,
+                                confidence=0.6,
+                                can_auto_fix=self.can_auto_fix,
+                                blocks_publish=self.blocks_publish,
+                                source=RuleSource.SCRIPT,
+                                attributed_by="F4_005_KeywordDensityRule",
+                                location={},
+                                evidence=f"Keyword: {keyword}, Density: {density:.1f}%",
+                            )
+                        )
+        return issues
+
+
+class F4_006_NofollowLinkRule(DeterministicRule):
+    """Check external links for nofollow (F4-006)."""
+
+    LINK_PATTERN = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F4-006",
+            category="F",
+            subcategory="F4",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        external_links = 0
+        for match in self.LINK_PATTERN.finditer(content):
+            url = match.group(2)
+            if url.startswith('http'):
+                external_links += 1
+
+        # 如果有多个外链，提示考虑 nofollow
+        if external_links >= 3:
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"文章包含 {external_links} 个外部链接。",
+                    suggestion="考虑为不完全信任的外链添加 nofollow 属性。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F4_006_NofollowLinkRule",
+                    location={},
+                    evidence=f"External links: {external_links}",
+                )
+            )
+        return issues
+
+
+class F4_007_StructuredDataRule(DeterministicRule):
+    """Check for structured data hints (F4-007)."""
+
+    STRUCTURED_INDICATORS = [
+        r'作者[:：]',
+        r'发布时间[:：]',
+        r'更新时间[:：]',
+        r'标签[:：]',
+        r'分类[:：]',
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F4-007",
+            category="F",
+            subcategory="F4",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 检查是否包含结构化数据提示
+        has_structured = any(re.search(pattern, content) for pattern in self.STRUCTURED_INDICATORS)
+
+        if not has_structured:
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="文章缺少结构化数据标记。",
+                    suggestion="添加作者、发布时间等元数据以改善 SEO 和搜索展示。",
+                    severity=self.severity,
+                    confidence=0.5,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F4_007_StructuredDataRule",
+                    location={},
+                    evidence="No structured data indicators found",
+                )
+            )
+        return issues
+
+
+class F4_008_ImageSEORule(DeterministicRule):
+    """Check image SEO optimization (F4-008)."""
+
+    IMAGE_PATTERN = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F4-008",
+            category="F",
+            subcategory="F4",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        images_without_alt = 0
+        total_images = 0
+
+        for match in self.IMAGE_PATTERN.finditer(content):
+            total_images += 1
+            alt_text = match.group(1).strip()
+
+            if not alt_text or len(alt_text) < 3:
+                images_without_alt += 1
+
+        # 如果超过一半图片缺少 alt，报告
+        if total_images > 0 and images_without_alt > total_images / 2:
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"{images_without_alt}/{total_images} 张图片缺少有效的 alt 文本。",
+                    suggestion="为所有图片添加描述性 alt 文本以改善 SEO 和无障碍访问。",
+                    severity=self.severity,
+                    confidence=0.9,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F4_008_ImageSEORule",
+                    location={},
+                    evidence=f"Images without alt: {images_without_alt}/{total_images}",
+                )
+            )
+        return issues
+
+
+class F4_009_URLFriendlinessRule(DeterministicRule):
+    """Check URL friendliness (F4-009)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F4-009",
+            category="F",
+            subcategory="F4",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+
+        # 如果 payload 有 url/slug 字段，检查友好性
+        url = None
+        if hasattr(payload, 'url') and payload.url:
+            url = payload.url
+        elif hasattr(payload, 'slug') and payload.slug:
+            url = payload.slug
+
+        if url:
+            # 检查 URL 是否包含中文或特殊字符
+            if re.search(r'[\u4e00-\u9fff]', url) or re.search(r'[%&=?]', url):
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"URL 包含中文或特殊字符：'{url}'。",
+                        suggestion="使用英文、数字和连字符创建 SEO 友好的 URL。",
+                        severity=self.severity,
+                        confidence=0.8,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="F4_009_URLFriendlinessRule",
+                        location={},
+                        evidence=url,
+                    )
+                )
+        return issues
+
+
+class F4_010_SocialMetaTagRule(DeterministicRule):
+    """Check for social media meta tags (F4-010)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="F4-010",
+            category="F",
+            subcategory="F4",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+
+        # 检查是否有 meta_description（Open Graph 的基础）
+        has_meta = hasattr(payload, 'meta_description') and payload.meta_description
+
+        # 检查是否有特色图片（社交分享必需）
+        has_featured_image = hasattr(payload, 'featured_image') and payload.featured_image
+
+        if not has_meta or not has_featured_image:
+            missing = []
+            if not has_meta:
+                missing.append('meta_description')
+            if not has_featured_image:
+                missing.append('featured_image')
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"缺少社交媒体元标签：{', '.join(missing)}。",
+                    suggestion="添加 meta description 和特色图片以优化社交媒体分享效果。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="F4_010_SocialMetaTagRule",
+                    location={},
+                    evidence=f"Missing: {', '.join(missing)}",
+                )
+            )
+        return issues
+
+
+# ============================================================================
 # 规则引擎
 # ============================================================================
 
@@ -7295,7 +8342,7 @@ class F4_003_InternalLinkRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.7.0"  # Batch 7: 254条规则 (A1:50, A2:30, A3:70, A4:1, B:60, C:24, F:19)
+    VERSION = "1.8.0"  # Batch 8: 275条规则 (A1:50, A2:30, A3:70, A4:1, B:60, C:24, F:40)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -7552,8 +8599,8 @@ class DeterministicRuleEngine:
             C2_007_SpeedUnitRule(),  # C2-007: 速度单位
             C2_008_PressureUnitRule(),  # C2-008: 压力单位
             C2_009_EnergyUnitRule(),  # C2-009: 能量单位
-            # F类 - 发布合规（19条）
-            # F1 子类 - 图片规范（7条）
+            # F类 - 发布合规（40条）
+            # F1 子类 - 图片规范（10条）
             ImageWidthRule(),  # F1-001
             FeaturedImageLandscapeRule(),  # F1-002
             F1_003_ImageAltTextRule(),  # F1-003
@@ -7561,21 +8608,42 @@ class DeterministicRuleEngine:
             F1_005_ImageCountRule(),  # F1-005
             F1_006_ImageFormatRule(),  # F1-006
             F1_007_ImageDuplicationRule(),  # F1-007
-            # F2 子类 - 内容结构（6条）
+            F1_008_ImageCompressionRule(),  # F1-008: 图片压缩
+            F1_009_ImageAspectRatioRule(),  # F1-009: 宽高比
+            F1_010_ImageNamingRule(),  # F1-010: 文件命名
+            # F2 子类 - 内容结构（10条）
             InvalidHeadingLevelRule(),  # F2-001
             F2_002_ArticleLengthRule(),  # F2-002
             F2_003_ParagraphLengthRule(),  # F2-003
             F2_004_HeadingHierarchyRule(),  # F2-004
             F2_005_ListFormatRule(),  # F2-005
             F2_006_LinkValidityRule(),  # F2-006
-            # F3 子类 - 内容质量（3条）
+            F2_007_HeadingLengthRule(),  # F2-007: 标题长度
+            F2_008_FirstParagraphLengthRule(),  # F2-008: 首段长度
+            F2_009_ContentSegmentationRule(),  # F2-009: 内容分段
+            F2_010_BlockquoteFormatRule(),  # F2-010: 引用块格式
+            # F3 子类 - 内容质量（10条）
             ImageLicenseRule(),  # F3-001
             F3_002_CitationSourceRule(),  # F3-002
             F3_003_OriginalContentRatioRule(),  # F3-003
-            # F4 子类 - SEO 优化（3条）
+            F3_004_SensitiveContentRule(),  # F3-004: 敏感内容
+            F3_005_DuplicateContentRule(),  # F3-005: 重复内容
+            F3_006_ExternalLinkQualityRule(),  # F3-006: 外链质量
+            F3_007_ReadabilityRule(),  # F3-007: 可读性
+            F3_008_TimelinessRule(),  # F3-008: 时效性
+            F3_009_FactCheckPromptRule(),  # F3-009: 事实核查
+            F3_010_CitationFormatRule(),  # F3-010: 引用格式
+            # F4 子类 - SEO 优化（10条）
             F4_001_MetaDescriptionLengthRule(),  # F4-001
             F4_002_KeywordUsageRule(),  # F4-002
             F4_003_InternalLinkRule(),  # F4-003
+            F4_004_TitleSEORule(),  # F4-004: 标题 SEO
+            F4_005_KeywordDensityRule(),  # F4-005: 关键词密度
+            F4_006_NofollowLinkRule(),  # F4-006: nofollow
+            F4_007_StructuredDataRule(),  # F4-007: 结构化数据
+            F4_008_ImageSEORule(),  # F4-008: 图片 SEO
+            F4_009_URLFriendlinessRule(),  # F4-009: URL 友好性
+            F4_010_SocialMetaTagRule(),  # F4-010: 社交媒体标签
         ]
 
     def run(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
