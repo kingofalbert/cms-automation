@@ -68,13 +68,13 @@
 **d. AI服务集成 (第2507-2780行)**
 - ❌ 删除：多个Prompt设计的示例
 - ✅ 更新：单一综合Prompt架构说明
-- ✅ 添加：完整的 `ArticleAnalysisService` 代码示例
+- ✅ 添加：完整的 `ProofreadingAnalysisService` 代码示例
 - ✅ 添加：成本对比表（v1.0 vs v2.0）
 
 **关键代码示例:**
 ```python
 # v2.0: 单一 Prompt 综合分析
-analysis_result = await ArticleAnalysisService.analyze_article(
+analysis_result = await ProofreadingAnalysisService.analyze_article(
     article_content=article.content,
     article_id=article.id
 )
@@ -233,7 +233,7 @@ COMMENT ON COLUMN articles.generation_time_ms IS
 | **成本数据一致** | ✅ 通过 | 所有文档使用~$0.0525/篇 |
 | **术语使用一致** | ✅ 通过 | 统一使用"单一Prompt"、"综合分析" |
 | **引用完整性** | ✅ 通过 | 所有文档正确引用 `single_prompt_design.md` |
-| **代码示例对齐** | ✅ 通过 | 使用 `ArticleAnalysisService` |
+| **代码示例对齐** | ✅ 通过 | 使用 `ProofreadingAnalysisService` |
 
 ---
 
@@ -267,14 +267,14 @@ mv article_proofreading_seo_workflow.md.backup article_proofreading_seo_workflow
 - [ ] 确认业务逻辑正确
 
 ### 2. 代码实现 (后续)
-- [ ] 实现 `ArticleAnalysisService` 类
+- [ ] 实现 `ProofreadingAnalysisService` 类
 - [ ] 创建综合Prompt模板文件
 - [ ] 更新API端点
 - [ ] 更新数据库Schema
 - [ ] 更新前端UI组件
 
 ### 3. 测试验证 (后续)
-- [ ] 单元测试：`ArticleAnalysisService`
+- [ ] 单元测试：`ProofreadingAnalysisService`
 - [ ] 集成测试：完整工作流
 - [ ] 性能测试：验证2.5秒目标
 - [ ] 成本测试：验证token使用

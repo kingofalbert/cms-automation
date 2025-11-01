@@ -20,6 +20,10 @@ class ArticleResponse(TimestampSchema):
     published_at: datetime | None
     article_metadata: dict
     formatting: dict
+    proofreading_issues: list[dict] = Field(default_factory=list)
+    critical_issues_count: int = 0
+    tags: list[str] = Field(default_factory=list, description="WordPress post tags (3-6 categories)")
+    categories: list[str] = Field(default_factory=list, description="WordPress post categories")
 
 
 class ArticleListResponse(BaseSchema):

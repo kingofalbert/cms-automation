@@ -9,6 +9,9 @@ from src.models.publish import (
     PublishTask,
     TaskStatus,
 )
+from src.models.analytics import ProviderMetrics
+from src.models.settings import AppSettings
+from src.models.worklist import WorklistItem, WorklistStatus
 from src.models.seo import SEOMetadata
 from src.models.topic_embedding import TopicEmbedding
 from src.models.topic_request import (
@@ -39,6 +42,13 @@ __all__ = [
     "TaskStatus",
     "ExecutionLog",
     "LogLevel",
+    # Analytics
+    "ProviderMetrics",
+    # Settings
+    "AppSettings",
+    # Worklist
+    "WorklistItem",
+    "WorklistStatus",
     # Storage
     "UploadedFile",
 ]

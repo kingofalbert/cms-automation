@@ -36,6 +36,8 @@ class ComputerUseCMSService:
         cms_username: str,
         cms_password: str,
         cms_type: str = "wordpress",
+        tags: list[str] = None,
+        categories: list[str] = None,
         article_images: list[dict] = None,
     ) -> dict[str, Any]:
         """Publish article to CMS using Computer Use API.
@@ -48,6 +50,8 @@ class ComputerUseCMSService:
             cms_username: CMS username
             cms_password: CMS password or application password
             cms_type: CMS platform type (wordpress, strapi, etc.)
+            tags: List of WordPress post tags (3-6 recommended)
+            categories: List of WordPress post categories (1-3 recommended)
             article_images: List of image metadata dicts with local_path for upload
 
         Returns:
@@ -83,6 +87,8 @@ class ComputerUseCMSService:
                 article_title=article_title,
                 article_body=article_body,
                 seo_data=seo_data,
+                tags=tags,
+                categories=categories,
                 article_images=article_images or [],
             )
 
@@ -254,6 +260,8 @@ class ComputerUseCMSService:
         article_title: str,
         article_body: str,
         seo_data: SEOMetadata,
+        tags: list[str],
+        categories: list[str],
         article_images: list[dict],
     ) -> str:
         """Build Computer Use instructions for CMS publishing.
@@ -266,6 +274,8 @@ class ComputerUseCMSService:
             article_title: Article title
             article_body: Article body
             seo_data: SEO metadata
+            tags: WordPress post tags
+            categories: WordPress post categories
             article_images: List of image metadata with local paths
 
         Returns:
@@ -273,7 +283,7 @@ class ComputerUseCMSService:
         """
         if cms_type == "wordpress":
             return self._build_wordpress_instructions(
-                cms_url, cms_username, cms_password, article_title, article_body, seo_data, article_images
+                cms_url, cms_username, cms_password, article_title, article_body, seo_data, article_images, tags, categories
             )
         else:
             raise ValueError(f"Unsupported CMS type: {cms_type}")
@@ -287,6 +297,8 @@ class ComputerUseCMSService:
         body: str,
         seo_data: SEOMetadata,
         article_images: list[dict],
+        tags: list[str] = None,
+        categories: list[str] = None,
     ) -> str:
         """Build WordPress-specific instructions.
 
@@ -298,6 +310,8 @@ class ComputerUseCMSService:
             body: Article body
             seo_data: SEO metadata
             article_images: List of article images with local paths
+            tags: List of WordPress post tags (3-6 recommended)
+            categories: List of WordPress post categories (1-3 recommended)
 
         Returns:
             str: WordPress publishing instructions
@@ -313,16 +327,31 @@ class ComputerUseCMSService:
             for idx, img in enumerate(article_images, 1):
                 image_info += f"  {idx}. {img['filename']} (local path: {img['local_path']})\n"
 
+        # Prepare tags and categories info
+        tags_info = ""
+        if tags:
+            tags_info = "\n**WordPress Tags to Add:**\n"
+            for tag in tags:
+                tags_info += f"  - {tag}\n"
+
+        categories_info = ""
+        if categories:
+            categories_info = "\n**WordPress Categories to Select/Create:**\n"
+            for category in categories:
+                categories_info += f"  - {category}\n"
+
         instructions = f"""You are an AI assistant helping to publish an article to a WordPress website with proper SEO configuration.
 
 **Your Task:**
 1. Navigate to the WordPress admin dashboard
 2. Log in if needed
 3. Create a new post
-4. {'Upload article images to WordPress media library' if has_images else 'Skip image upload (no images)'}
-5. Set up the article content and SEO metadata
-6. Publish the article
-7. Return the published article URL and ID
+4. Set article title and content
+5. {'Upload article images to WordPress media library' if has_images else 'Skip image upload (no images)'}
+6. {'Set WordPress tags and categories' if tags or categories else 'Skip tags/categories (none provided)'}
+7. Configure SEO metadata (Yoast SEO or Rank Math)
+8. Publish the article
+9. Return the published article URL and ID
 
 **WordPress Details:**
 - Admin URL: {cms_url}/wp-admin
@@ -332,7 +361,7 @@ class ComputerUseCMSService:
 **Article Content:**
 Title: {title}
 Body Preview: {body_preview}
-[Full body content will be provided when needed]{image_info}
+[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}
 
 **SEO Configuration (use Yoast SEO or Rank Math if available):**
 - Meta Title: {seo_data.meta_title}
@@ -386,7 +415,33 @@ Body Preview: {body_preview}
    - {"Insert the uploaded images at appropriate locations in the content" if has_images else "Format the content appropriately (headings, paragraphs, etc.)"}
    - Take a screenshot
 
-{"7" if has_images else "6"}. **Configure Yoast SEO / Rank Math (if available)**
+{"7" if has_images else "6"}. **Set WordPress Tags and Categories**
+
+   {"**Tags:**" if tags else "**Tags:** None provided - skip this section"}
+   {f'''- In the right sidebar, scroll down to find the "Tags" panel
+   - If the panel is collapsed (you see a closed arrow), click the panel title to expand it
+   - Look for a text input field, usually labeled "Add New Tag" or just a white input box
+   - Type each tag and press Enter after each one to create it:
+     {chr(10).join(f"     • {tag}" for tag in tags)}
+   - WordPress will automatically create tags if they don't already exist
+   - After adding all tags, you should see them displayed as colored pills/badges below the input
+   - Verify all {len(tags)} tags are showing
+   - Take a screenshot showing all tags added''' if tags else '- Skip (no tags provided)'}
+
+   {"**Categories:**" if categories else "**Categories:** None provided - skip this section"}
+   {f'''- In the right sidebar, find the "Categories" panel (usually below Tags)
+   - If the panel is collapsed, click to expand it
+   - You will see a list of existing categories with checkboxes
+   - For each category to add:
+     {chr(10).join(f"     • {cat}" for cat in categories)}
+   - For each one:
+     a. Look for a checkbox with that exact category name
+     b. If you find it: Check the checkbox
+     c. If you don't find it: Click "+ Add New Category" link, enter the category name, and press Enter
+   - After selecting/creating all categories, verify they are checked
+   - Take a screenshot showing all categories selected''' if categories else '- Skip (no categories provided)'}
+
+{"8" if has_images else "7"}. **Configure Yoast SEO / Rank Math (if available)**
    - Scroll down to the SEO meta box (usually below the editor or in sidebar)
    - Set Focus Keyword: {seo_data.focus_keyword}
    - Edit Meta Title to: {seo_data.meta_title}
@@ -394,18 +449,18 @@ Body Preview: {body_preview}
    - Verify SEO score is green/acceptable
    - Take a screenshot of SEO settings
 
-{"8" if has_images else "7"}. **Publish Article**
+{"9" if has_images else "8"}. **Publish Article**
    - Click the "Publish" button (top right)
    - If prompted, click "Publish" again to confirm
    - Wait for "Post published" confirmation
    - Take a screenshot of the success message
 
-{"9" if has_images else "8"}. **Capture Article URL and ID**
+{"10" if has_images else "9"}. **Capture Article URL and ID**
    - Look for the "View Post" link or the article URL in the success message
    - Note the post ID (usually in the URL as ?post=123)
    - Take a final screenshot
 
-{"10" if has_images else "9"}. **Return Results**
+{"11" if has_images else "10"}. **Return Results**
    - Provide the article URL and post ID in your final response
    - Format: {{"article_url": "...", "article_id": "..."}}
 

@@ -6,7 +6,7 @@ from enum import Enum as PyEnum
 from typing import List, Optional
 
 from sqlalchemy import Enum, Integer, String, Text
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
@@ -83,6 +83,34 @@ class Article(Base, TimestampMixin):
         nullable=True,
         default=list,
         comment="Array of additional image paths",
+    )
+
+    # WordPress taxonomy
+    tags: Mapped[Optional[List[str]]] = mapped_column(
+        ARRAY(String(100)),
+        nullable=True,
+        default=list,
+        comment="WordPress post tags (3-6 natural categories for internal navigation)",
+    )
+
+    categories: Mapped[Optional[List[str]]] = mapped_column(
+        ARRAY(String(100)),
+        nullable=True,
+        default=list,
+        comment="WordPress post categories (hierarchical taxonomy)",
+    )
+
+    proofreading_issues: Mapped[List] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=list,
+        comment="Combined AI/script proofreading issues",
+    )
+    critical_issues_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        comment="Count of blocking (F-class) issues",
     )
 
     # CMS integration

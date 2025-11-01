@@ -282,7 +282,7 @@ INSERT INTO articles (
 **系统调用：**
 ```python
 # v1.1: 单一 Prompt 综合分析
-analysis_result = await ArticleAnalysisService.analyze_article(
+analysis_result = await ProofreadingAnalysisService.analyze_article(
     article_content=article.content,
     article_id=article.id
 )

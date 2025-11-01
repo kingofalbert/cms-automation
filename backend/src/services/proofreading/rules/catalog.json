@@ -1,0 +1,237 @@
+{
+  "version": "2025.02.05",
+  "generated_at": "2025-02-05T00:00:00Z",
+  "source_documents": [
+    "backend/docs/proofreading_requirements.v2.md",
+    "backend/docs/article_proofreading_seo_workflow.md",
+    "backend/docs/single_prompt_design.md"
+  ],
+  "categories": [
+    {
+      "category": "A",
+      "description": "用字与用词规范（错别字、统一用字、敏感语汇）",
+      "rule_count": 150,
+      "rules": [
+        {
+          "rule_id": "A1-001",
+          "subcategory": "A1",
+          "summary": "统一用字：電錶/水錶应写作「表」，手錶除外。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "A1-010",
+          "subcategory": "A1",
+          "summary": "统一用字：占/佔统一为「占」。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "A2-002",
+          "subcategory": "A2",
+          "summary": "易混淆字：形/型 需根据语境判别。",
+          "severity": "info",
+          "can_auto_fix": false,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "A3-004",
+          "subcategory": "A3",
+          "summary": "常见错字：莫名其妙，不写莫明其妙。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "A4-014",
+          "subcategory": "A4",
+          "summary": "粗俗或网络流行语检测（例如：老公、土豪、颜值）。",
+          "severity": "warning",
+          "can_auto_fix": false,
+          "blocks_publish": false
+        }
+      ]
+    },
+    {
+      "category": "B",
+      "description": "标点符号与排版（引号、书名号、全角半角）",
+      "rule_count": 60,
+      "rules": [
+        {
+          "rule_id": "B1-001",
+          "subcategory": "B1",
+          "summary": "句末标点缺失（陈述句需要句号）。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "B2-002",
+          "subcategory": "B2",
+          "summary": "中文段落禁止使用半角逗号。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "B3-002",
+          "subcategory": "B3",
+          "summary": "引号嵌套遵循「」>『』结构。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "B7-004",
+          "subcategory": "B7",
+          "summary": "中文语句禁止使用半角短横线。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        }
+      ]
+    },
+    {
+      "category": "C",
+      "description": "数字与计量单位（阿拉伯数字、货币格式）",
+      "rule_count": 24,
+      "rules": [
+        {
+          "rule_id": "C1-001",
+          "subcategory": "C1",
+          "summary": "统计数据使用阿拉伯数字并统一分节号。",
+          "severity": "info",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "C1-006",
+          "subcategory": "C1",
+          "summary": "阿拉伯数字必须使用半角字符。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "C3-003",
+          "subcategory": "C3",
+          "summary": "非主流货币需括注换算金额。",
+          "severity": "warning",
+          "can_auto_fix": false,
+          "blocks_publish": false
+        }
+      ]
+    },
+    {
+      "category": "D",
+      "description": "人名地名译名与机构标准",
+      "rule_count": 40,
+      "rules": [
+        {
+          "rule_id": "D1-001",
+          "subcategory": "D1",
+          "summary": "译名遵循大陆标准（奥巴马、意大利等）。",
+          "severity": "warning",
+          "can_auto_fix": false,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "D2-005",
+          "subcategory": "D2",
+          "summary": "姓氏『于』保持字形，不写『於』。",
+          "severity": "warning",
+          "can_auto_fix": false,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "D4-002",
+          "subcategory": "D4",
+          "summary": "一般外国机构缩写需注明全称。",
+          "severity": "info",
+          "can_auto_fix": false,
+          "blocks_publish": false
+        }
+      ]
+    },
+    {
+      "category": "E",
+      "description": "特殊规范（图片来源、宗教术语、年代表示）",
+      "rule_count": 40,
+      "rules": [
+        {
+          "rule_id": "E1-001",
+          "subcategory": "E1",
+          "summary": "图片来源格式（全西文用半角括号，中文版权用全角）。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "E2-001",
+          "subcategory": "E2",
+          "summary": "法轮功专用字：煉功、他（不写它）。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        },
+        {
+          "rule_id": "E3-002",
+          "subcategory": "E3",
+          "summary": "公元前纪年应保留『前』字。",
+          "severity": "warning",
+          "can_auto_fix": true,
+          "blocks_publish": false
+        }
+      ]
+    },
+    {
+      "category": "F",
+      "description": "发布合规（图片规格、标题层级、授权）",
+      "rule_count": 40,
+      "rules": [
+        {
+          "rule_id": "F1-001",
+          "subcategory": "F1",
+          "summary": "插图宽度规范：横图600px、方/竖图450px。",
+          "severity": "critical",
+          "can_auto_fix": false,
+          "blocks_publish": true
+        },
+        {
+          "rule_id": "F1-002",
+          "subcategory": "F1",
+          "summary": "特色图必须为横图且宽高比>1.2。",
+          "severity": "critical",
+          "can_auto_fix": false,
+          "blocks_publish": true
+        },
+        {
+          "rule_id": "F2-001",
+          "subcategory": "F2",
+          "summary": "HTML 标题层级仅允许 H2/H3。",
+          "severity": "error",
+          "can_auto_fix": true,
+          "blocks_publish": true
+        },
+        {
+          "rule_id": "F3-001",
+          "subcategory": "F3",
+          "summary": "仅允许使用具备明确授权的媒体素材。",
+          "severity": "critical",
+          "can_auto_fix": false,
+          "blocks_publish": true
+        },
+        {
+          "rule_id": "F6-006",
+          "subcategory": "F6",
+          "summary": "综合阻断：若有 critical 问题发布必须中止。",
+          "severity": "critical",
+          "can_auto_fix": false,
+          "blocks_publish": true
+        }
+      ]
+    }
+  ]
+}

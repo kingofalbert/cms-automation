@@ -33,6 +33,7 @@ celery_app.conf.update(
     task_routes={
         "src.workers.tasks.generate_article.*": {"queue": "article_generation"},
         "src.workers.tasks.publish_scheduled.*": {"queue": "publishing"},
+        "src.workers.tasks.publishing.*": {"queue": "publishing"},
     },
     # Task execution settings
     task_acks_late=True,  # Acknowledge after execution

@@ -86,7 +86,7 @@ Token使用: ~6,300 tokens (节省34%)
   - `MetaOptimizer._generate_new()` 单独调用
   - `KeywordOptimizer._generate_new()` 单独调用
   - `FAQGenerator.generate()` 单独调用
-- ✅ 更新：改为引用 `ArticleAnalysisService` 统一服务
+- ✅ 更新：改为引用 `ProofreadingAnalysisService` 统一服务
 - ✅ 添加：JSON响应解析逻辑
 
 **第10节：AI服务集成**
@@ -97,7 +97,7 @@ Token使用: ~6,300 tokens (节省34%)
 
 **代码示例**
 - ❌ 删除：所有分散的AI调用代码
-- ✅ 更新：改为 `ArticleAnalysisService.analyze_article()`
+- ✅ 更新：改为 `ProofreadingAnalysisService.analyze_article()`
 - ✅ 添加：完整JSON Schema定义
 
 #### 具体修改位置
@@ -240,7 +240,7 @@ cp proofreading_requirements.md proofreading_requirements.md.backup
 
 ### 术语一致性
 - [ ] "单一 Prompt" / "综合分析" 术语统一
-- [ ] "ArticleAnalysisService" 服务名统一
+- [ ] "ProofreadingAnalysisService" 服务名统一
 - [ ] JSON响应格式引用统一
 
 ### 引用完整性
@@ -250,7 +250,7 @@ cp proofreading_requirements.md proofreading_requirements.md.backup
 
 ### 代码示例有效性
 - [ ] 删除所有过时的分散AI调用代码
-- [ ] 所有代码示例使用新的 `ArticleAnalysisService`
+- [ ] 所有代码示例使用新的 `ProofreadingAnalysisService`
 - [ ] JSON Schema定义完整且一致
 
 ---

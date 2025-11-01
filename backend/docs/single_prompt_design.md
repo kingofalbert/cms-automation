@@ -502,127 +502,73 @@ SEO关键词：
 ### 3.1 服务层实现
 
 ```python
-# backend/app/services/article_analysis.py
+# backend/src/services/proofreading/service.py
 
 from typing import Dict, Any
-from anthropic import Anthropic
-from app.core.config import settings
-from app.models.article import Article
-from app.schemas.analysis import AnalysisResult
-import json
-import time
+from anthropic import AsyncAnthropic
 
-class ArticleAnalysisService:
+from src.services.proofreading.ai_prompt_builder import ProofreadingPromptBuilder
+from src.services.proofreading.deterministic_engine import DeterministicRuleEngine
+from src.services.proofreading.merger import ProofreadingResultMerger
+from src.services.proofreading.models import ArticlePayload, ProofreadingResult
+
+
+class ProofreadingAnalysisService:
     """
-    单一 Prompt 文章分析服务
+    单一 Prompt + 程序化校验的统一服务。
+
+    责任：
+    1. 构建系统/用户 Prompt，并调用 Claude Messages API（单次调用）。
+    2. 解析 AI 返回的 JSON，转换为 ProofreadingResult。
+    3. 运行 DeterministicRuleEngine（F 类强制 + 高置信度规则）。
+    4. 使用 ProofreadingResultMerger 合并 AI 与脚本结果，统一统计。
     """
 
     def __init__(self):
-        self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"
+        self.manifest = load_default_manifest()
+        self.prompt_builder = ProofreadingPromptBuilder(self.manifest)
+        self.rule_engine = DeterministicRuleEngine()
+        self.merger = ProofreadingResultMerger()
+        self.client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.model = settings.ANTHROPIC_MODEL
 
-    async def analyze_article(
-        self,
-        article_content: str,
-        article_id: int
-    ) -> Dict[str, Any]:
-        """
-        使用单一 Prompt 完成所有分析
-
-        Args:
-            article_content: 文章内容（三部分格式）
-            article_id: 文章ID
-
-        Returns:
-            完整的分析结果（包含校对、优化、FAQ等所有内容）
-        """
-
-        # 1. 构建完整的 Prompt
-        full_prompt = self._build_comprehensive_prompt(article_content)
-
-        # 2. 调用 Claude API（单次调用）
-        start_time = time.time()
-
-        response = self.client.messages.create(
+    async def analyze_article(self, payload: ArticlePayload) -> ProofreadingResult:
+        prompt_bundle = self.prompt_builder.build_prompt(payload)
+        ai_response = await self.client.messages.create(
             model=self.model,
-            max_tokens=8192,  # 足够大以容纳完整输出
-            temperature=0.3,  # 较低温度保证稳定性
+            temperature=0.2,
+            max_tokens=settings.ANTHROPIC_MAX_TOKENS,
             messages=[
-                {
-                    "role": "user",
-                    "content": full_prompt
-                }
-            ]
+                {"role": "system", "content": prompt_bundle["system"]},
+                {"role": "user", "content": prompt_bundle["user"]},
+            ],
         )
 
-        processing_time = int((time.time() - start_time) * 1000)
+        ai_result = self._parse_ai_response(ai_response)
+        script_issues = self.rule_engine.run(payload)
+        merged = self.merger.merge(ai_result, script_issues)
 
-        # 3. 解析 AI 响应
-        response_text = response.content[0].text
-
-        # 提取 JSON（AI应该返回完整JSON）
-        try:
-            # 尝试直接解析
-            result = json.loads(response_text)
-        except json.JSONDecodeError:
-            # 如果AI在JSON外包含了其他文本，提取JSON部分
-            json_start = response_text.find('{')
-            json_end = response_text.rfind('}') + 1
-            if json_start >= 0 and json_end > json_start:
-                result = json.loads(response_text[json_start:json_end])
-            else:
-                raise ValueError("AI响应不包含有效的JSON")
-
-        # 4. 添加处理元数据
-        result['processing_metadata'] = {
-            'model': self.model,
-            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-            'processing_time_ms': processing_time,
-            'total_tokens': {
-                'input': response.usage.input_tokens,
-                'output': response.usage.output_tokens,
-                'total': response.usage.input_tokens + response.usage.output_tokens
-            },
-            'article_id': article_id
-        }
-
-        return result
-
-    def _build_comprehensive_prompt(self, article_content: str) -> str:
-        """
-        构建综合分析 Prompt
-        """
-
-        # 读取完整的系统Prompt模板
-        system_prompt = self._load_system_prompt()
-
-        # 拼接用户内容
-        user_prompt = f"""
-# 待分析文稿
-
-```
-{article_content}
+        merged.processing_metadata.rule_manifest_version = self.manifest.version
+        merged.processing_metadata.script_engine_version = self.rule_engine.VERSION
+        return merged
 ```
 
-请按照系统指示完成全面分析，输出完整的JSON结果。
-"""
+> 📌 **关键变化**
+> - PromptBuilder 生成 system/user 双段指令，附带规则清单表格与输出 schema。
+> - DeterministicRuleEngine 暂含 B2-002、F1-002、F2-001 等可程序化规则，可持续扩展。
+> - ProofreadingResultMerger 统一去重、冲突处理，并输出 `source_breakdown`（ai/script/merged）。
 
-        return f"{system_prompt}\n\n{user_prompt}"
+#### 3.1.1 合并策略摘要
 
-    def _load_system_prompt(self) -> str:
-        """
-        加载系统 Prompt 模板
-        可以从文件读取，便于维护和版本控制
-        """
-        # 实际项目中建议从文件读取
-        # with open('prompts/comprehensive_analysis_v1.md', 'r') as f:
-        #     return f.read()
+| 情况 | 处理策略 |
+|------|----------|
+| 只 AI 命中 | 保留 AI issue，`source=ai`，标记 `confidence<0.7` 时在 UI 上要求人工复核 |
+| 只脚本命中 | 保留脚本 issue，`source=script`，若 `blocks_publish=true` 则直接阻断 |
+| 双方命中同一 rule_id | 以脚本结果为准，`source=merged`，但保留 AI 提供的语境说明/建议 |
+| AI 输出缺少 rule_id | 直接丢弃并记录 `proofreading_ai_issue_parse_failed` 日志 |
+| AI 提供 rule_coverage | 存储至 `processing_metadata.notes['ai_rule_coverage']`，用于回归对比 |
 
-        # 这里返回上面设计的完整 Prompt
-        return """
-[上面设计的完整系统Prompt内容]
-"""
-```
+> ⚠️ 所有合并结果最终写入 `articles.proofreading_issues`。F 类 `blocks_publish` 将同步更新 `critical_issues_count`。
 
 ### 3.2 API端点实现
 
@@ -632,7 +578,7 @@ class ArticleAnalysisService:
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_user
-from app.services.article_analysis import ArticleAnalysisService
+from src.services.proofreading import ProofreadingAnalysisService
 from app.models.article import Article, ArticleVersion
 from app.schemas.article import ArticleAnalysisResponse
 import json
@@ -666,7 +612,7 @@ async def analyze_article(
         raise HTTPException(status_code=404, detail="文章不存在")
 
     # 2. 调用分析服务（单一 Prompt）
-    analysis_service = ArticleAnalysisService()
+    analysis_service = ProofreadingAnalysisService()
 
     try:
         result = await analysis_service.analyze_article(
@@ -1049,7 +995,7 @@ export function ArticleAnalysis({ articleId, onComplete }: Props) {
    - 验证术语一致性
 
 2. **第二阶段：后端实现**（2-3天）
-   - 实现 ArticleAnalysisService
+   - 实现 ProofreadingAnalysisService
    - 创建API端点
    - 数据库保存逻辑
    - 错误处理和重试机制

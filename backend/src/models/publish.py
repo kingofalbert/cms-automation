@@ -21,18 +21,24 @@ from src.models.base import Base
 
 
 class Provider(str, PyEnum):
-    """Computer Use provider types."""
+    """Publishing provider types."""
 
-    ANTHROPIC = "anthropic"
-    GEMINI = "gemini"
     PLAYWRIGHT = "playwright"
+    COMPUTER_USE = "computer_use"
+    HYBRID = "hybrid"
 
 
 class TaskStatus(str, PyEnum):
-    """Publishing task status."""
+    """Publishing task status with detailed workflow steps."""
 
+    IDLE = "idle"
     PENDING = "pending"
-    RUNNING = "running"
+    INITIALIZING = "initializing"
+    LOGGING_IN = "logging_in"
+    CREATING_POST = "creating_post"
+    UPLOADING_IMAGES = "uploading_images"
+    CONFIGURING_SEO = "configuring_seo"
+    PUBLISHING = "publishing"
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -110,6 +116,35 @@ class PublishTask(Base):
         default=TaskStatus.PENDING,
         index=True,
         comment="Task execution status",
+    )
+
+    # Progress tracking
+    progress: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        comment="Task progress percentage (0-100)",
+    )
+
+    current_step: Mapped[str] = mapped_column(
+        String(100),
+        nullable=False,
+        default=TaskStatus.PENDING.value,
+        comment="Current step description",
+    )
+
+    total_steps: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=7,
+        comment="Total number of steps in publishing workflow",
+    )
+
+    completed_steps: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        comment="Number of completed steps",
     )
 
     retry_count: Mapped[int] = mapped_column(
@@ -204,6 +239,22 @@ class PublishTask(Base):
             "cost_usd IS NULL OR cost_usd >= 0",
             name="cost_positive_check",
         ),
+        CheckConstraint(
+            "progress >= 0 AND progress <= 100",
+            name="progress_range_check",
+        ),
+        CheckConstraint(
+            "completed_steps >= 0",
+            name="completed_steps_non_negative_check",
+        ),
+        CheckConstraint(
+            "total_steps > 0",
+            name="total_steps_positive_check",
+        ),
+        CheckConstraint(
+            "completed_steps <= total_steps",
+            name="completed_steps_not_exceed_total_check",
+        ),
     )
 
     def __repr__(self) -> str:
@@ -217,6 +268,11 @@ class PublishTask(Base):
     def is_complete(self) -> bool:
         """Check if task has completed (success or failure)."""
         return self.status in (TaskStatus.COMPLETED, TaskStatus.FAILED)
+
+    @property
+    def article_title(self) -> str:
+        """Return related article title if available."""
+        return self.article.title if self.article else ""
 
     @property
     def can_retry(self) -> bool:
@@ -260,9 +316,37 @@ class PublishTask(Base):
 
         self.screenshots.append(screenshot_data)
 
+    def update_progress(
+        self,
+        step_name: str,
+        completed_steps: int,
+        progress: int,
+    ) -> None:
+        """Update progress tracking fields.
+
+        Args:
+            step_name: Workflow step identifier
+            completed_steps: Number of steps completed so far
+            progress: Progress percentage (0-100)
+        """
+        normalized_progress = max(0, min(progress, 100))
+        normalized_completed = max(0, completed_steps)
+
+        try:
+            self.status = TaskStatus(step_name)
+            self.current_step = self.status.value
+        except ValueError:
+            self.current_step = step_name
+
+        self.completed_steps = min(normalized_completed, self.total_steps)
+        self.progress = normalized_progress
+
     def mark_started(self) -> None:
-        """Mark task as started (sets status and started_at)."""
-        self.status = TaskStatus.RUNNING
+        """Mark task as started (sets status, timestamps, and initial progress)."""
+        self.status = TaskStatus.INITIALIZING
+        self.current_step = TaskStatus.INITIALIZING.value
+        self.progress = 0
+        self.completed_steps = 0
         self.started_at = datetime.utcnow()
 
     def mark_completed(self, cost_usd: Optional[float] = None) -> None:
@@ -277,6 +361,9 @@ class PublishTask(Base):
             self.duration_seconds = int((self.completed_at - self.started_at).total_seconds())
         if cost_usd is not None:
             self.cost_usd = cost_usd
+        self.current_step = TaskStatus.COMPLETED.value
+        self.progress = 100
+        self.completed_steps = self.total_steps
 
     def mark_failed(self, error_message: str) -> None:
         """Mark task as failed with error message.
@@ -289,11 +376,20 @@ class PublishTask(Base):
         self.error_message = error_message
         if self.started_at:
             self.duration_seconds = int((self.completed_at - self.started_at).total_seconds())
+        self.current_step = TaskStatus.FAILED.value
+        self.progress = 100
 
     def increment_retry(self) -> None:
         """Increment retry counter (called before retry attempt)."""
         self.retry_count += 1
         self.status = TaskStatus.PENDING
+        self.progress = 0
+        self.completed_steps = 0
+        self.current_step = TaskStatus.PENDING.value
+        self.error_message = None
+        self.started_at = None
+        self.completed_at = None
+        self.duration_seconds = None
 
 
 class ExecutionLog(Base):

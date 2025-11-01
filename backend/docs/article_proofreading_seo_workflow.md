@@ -496,20 +496,24 @@ PENDING → PARSING → ANALYZING → SUGGESTED
   └────┬─────────────┘
        │
        ▼
-  ┌─────────────────────────────────────────────────┐
-  │     AI 综合分析 (单一 Prompt 调用 ~2.5秒)          │
-  │  ArticleAnalysisService.analyze_article()       │
-  │                                                 │
-  │  一次性完成：                                     │
-  │  ✓ A-F类 450条校对规则检查                        │
-  │  ✓ 正文内容优化建议                               │
-  │  ✓ Meta描述生成/优化                             │
-  │  ✓ SEO关键词提取/优化                            │
-  │  ✓ FAQ Schema生成 (3/5/7版本)                   │
-  │  ✓ 发布合规性检查 (F类规则)                       │
-  │                                                 │
-  │  返回完整 JSON 结果，术语自动保持一致             │
-  └────────────────┬────────────────────────────────┘
+  ┌───────────────────────────────────────────────────────┐
+  │   ProofreadingAnalysisService.analyze_article()        │
+  │   单一 Prompt + 程序化校验（总耗时 ~3.0 秒）            │
+  │                                                       │
+  │  Step A: Claude 单次调用（PromptBuilder）               │
+  │  ✓ A-F 类规则逐条审核（含 rule_coverage 列表）          │
+  │  ✓ 正文优化 / Meta / 关键词 / FAQ                      │
+  │                                                       │
+  │  Step B: DeterministicRuleEngine.run()                │
+  │  ✓ B2-002 半角逗号检测                                 │
+  │  ✓ F1-002 特色图横幅校验                               │
+  │  ✓ F2-001 标题层级检查（持续扩充可程序化规则）          │
+  │                                                       │
+  │  Step C: ProofreadingResultMerger.merge()             │
+  │  ✓ AI + 脚本结果比对与去重                              │
+  │  ✓ source_breakdown（ai/script/merged）统计            │
+  │  ✓ F 类阻断自动写入 critical_issues_count             │
+  └────────────────────────┬──────────────────────────────┘
                    │
                    ▼
             ┌─────────────┐
@@ -552,11 +556,11 @@ PENDING → PARSING → ANALYZING → SUGGESTED
             │  上稿发布    │
             └─────────────┘
 
-**关键改进 (v2.0):**
-- ⚡ AI处理时间：从 ~6秒 减少到 ~2.5秒 (58%提升)
-- 💰 Token使用：从 ~9,550 减少到 ~6,300 (34%节省)
-- ✅ 术语一致性：所有内容在同一上下文生成，自动保持一致
-- 📦 单一服务：ArticleAnalysisService 统一处理所有AI任务
+**关键改进 (v2.1):**
+- ⚡ AI 单次调用 + 脚本并行合并，总耗时稳定在 ~3 秒
+- 🔐 F 类强制规则由脚本兜底，杜绝幻觉导致的漏检
+- 📊 `source_breakdown` 支撑监控 AI / 脚本命中率，快速发现漂移
+- 📦 ProofreadingAnalysisService 统一 orchestrate，后端/前端/CI 共用同一输出 schema
 ```
 
 ### 5.2 阶段详细说明
@@ -2525,7 +2529,7 @@ CREATE INDEX idx_articles_final_confirmed ON articles(final_confirmed_at);
 - ✅ **Token节省**: 34% (文章内容只发送一次)
 - ✅ **速度提升**: 58% (从~6秒降到~2.5秒)
 - ✅ **术语一致性**: 所有内容在同一上下文生成，自动保持一致
-- ✅ **代码简化**: 单一服务类 `ArticleAnalysisService`
+- ✅ **代码简化**: 单一服务类 `ProofreadingAnalysisService`
 
 ### 10.2 核心服务实现
 
@@ -2538,7 +2542,7 @@ from app.core.config import settings
 import json
 import time
 
-class ArticleAnalysisService:
+class ProofreadingAnalysisService:
     """
     v2.0 单一 Prompt 文章综合分析服务
 
@@ -3163,4 +3167,3 @@ SEO关键词:
 - 审核并批准本需求文档
 - 进入技术设计和原型开发阶段
 - 按里程碑逐步实现功能模块
-

@@ -126,13 +126,13 @@ AI综合分析 (单一Prompt，2.5秒)
 - ✅ 版本升级到 2.0.0
 - ✅ 工作流程图更新为单一AI分析步骤
 - ✅ 删除所有分散的AI调用代码
-- ✅ 添加 `ArticleAnalysisService` 完整实现
+- ✅ 添加 `ProofreadingAnalysisService` 完整实现
 - ✅ 成本控制章节更新（v1.0 vs v2.0对比）
 - ✅ AI服务集成章节完全重写
 
 **关键新增内容：**
 ```python
-class ArticleAnalysisService:
+class ProofreadingAnalysisService:
     """v2.0 单一 Prompt 文章综合分析服务"""
     async def analyze_article(
         self,
@@ -285,7 +285,7 @@ ALTER TABLE articles ADD COLUMN generation_time_ms INTEGER;
 | **成本数据一致** | ✅ 通过 | 所有文档使用~$0.0525/篇 |
 | **性能提升数据一致** | ✅ 通过 | 58%时间、34% token、13%成本 |
 | **术语使用统一** | ✅ 通过 | "单一Prompt"、"综合分析"统一 |
-| **代码示例对齐** | ✅ 通过 | 使用 `ArticleAnalysisService` |
+| **代码示例对齐** | ✅ 通过 | 使用 `ProofreadingAnalysisService` |
 | **引用关系完整** | ✅ 通过 | 正确引用 `single_prompt_design.md` |
 | **版本号更新** | ✅ 通过 | 所有核心文档版本已升级 |
 | **功能定位明确** | ✅ 通过 | SEO Analysis功能说明已添加 |
@@ -471,7 +471,7 @@ ALTER TABLE articles ADD COLUMN generation_time_ms INTEGER;
 - 直接使用 `single_prompt_design.md` 作为实施指南
 - 参考 `article_proofreading_seo_workflow.md` 了解完整架构
 - 按照 `database_schema_updates.md` 更新数据库
-- 实现 `ArticleAnalysisService` 类
+- 实现 `ProofreadingAnalysisService` 类
 - 创建综合Prompt模板文件
 
 ### 建议下一步
