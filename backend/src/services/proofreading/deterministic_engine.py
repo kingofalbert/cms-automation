@@ -2576,6 +2576,354 @@ class A3_044_WanQuanRule(TypoReplacementRule):
         )
 
 
+class A3_045_WeiMiaoWeiXiaoRule(TypoReplacementRule):
+    """A3-045: 维妙维肖 → 惟妙惟肖."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-045",
+            wrong_pattern="维妙维肖",
+            correct_form="惟妙惟肖",
+            description="成语应为 '惟妙惟肖'，不写 '维妙维肖'。",
+        )
+
+
+class A3_046_CuZhiLanZaoRule(TypoReplacementRule):
+    """A3-046: 粗制烂造 → 粗制滥造."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-046",
+            wrong_pattern="粗制烂造",
+            correct_form="粗制滥造",
+            description="成语应为 '粗制滥造'，不写 '粗制烂造'。",
+        )
+
+
+class A3_047_SongChiRule(TypoReplacementRule):
+    """A3-047: 松驰 → 松弛."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-047",
+            wrong_pattern="松驰",
+            correct_form="松弛",
+            description="应为 '松弛'（弓字旁），不写 '松驰'（马字旁）。",
+        )
+
+
+class A3_048_QiKaiRule(TypoReplacementRule):
+    """A3-048: 气慨 → 气概."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-048",
+            wrong_pattern="气慨",
+            correct_form="气概",
+            description="应为 '气概'，不写 '气慨'。",
+        )
+
+
+class A3_049_TiGangRule(TypoReplacementRule):
+    """A3-049: 题纲 → 提纲."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-049",
+            wrong_pattern="题纲",
+            correct_form="提纲",
+            description="应为 '提纲'（提手旁），不写 '题纲'（页字旁）。",
+        )
+
+
+class A3_050_BiJingRule(TypoReplacementRule):
+    """A3-050: 必竟 → 毕竟."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-050",
+            wrong_pattern="必竟",
+            correct_form="毕竟",
+            description="应为 '毕竟'，不写 '必竟'。",
+        )
+
+
+class A3_051_JiBianRule(TypoReplacementRule):
+    """A3-051: 既便 → 即便."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-051",
+            wrong_pattern="既便",
+            correct_form="即便",
+            description="表示「假设、就算」时应为 '即便'，不写 '既便'。",
+        )
+
+
+class A3_052_ZuoLuoRule(TypoReplacementRule):
+    """A3-052: 座落 → 坐落."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-052",
+            wrong_pattern="座落",
+            correct_form="坐落",
+            description="表示「位于」时应为 '坐落'，不写 '座落'。",
+        )
+
+
+class A3_053_RuBuFuChuRule(TypoReplacementRule):
+    """A3-053: 入不付出 → 入不敷出."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-053",
+            wrong_pattern="入不付出",
+            correct_form="入不敷出",
+            description="成语应为 '入不敷出'，不写 '入不付出'。",
+        )
+
+
+class A3_054_BuJiQiShuRule(TypoReplacementRule):
+    """A3-054: 不记其数 → 不计其数."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-054",
+            wrong_pattern="不记其数",
+            correct_form="不计其数",
+            description="成语应为 '不计其数'，不写 '不记其数'。",
+        )
+
+
+class A3_055_QingZhuNanShuRule(TypoReplacementRule):
+    """A3-055: 磬竹难书 → 罄竹难书."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-055",
+            wrong_pattern="磬竹难书",
+            correct_form="罄竹难书",
+            description="成语应为 '罄竹难书'，不写 '磬竹难书'。",
+        )
+
+
+class A3_056_ZhenBianRule(TypoReplacementRule):
+    """A3-056: 针贬 → 针砭."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-056",
+            wrong_pattern="针贬",
+            correct_form="针砭",
+            description="应为 '针砭'（石字旁），不写 '针贬'（贝字旁）。",
+        )
+
+
+class A3_057_ZhenHanRule(TypoReplacementRule):
+    """A3-057: 震憾 → 震撼."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-057",
+            wrong_pattern="震憾",
+            correct_form="震撼",
+            description="应为 '震撼'（提手旁），不写 '震憾'（心字旁）。",
+        )
+
+
+class A3_058_FanZaoRule(TypoReplacementRule):
+    """A3-058: 烦燥 → 烦躁."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-058",
+            wrong_pattern="烦燥",
+            correct_form="烦躁",
+            description="表示「烦闷不安」时应为 '烦躁'（足字旁），不写 '烦燥'（火字旁）。",
+        )
+
+
+class A3_059_FengMiRule(TypoReplacementRule):
+    """A3-059: 风糜 → 风靡."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-059",
+            wrong_pattern="风糜",
+            correct_form="风靡",
+            description="表示「广泛流行」时应为 '风靡'（非字旁），不写 '风糜'（米字旁）。",
+        )
+
+
+class A3_060_FengYongErZhiRule(TypoReplacementRule):
+    """A3-060: 蜂涌而至 → 蜂拥而至."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-060",
+            wrong_pattern="蜂涌而至",
+            correct_form="蜂拥而至",
+            description="成语应为 '蜂拥而至'，不写 '蜂涌而至'。",
+        )
+
+
+class A3_061_GanBaiXiaFengRule(TypoReplacementRule):
+    """A3-061: 甘败下风 → 甘拜下风."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-061",
+            wrong_pattern="甘败下风",
+            correct_form="甘拜下风",
+            description="成语应为 '甘拜下风'（拜服），不写 '甘败下风'。",
+        )
+
+
+class A3_062_YiGuZuoQiRule(TypoReplacementRule):
+    """A3-062: 一股作气 → 一鼓作气."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-062",
+            wrong_pattern="一股作气",
+            correct_form="一鼓作气",
+            description="成语应为 '一鼓作气'，不写 '一股作气'。",
+        )
+
+
+class A3_063_GuiJiDuoDuanRule(TypoReplacementRule):
+    """A3-063: 鬼计多端 → 诡计多端."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-063",
+            wrong_pattern="鬼计多端",
+            correct_form="诡计多端",
+            description="成语应为 '诡计多端'（言字旁），不写 '鬼计多端'。",
+        )
+
+
+class A3_064_HongTangDaXiaoRule(TypoReplacementRule):
+    """A3-064: 轰堂大笑 → 哄堂大笑."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-064",
+            wrong_pattern="轰堂大笑",
+            correct_form="哄堂大笑",
+            description="成语应为 '哄堂大笑'（口字旁），不写 '轰堂大笑'（车字旁）。",
+        )
+
+
+class A3_065_HouMenSiHaiRule(TypoReplacementRule):
+    """A3-065: 候门似海 → 侯门似海."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-065",
+            wrong_pattern="候门似海",
+            correct_form="侯门似海",
+            description="成语应为 '侯门似海'（单人旁），不写 '候门似海'（双人旁）。",
+        )
+
+
+class A3_066_JiWangBuJiuRule(TypoReplacementRule):
+    """A3-066: 既往不究 → 既往不咎."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-066",
+            wrong_pattern="既往不究",
+            correct_form="既往不咎",
+            description="成语应为 '既往不咎'，不写 '既往不究'。",
+        )
+
+
+class A3_067_JiaoRouZaoZuoRule(TypoReplacementRule):
+    """A3-067: 娇揉造作 → 矫揉造作."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-067",
+            wrong_pattern="娇揉造作",
+            correct_form="矫揉造作",
+            description="成语应为 '矫揉造作'（矢字旁），不写 '娇揉造作'（女字旁）。",
+        )
+
+
+class A3_068_TingErZouXianRule(TypoReplacementRule):
+    """A3-068: 挺而走险 → 铤而走险."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-068",
+            wrong_pattern="挺而走险",
+            correct_form="铤而走险",
+            description="成语应为 '铤而走险'（金字旁），不写 '挺而走险'（提手旁）。",
+        )
+
+
+class A3_069_MiLiRule(TypoReplacementRule):
+    """A3-069: 糜烂 → 靡烂 (in context of 奢靡)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-069",
+            wrong_pattern="奢糜",
+            correct_form="奢靡",
+            description="应为 '奢靡'（非字旁），不写 '奢糜'（米字旁）。",
+        )
+
+
+class A3_070_YuanXingBiLuRule(TypoReplacementRule):
+    """A3-070: 原型毕露 → 原形毕露."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-070",
+            wrong_pattern="原型毕露",
+            correct_form="原形毕露",
+            description="成语应为 '原形毕露'，不写 '原型毕露'。",
+        )
+
+
+class A3_071_ZuoKeRule(TypoReplacementRule):
+    """A3-071: 做客 → 作客."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-071",
+            wrong_pattern="做客",
+            correct_form="作客",
+            description="表示「当客人」时应为 '作客'，不写 '做客'。",
+        )
+
+
+class A3_072_ChuanDaiRule(TypoReplacementRule):
+    """A3-072: 穿带 → 穿戴."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-072",
+            wrong_pattern="穿带",
+            correct_form="穿戴",
+            description="应为 '穿戴'，不写 '穿带'。",
+        )
+
+
+class A3_073_DanWuRule(TypoReplacementRule):
+    """A3-073: 耽误 → 担误."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-073",
+            wrong_pattern="担误",
+            correct_form="耽误",
+            description="应为 '耽误'（耳字旁），不写 '担误'（提手旁）。",
+        )
+
+
 # ============================================================================
 # A4类 - 非正式用语规则
 # ============================================================================
@@ -3534,7 +3882,7 @@ class ImageLicenseRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.0.0"  # Phase 2 Complete: 119条规则 (A1+20, A2+10, A3+30, B+15, C+7)
+    VERSION = "1.1.0"  # Batch 1: 148条规则 (A1:23, A2:10, A3:70, A4:1, B:25, C:15, F:4)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -3604,7 +3952,7 @@ class DeterministicRuleEngine:
             A2_008_XiuLianRule(),  # A2-008: 修练 → 修炼
             A2_009_JiaoDaiRule(),  # A2-009: 交待 → 交代
             A2_010_FenLiangRule(),  # A2-010: 份量 → 分量
-            # A3 子类 - 常见错字（40条）
+            # A3 子类 - 常见错字（70条）
             CommonTypoRule(),  # A3-004
             ZaiJieZaiLiTypoRule(),  # A3-005: 再接再厉
             AnBuJiuBanTypoRule(),  # A3-006: 按部就班
@@ -3647,6 +3995,35 @@ class DeterministicRuleEngine:
             A3_042_ChengFenRule(),  # A3-042: 成分
             A3_043_JianChaRule(),  # A3-043: 检查
             A3_044_WanQuanRule(),  # A3-044: 完全
+            A3_045_WeiMiaoWeiXiaoRule(),  # A3-045: 惟妙惟肖
+            A3_046_CuZhiLanZaoRule(),  # A3-046: 粗制滥造
+            A3_047_SongChiRule(),  # A3-047: 松弛
+            A3_048_QiKaiRule(),  # A3-048: 气概
+            A3_049_TiGangRule(),  # A3-049: 提纲
+            A3_050_BiJingRule(),  # A3-050: 毕竟
+            A3_051_JiBianRule(),  # A3-051: 即便
+            A3_052_ZuoLuoRule(),  # A3-052: 坐落
+            A3_053_RuBuFuChuRule(),  # A3-053: 入不敷出
+            A3_054_BuJiQiShuRule(),  # A3-054: 不计其数
+            A3_055_QingZhuNanShuRule(),  # A3-055: 罄竹难书
+            A3_056_ZhenBianRule(),  # A3-056: 针砭
+            A3_057_ZhenHanRule(),  # A3-057: 震撼
+            A3_058_FanZaoRule(),  # A3-058: 烦躁
+            A3_059_FengMiRule(),  # A3-059: 风靡
+            A3_060_FengYongErZhiRule(),  # A3-060: 蜂拥而至
+            A3_061_GanBaiXiaFengRule(),  # A3-061: 甘拜下风
+            A3_062_YiGuZuoQiRule(),  # A3-062: 一鼓作气
+            A3_063_GuiJiDuoDuanRule(),  # A3-063: 诡计多端
+            A3_064_HongTangDaXiaoRule(),  # A3-064: 哄堂大笑
+            A3_065_HouMenSiHaiRule(),  # A3-065: 侯门似海
+            A3_066_JiWangBuJiuRule(),  # A3-066: 既往不咎
+            A3_067_JiaoRouZaoZuoRule(),  # A3-067: 矫揉造作
+            A3_068_TingErZouXianRule(),  # A3-068: 铤而走险
+            A3_069_MiLiRule(),  # A3-069: 奢靡
+            A3_070_YuanXingBiLuRule(),  # A3-070: 原形毕露
+            A3_071_ZuoKeRule(),  # A3-071: 作客
+            A3_072_ChuanDaiRule(),  # A3-072: 穿戴
+            A3_073_DanWuRule(),  # A3-073: 耽误
             # A4 子类 - 非正式用语（1条）
             InformalLanguageRule(),  # A4-014
             # C类 - 数字与计量（15条）
