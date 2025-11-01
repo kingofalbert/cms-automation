@@ -710,6 +710,333 @@ class UnifiedTermOccupyRule(DeterministicRule):
         return issues
 
 
+# ============================================================================
+# A1类 - 统一用字规则（通用基类）
+# ============================================================================
+
+
+class UnifiedTermRule(DeterministicRule):
+    """Generic unified term rule for A1 category."""
+
+    def __init__(
+        self,
+        rule_id: str,
+        wrong_pattern: str,
+        correct_form: str,
+        description: str,
+        exclusion_pattern: str | None = None,
+    ) -> None:
+        super().__init__(
+            rule_id=rule_id,
+            category="A",
+            subcategory="A1",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+        self.wrong_pattern = re.compile(wrong_pattern)
+        self.correct_form = correct_form
+        self.description = description
+        self.exclusion_pattern = (
+            re.compile(exclusion_pattern) if exclusion_pattern else None
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.wrong_pattern.finditer(content):
+            # Check exclusion pattern if exists
+            if self.exclusion_pattern:
+                context_start = max(0, match.start() - 2)
+                context_end = min(len(content), match.end() + 2)
+                context = content[context_start:context_end]
+                if self.exclusion_pattern.search(context):
+                    continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"统一用字：{self.description}",
+                    suggestion=f"将 '{match.group()}' 替换为 '{self.correct_form}'。",
+                    severity=self.severity,
+                    confidence=1.0,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by=self.__class__.__name__,
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+# A1 Class Rules (Unified Terms) - 20 new rules
+class A1_002_LiInsideRule(UnifiedTermRule):
+    """裡/裏 统一为 里（表示inside）."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-002",
+            wrong_pattern=r"[裡裏]",
+            correct_form="里",
+            description="'裡/裏' 应统一为 '里'（表示「里面」时）。",
+            exclusion_pattern=r"公[裡裏]|千[裡裏]|英[裡裏]",  # Exclude distance usage
+        )
+
+
+class A1_003_MeQuestionRule(UnifiedTermRule):
+    """麽/么 统一为 么."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-003",
+            wrong_pattern=r"麽",
+            correct_form="么",
+            description="'麽' 应统一为 '么'（什么、怎么等）。",
+        )
+
+
+class A1_004_EmployRule(UnifiedTermRule):
+    """僱 统一为 雇."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-004",
+            wrong_pattern=r"僱",
+            correct_form="雇",
+            description="'僱' 应统一为 '雇'（雇佣、雇员等）。",
+        )
+
+
+class A1_005_AndAlsoRule(UnifiedTermRule):
+    """並 统一为 并."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-005",
+            wrong_pattern=r"並",
+            correct_form="并",
+            description="'並' 应统一为 '并'（并且、并列等）。",
+        )
+
+
+class A1_006_ReturnRule(UnifiedTermRule):
+    """迴 统一为 回."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-006",
+            wrong_pattern=r"迴",
+            correct_form="回",
+            description="'迴' 应统一为 '回'（回转、回避等）。",
+        )
+
+
+class A1_007_SecretRule(UnifiedTermRule):
+    """祕 统一为 秘."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-007",
+            wrong_pattern=r"祕",
+            correct_form="秘",
+            description="'祕' 应统一为 '秘'（秘密、秘书等）。",
+        )
+
+
+class A1_008_LineRule(UnifiedTermRule):
+    """綫 统一为 线."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-008",
+            wrong_pattern=r"綫",
+            correct_form="线",
+            description="'綫' 应统一为 '线'（线路、电线等）。",
+        )
+
+
+class A1_009_OnlyRule(UnifiedTermRule):
+    """衹 统一为 只."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-009",
+            wrong_pattern=r"衹",
+            correct_form="只",
+            description="'衹' 应统一为 '只'（只是、只有等）。",
+        )
+
+
+class A1_011_ExhaustRule(UnifiedTermRule):
+    """儘 统一为 尽."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-011",
+            wrong_pattern=r"儘",
+            correct_form="尽",
+            description="'儘' 应统一为 '尽'（尽管、尽力等）。",
+        )
+
+
+class A1_012_PrepareRule(UnifiedTermRule):
+    """準 统一为 准."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-012",
+            wrong_pattern=r"準",
+            correct_form="准",
+            description="'準' 应统一为 '准'（准备、标准等）。",
+        )
+
+
+class A1_013_CrowdRule(UnifiedTermRule):
+    """衆 统一为 众."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-013",
+            wrong_pattern=r"衆",
+            correct_form="众",
+            description="'衆' 应统一为 '众'（众人、群众等）。",
+        )
+
+
+class A1_014_GroupRule(UnifiedTermRule):
+    """羣 统一为 群."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-014",
+            wrong_pattern=r"羣",
+            correct_form="群",
+            description="'羣' 应统一为 '群'（群体、群众等）。",
+        )
+
+
+class A1_015_ForAsRule(UnifiedTermRule):
+    """爲 统一为 为."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-015",
+            wrong_pattern=r"爲",
+            correct_form="为",
+            description="'爲' 应统一为 '为'（因为、作为等）。",
+        )
+
+
+class A1_016_AtInRule(UnifiedTermRule):
+    """於 统一为 于."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-016",
+            wrong_pattern=r"於",
+            correct_form="于",
+            description="'於' 应统一为 '于'（在于、对于等）。",
+        )
+
+
+class A1_017_CleanRule(UnifiedTermRule):
+    """淨 统一为 净."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-017",
+            wrong_pattern=r"淨",
+            correct_form="净",
+            description="'淨' 应统一为 '净'（干净、净化等）。",
+        )
+
+
+class A1_018_JustNowRule(UnifiedTermRule):
+    """纔 统一为 才."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-018",
+            wrong_pattern=r"纔",
+            correct_form="才",
+            description="'纔' 应统一为 '才'（刚才、才能等）。",
+        )
+
+
+class A1_019_ThroughRule(UnifiedTermRule):
+    """籍 统一为 藉 (表示through)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-019",
+            wrong_pattern=r"籍(?=由|着|此|以)",  # Only when followed by 由/着/此/以
+            correct_form="藉",
+            description="'籍' 应统一为 '藉'（藉由、凭藉等，表示「通过」时）。",
+        )
+
+
+class A1_020_TwoRule(UnifiedTermRule):
+    """兩 统一为 两."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-020",
+            wrong_pattern=r"兩",
+            correct_form="两",
+            description="'兩' 应统一为 '两'（两个、两者等）。",
+        )
+
+
+class A1_021_CheckRule(UnifiedTermRule):
+    """檢 统一为 检."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-021",
+            wrong_pattern=r"檢",
+            correct_form="检",
+            description="'檢' 应统一为 '检'（检查、检验等）。",
+        )
+
+
+class A1_022_BodyRule(UnifiedTermRule):
+    """體 统一为 体."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-022",
+            wrong_pattern=r"體",
+            correct_form="体",
+            description="'體' 应统一为 '体'（身体、体验等）。",
+        )
+
+
+class A1_023_LikeRule(UnifiedTermRule):
+    """彷 统一为 仿 (表示resemble)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-023",
+            wrong_pattern=r"彷(?=彿|佛|如|若)",  # Only when followed by 彿/佛/如/若
+            correct_form="仿",
+            description="'彷' 应统一为 '仿'（仿佛、仿如等，表示「像」时）。",
+        )
+
+
+# ============================================================================
+# A3类 - 常见错字规则
+# ============================================================================
+
+
 class CommonTypoRule(DeterministicRule):
     """Detect common typos like 莫明其妙 (A3-004)."""
 
@@ -928,6 +1255,372 @@ class PoFuChenZhouTypoRule(TypoReplacementRule):
             correct_form="破釜沉舟",
             description="应为 '破釜沉舟'，不写 '破斧沉舟'",
         )
+
+
+# A3 Class - Additional Common Typos (30 new rules: A3-015 to A3-044)
+class A3_015_XiaoShengNiJiRule(TypoReplacementRule):
+    """A3-015: 消声匿迹 → 销声匿迹."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-015",
+            wrong_pattern=r"消声匿迹",
+            correct_form="销声匿迹",
+            description="应为 '销声匿迹'，不写 '消声匿迹'",
+        )
+
+
+class A3_016_MoShouChengGuiRule(TypoReplacementRule):
+    """A3-016: 默守成规 → 墨守成规."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-016",
+            wrong_pattern=r"默守成规",
+            correct_form="墨守成规",
+            description="应为 '墨守成规'，不写 '默守成规'",
+        )
+
+
+class A3_017_SuiShengFuHeRule(TypoReplacementRule):
+    """A3-017: 随声附合 → 随声附和."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-017",
+            wrong_pattern=r"随声附合",
+            correct_form="随声附和",
+            description="应为 '随声附和'，不写 '随声附合'",
+        )
+
+
+class A3_018_MingFuQiShiRule(TypoReplacementRule):
+    """A3-018: 名符其实 → 名副其实."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-018",
+            wrong_pattern=r"名符其实",
+            correct_form="名副其实",
+            description="应为 '名副其实'，不写 '名符其实'",
+        )
+
+
+class A3_019_BianBenJiaLiRule(TypoReplacementRule):
+    """A3-019: 变本加励 → 变本加厉."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-019",
+            wrong_pattern=r"变本加励",
+            correct_form="变本加厉",
+            description="应为 '变本加厉'，不写 '变本加励'",
+        )
+
+
+class A3_020_YiChouMoZhanRule(TypoReplacementRule):
+    """A3-020: 一愁莫展 → 一筹莫展."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-020",
+            wrong_pattern=r"一愁莫展",
+            correct_form="一筹莫展",
+            description="应为 '一筹莫展'，不写 '一愁莫展'",
+        )
+
+
+class A3_021_XingLuoQiBuRule(TypoReplacementRule):
+    """A3-021: 星罗棋部 → 星罗棋布."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-021",
+            wrong_pattern=r"星罗棋部",
+            correct_form="星罗棋布",
+            description="应为 '星罗棋布'，不写 '星罗棋部'",
+        )
+
+
+class A3_022_JingBingJianZhengRule(TypoReplacementRule):
+    """A3-022: 精兵简正 → 精兵简政."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-022",
+            wrong_pattern=r"精兵简正",
+            correct_form="精兵简政",
+            description="应为 '精兵简政'，不写 '精兵简正'",
+        )
+
+
+class A3_023_ZouTouWuLuRule(TypoReplacementRule):
+    """A3-023: 走头无路 → 走投无路."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-023",
+            wrong_pattern=r"走头无路",
+            correct_form="走投无路",
+            description="应为 '走投无路'，不写 '走头无路'",
+        )
+
+
+class A3_024_GuiFuShenGongRule(TypoReplacementRule):
+    """A3-024: 鬼符神工 → 鬼斧神工."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-024",
+            wrong_pattern=r"鬼符神工",
+            correct_form="鬼斧神工",
+            description="应为 '鬼斧神工'，不写 '鬼符神工'",
+        )
+
+
+class A3_025_ZhongShengXiangRiRule(TypoReplacementRule):
+    """A3-025: 重生向日 → 重升向日 (errors may vary, using common variant)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-025",
+            wrong_pattern=r"蒸蒸日尚",
+            correct_form="蒸蒸日上",
+            description="应为 '蒸蒸日上'，不写 '蒸蒸日尚'",
+        )
+
+
+class A3_026_HanNiuChongDongRule(TypoReplacementRule):
+    """A3-026: 汗流夹背 → 汗流浃背."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-026",
+            wrong_pattern=r"汗流夹背",
+            correct_form="汗流浃背",
+            description="应为 '汗流浃背'，不写 '汗流夹背'",
+        )
+
+
+class A3_027_XinXinXiangRongRule(TypoReplacementRule):
+    """A3-027: 欣欣向荣 typo variants."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-027",
+            wrong_pattern=r"欣欣相荣",
+            correct_form="欣欣向荣",
+            description="应为 '欣欣向荣'，不写 '欣欣相荣'",
+        )
+
+
+class A3_028_BuYiErTongRule(TypoReplacementRule):
+    """A3-028: 不一而同 → 不一而足."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-028",
+            wrong_pattern=r"不一而同",
+            correct_form="不一而足",
+            description="应为 '不一而足'，不写 '不一而同'",
+        )
+
+
+class A3_029_YuYueYuShiRule(TypoReplacementRule):
+    """A3-029: 于事无补 vs 与事无补."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-029",
+            wrong_pattern=r"与事无补",
+            correct_form="于事无补",
+            description="应为 '于事无补'，不写 '与事无补'",
+        )
+
+
+class A3_030_CangHaiYiSuRule(TypoReplacementRule):
+    """A3-030: 沧海一粟 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-030",
+            wrong_pattern=r"沧海一栗",
+            correct_form="沧海一粟",
+            description="应为 '沧海一粟'，不写 '沧海一栗'",
+        )
+
+
+class A3_031_ManBuJingXinRule(TypoReplacementRule):
+    """A3-031: 漫不经心 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-031",
+            wrong_pattern=r"慢不经心",
+            correct_form="漫不经心",
+            description="应为 '漫不经心'，不写 '慢不经心'",
+        )
+
+
+class A3_032_BuQiErYuRule(TypoReplacementRule):
+    """A3-032: 不期而遇 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-032",
+            wrong_pattern=r"不其而遇",
+            correct_form="不期而遇",
+            description="应为 '不期而遇'，不写 '不其而遇'",
+        )
+
+
+class A3_033_DiaoChaPinZhongRule(TypoReplacementRule):
+    """A3-033: 调查 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-033",
+            wrong_pattern=r"凋查",
+            correct_form="调查",
+            description="应为 '调查'，不写 '凋查'",
+        )
+
+
+class A3_034_JiaoTaShiDiRule(TypoReplacementRule):
+    """A3-034: 脚踏实地 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-034",
+            wrong_pattern=r"脚踏实[低底]",
+            correct_form="脚踏实地",
+            description="应为 '脚踏实地'，不写 '脚踏实底/低'",
+        )
+
+
+class A3_035_QingErYiJuRule(TypoReplacementRule):
+    """A3-035: 倾耳易举 → 轻而易举."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-035",
+            wrong_pattern=r"[倾清]而易举",
+            correct_form="轻而易举",
+            description="应为 '轻而易举'，不写 '倾而易举/清而易举'",
+        )
+
+
+class A3_036_JiuJiuGuiZhengRule(TypoReplacementRule):
+    """A3-036: 纠正 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-036",
+            wrong_pattern=r"究正",
+            correct_form="纠正",
+            description="应为 '纠正'，不写 '究正'",
+        )
+
+
+class A3_037_BiMianRule(TypoReplacementRule):
+    """A3-037: 避免 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-037",
+            wrong_pattern=r"[壁避辟]免",
+            correct_form="避免",
+            description="应为 '避免'，不写 '壁免/辟免'",
+        )
+
+
+class A3_038_BaoZhaRule(TypoReplacementRule):
+    """A3-038: 爆炸 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-038",
+            wrong_pattern=r"暴炸",
+            correct_form="爆炸",
+            description="应为 '爆炸'，不写 '暴炸'",
+        )
+
+
+class A3_039_ShiGanRule(TypoReplacementRule):
+    """A3-039: 试管 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-039",
+            wrong_pattern=r"试管婴[孩儿]",
+            correct_form="试管婴儿",
+            description="应为 '试管婴儿'，不写 '试管婴孩'",
+        )
+
+
+class A3_040_FenQiRule(TypoReplacementRule):
+    """A3-040: 愤起 → 奋起."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-040",
+            wrong_pattern=r"愤起",
+            correct_form="奋起",
+            description="应为 '奋起'，不写 '愤起'（在「奋起反抗」等语境）",
+        )
+
+
+class A3_041_JianDingRule(TypoReplacementRule):
+    """A3-041: 坚定 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-041",
+            wrong_pattern=r"艰定",
+            correct_form="坚定",
+            description="应为 '坚定'，不写 '艰定'",
+        )
+
+
+class A3_042_ChengFenRule(TypoReplacementRule):
+    """A3-042: 成分 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-042",
+            wrong_pattern=r"成份(?!股|有限)",
+            correct_form="成分",
+            description="应为 '成分'，不写 '成份'（除「份」用于股份等）",
+        )
+
+
+class A3_043_JianChaRule(TypoReplacementRule):
+    """A3-043: 检察 vs 检查."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-043",
+            wrong_pattern=r"检察(?!院|官|署|机关|长|系统)",
+            correct_form="检查",
+            description="一般应为 '检查'，'检察' 仅用于法律机关（检察院等）",
+        )
+
+
+class A3_044_WanQuanRule(TypoReplacementRule):
+    """A3-044: 完全 typo."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A3-044",
+            wrong_pattern=r"完[圈全](?![部满整])(?=不|没)",
+            correct_form="完全",
+            description="应为 '完全'，不写 '完圈'（在「完全不/没」等语境）",
+        )
+
+
+# ============================================================================
+# A4类 - 非正式用语规则
+# ============================================================================
 
 
 class InformalLanguageRule(DeterministicRule):
@@ -1399,6 +2092,378 @@ class SquareMeterSymbolRule(DeterministicRule):
         return issues
 
 
+# C Class - Additional Number & Unit Rules (7 new rules: C1-007 to C2-006)
+class C1_007_TimeFormatRule(DeterministicRule):
+    """Check time format consistency (C1-007)."""
+
+    # 匹配不规范的时间格式
+    IMPROPER_TIME = re.compile(r"(\d{1,2})\s*[:：]\s*(\d{2})\s*分?钟?")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-007",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.IMPROPER_TIME.finditer(content):
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="时间格式：建议使用标准格式如 '14:30' 或 '下午2点30分'。",
+                    suggestion=f"统一时间表示格式。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C1_007_TimeFormatRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class C1_008_ScientificNotationRule(DeterministicRule):
+    """Check scientific notation format (C1-008)."""
+
+    # 匹配科学计数法相关
+    LARGE_NUMBER = re.compile(r"(\d{1,3})(,?\d{3}){3,}")  # 大数字建议用科学计数法
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-008",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.LARGE_NUMBER.finditer(content):
+            # 只对非常大的数字（10位以上）提示
+            num_str = match.group().replace(',', '')
+            if len(num_str) >= 10:
+                snippet_start = max(0, match.start() - 10)
+                snippet_end = min(len(content), match.end() + 10)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message="数字格式：超大数字建议使用科学计数法或「亿、万」等单位。",
+                        suggestion=f"考虑将 '{match.group()}' 转换为科学计数法。",
+                        severity=self.severity,
+                        confidence=0.5,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="C1_008_ScientificNotationRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+class C1_009_OrdinalNumberRule(DeterministicRule):
+    """Check ordinal number format (C1-009)."""
+
+    # 匹配序数格式
+    ORDINAL_PATTERN = re.compile(r"第\s*[0-9]+\s*[个|位|名|次|届|期|章|条|项]")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-009",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.ORDINAL_PATTERN.finditer(content):
+            if ' ' in match.group():  # 只对有空格的情况提示
+                snippet_start = max(0, match.start() - 10)
+                snippet_end = min(len(content), match.end() + 10)
+                snippet = content[snippet_start:snippet_end]
+
+                corrected = match.group().replace(' ', '')
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message="序数格式：「第」与数字、量词之间不应有空格。",
+                        suggestion=f"将 '{match.group()}' 改为 '{corrected}'。",
+                        severity=self.severity,
+                        confidence=0.9,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="C1_009_OrdinalNumberRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+class C2_003_TemperatureUnitRule(DeterministicRule):
+    """Check temperature unit format (C2-003)."""
+
+    # 匹配温度表示
+    TEMP_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:度|摄氏度|华氏度)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C2-003",
+            category="C",
+            subcategory="C2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.TEMP_PATTERN.finditer(content):
+            original = match.group()
+            if "华氏度" in original:
+                # 华氏度不建议修改
+                continue
+            if "摄氏度" in original:
+                # 建议使用°C
+                number = re.search(r"(\d+(?:\.\d+)?)", original).group()
+                corrected = f"{number}°C"
+                snippet_start = max(0, match.start() - 10)
+                snippet_end = min(len(content), match.end() + 10)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message="计量单位：建议使用符号 '°C' 表示摄氏度。",
+                        suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                        severity=self.severity,
+                        confidence=0.7,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="C2_003_TemperatureUnitRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+class C2_004_WeightUnitRule(DeterministicRule):
+    """Check weight unit format (C2-004)."""
+
+    # 匹配重量单位
+    WEIGHT_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:公斤|千克|克|毫克|吨)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C2-004",
+            category="C",
+            subcategory="C2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.WEIGHT_PATTERN.finditer(content):
+            original = match.group()
+            number = re.search(r"(\d+(?:\.\d+)?)", original).group()
+
+            # 建议使用标准单位符号
+            if "公斤" in original or "千克" in original:
+                corrected = f"{number} kg"
+            elif "吨" in original:
+                corrected = f"{number} t"
+            elif "毫克" in original:
+                corrected = f"{number} mg"
+            elif "克" in original:
+                corrected = f"{number} g"
+            else:
+                continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="计量单位：建议使用国际标准单位符号（kg、g、mg、t）。",
+                    suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C2_004_WeightUnitRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class C2_005_VolumeUnitRule(DeterministicRule):
+    """Check volume unit format (C2-005)."""
+
+    # 匹配体积单位
+    VOLUME_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:立方米|立方厘米|升|毫升)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C2-005",
+            category="C",
+            subcategory="C2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.VOLUME_PATTERN.finditer(content):
+            original = match.group()
+            number = re.search(r"(\d+(?:\.\d+)?)", original).group()
+
+            # 建议使用标准单位符号
+            if "立方米" in original:
+                corrected = f"{number} m³"
+            elif "立方厘米" in original:
+                corrected = f"{number} cm³"
+            elif "毫升" in original:
+                corrected = f"{number} ml"
+            elif "升" in original:
+                corrected = f"{number} L"
+            else:
+                continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="计量单位：建议使用国际标准单位符号（m³、cm³、L、ml）。",
+                    suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C2_005_VolumeUnitRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class C2_006_AreaUnitRule(DeterministicRule):
+    """Check area unit format (C2-006)."""
+
+    # 匹配面积单位（除了已有的平方米）
+    AREA_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:平方公里|平方厘米|公顷)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C2-006",
+            category="C",
+            subcategory="C2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.AREA_PATTERN.finditer(content):
+            original = match.group()
+            number = re.search(r"(\d+(?:\.\d+)?)", original).group()
+
+            # 建议使用标准单位符号
+            if "平方公里" in original:
+                corrected = f"{number} km²"
+            elif "平方厘米" in original:
+                corrected = f"{number} cm²"
+            elif "公顷" in original:
+                corrected = f"{number} ha"
+            else:
+                continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="计量单位：建议使用国际标准单位符号（km²、cm²、ha）。",
+                    suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C2_006_AreaUnitRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
 # ============================================================================
 # F类规则 - 发布合规（补充规则）
 # ============================================================================
@@ -1511,7 +2576,7 @@ class ImageLicenseRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "0.5.0"  # Phase 1 MVP+：35条规则 (新增21条规则)
+    VERSION = "0.8.0"  # Phase 2 Partial: 94条规则 (A1+20, A3+30, C+7)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -1526,9 +2591,32 @@ class DeterministicRuleEngine:
             QuotationNestingRule(),  # B3-002
             BookTitleMatchingRule(),  # B3-003: 书名号配对
             HalfWidthDashRule(),  # B7-004
-            # A类 - 用字规范（13条）
+            # A类 - 用字规范（63条）
+            # A1 子类 - 统一用字（22条）
             UnifiedTermMeterRule(),  # A1-001
-            UnifiedTermOccupyRule(),  # A1-010
+            A1_002_LiInsideRule(),  # A1-002: 裡/裏 → 里
+            A1_003_MeQuestionRule(),  # A1-003: 麽 → 么
+            A1_004_EmployRule(),  # A1-004: 僱 → 雇
+            A1_005_AndAlsoRule(),  # A1-005: 並 → 并
+            A1_006_ReturnRule(),  # A1-006: 迴 → 回
+            A1_007_SecretRule(),  # A1-007: 祕 → 秘
+            A1_008_LineRule(),  # A1-008: 綫 → 线
+            A1_009_OnlyRule(),  # A1-009: 衹 → 只
+            UnifiedTermOccupyRule(),  # A1-010: 佔 → 占
+            A1_011_ExhaustRule(),  # A1-011: 儘 → 尽
+            A1_012_PrepareRule(),  # A1-012: 準 → 准
+            A1_013_CrowdRule(),  # A1-013: 衆 → 众
+            A1_014_GroupRule(),  # A1-014: 羣 → 群
+            A1_015_ForAsRule(),  # A1-015: 爲 → 为
+            A1_016_AtInRule(),  # A1-016: 於 → 于
+            A1_017_CleanRule(),  # A1-017: 淨 → 净
+            A1_018_JustNowRule(),  # A1-018: 纔 → 才
+            A1_019_ThroughRule(),  # A1-019: 籍 → 藉
+            A1_020_TwoRule(),  # A1-020: 兩 → 两
+            A1_021_CheckRule(),  # A1-021: 檢 → 检
+            A1_022_BodyRule(),  # A1-022: 體 → 体
+            A1_023_LikeRule(),  # A1-023: 彷 → 仿
+            # A3 子类 - 常见错字（40条）
             CommonTypoRule(),  # A3-004
             ZaiJieZaiLiTypoRule(),  # A3-005: 再接再厉
             AnBuJiuBanTypoRule(),  # A3-006: 按部就班
@@ -1540,16 +2628,57 @@ class DeterministicRuleEngine:
             KuaiZhiRenKouTypoRule(),  # A3-012: 脍炙人口
             AnRanShiSeTypoRule(),  # A3-013: 黯然失色
             PoFuChenZhouTypoRule(),  # A3-014: 破釜沉舟
+            # A3-015 to A3-044 (30 additional typos)
+            A3_015_XiaoShengNiJiRule(),  # A3-015: 销声匿迹
+            A3_016_MoShouChengGuiRule(),  # A3-016: 墨守成规
+            A3_017_SuiShengFuHeRule(),  # A3-017: 随声附和
+            A3_018_MingFuQiShiRule(),  # A3-018: 名副其实
+            A3_019_BianBenJiaLiRule(),  # A3-019: 变本加厉
+            A3_020_YiChouMoZhanRule(),  # A3-020: 一筹莫展
+            A3_021_XingLuoQiBuRule(),  # A3-021: 星罗棋布
+            A3_022_JingBingJianZhengRule(),  # A3-022: 精兵简政
+            A3_023_ZouTouWuLuRule(),  # A3-023: 走投无路
+            A3_024_GuiFuShenGongRule(),  # A3-024: 鬼斧神工
+            A3_025_ZhongShengXiangRiRule(),  # A3-025: 蒸蒸日上
+            A3_026_HanNiuChongDongRule(),  # A3-026: 汗流浃背
+            A3_027_XinXinXiangRongRule(),  # A3-027: 欣欣向荣
+            A3_028_BuYiErTongRule(),  # A3-028: 不一而足
+            A3_029_YuYueYuShiRule(),  # A3-029: 于事无补
+            A3_030_CangHaiYiSuRule(),  # A3-030: 沧海一粟
+            A3_031_ManBuJingXinRule(),  # A3-031: 漫不经心
+            A3_032_BuQiErYuRule(),  # A3-032: 不期而遇
+            A3_033_DiaoChaPinZhongRule(),  # A3-033: 调查
+            A3_034_JiaoTaShiDiRule(),  # A3-034: 脚踏实地
+            A3_035_QingErYiJuRule(),  # A3-035: 轻而易举
+            A3_036_JiuJiuGuiZhengRule(),  # A3-036: 纠正
+            A3_037_BiMianRule(),  # A3-037: 避免
+            A3_038_BaoZhaRule(),  # A3-038: 爆炸
+            A3_039_ShiGanRule(),  # A3-039: 试管婴儿
+            A3_040_FenQiRule(),  # A3-040: 奋起
+            A3_041_JianDingRule(),  # A3-041: 坚定
+            A3_042_ChengFenRule(),  # A3-042: 成分
+            A3_043_JianChaRule(),  # A3-043: 检查
+            A3_044_WanQuanRule(),  # A3-044: 完全
+            # A4 子类 - 非正式用语（1条）
             InformalLanguageRule(),  # A4-014
-            # C类 - 数字与计量（8条）
+            # C类 - 数字与计量（15条）
+            # C1 子类 - 数字格式（9条）
             FullWidthDigitRule(),  # C1-006
             NumberSeparatorRule(),  # C1-001
             PercentageFormatRule(),  # C1-002: 百分比格式
             DecimalPointRule(),  # C1-003: 小数点格式
             DateFormatRule(),  # C1-004: 日期格式
             CurrencyFormatRule(),  # C1-005: 货币格式
+            C1_007_TimeFormatRule(),  # C1-007: 时间格式
+            C1_008_ScientificNotationRule(),  # C1-008: 科学计数法
+            C1_009_OrdinalNumberRule(),  # C1-009: 序数格式
+            # C2 子类 - 单位格式（6条）
             KilometerUnificationRule(),  # C2-001: 公里/千米统一
             SquareMeterSymbolRule(),  # C2-002: 平方米符号
+            C2_003_TemperatureUnitRule(),  # C2-003: 温度单位
+            C2_004_WeightUnitRule(),  # C2-004: 重量单位
+            C2_005_VolumeUnitRule(),  # C2-005: 体积单位
+            C2_006_AreaUnitRule(),  # C2-006: 面积单位
             # F类 - 发布合规（4条）
             InvalidHeadingLevelRule(),  # F2-001
             FeaturedImageLandscapeRule(),  # F1-002
