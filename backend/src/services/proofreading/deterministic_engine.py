@@ -2314,6 +2314,246 @@ class A2_010_FenLiangRule(VariantWordRule):
         )
 
 
+class A2_011_ZuoBiaoRule(VariantWordRule):
+    """座标 → 坐标 (A2-011)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-011",
+            wrong_form="座标",
+            correct_form="坐标",
+            description="数学或地理术语应使用「坐标」，而非「座标」。",
+        )
+
+
+class A2_012_FuGaiRule(VariantWordRule):
+    """复盖 → 覆盖 (A2-012)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-012",
+            wrong_form="复盖",
+            correct_form="覆盖",
+            description="表示「遮盖、覆盖面」时应使用「覆盖」，而非「复盖」。",
+        )
+
+
+class A2_013_FanFuRule(VariantWordRule):
+    """反覆 → 反复 (A2-013)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-013",
+            wrong_form="反覆",
+            correct_form="反复",
+            description="现代标准用法应使用「反复」，而非「反覆」。",
+        )
+
+
+class A2_014_JueZeRule(VariantWordRule):
+    """决择 → 抉择 (A2-014)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-014",
+            wrong_form="决择",
+            correct_form="抉择",
+            description="表示「选择、挑选」时应使用「抉择」，而非「决择」。",
+        )
+
+
+class A2_015_CangSangRule(VariantWordRule):
+    """苍桑 → 沧桑 (A2-015)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-015",
+            wrong_form="苍桑",
+            correct_form="沧桑",
+            description="成语「沧海桑田」，应使用「沧桑」，而非「苍桑」。",
+        )
+
+
+class A2_016_BanJiaoShiRule(VariantWordRule):
+    """拌脚石 → 绊脚石 (A2-016)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-016",
+            wrong_form="拌脚石",
+            correct_form="绊脚石",
+            description="表示「障碍物」时应使用「绊脚石」，而非「拌脚石」。",
+        )
+
+
+class A2_017_BaoGuangRule(VariantWordRule):
+    """暴光 → 曝光 (A2-017)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-017",
+            wrong_form="暴光",
+            correct_form="曝光",
+            description="表示「揭露、公开」或「摄影曝光」时应使用「曝光」，而非「暴光」。",
+        )
+
+
+class A2_018_MengBiRule(VariantWordRule):
+    """蒙敝 → 蒙蔽 (A2-018)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-018",
+            wrong_form="蒙敝",
+            correct_form="蒙蔽",
+            description="表示「欺骗、隐瞒」时应使用「蒙蔽」，而非「蒙敝」。",
+        )
+
+
+class A2_019_JiShenRule(VariantWordRule):
+    """挤身 → 跻身 (A2-019)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-019",
+            wrong_form="挤身",
+            correct_form="跻身",
+            description="表示「进入某一行列」时应使用「跻身」，而非「挤身」。",
+        )
+
+
+class A2_020_TaoYuanRule(VariantWordRule):
+    """世外桃园 → 世外桃源 (A2-020)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-020",
+            wrong_form="世外桃园",
+            correct_form="世外桃源",
+            description="成语应为「世外桃源」，而非「世外桃园」。",
+        )
+
+
+class A2_021_YiShenZuoZeRule(VariantWordRule):
+    """以身作责 → 以身作则 (A2-021)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-021",
+            wrong_form="以身作责",
+            correct_form="以身作则",
+            description="成语应为「以身作则」，而非「以身作责」。",
+        )
+
+
+class A2_022_AnZhuangRule(VariantWordRule):
+    """按装 → 安装 (A2-022)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-022",
+            wrong_form="按装",
+            correct_form="安装",
+            description="表示「安装设备、软件」时应使用「安装」，而非「按装」。",
+        )
+
+
+class A2_023_BanPeiRule(VariantWordRule):
+    """班配 → 般配 (A2-023)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-023",
+            wrong_form="班配",
+            correct_form="般配",
+            description="表示「相称、匹配」时应使用「般配」，而非「班配」。",
+        )
+
+
+class A2_024_SuXingRule(VariantWordRule):
+    """甦醒 → 苏醒 (A2-024)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-024",
+            wrong_form="甦醒",
+            correct_form="苏醒",
+            description="现代标准用法应使用「苏醒」，而非「甦醒」。",
+        )
+
+
+class A2_025_MoFangRule(VariantWordRule):
+    """摹仿 → 模仿 (A2-025)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-025",
+            wrong_form="摹仿",
+            correct_form="模仿",
+            description="现代标准用法应使用「模仿」，而非「摹仿」。",
+        )
+
+
+class A2_026_TiXingRule(VariantWordRule):
+    """体形 → 体型 (A2-026)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-026",
+            wrong_form="体形",
+            correct_form="体型",
+            description="表示「身体形态」时应使用「体型」，而非「体形」。",
+        )
+
+
+class A2_027_QiGaiRule(VariantWordRule):
+    """气慨 → 气概 (A2-027)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-027",
+            wrong_form="气慨",
+            correct_form="气概",
+            description="表示「气魄、风度」时应使用「气概」，而非「气慨」。",
+        )
+
+
+class A2_028_LiaoWangRule(VariantWordRule):
+    """了望 → 瞭望 (A2-028)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-028",
+            wrong_form="了望",
+            correct_form="瞭望",
+            description="表示「从高处远看」时应使用「瞭望」，而非「了望」。",
+        )
+
+
+class A2_029_TiGangRule(VariantWordRule):
+    """题纲 → 提纲 (A2-029)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-029",
+            wrong_form="题纲",
+            correct_form="提纲",
+            description="表示「大纲、要点」时应使用「提纲」，而非「题纲」。",
+        )
+
+
+class A2_030_SongChiRule(VariantWordRule):
+    """松驰 → 松弛 (A2-030)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-030",
+            wrong_form="松驰",
+            correct_form="松弛",
+            description="表示「不紧张、放松」时应使用「松弛」，而非「松驰」。",
+        )
+
+
 # ============================================================================
 # A3类 - 常见错字规则
 # ============================================================================
@@ -4699,7 +4939,7 @@ class ImageLicenseRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.3.0"  # Batch 3: 184条规则 (A1:50, A2:10, A3:70, A4:1, B:25, C:24, F:4)
+    VERSION = "1.4.0"  # Batch 4: 204条规则 (A1:50, A2:30, A3:70, A4:1, B:25, C:24, F:4)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -4733,7 +4973,7 @@ class DeterministicRuleEngine:
             B7_001_DashFormatRule(),  # B7-001: 破折号格式
             B7_002_HyphenFormatRule(),  # B7-002: 连接号格式
             HalfWidthDashRule(),  # B7-004: 半角短横线
-            # A类 - 用字规范（100条）
+            # A类 - 用字规范（120条）
             # A1 子类 - 统一用字（50条）
             UnifiedTermMeterRule(),  # A1-001
             A1_002_LiInsideRule(),  # A1-002: 裡/裏 → 里
@@ -4785,7 +5025,7 @@ class DeterministicRuleEngine:
             A1_048_WeiRule(),  # A1-048: 衛 → 卫
             A1_049_XianRule(),  # A1-049: 綫/線 → 线
             A1_050_XiangRule(),  # A1-050: 響 → 响
-            # A2 子类 - 异形词规范（10条）
+            # A2 子类 - 异形词规范（30条）
             A2_001_GouTongRule(),  # A2-001: 勾通 → 沟通
             A2_002_ZhangHuRule(),  # A2-002: 帐户 → 账户
             A2_003_BuFenRule(),  # A2-003: 部份 → 部分
@@ -4796,6 +5036,26 @@ class DeterministicRuleEngine:
             A2_008_XiuLianRule(),  # A2-008: 修练 → 修炼
             A2_009_JiaoDaiRule(),  # A2-009: 交待 → 交代
             A2_010_FenLiangRule(),  # A2-010: 份量 → 分量
+            A2_011_ZuoBiaoRule(),  # A2-011: 座标 → 坐标
+            A2_012_FuGaiRule(),  # A2-012: 复盖 → 覆盖
+            A2_013_FanFuRule(),  # A2-013: 反覆 → 反复
+            A2_014_JueZeRule(),  # A2-014: 决择 → 抉择
+            A2_015_CangSangRule(),  # A2-015: 苍桑 → 沧桑
+            A2_016_BanJiaoShiRule(),  # A2-016: 拌脚石 → 绊脚石
+            A2_017_BaoGuangRule(),  # A2-017: 暴光 → 曝光
+            A2_018_MengBiRule(),  # A2-018: 蒙敝 → 蒙蔽
+            A2_019_JiShenRule(),  # A2-019: 挤身 → 跻身
+            A2_020_TaoYuanRule(),  # A2-020: 世外桃园 → 世外桃源
+            A2_021_YiShenZuoZeRule(),  # A2-021: 以身作责 → 以身作则
+            A2_022_AnZhuangRule(),  # A2-022: 按装 → 安装
+            A2_023_BanPeiRule(),  # A2-023: 班配 → 般配
+            A2_024_SuXingRule(),  # A2-024: 甦醒 → 苏醒
+            A2_025_MoFangRule(),  # A2-025: 摹仿 → 模仿
+            A2_026_TiXingRule(),  # A2-026: 体形 → 体型
+            A2_027_QiGaiRule(),  # A2-027: 气慨 → 气概
+            A2_028_LiaoWangRule(),  # A2-028: 了望 → 瞭望
+            A2_029_TiGangRule(),  # A2-029: 题纲 → 提纲
+            A2_030_SongChiRule(),  # A2-030: 松驰 → 松弛
             # A3 子类 - 常见错字（70条）
             CommonTypoRule(),  # A3-004
             ZaiJieZaiLiTypoRule(),  # A3-005: 再接再厉
