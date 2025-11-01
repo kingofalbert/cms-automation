@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import List
+from typing import Any, Dict, List
+
+from src.services.proofreading.rule_specs import (
+    D_TRANSLATION_SPECS,
+    E_SPECIAL_SPECS,
+)
 
 from src.services.proofreading.models import (
     ArticlePayload,
@@ -27,6 +32,125 @@ class DeterministicRule:
     def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
         """Run rule on payload returning 0..n issues."""
         raise NotImplementedError
+
+
+class DictionaryReplacementRule(DeterministicRule):
+    """Rule backed by a dictionary of non标准写法 -> 标准写法映射。"""
+
+    def __init__(
+        self,
+        *,
+        rule_id: str,
+        category: str,
+        subcategory: str,
+        patterns: List[Any],
+        correct: str | None,
+        description: str,
+        message: str | None = None,
+        suggestion: str | None = None,
+        severity: str = "warning",
+        blocks_publish: bool = False,
+        can_auto_fix: bool = True,
+        confidence: float = 0.95,
+    ) -> None:
+        super().__init__(
+            rule_id=rule_id,
+            category=category,
+            subcategory=subcategory,
+            severity=severity,
+            blocks_publish=blocks_publish,
+            can_auto_fix=can_auto_fix,
+        )
+        self._patterns: List[re.Pattern[str]] = []
+        for entry in patterns:
+            if isinstance(entry, dict):
+                value = entry["value"]
+                regex = entry.get("regex", False)
+                ignore_case = entry.get("ignore_case", False)
+            else:
+                value = entry
+                regex = False
+                ignore_case = False
+            flags = re.IGNORECASE if ignore_case else 0
+            compiled = re.compile(value if regex else re.escape(value), flags)
+            self._patterns.append(compiled)
+        self.correct_form = correct or ""
+        self.description = description
+        self.message_template = message
+        self.suggestion_template = suggestion
+        self.confidence = confidence
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for pattern in self._patterns:
+            for match in pattern.finditer(content):
+                match_text = match.group()
+                snippet_start = max(0, match.start() - 12)
+                snippet_end = min(len(content), match.end() + 12)
+                snippet = content[snippet_start:snippet_end]
+
+                if self.message_template:
+                    message = self.message_template.format(
+                        match=match_text, correct=self.correct_form
+                    )
+                else:
+                    message = f"{self.description}（检测到“{match_text}”）。"
+
+                if self.suggestion_template:
+                    suggestion = self.suggestion_template.format(
+                        match=match_text, correct=self.correct_form
+                    )
+                elif self.correct_form:
+                    suggestion = f"将“{match_text}”替换为“{self.correct_form}”。"
+                else:
+                    suggestion = "请根据规范调整该用语。"
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=message,
+                        suggestion=suggestion,
+                        severity=self.severity,
+                        confidence=self.confidence,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by=self.__class__.__name__,
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+def build_dictionary_rules(
+    specs: List[Dict[str, Any]]
+) -> List[DictionaryReplacementRule]:
+    """Instantiate dictionary-backed deterministic rules."""
+
+    rules: List[DictionaryReplacementRule] = []
+    for spec in specs:
+        rules.append(
+            DictionaryReplacementRule(
+                rule_id=spec["rule_id"],
+                category=spec["category"],
+                subcategory=spec["subcategory"],
+                patterns=spec["patterns"],
+                correct=spec.get("correct"),
+                description=spec["description"],
+                message=spec.get("message"),
+                suggestion=spec.get("suggestion"),
+                severity=spec.get("severity", "warning"),
+                blocks_publish=spec.get("blocks_publish", False),
+                can_auto_fix=spec.get("can_auto_fix", True),
+                confidence=spec.get("confidence", 0.95),
+            )
+        )
+    return rules
 
 
 class HalfWidthCommaRule(DeterministicRule):
@@ -8342,7 +8466,7 @@ class F4_010_SocialMetaTagRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.8.0"  # Batch 8: 275条规则 (A1:50, A2:30, A3:70, A4:1, B:60, C:24, F:40)
+    VERSION = "1.9.0"  # Batch 9: 355条规则 (A1:50, A2:30, A3:70, A4:1, B:60, C:24, D:40, E:40, F:40)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -8599,6 +8723,8 @@ class DeterministicRuleEngine:
             C2_007_SpeedUnitRule(),  # C2-007: 速度单位
             C2_008_PressureUnitRule(),  # C2-008: 压力单位
             C2_009_EnergyUnitRule(),  # C2-009: 能量单位
+            *build_dictionary_rules(D_TRANSLATION_SPECS),
+            *build_dictionary_rules(E_SPECIAL_SPECS),
             # F类 - 发布合规（40条）
             # F1 子类 - 图片规范（10条）
             ImageWidthRule(),  # F1-001
@@ -8652,4 +8778,3 @@ class DeterministicRuleEngine:
         for rule in self.rules:
             issues.extend(rule.evaluate(payload))
         return issues
-
