@@ -10,8 +10,8 @@
 
 This document provides a comprehensive checklist of all functional and non-functional requirements for the CMS Automation Platform. Use this checklist to verify completeness during implementation and testing.
 
-**Architecture**: Multi-provider Computer Use (Anthropic / Gemini / Playwright)
-**Core Workflow**: Import → SEO Optimize → Publish
+**Architecture**: Multi-provider Computer Use (Anthropic / Gemini / Playwright) + AI Proofreading Guard Rails
+**Core Workflow**: Import → Proofread & SEO（单一 Prompt + 脚本合并）→ Publish
 
 ---
 
@@ -61,8 +61,19 @@ This document provides a comprehensive checklist of all functional and non-funct
 
 ### 2. SEO Optimization (Requirements: FR-011 to FR-020)
 
-- [ ] **FR-011**: System analyzes articles and generates SEO metadata
-  - Uses Claude Messages API (claude-3-5-haiku-20241022)
+- [ ] **FR-011**: System运行单一 Prompt 的 ProofreadingAnalysisService，输出统一校对+SEO结果
+  - 使用 Claude Messages API (claude-3-5-sonnet-20241022)
+  - 返回结构包含：`issues[]`, `suggested_content`, `seo_metadata`, `processing_metadata`
+  - `issues[]` 遵循 schema：`rule_id`, `category`, `severity`, `confidence`, `source (ai|script|merged)`, `blocks_publish`, `suggestion`
+  - `statistics` 需包含 `total_issues`, `blocking_issue_count`, `source_breakdown`
+  - `processing_metadata` 记录 `prompt_hash`, `ai_model`, `latency_ms`, `rule_manifest_version`, `script_engine_version`
+  - AI 无法输出 JSON 时需返回错误并记录日志
+
+- [ ] **FR-011a**: DeterministicRuleEngine 补强 F 类发布合规与高置信度规则
+  - 必须覆盖：B2-002 半角逗号、F1-002 特色图横向、F2-001 标题层级
+  - 命中 F 类规则时 `blocks_publish=true` 并写入 `articles.critical_issues_count`
+  - Rule Engine 版本号记录在 `processing_metadata.script_engine_version`
+  - 支持后续扩展更多规则（配置化 / 插件化）
 
 - [ ] **FR-012**: SEO metadata includes meta title (50-60 characters)
   - Focus keyword appears near beginning

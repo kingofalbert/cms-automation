@@ -11,7 +11,7 @@ This guide helps you set up a local development environment for the **CMS automa
 
 **Core Workflow**:
 1. **Import** articles from CSV/JSON or manual entry
-2. **Optimize** SEO metadata using Claude Messages API
+2. **Proofread & Optimize** via单一 Prompt（Claude Messages API）+ Deterministic Rule Engine 合并
 3. **Publish** to WordPress using Computer Use (choose provider: Anthropic/Gemini/Playwright)
 
 **Provider Options**:
@@ -332,7 +332,7 @@ npm run dev
 
 ---
 
-## Core Workflow: Import → SEO → Publish
+## Core Workflow: Import → Proofread & SEO → Publish
 
 ### Step 1: Import Articles
 
@@ -385,30 +385,40 @@ curl -X POST http://localhost:8000/v1/articles/import/batch \
 # }
 ```
 
-### Step 2: SEO Analysis
+### Step 2: Proofreading + SEO (Single Prompt + Scripts)
 
-**2.1. Analyze Single Article**
+**2.1. Run ProofreadingAnalysisService**
 
 ```bash
-curl -X POST http://localhost:8000/v1/seo/analyze/1
+curl -X POST http://localhost:8000/v1/articles/1/proofread \
+  -H "Authorization: Bearer $TOKEN"
 
-# Response:
+# Response (truncated):
 # {
-#   "id": 1,
 #   "article_id": 1,
-#   "meta_title": "Docker Complete Guide: Install, Deploy & Master 2025",
-#   "meta_description": "Master Docker with this comprehensive guide. Learn installation, commands, best practices, and real-world examples. Start containerizing your apps today!",
-#   "focus_keyword": "Docker guide",
-#   "primary_keywords": ["Docker", "Docker installation", "container deployment"],
-#   "secondary_keywords": ["Docker commands", "Docker tutorial", "containerization"],
-#   "keyword_density": {
-#     "Docker": {"count": 15, "density": 2.1},
-#     "Docker installation": {"count": 8, "density": 1.1}
+#   "issues": [
+#     {"rule_id": "B2-002", "message": "中文段落使用半角逗号", "severity": "warning", "source": "script"},
+#     {"rule_id": "F1-002", "message": "特色图片宽高比不足", "severity": "critical", "blocks_publish": true, "source": "script"},
+#     {"rule_id": "A4-014", "message": "出现网络流行语“土豪”", "severity": "warning", "source": "ai", "confidence": 0.68}
+#   ],
+#   "statistics": {
+#     "total_issues": 5,
+#     "blocking_issue_count": 1,
+#     "source_breakdown": {"script": 2, "ai": 2, "merged": 1}
 #   },
-#   "readability_score": 65.3,
-#   "generated_by": "claude-3-5-haiku",
-#   "generation_cost": 0.0245,
-#   "created_at": "2025-10-26T14:32:00Z"
+#   "suggested_content": "<h2>Docker 简介...</h2>",
+#   "seo_metadata": {
+#     "meta_title": "Docker 完整指南：安装、部署与最佳实践 2025",
+#     "meta_description": "掌握最新 Docker 技巧，从安装、命令到生产部署完整解析。立即开始容器化应用！",
+#     "focus_keyword": "Docker 指南",
+#     "keywords": ["Docker 教學", "Docker 指令", "容器部署"]
+#   },
+#   "processing_metadata": {
+#     "ai_model": "claude-3-5-sonnet-20241022",
+#     "prompt_hash": "c13c8e5...",
+#     "rule_manifest_version": "2025.02.05",
+#     "script_engine_version": "0.1.0"
+#   }
 # }
 ```
 

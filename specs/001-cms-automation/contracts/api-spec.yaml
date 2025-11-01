@@ -20,7 +20,14 @@ info:
     - Added SEO analysis and optimization endpoints
     - Added Computer Use publishing endpoints
     - Extended Article model with `source` and `seo_optimized` fields
-  version: 2.0.0
+    **Version 2.1 Changes**:
+    - Added unified proofreading endpoint with deterministic rule merge
+    - Added ProofreadingIssue/ProofreadingResponse schemas and Article detail fields
+    **Version 2.2 Changes**:
+    - Added publishing task progress tracking and retry APIs
+    - Added monitoring/analytics endpoints for task insights
+    - Added settings management and Google Drive worklist synchronization
+  version: 2.2.0
   contact:
     name: CMS Automation Team
   license:
@@ -45,8 +52,18 @@ tags:
     description: External article import (CSV, JSON, manual)
   - name: SEO
     description: SEO analysis and metadata optimization
+  - name: Proofreading
+    description: Unified AI proofreading with deterministic guard rails
   - name: Publishing
     description: Computer Use automated publishing to WordPress
+  - name: Monitoring
+    description: Publishing task monitoring and logs
+  - name: Analytics
+    description: Provider performance and cost analytics
+  - name: Settings
+    description: Application configuration management
+  - name: Worklist
+    description: Google Drive worklist synchronization and triage
   - name: Tags
     description: Tag and categorization management
   - name: Schedules
@@ -163,6 +180,37 @@ paths:
                 $ref: '#/components/schemas/TopicRequestDetail'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /articles/{articleId}/proofread:
+    post:
+      tags: [Proofreading, SEO]
+      summary: Run unified proofreading analysis
+      description: |
+        Executes ProofreadingAnalysisService for the specified article. The service issues a single
+        Claude Messages API call, merges the AI findings with deterministic F-class rule checks,
+        and returns a normalized payload containing issues, suggested content, SEO metadata, and
+        processing statistics.
+      operationId: proofreadArticle
+      parameters:
+        - $ref: '#/components/parameters/ArticleIdParam'
+      responses:
+        '200':
+          description: Proofreading analysis completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProofreadingResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          description: Proofreading service failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
 
     delete:
       tags: [Topics]
@@ -648,12 +696,13 @@ paths:
   # COMPUTER USE PUBLISHING (NEW - Fusion Architecture)
   # ============================================================================
 
-  /publish/submit:
+  /publish/submit/{articleId}:
     post:
       tags: [Publishing]
       summary: Submit article for publishing
       description: |
-        Submit article for automated publishing to WordPress using Claude Computer Use API.
+        Submit article for automated publishing using the configured provider
+        (Playwright, Computer Use, or Hybrid orchestrator).
 
         **Prerequisites**:
         - Article must have SEO metadata (seo_optimized = TRUE)
@@ -669,24 +718,20 @@ paths:
         7. Publish article
         8. Verify article is live
 
-        **Screenshots Captured**:
-        - login_success.png
-        - editor_loaded.png
-        - content_filled.png
-        - image_uploaded.png (if applicable)
-        - seo_fields_filled.png
-        - taxonomy_set.png
-        - publish_clicked.png
-        - article_live.png
-
-        **Success Criteria**: Complete workflow in < 5 minutes, 95%+ success rate
       operationId: submitPublishTask
+      parameters:
+        - name: articleId
+          in: path
+          required: true
+          description: Article ID to publish
+          schema:
+            type: integer
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PublishTaskCreate'
+              $ref: '#/components/schemas/PublishRequest'
       responses:
         '202':
           description: Publishing task accepted
@@ -705,26 +750,26 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /publish/tasks/{taskId}:
+  /publish/tasks/{taskId}/status:
     get:
       tags: [Publishing]
       summary: Get publishing task status
       description: |
-        Retrieve detailed status of publishing task including:
-        - Current status (pending, in_progress, completed, failed)
+        Retrieve detailed status of a publishing task including:
+        - Current status (pending, initializing, publishing, completed, failed)
         - Progress through workflow steps
         - Screenshot URLs
         - Execution logs
         - Published article URL (if completed)
         - Error details (if failed)
-      operationId: getPublishTask
+      operationId: getPublishTaskStatus
       parameters:
         - name: taskId
           in: path
           required: true
           description: Publishing task ID
           schema:
-            type: integer
+            type: string
       responses:
         '200':
           description: Publishing task details
@@ -732,31 +777,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublishTask'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-  /publish/tasks/{taskId}/screenshots:
-    get:
-      tags: [Publishing]
-      summary: Get task screenshots
-      description: |
-        Retrieve all screenshots captured during publishing workflow.
-        Returns array of screenshot metadata with pre-signed URLs for download.
-      operationId: getPublishTaskScreenshots
-      parameters:
-        - name: taskId
-          in: path
-          required: true
-          description: Publishing task ID
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Screenshots retrieved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ScreenshotsResponse'
         '404':
           $ref: '#/components/responses/NotFound'
 
@@ -798,14 +818,43 @@ paths:
       description: Retrieve paginated list of publishing tasks with filtering
       operationId: listPublishTasks
       parameters:
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/PageSizeParam'
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          description: Number of records to skip for pagination
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
         - name: status
           in: query
           description: Filter by task status
           schema:
             type: string
-            enum: [pending, in_progress, completed, failed]
+            enum:
+              - idle
+              - pending
+              - initializing
+              - logging_in
+              - creating_post
+              - uploading_images
+              - configuring_seo
+              - publishing
+              - completed
+              - failed
+        - name: provider
+          in: query
+          description: Filter by publishing provider
+          schema:
+            type: string
+            enum: [playwright, computer_use, hybrid]
         - name: article_id
           in: query
           description: Filter by article ID
@@ -818,6 +867,392 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PublishTaskList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # TASK MONITORING
+  # ============================================================================
+
+  /monitoring/tasks:
+    get:
+      tags: [Monitoring]
+      summary: List publishing tasks with monitoring filters
+      description: Retrieve publishing tasks with provider/status filters for dashboards
+      operationId: monitoringListTasks
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            nullable: true
+          description: Optional status filter (completed, failed, in_progress, etc.)
+        - name: provider
+          in: query
+          schema:
+            type: string
+            nullable: true
+            enum: [playwright, computer_use, hybrid]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Monitoring tasks retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublishTaskList'
+
+  /monitoring/statistics:
+    get:
+      tags: [Monitoring]
+      summary: Get publishing task statistics
+      description: Return aggregate counts for completed, failed, and in-progress tasks
+      operationId: monitoringStats
+      parameters:
+        - name: provider
+          in: query
+          schema:
+            type: string
+            nullable: true
+            enum: [playwright, computer_use, hybrid]
+          description: Optional provider filter
+      responses:
+        '200':
+          description: Monitoring statistics summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskStatistics'
+
+  /monitoring/tasks/{taskId}/logs:
+    get:
+      tags: [Monitoring]
+      summary: Get execution logs for a publishing task
+      description: Retrieve chronological execution logs with action metadata
+      operationId: monitoringTaskLogs
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Publishing task identifier (database ID or Celery task ID)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Execution logs retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionLogList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ============================================================================
+  # ANALYTICS
+  # ============================================================================
+
+  /analytics/provider-comparison:
+    get:
+      tags: [Analytics]
+      summary: Compare provider performance
+      description: Return aggregate metrics per provider for the selected time range
+      operationId: analyticsProviderComparison
+      parameters:
+        - name: time_range
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+          description: Time window for aggregation
+      responses:
+        '200':
+          description: Provider comparison metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderMetric'
+
+  /analytics/cost-usage:
+    get:
+      tags: [Analytics]
+      summary: Get publishing cost usage by day
+      description: Aggregate daily cost usage data for the selected time range
+      operationId: analyticsCostUsage
+      parameters:
+        - name: time_range
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+      responses:
+        '200':
+          description: Daily cost usage data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CostUsageEntry'
+
+  /analytics/storage-usage:
+    get:
+      tags: [Analytics]
+      summary: Get storage consumption metrics
+      description: Summarize Google Drive storage usage by file type
+      operationId: analyticsStorageUsage
+      responses:
+        '200':
+          description: Storage usage details
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StorageUsageEntry'
+
+  /analytics/recommendations:
+    get:
+      tags: [Analytics]
+      summary: Get provider optimization recommendations
+      description: Generate heuristic recommendations based on provider performance
+      operationId: analyticsRecommendations
+      parameters:
+        - name: time_range
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+            default: 30d
+      responses:
+        '200':
+          description: Analytics recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationsResponse'
+
+  # ============================================================================
+  # SETTINGS MANAGEMENT
+  # ============================================================================
+
+  /settings:
+    get:
+      tags: [Settings]
+      summary: Get application settings
+      description: Retrieve current application configuration (singleton record)
+      operationId: getSettings
+      responses:
+        '200':
+          description: Settings payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+
+    put:
+      tags: [Settings]
+      summary: Update application settings
+      description: Apply partial updates to provider, CMS, and cost configurations
+      operationId: updateSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsUpdateRequest'
+      responses:
+        '200':
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsResponse'
+
+  /settings/test-connection:
+    post:
+      tags: [Settings]
+      summary: Test CMS connection
+      description: Validate credentials for the configured CMS provider
+      operationId: testConnection
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionTestRequest'
+      responses:
+        '200':
+          description: Connection test result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionTestResponse'
+
+  # ============================================================================
+  # WORKLIST (GOOGLE DRIVE)
+  # ============================================================================
+
+  /worklist:
+    get:
+      tags: [Worklist]
+      summary: List worklist items
+      description: Retrieve paginated worklist documents with optional status filter
+      operationId: listWorklistItems
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            nullable: true
+            enum:
+              - to_evaluate
+              - to_confirm
+              - to_review
+              - to_revise
+              - to_rereview
+              - ready_to_publish
+              - published
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Worklist items retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorklistItemList'
+
+  /worklist/statistics:
+    get:
+      tags: [Worklist]
+      summary: Get worklist statistics
+      description: Return counts per worklist status
+      operationId: getWorklistStatistics
+      responses:
+        '200':
+          description: Worklist statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorklistStatisticsResponse'
+
+  /worklist/sync-status:
+    get:
+      tags: [Worklist]
+      summary: Get worklist sync status
+      description: Provides metadata about the latest Google Drive sync
+      operationId: getWorklistSyncStatus
+      responses:
+        '200':
+          description: Sync status payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorklistSyncStatusResponse'
+
+  /worklist/sync:
+    post:
+      tags: [Worklist]
+      summary: Trigger Google Drive sync
+      description: Initiate synchronization with Google Drive worklist folder
+      operationId: triggerWorklistSync
+      responses:
+        '200':
+          description: Sync initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorklistSyncTriggerResponse'
+
+  /worklist/{itemId}/status:
+    post:
+      tags: [Worklist]
+      summary: Update worklist item status
+      description: Change worklist status and optionally append reviewer note
+      operationId: updateWorklistStatus
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorklistStatusUpdateRequest'
+      responses:
+        '200':
+          description: Updated worklist item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorklistItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /worklist/{itemId}/publish:
+    post:
+      tags: [Worklist]
+      summary: Initiate publishing from worklist
+      description: Shortcut to mark worklist item ready for publishing workflow
+      operationId: publishWorklistItem
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Worklist item updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorklistItemResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   # ============================================================================
   # TAGS
@@ -1143,6 +1578,8 @@ components:
     # ========================================================================
     # TOPIC REQUESTS (AI Generation)
     # ========================================================================
+    # PROOFREADING (AI + Deterministic Guard Rails)
+    # ========================================================================
 
     TopicRequestCreate:
       type: object
@@ -1313,6 +1750,14 @@ components:
             version:
               type: integer
               description: Article version number
+            proofreading_issues:
+              type: array
+              description: Proofreading issues returned by AI + deterministic checks
+              items:
+                $ref: '#/components/schemas/ProofreadingIssue'
+            critical_issues_count:
+              type: integer
+              description: Number of blocking issues detected during latest proofreading
             modification_history:
               type: array
               items:
@@ -1564,6 +2009,9 @@ components:
           type: integer
         article_id:
           type: integer
+        article_title:
+          type: string
+          description: Associated article title
         seo_title:
           type: string
           minLength: 50
@@ -1663,44 +2111,165 @@ components:
           maxItems: 10
 
     # ========================================================================
-    # COMPUTER USE PUBLISHING (NEW - Fusion Architecture)
+    # PROOFREADING (AI + DETERMINISTIC)
     # ========================================================================
 
-    PublishTaskCreate:
+    ProofreadingIssue:
       type: object
-      required:
-        - article_id
+      required: [rule_id, category, message, severity, confidence, can_auto_fix, blocks_publish, source]
+      properties:
+        rule_id:
+          type: string
+          description: Rule identifier (e.g. A1-001)
+        category:
+          type: string
+          description: Rule category (A-F)
+        subcategory:
+          type: string
+          nullable: true
+          description: Subcategory (e.g. A1, F2)
+        message:
+          type: string
+          description: Human readable explanation of the issue
+        suggestion:
+          type: string
+          nullable: true
+          description: Optional fix recommendation
+        severity:
+          type: string
+          enum: [info, warning, error, critical]
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        can_auto_fix:
+          type: boolean
+        blocks_publish:
+          type: boolean
+        source:
+          type: string
+          enum: [ai, script, merged]
+          description: Origin of the issue
+        attributed_by:
+          type: string
+          nullable: true
+          description: Component identifiers that produced the issue
+        location:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Pointer to affected content (paragraph index, offsets, etc.)
+        evidence:
+          type: string
+          nullable: true
+          description: Supporting excerpt or metadata
+
+    ProofreadingStatistics:
+      type: object
+      properties:
+        total_issues:
+          type: integer
+        ai_issue_count:
+          type: integer
+        script_issue_count:
+          type: integer
+        blocking_issue_count:
+          type: integer
+        categories:
+          type: object
+          additionalProperties:
+            type: integer
+        source_breakdown:
+          type: object
+          additionalProperties:
+            type: integer
+
+    ProcessingMetadata:
+      type: object
+      properties:
+        ai_model:
+          type: string
+          nullable: true
+        ai_latency_ms:
+          type: integer
+          nullable: true
+        prompt_tokens:
+          type: integer
+          nullable: true
+        completion_tokens:
+          type: integer
+          nullable: true
+        total_tokens:
+          type: integer
+          nullable: true
+        prompt_hash:
+          type: string
+          nullable: true
+        rule_manifest_version:
+          type: string
+          nullable: true
+        script_engine_version:
+          type: string
+          nullable: true
+        notes:
+          type: object
+          additionalProperties: true
+          description: Miscellaneous debugging or analytics metadata
+
+    ProofreadingResponse:
+      type: object
       properties:
         article_id:
           type: integer
-        cms_type:
+          nullable: true
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProofreadingIssue'
+        statistics:
+          $ref: '#/components/schemas/ProofreadingStatistics'
+        suggested_content:
           type: string
-          enum: [wordpress]
-          default: wordpress
-          description: CMS platform (currently only WordPress supported)
-        max_retries:
-          type: integer
-          minimum: 0
-          maximum: 5
-          default: 3
-          description: Maximum retry attempts on failure
+          nullable: true
+        seo_metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+        processing_metadata:
+          $ref: '#/components/schemas/ProcessingMetadata'
+
+    # ========================================================================
+    # COMPUTER USE PUBLISHING (NEW - Fusion Architecture)
+    # ========================================================================
+
+    PublishRequest:
+      type: object
+      required:
+        - provider
+        - options
+      properties:
+        provider:
+          type: string
+          enum: [playwright, computer_use, hybrid]
+          description: Publishing provider to use
+        options:
+          type: object
+          additionalProperties: true
+          description: Provider options (SEO, scheduling, categories)
 
     PublishTaskResponse:
       type: object
       properties:
         task_id:
-          type: integer
-        article_id:
-          type: integer
+          type: string
+          description: Celery task ID
         status:
           type: string
-          enum: [pending, in_progress, completed, failed]
-        estimated_completion:
-          type: string
-          format: date-time
+          description: Initial task status
         message:
           type: string
-          example: "Publishing task queued successfully"
+          example: "Publishing task submitted successfully."
 
     PublishTask:
       type: object
@@ -1709,13 +2278,35 @@ components:
           type: integer
         article_id:
           type: integer
-        cms_type:
+        article_title:
           type: string
-          enum: [wordpress]
+          description: Associated article title
+        provider:
+          type: string
+          enum: [playwright, computer_use, hybrid]
         status:
           type: string
-          enum: [pending, in_progress, completed, failed]
-          description: Task status
+          enum:
+            - idle
+            - pending
+            - initializing
+            - logging_in
+            - creating_post
+            - uploading_images
+            - configuring_seo
+            - publishing
+            - completed
+            - failed
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        current_step:
+          type: string
+        total_steps:
+          type: integer
+        completed_steps:
+          type: integer
         published_url:
           type: string
           format: uri
@@ -1758,11 +2349,14 @@ components:
           type: string
           format: date-time
           nullable: true
-        duration_seconds:
+        duration:
+          type: integer
+          nullable: true
+          description: Total execution time
+        cost:
           type: number
           format: float
           nullable: true
-          description: Total execution time
 
     PublishTaskList:
       type: object
@@ -1773,12 +2367,324 @@ components:
             $ref: '#/components/schemas/PublishTask'
         total:
           type: integer
-        page:
+        limit:
           type: integer
-        page_size:
+        offset:
           type: integer
-        total_pages:
+
+    TaskStatistics:
+      type: object
+      properties:
+        total:
           type: integer
+        completed:
+          type: integer
+        failed:
+          type: integer
+        in_progress:
+          type: integer
+
+    ExecutionLogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        task_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        log_level:
+          type: string
+        step_name:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        action_type:
+          type: string
+          nullable: true
+        action_target:
+          type: string
+          nullable: true
+        action_result:
+          type: string
+          nullable: true
+        screenshot_url:
+          type: string
+          format: uri
+          nullable: true
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    ExecutionLogList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionLogEntry'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    ProviderMetric:
+      type: object
+      properties:
+        provider:
+          type: string
+          enum: [playwright, computer_use, hybrid]
+        total_tasks:
+          type: integer
+        completed_tasks:
+          type: integer
+        failed_tasks:
+          type: integer
+        in_progress_tasks:
+          type: integer
+        success_rate:
+          type: number
+          format: float
+        avg_duration_seconds:
+          type: number
+          format: float
+          nullable: true
+        avg_cost_usd:
+          type: number
+          format: float
+          nullable: true
+        total_cost_usd:
+          type: number
+          format: float
+
+    CostUsageEntry:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          nullable: true
+        total_cost_usd:
+          type: number
+          format: float
+        avg_cost_usd:
+          type: number
+          format: float
+
+    StorageUsageEntry:
+      type: object
+      properties:
+        file_type:
+          type: string
+        file_count:
+          type: integer
+        total_bytes:
+          type: integer
+        total_megabytes:
+          type: number
+          format: float
+
+    RecommendationsResponse:
+      type: object
+      properties:
+        summary:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderMetric'
+
+    SettingsResponse:
+      type: object
+      properties:
+        provider_config:
+          type: object
+          additionalProperties: true
+        cms_config:
+          type: object
+          additionalProperties: true
+        cost_limits:
+          type: object
+          additionalProperties: true
+        screenshot_retention:
+          type: object
+          additionalProperties: true
+        updated_at:
+          type: string
+          format: date-time
+
+    SettingsUpdateRequest:
+      type: object
+      properties:
+        provider_config:
+          type: object
+          additionalProperties: true
+        cms_config:
+          type: object
+          additionalProperties: true
+        cost_limits:
+          type: object
+          additionalProperties: true
+        screenshot_retention:
+          type: object
+          additionalProperties: true
+
+    ConnectionTestRequest:
+      type: object
+      properties:
+        cms_type:
+          type: string
+          nullable: true
+        base_url:
+          type: string
+          format: uri
+          nullable: true
+        username:
+          type: string
+          nullable: true
+        application_password:
+          type: string
+          nullable: true
+        api_token:
+          type: string
+          nullable: true
+
+    ConnectionTestResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    WorklistItemResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        drive_file_id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+            - to_evaluate
+            - to_confirm
+            - to_review
+            - to_revise
+            - to_rereview
+            - ready_to_publish
+            - published
+        author:
+          type: string
+          nullable: true
+        article_id:
+          type: integer
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+        notes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        synced_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    WorklistItemList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorklistItemResponse'
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    WorklistStatisticsResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        breakdown:
+          type: object
+          additionalProperties:
+            type: integer
+
+    WorklistSyncStatusResponse:
+      type: object
+      properties:
+        last_synced_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_items:
+          type: integer
+
+    WorklistSyncTriggerResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        queued_at:
+          type: string
+          format: date-time
+        summary:
+          type: object
+          nullable: true
+          additionalProperties: true
+        error:
+          type: string
+          nullable: true
+
+    WorklistStatusUpdateRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - to_evaluate
+            - to_confirm
+            - to_review
+            - to_revise
+            - to_rereview
+            - ready_to_publish
+            - published
+        note:
+          type: object
+          nullable: true
+          additionalProperties: true
 
     ScreenshotsResponse:
       type: object
