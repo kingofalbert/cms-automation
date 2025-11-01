@@ -1779,6 +1779,330 @@ class A1_023_LikeRule(UnifiedTermRule):
         )
 
 
+class A1_024_QuanRule(UnifiedTermRule):
+    """勸 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-024",
+            wrong_pattern=r"勸",
+            correct_form="劝",
+            description="'勸' 应统一为 '劝'（劝说、劝告等）。",
+        )
+
+
+class A1_025_RangRule(UnifiedTermRule):
+    """讓 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-025",
+            wrong_pattern=r"讓",
+            correct_form="让",
+            description="'讓' 应统一为 '让'（让步、让位等）。",
+        )
+
+
+class A1_026_ReRule(UnifiedTermRule):
+    """熱 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-026",
+            wrong_pattern=r"熱",
+            correct_form="热",
+            description="'熱' 应统一为 '热'（热情、热爱等）。",
+        )
+
+
+class A1_027_RenRule(UnifiedTermRule):
+    """認 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-027",
+            wrong_pattern=r"認",
+            correct_form="认",
+            description="'認' 应统一为 '认'（认识、认可等）。",
+        )
+
+
+class A1_028_RongRule(UnifiedTermRule):
+    """榮 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-028",
+            wrong_pattern=r"榮",
+            correct_form="荣",
+            description="'榮' 应统一为 '荣'（光荣、荣誉等）。",
+        )
+
+
+class A1_029_SaiRule(UnifiedTermRule):
+    """賽 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-029",
+            wrong_pattern=r"賽",
+            correct_form="赛",
+            description="'賽' 应统一为 '赛'（比赛、赛跑等）。",
+        )
+
+
+class A1_030_ShanRule(UnifiedTermRule):
+    """閃 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-030",
+            wrong_pattern=r"閃",
+            correct_form="闪",
+            description="'閃' 应统一为 '闪'（闪光、闪电等）。",
+        )
+
+
+class A1_031_ShengRule(UnifiedTermRule):
+    """聲 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-031",
+            wrong_pattern=r"聲",
+            correct_form="声",
+            description="'聲' 应统一为 '声'（声音、声明等）。",
+        )
+
+
+class A1_032_ShiRule(UnifiedTermRule):
+    """適 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-032",
+            wrong_pattern=r"適",
+            correct_form="适",
+            description="'適' 应统一为 '适'（适合、适应等）。",
+        )
+
+
+class A1_033_ShouRule(UnifiedTermRule):
+    """壽 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-033",
+            wrong_pattern=r"壽",
+            correct_form="寿",
+            description="'壽' 应统一为 '寿'（长寿、寿命等）。",
+        )
+
+
+class A1_034_ShuRule(UnifiedTermRule):
+    """術 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-034",
+            wrong_pattern=r"術",
+            correct_form="术",
+            description="'術' 应统一为 '术'（技术、艺术等）。",
+        )
+
+
+class A1_035_ShuaiRule(UnifiedTermRule):
+    """帥 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-035",
+            wrong_pattern=r"帥",
+            correct_form="帅",
+            description="'帥' 应统一为 '帅'（帅气、元帅等）。",
+        )
+
+
+class A1_036_ShunRule(UnifiedTermRule):
+    """順 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-036",
+            wrong_pattern=r"順",
+            correct_form="顺",
+            description="'順' 应统一为 '顺'（顺利、顺序等）。",
+        )
+
+
+class A1_037_ShuoRule(UnifiedTermRule):
+    """説/說 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-037",
+            wrong_pattern=r"[説說]",
+            correct_form="说",
+            description="'説' 或 '說' 应统一为 '说'（说话、说明等）。",
+        )
+
+
+class A1_038_SiRule(UnifiedTermRule):
+    """絲 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-038",
+            wrong_pattern=r"絲",
+            correct_form="丝",
+            description="'絲' 应统一为 '丝'（丝绸、丝毫等）。",
+        )
+
+
+class A1_039_SongRule(UnifiedTermRule):
+    """鬆 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-039",
+            wrong_pattern=r"鬆",
+            correct_form="松",
+            description="'鬆' 应统一为 '松'（轻松、松弛等，表示「不紧」时）。",
+        )
+
+
+class A1_040_TaiRule(UnifiedTermRule):
+    """臺/檯/枱 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-040",
+            wrong_pattern=r"[臺檯枱]",
+            correct_form="台",
+            description="'臺'、'檯' 或 '枱' 应统一为 '台'（台湾、舞台、台面等）。",
+        )
+
+
+class A1_041_TanRule(UnifiedTermRule):
+    """談 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-041",
+            wrong_pattern=r"談",
+            correct_form="谈",
+            description="'談' 应统一为 '谈'（谈话、谈论等）。",
+        )
+
+
+class A1_042_TaoRule(UnifiedTermRule):
+    """討 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-042",
+            wrong_pattern=r"討",
+            correct_form="讨",
+            description="'討' 应统一为 '讨'（讨论、讨厌等）。",
+        )
+
+
+class A1_043_TiRule(UnifiedTermRule):
+    """題 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-043",
+            wrong_pattern=r"題",
+            correct_form="题",
+            description="'題' 应统一为 '题'（问题、题目等）。",
+        )
+
+
+class A1_044_TingRule(UnifiedTermRule):
+    """聽 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-044",
+            wrong_pattern=r"聽",
+            correct_form="听",
+            description="'聽' 应统一为 '听'（听说、听见等）。",
+        )
+
+
+class A1_045_TongRule(UnifiedTermRule):
+    """衕 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-045",
+            wrong_pattern=r"衕",
+            correct_form="同",
+            description="'衕' 应统一为 '同'（胡同等，表示「一起」或「相同」时）。",
+        )
+
+
+class A1_046_TuanRule(UnifiedTermRule):
+    """團 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-046",
+            wrong_pattern=r"團",
+            correct_form="团",
+            description="'團' 应统一为 '团'（团队、团结等）。",
+        )
+
+
+class A1_047_WanRule(UnifiedTermRule):
+    """萬 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-047",
+            wrong_pattern=r"萬",
+            correct_form="万",
+            description="'萬' 应统一为 '万'（万一、万分等）。",
+        )
+
+
+class A1_048_WeiRule(UnifiedTermRule):
+    """衛 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-048",
+            wrong_pattern=r"衛",
+            correct_form="卫",
+            description="'衛' 应统一为 '卫'（卫生、保卫等）。",
+        )
+
+
+class A1_049_XianRule(UnifiedTermRule):
+    """綫/線 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-049",
+            wrong_pattern=r"[綫線]",
+            correct_form="线",
+            description="'綫' 或 '線' 应统一为 '线'（线条、路线等）。",
+        )
+
+
+class A1_050_XiangRule(UnifiedTermRule):
+    """響 统一写法."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A1-050",
+            wrong_pattern=r"響",
+            correct_form="响",
+            description="'響' 应统一为 '响'（响应、影响等）。",
+        )
+
+
 # ============================================================================
 # A2类 - 异形词规范（Variant Word Forms）
 # ============================================================================
@@ -4375,7 +4699,7 @@ class ImageLicenseRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.2.0"  # Batch 2: 157条规则 (A1:23, A2:10, A3:70, A4:1, B:25, C:24, F:4)
+    VERSION = "1.3.0"  # Batch 3: 184条规则 (A1:50, A2:10, A3:70, A4:1, B:25, C:24, F:4)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -4409,8 +4733,8 @@ class DeterministicRuleEngine:
             B7_001_DashFormatRule(),  # B7-001: 破折号格式
             B7_002_HyphenFormatRule(),  # B7-002: 连接号格式
             HalfWidthDashRule(),  # B7-004: 半角短横线
-            # A类 - 用字规范（73条）
-            # A1 子类 - 统一用字（23条）
+            # A类 - 用字规范（100条）
+            # A1 子类 - 统一用字（50条）
             UnifiedTermMeterRule(),  # A1-001
             A1_002_LiInsideRule(),  # A1-002: 裡/裏 → 里
             A1_003_MeQuestionRule(),  # A1-003: 麽 → 么
@@ -4434,6 +4758,33 @@ class DeterministicRuleEngine:
             A1_021_CheckRule(),  # A1-021: 檢 → 检
             A1_022_BodyRule(),  # A1-022: 體 → 体
             A1_023_LikeRule(),  # A1-023: 彷 → 仿
+            A1_024_QuanRule(),  # A1-024: 勸 → 劝
+            A1_025_RangRule(),  # A1-025: 讓 → 让
+            A1_026_ReRule(),  # A1-026: 熱 → 热
+            A1_027_RenRule(),  # A1-027: 認 → 认
+            A1_028_RongRule(),  # A1-028: 榮 → 荣
+            A1_029_SaiRule(),  # A1-029: 賽 → 赛
+            A1_030_ShanRule(),  # A1-030: 閃 → 闪
+            A1_031_ShengRule(),  # A1-031: 聲 → 声
+            A1_032_ShiRule(),  # A1-032: 適 → 适
+            A1_033_ShouRule(),  # A1-033: 壽 → 寿
+            A1_034_ShuRule(),  # A1-034: 術 → 术
+            A1_035_ShuaiRule(),  # A1-035: 帥 → 帅
+            A1_036_ShunRule(),  # A1-036: 順 → 顺
+            A1_037_ShuoRule(),  # A1-037: 説/說 → 说
+            A1_038_SiRule(),  # A1-038: 絲 → 丝
+            A1_039_SongRule(),  # A1-039: 鬆 → 松
+            A1_040_TaiRule(),  # A1-040: 臺/檯/枱 → 台
+            A1_041_TanRule(),  # A1-041: 談 → 谈
+            A1_042_TaoRule(),  # A1-042: 討 → 讨
+            A1_043_TiRule(),  # A1-043: 題 → 题
+            A1_044_TingRule(),  # A1-044: 聽 → 听
+            A1_045_TongRule(),  # A1-045: 衕 → 同
+            A1_046_TuanRule(),  # A1-046: 團 → 团
+            A1_047_WanRule(),  # A1-047: 萬 → 万
+            A1_048_WeiRule(),  # A1-048: 衛 → 卫
+            A1_049_XianRule(),  # A1-049: 綫/線 → 线
+            A1_050_XiangRule(),  # A1-050: 響 → 响
             # A2 子类 - 异形词规范（10条）
             A2_001_GouTongRule(),  # A2-001: 勾通 → 沟通
             A2_002_ZhangHuRule(),  # A2-002: 帐户 → 账户
