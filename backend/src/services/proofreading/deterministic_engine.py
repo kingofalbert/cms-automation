@@ -2067,6 +2067,944 @@ class B1_012_PunctuationStackingRule(DeterministicRule):
 
 
 # ============================================================================
+# B1 Extended - Additional Basic Punctuation Rules
+# ============================================================================
+
+
+class B1_013_EnglishPunctuationInChineseRule(DeterministicRule):
+    """Check for English punctuation misuse in Chinese text (B1-013)."""
+
+    # 英文标点在中文段落中
+    ENG_PUNCT_IN_CN = re.compile(r'[\u4e00-\u9fff][,;:!?][\u4e00-\u9fff]')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B1-013",
+            category="B",
+            subcategory="B1",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.ENG_PUNCT_IN_CN.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+            punct = match.group()[1]
+            chinese_punct = {',': '，', ';': '；', ':': '：', '!': '！', '?': '？'}
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"中文文本中使用了英文标点 '{punct}'。",
+                    suggestion=f"改为中文标点 '{chinese_punct.get(punct, punct)}'。",
+                    severity=self.severity,
+                    confidence=0.9,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B1_013_EnglishPunctuationInChineseRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B1_014_PunctuationLeadingSpaceRule(DeterministicRule):
+    """Check for unnecessary space before punctuation (B1-014)."""
+
+    PUNCT_LEADING_SPACE = re.compile(r'\s+[，。！？；：、]')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B1-014",
+            category="B",
+            subcategory="B1",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.PUNCT_LEADING_SPACE.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"标点符号 '{match.group().strip()}' 前有多余空格。",
+                    suggestion="删除标点符号前的空格。",
+                    severity=self.severity,
+                    confidence=1.0,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B1_014_PunctuationLeadingSpaceRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+# ============================================================================
+# B2 Extended - Additional Comma and Dunhao Rules
+# ============================================================================
+
+
+class B2_008_DunhaoInMixedTextRule(DeterministicRule):
+    """Check dunhao usage in Chinese-English mixed text (B2-008)."""
+
+    DUNHAO_WITH_ENG = re.compile(r'[a-zA-Z]+、[a-zA-Z]+')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-008",
+            category="B",
+            subcategory="B2",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.DUNHAO_WITH_ENG.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"英文词汇间使用了顿号：'{match.group()}'。",
+                    suggestion="英文词汇间应使用逗号（,）或顿号改为中文词。",
+                    severity=self.severity,
+                    confidence=0.85,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_008_DunhaoInMixedTextRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B2_009_OxfordCommaRule(DeterministicRule):
+    """Check for Oxford comma usage (B2-009)."""
+
+    # 检测"A、B和C"模式中缺少逗号
+    OXFORD_PATTERN = re.compile(r'[\u4e00-\u9fff]{1,5}、[\u4e00-\u9fff]{1,5}[和与及][\u4e00-\u9fff]{1,5}')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-009",
+            category="B",
+            subcategory="B2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.OXFORD_PATTERN.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"并列列举最后一项前可考虑添加顿号：'{match.group()}'。",
+                    suggestion="在'和/与/及'之前可添加顿号以保持一致性（可选）。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_009_OxfordCommaRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B2_010_MissingDunhaoRule(DeterministicRule):
+    """Check for missing dunhao in short parallel phrases (B2-010)."""
+
+    # 检测短并列词组间缺顿号
+    PARALLEL_NO_DUNHAO = re.compile(r'[\u4e00-\u9fff]{2,3}\s[\u4e00-\u9fff]{2,3}(?:\s[\u4e00-\u9fff]{2,3})+')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-010",
+            category="B",
+            subcategory="B2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.PARALLEL_NO_DUNHAO.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"短并列词组间可能缺少顿号：'{match.group()}'。",
+                    suggestion="如果是并列关系，应使用顿号分隔。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_010_MissingDunhaoRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B2_011_DunhaoInLongClausesRule(DeterministicRule):
+    """Check for dunhao misuse in long parallel clauses (B2-011)."""
+
+    # 检测长句间使用顿号
+    LONG_DUNHAO = re.compile(r'[\u4e00-\u9fff，]{10,}、[\u4e00-\u9fff，]{10,}')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-011",
+            category="B",
+            subcategory="B2",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.LONG_DUNHAO.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="并列长句间不应使用顿号。",
+                    suggestion="较长的并列成分应使用逗号或分号，而非顿号。",
+                    severity=self.severity,
+                    confidence=0.8,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_011_DunhaoInLongClausesRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B2_012_CommaInShortPhrasesRule(DeterministicRule):
+    """Check for comma misuse in short parallel words (B2-012)."""
+
+    # 检测短词组间使用逗号
+    SHORT_COMMA = re.compile(r'[\u4e00-\u9fff]{2,4}，[\u4e00-\u9fff]{2,4}(?:，[\u4e00-\u9fff]{2,4})+')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-012",
+            category="B",
+            subcategory="B2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.SHORT_COMMA.finditer(content):
+            # 排除包含动词的情况
+            if any(verb in match.group() for verb in ['是', '为', '有', '在', '说', '做', '去', '来']):
+                continue
+
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"短并列词组间可考虑使用顿号：'{match.group()}'。",
+                    suggestion="短并列词组（2-4字）通常使用顿号，而非逗号。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_012_CommaInShortPhrasesRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B2_013_CommaSpacingEnglishRule(DeterministicRule):
+    """Check comma spacing in English text (B2-013)."""
+
+    # 英文中逗号后缺空格
+    ENG_COMMA_NO_SPACE = re.compile(r',[a-zA-Z]')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-013",
+            category="B",
+            subcategory="B2",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.ENG_COMMA_NO_SPACE.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"英文逗号后缺少空格：'{match.group()}'。",
+                    suggestion="英文逗号后应添加空格。",
+                    severity=self.severity,
+                    confidence=0.95,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_013_CommaSpacingEnglishRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B2_014_DunhaoWithDengRule(DeterministicRule):
+    """Check for dunhao enumeration ending with 等 (B2-014)."""
+
+    DUNHAO_DENG = re.compile(r'[\u4e00-\u9fff]{2,5}、[\u4e00-\u9fff]{2,5}(?:、[\u4e00-\u9fff]{2,5})*等')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-014",
+            category="B",
+            subcategory="B2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.DUNHAO_DENG.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"顿号列举后使用'等'：'{match.group()}'。",
+                    suggestion="可在'等'字前加顿号以保持一致性，或根据风格指南决定。",
+                    severity=self.severity,
+                    confidence=0.8,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_014_DunhaoWithDengRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B2_015_CommaSemicolonMixRule(DeterministicRule):
+    """Check for inconsistent comma and semicolon usage (B2-015)."""
+
+    # 检测同一句中逗号和分号混用的不一致性
+    COMMA_SEMI_MIX = re.compile(r'[^。！？；]{20,}；[^。！？]{10,}，[^。！？]{10,}；')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B2-015",
+            category="B",
+            subcategory="B2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.COMMA_SEMI_MIX.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="同一长句中逗号和分号混用可能不一致。",
+                    suggestion="检查是否应统一使用分号，或调整句子结构。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B2_015_CommaSemicolonMixRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+# ============================================================================
+# B3 Extended - Additional Quote and Book Title Rules
+# ============================================================================
+
+
+class B3_006_QuoteMisuseRule(DeterministicRule):
+    """Check for quotation mark misuse in non-quotation contexts (B3-006)."""
+
+    # 检测引号用于强调而非引用
+    QUOTE_EMPHASIS = re.compile(r'[""][\u4e00-\u9fff]{1,3}[""](?![说道曰云])')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B3-006",
+            category="B",
+            subcategory="B3",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.QUOTE_EMPHASIS.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"引号可能用于强调而非引用：'{match.group()}'。",
+                    suggestion="引号主要用于引用，强调可考虑使用着重号或其他方式。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B3_006_QuoteMisuseRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B3_007_BookTitleOveruseRule(DeterministicRule):
+    """Check for book title mark overuse (B3-007)."""
+
+    # 检测书名号用于非作品名
+    BOOK_TITLE_PATTERN = re.compile(r'《[\u4e00-\u9fff]{1,4}》')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B3-007",
+            category="B",
+            subcategory="B3",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 常见的非作品名词汇
+        non_works = ['方法', '理论', '概念', '原则', '规则', '标准', '模式', '体系']
+
+        for match in self.BOOK_TITLE_PATTERN.finditer(content):
+            inner_text = match.group()[1:-1]  # 去掉书名号
+            if inner_text in non_works:
+                snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"书名号可能用于非作品名：'{match.group()}'。",
+                        suggestion="书名号应仅用于书籍、文章、影视等作品名称。",
+                        severity=self.severity,
+                        confidence=0.7,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="B3_007_BookTitleOveruseRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+# ============================================================================
+# B4 Extended - Additional Parenthesis Rules
+# ============================================================================
+
+
+class B4_005_MixedParenthesesRule(DeterministicRule):
+    """Check for mixed Chinese and English parentheses (B4-005)."""
+
+    # 检测中英文括号混用
+    CN_OPEN_ENG_CLOSE = re.compile(r'（[^）]{1,20}\)')
+    ENG_OPEN_CN_CLOSE = re.compile(r'\([^)]{1,20}）')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B4-005",
+            category="B",
+            subcategory="B4",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.CN_OPEN_ENG_CLOSE.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"中文左括号配英文右括号：'{match.group()}'。",
+                    suggestion="括号应成对使用，统一为中文括号（）或英文括号()。",
+                    severity=self.severity,
+                    confidence=1.0,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B4_005_MixedParenthesesRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+
+        for match in self.ENG_OPEN_CN_CLOSE.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"英文左括号配中文右括号：'{match.group()}'。",
+                    suggestion="括号应成对使用，统一为中文括号（）或英文括号()。",
+                    severity=self.severity,
+                    confidence=1.0,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B4_005_MixedParenthesesRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B4_006_NestedParenthesesRule(DeterministicRule):
+    """Check for deeply nested parentheses (B4-006)."""
+
+    # 检测括号嵌套
+    NESTED_PAREN = re.compile(r'[（(][^）)]{0,50}[（(][^）)]{0,50}[）)][^）)]{0,50}[）)]')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B4-006",
+            category="B",
+            subcategory="B4",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.NESTED_PAREN.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="检测到括号嵌套使用。",
+                    suggestion="过度嵌套会影响可读性，考虑改写句子结构或使用不同层级的标点。",
+                    severity=self.severity,
+                    confidence=0.85,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B4_006_NestedParenthesesRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+# ============================================================================
+# B7 Extended - Additional Dash and Hyphen Rules
+# ============================================================================
+
+
+class B7_007_DashForParallelRule(DeterministicRule):
+    """Check for dash misuse in parallel components (B7-007)."""
+
+    # 检测破折号用于并列成分
+    DASH_PARALLEL = re.compile(r'[\u4e00-\u9fff]{2,6}—[\u4e00-\u9fff]{2,6}—[\u4e00-\u9fff]{2,6}')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B7-007",
+            category="B",
+            subcategory="B7",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.DASH_PARALLEL.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"破折号可能用于并列成分：'{match.group()}'。",
+                    suggestion="并列成分应使用顿号或逗号，破折号主要用于解释说明。",
+                    severity=self.severity,
+                    confidence=0.75,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B7_007_DashForParallelRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B7_008_HyphenInconsistencyRule(DeterministicRule):
+    """Check for inconsistent hyphen format (B7-008)."""
+
+    # 检测短横线格式不统一
+    MIXED_HYPHENS = re.compile(r'\d+[-–—]\d+')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B7-008",
+            category="B",
+            subcategory="B7",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        # 统计使用的连接符类型
+        hyphens_used = set()
+        for match in self.MIXED_HYPHENS.finditer(content):
+            hyphen = match.group()[len(str(int(match.group().split('-')[0] if '-' in match.group() else
+                                          match.group().split('–')[0] if '–' in match.group() else
+                                          match.group().split('—')[0]))):-len(str(int(match.group().split('-')[-1] if '-' in match.group() else
+                                          match.group().split('–')[-1] if '–' in match.group() else
+                                          match.group().split('—')[-1])))]
+            hyphens_used.add(hyphen)
+
+        # 如果使用了多种连接符，报告不一致
+        if len(hyphens_used) > 1:
+            snippet = content[:100]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"数字范围使用了多种连接符：{hyphens_used}。",
+                    suggestion="建议统一使用半角连接号（-）表示数字范围。",
+                    severity=self.severity,
+                    confidence=0.9,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B7_008_HyphenInconsistencyRule",
+                    location={"offset": 0},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B7_009_EllipsisMisplacementRule(DeterministicRule):
+    """Check for ellipsis placement errors (B7-009)."""
+
+    # 检测省略号在句首
+    ELLIPSIS_START = re.compile(r'^……|[。！？]\s*……')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B7-009",
+            category="B",
+            subcategory="B7",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.ELLIPSIS_START.finditer(content):
+            snippet = content[max(0, match.start() - 5) : match.end() + 20]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="省略号出现在句首或独立使用。",
+                    suggestion="省略号通常用于句中或句末，表示省略或停顿，句首使用较少见。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B7_009_EllipsisMisplacementRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+# ============================================================================
+# B8 New - Whitespace Usage Rules
+# ============================================================================
+
+
+class B8_001_ExcessiveChineseSpacingRule(DeterministicRule):
+    """Check for excessive spacing between Chinese characters (B8-001)."""
+
+    # 检测中文字符间多余空格
+    CN_SPACING = re.compile(r'[\u4e00-\u9fff]\s{2,}[\u4e00-\u9fff]')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B8-001",
+            category="B",
+            subcategory="B8",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.CN_SPACING.finditer(content):
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"中文字符间有多余空格：'{match.group()}'。",
+                    suggestion="删除中文字符间的多余空格。",
+                    severity=self.severity,
+                    confidence=0.95,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B8_001_ExcessiveChineseSpacingRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B8_002_ChineseEnglishSpacingRule(DeterministicRule):
+    """Check for missing space between Chinese and English (B8-002)."""
+
+    # 检测中英文间缺空格（可选规则，根据风格指南决定）
+    CN_ENG_NO_SPACE = re.compile(r'[\u4e00-\u9fff][a-zA-Z]|[a-zA-Z][\u4e00-\u9fff]')
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B8-002",
+            category="B",
+            subcategory="B8",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.CN_ENG_NO_SPACE.finditer(content):
+            # 排除特定场景：单位、代码、URL等
+            if any(pattern in content[max(0, match.start()-5):match.end()+5]
+                   for pattern in ['http', 'www', 'kg', 'km', 'cm', 'mm', 'ml', 'GB', 'MB', 'KB']):
+                continue
+
+            snippet = content[max(0, match.start() - 10) : match.end() + 10]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"中英文之间可能缺少空格：'{match.group()}'。",
+                    suggestion="根据排版风格，中英文之间可添加空格（可选）。",
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="B8_002_ChineseEnglishSpacingRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class B8_003_LineSpacingRule(DeterministicRule):
+    """Check for whitespace at line start/end (B8-003)."""
+
+    # 检测行首行末空格
+    LINE_SPACING = re.compile(r'^\s+|\s+$', re.MULTILINE)
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="B8-003",
+            category="B",
+            subcategory="B8",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        lines = content.split('\n')
+        for i, line in enumerate(lines):
+            if line != line.strip() and line.strip():  # 有内容但有空格
+                snippet = line[:50]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"第 {i+1} 行存在行首或行末空格。",
+                        suggestion="删除行首和行末的空格。",
+                        severity=self.severity,
+                        confidence=1.0,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="B8_003_LineSpacingRule",
+                        location={"line": i + 1},
+                        evidence=snippet,
+                    )
+                )
+        return issues
+
+
+# ============================================================================
 # A类规则 - 用字与用词规范
 # ============================================================================
 
@@ -6357,12 +7295,12 @@ class F4_003_InternalLinkRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.6.0"  # Batch 6: 234条规则 (A1:50, A2:30, A3:70, A4:1, B:40, C:24, F:19)
+    VERSION = "1.7.0"  # Batch 7: 254条规则 (A1:50, A2:30, A3:70, A4:1, B:60, C:24, F:19)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
-            # B类 - 标点符号与排版（40条）
-            # B1 子类 - 基本标点（12条）
+            # B类 - 标点符号与排版（60条）
+            # B1 子类 - 基本标点（14条）
             MissingPunctuationRule(),  # B1-001
             EllipsisFormatRule(),  # B1-002: 省略号格式
             QuestionMarkAbuseRule(),  # B1-003: 问号滥用
@@ -6375,7 +7313,9 @@ class DeterministicRuleEngine:
             B1_010_ChinesePeriodRule(),  # B1-010: 中文句号
             B1_011_ParagraphEndPunctuationRule(),  # B1-011: 段落末标点
             B1_012_PunctuationStackingRule(),  # B1-012: 标点堆叠
-            # B2 子类 - 逗号顿号（8条）
+            B1_013_EnglishPunctuationInChineseRule(),  # B1-013: 中文中英文标点
+            B1_014_PunctuationLeadingSpaceRule(),  # B1-014: 标点前空格
+            # B2 子类 - 逗号顿号（15条）
             B2_001_CommaSpacingRule(),  # B2-001: 逗号后空格
             HalfWidthCommaRule(),  # B2-002
             B2_003_DunhaoUsageRule(),  # B2-003: 顿号使用
@@ -6383,17 +7323,29 @@ class DeterministicRuleEngine:
             B2_005_SerialCommaRule(),  # B2-005: 序列逗号
             B2_006_ConsecutiveCommasRule(),  # B2-006: 连续逗号
             B2_007_DunhaoCommaMixRule(),  # B2-007: 顿号逗号混用
-            # B3 子类 - 引号书名号（5条）
+            B2_008_DunhaoInMixedTextRule(),  # B2-008: 中英文混排顿号
+            B2_009_OxfordCommaRule(),  # B2-009: 牛津逗号
+            B2_010_MissingDunhaoRule(),  # B2-010: 并列短语缺顿号
+            B2_011_DunhaoInLongClausesRule(),  # B2-011: 长句用顿号
+            B2_012_CommaInShortPhrasesRule(),  # B2-012: 短语用逗号
+            B2_013_CommaSpacingEnglishRule(),  # B2-013: 英文逗号空格
+            B2_014_DunhaoWithDengRule(),  # B2-014: 顿号与等
+            B2_015_CommaSemicolonMixRule(),  # B2-015: 逗号分号混用
+            # B3 子类 - 引号书名号（7条）
             QuotationMatchingRule(),  # B3-001: 引号配对
             QuotationNestingRule(),  # B3-002: 引号嵌套
             BookTitleMatchingRule(),  # B3-003: 书名号配对
             B3_004_EmptyQuoteRule(),  # B3-004: 空引号
             B3_005_BookTitleQuoteMixRule(),  # B3-005: 书名号引号混用
-            # B4 子类 - 括号（4条）
+            B3_006_QuoteMisuseRule(),  # B3-006: 引号误用
+            B3_007_BookTitleOveruseRule(),  # B3-007: 书名号滥用
+            # B4 子类 - 括号（6条）
             B4_001_ParenthesesMatchingRule(),  # B4-001: 括号配对
             B4_002_ParenthesesFormatRule(),  # B4-002: 括号格式
             B4_003_ParenthesisSpacingRule(),  # B4-003: 括号空格
             B4_004_ParenthesisInnerSpaceRule(),  # B4-004: 括号内空格
+            B4_005_MixedParenthesesRule(),  # B4-005: 中英文括号混用
+            B4_006_NestedParenthesesRule(),  # B4-006: 括号嵌套
             # B5 子类 - 引号（3条）
             B5_001_DoubleQuoteMisuseRule(),  # B5-001: 双引号误用
             B5_002_SingleQuoteMisuseRule(),  # B5-002: 单引号误用
@@ -6402,13 +7354,20 @@ class DeterministicRuleEngine:
             B6_001_EmphasisMarkRule(),  # B6-001: 间隔号
             B6_002_DunhaoMisuseRule(),  # B6-002: 顿号误用
             B6_003_IntervalMarkMisuseRule(),  # B6-003: 间隔号误用
-            # B7 子类 - 连接号省略号（5条）
+            # B7 子类 - 连接号省略号（9条）
             B7_001_DashFormatRule(),  # B7-001: 破折号格式
             B7_002_HyphenFormatRule(),  # B7-002: 连接号格式
             B7_003_HyphenFormatRule(),  # B7-003: 连字符格式
             HalfWidthDashRule(),  # B7-004: 半角短横线
             B7_005_EllipsisDengRule(),  # B7-005: 省略号与等
             B7_006_DashLengthRule(),  # B7-006: 破折号长度
+            B7_007_DashForParallelRule(),  # B7-007: 破折号并列误用
+            B7_008_HyphenInconsistencyRule(),  # B7-008: 连接号不一致
+            B7_009_EllipsisMisplacementRule(),  # B7-009: 省略号位置
+            # B8 子类 - 空格使用（3条）
+            B8_001_ExcessiveChineseSpacingRule(),  # B8-001: 中文多余空格
+            B8_002_ChineseEnglishSpacingRule(),  # B8-002: 中英文间空格
+            B8_003_LineSpacingRule(),  # B8-003: 行首行末空格
             # A类 - 用字规范（120条）
             # A1 子类 - 统一用字（50条）
             UnifiedTermMeterRule(),  # A1-001
