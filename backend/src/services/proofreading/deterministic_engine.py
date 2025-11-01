@@ -3770,6 +3770,499 @@ class C2_006_AreaUnitRule(DeterministicRule):
         return issues
 
 
+class C1_010_NegativeNumberRule(DeterministicRule):
+    """Check negative number format (C1-010)."""
+
+    # 匹配使用连字符作为负号的数字
+    NEGATIVE_PATTERN = re.compile(r"(?<!\d)-(\d+(?:\.\d+)?)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-010",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.NEGATIVE_PATTERN.finditer(content):
+            original = match.group()
+            corrected = original.replace("-", "−")  # 使用减号（U+2212）
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="数字格式：负数应使用减号「−」（U+2212），而非连字符「-」。",
+                    suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C1_010_NegativeNumberRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                    auto_fix_value=corrected,
+                )
+            )
+        return issues
+
+
+class C1_011_NumberRangeRule(DeterministicRule):
+    """Check number range format (C1-011)."""
+
+    # 匹配数字范围表示
+    RANGE_PATTERN = re.compile(r"(\d+)\s*[-~～]\s*(\d+)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-011",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.RANGE_PATTERN.finditer(content):
+            original = match.group()
+            start_num = match.group(1)
+            end_num = match.group(2)
+
+            # 建议使用全角波浪号或en-dash
+            if "-" in original or "~" in original:
+                corrected = f"{start_num}～{end_num}"  # 使用全角波浪号
+
+                snippet_start = max(0, match.start() - 10)
+                snippet_end = min(len(content), match.end() + 10)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message="数字范围：建议使用全角波浪号「～」表示范围。",
+                        suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                        severity=self.severity,
+                        confidence=0.6,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="C1_011_NumberRangeRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                        auto_fix_value=corrected,
+                    )
+                )
+        return issues
+
+
+class C1_012_PhoneNumberRule(DeterministicRule):
+    """Check phone number format (C1-012)."""
+
+    # 匹配电话号码格式（简单模式）
+    PHONE_PATTERN = re.compile(r"(?:电话|手机|Tel|Mobile)[:：]\s*(\d{3,4})[-\s]?(\d{7,8})")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-012",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.PHONE_PATTERN.finditer(content):
+            area_code = match.group(1)
+            number = match.group(2)
+            original = match.group()
+
+            # 建议使用统一格式
+            corrected = original.replace(f"{area_code}-{number}", f"{area_code}-{number}")
+            corrected = corrected.replace(f"{area_code} {number}", f"{area_code}-{number}")
+
+            if original != corrected:
+                snippet_start = max(0, match.start() - 10)
+                snippet_end = min(len(content), match.end() + 10)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message="电话号码：建议使用连字符「-」分隔区号和号码。",
+                        suggestion=f"统一格式为 '{corrected}'。",
+                        severity=self.severity,
+                        confidence=0.7,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="C1_012_PhoneNumberRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                        auto_fix_value=corrected,
+                    )
+                )
+        return issues
+
+
+class C1_013_OrdinalNumberRule(DeterministicRule):
+    """Check ordinal number format (C1-013)."""
+
+    # 匹配序数词格式（第 + 空格 + 数字）
+    ORDINAL_PATTERN = re.compile(r"第\s+(\d+|[一二三四五六七八九十百千万]+)\s*[个条项款张次]")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-013",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.ORDINAL_PATTERN.finditer(content):
+            original = match.group()
+            number = match.group(1)
+            unit = original[-1]  # 获取量词
+
+            # 建议不使用空格
+            corrected = f"第{number}{unit}"
+
+            if original != corrected:
+                snippet_start = max(0, match.start() - 10)
+                snippet_end = min(len(content), match.end() + 10)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message="序数格式：「第」和数字之间不应有空格。",
+                        suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                        severity=self.severity,
+                        confidence=0.9,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="C1_013_OrdinalNumberRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                        auto_fix_value=corrected,
+                    )
+                )
+        return issues
+
+
+class C1_014_LargeNumberRule(DeterministicRule):
+    """Check large number representation (C1-014)."""
+
+    # 匹配大数字（7位以上）
+    LARGE_NUMBER_PATTERN = re.compile(r"\b(\d{7,})\b")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-014",
+            category="C",
+            subcategory="C1",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.LARGE_NUMBER_PATTERN.finditer(content):
+            number = match.group(1)
+            length = len(number)
+
+            if length >= 9:  # 亿级别
+                suggestion = f"建议使用「{int(number) // 100000000}亿」或科学计数法。"
+            elif length >= 5:  # 万级别
+                suggestion = f"建议使用「{int(number) // 10000}万」或千位分隔符。"
+            else:
+                continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"大数字：'{number}' 太长，建议使用中文单位或千位分隔符。",
+                    suggestion=suggestion,
+                    severity=self.severity,
+                    confidence=0.6,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C1_014_LargeNumberRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class C1_015_MixedNumberFormatRule(DeterministicRule):
+    """Check mixed number format (C1-015)."""
+
+    # 匹配阿拉伯数字和中文数字混用
+    MIXED_PATTERN = re.compile(r"([一二三四五六七八九十百千万亿]+)(\d+)|(\d+)([一二三四五六七八九十百千万亿]+)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C1-015",
+            category="C",
+            subcategory="C1",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.MIXED_PATTERN.finditer(content):
+            original = match.group()
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="数字格式：阿拉伯数字和中文数字不应混用。",
+                    suggestion="统一使用阿拉伯数字或中文数字。",
+                    severity=self.severity,
+                    confidence=0.8,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C1_015_MixedNumberFormatRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                )
+            )
+        return issues
+
+
+class C2_007_SpeedUnitRule(DeterministicRule):
+    """Check speed unit format (C2-007)."""
+
+    # 匹配速度单位
+    SPEED_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:公里[/／每]小时|千米[/／每]小时|米[/／每]秒)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C2-007",
+            category="C",
+            subcategory="C2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.SPEED_PATTERN.finditer(content):
+            original = match.group()
+            number = match.group(1)
+
+            # 建议使用标准单位符号
+            if "公里" in original or "千米" in original:
+                corrected = f"{number} km/h"
+            elif "米" in original:
+                corrected = f"{number} m/s"
+            else:
+                continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="计量单位：建议使用国际标准单位符号（km/h、m/s）。",
+                    suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C2_007_SpeedUnitRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                    auto_fix_value=corrected,
+                )
+            )
+        return issues
+
+
+class C2_008_PressureUnitRule(DeterministicRule):
+    """Check pressure unit format (C2-008)."""
+
+    # 匹配压力单位
+    PRESSURE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:帕斯卡|千帕|兆帕|大气压)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C2-008",
+            category="C",
+            subcategory="C2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.PRESSURE_PATTERN.finditer(content):
+            original = match.group()
+            number = match.group(1)
+
+            # 建议使用标准单位符号
+            if "帕斯卡" in original:
+                corrected = f"{number} Pa"
+            elif "千帕" in original:
+                corrected = f"{number} kPa"
+            elif "兆帕" in original:
+                corrected = f"{number} MPa"
+            elif "大气压" in original:
+                corrected = f"{number} atm"
+            else:
+                continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="计量单位：建议使用国际标准单位符号（Pa、kPa、MPa、atm）。",
+                    suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C2_008_PressureUnitRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                    auto_fix_value=corrected,
+                )
+            )
+        return issues
+
+
+class C2_009_EnergyUnitRule(DeterministicRule):
+    """Check energy unit format (C2-009)."""
+
+    # 匹配能量单位
+    ENERGY_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:焦耳|千焦|兆焦|千瓦时|度电)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="C2-009",
+            category="C",
+            subcategory="C2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.ENERGY_PATTERN.finditer(content):
+            original = match.group()
+            number = match.group(1)
+
+            # 建议使用标准单位符号
+            if "焦耳" in original and "千" not in original and "兆" not in original:
+                corrected = f"{number} J"
+            elif "千焦" in original:
+                corrected = f"{number} kJ"
+            elif "兆焦" in original:
+                corrected = f"{number} MJ"
+            elif "千瓦时" in original or "度电" in original:
+                corrected = f"{number} kWh"
+            else:
+                continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message="计量单位：建议使用国际标准单位符号（J、kJ、MJ、kWh）。",
+                    suggestion=f"将 '{original}' 改为 '{corrected}'。",
+                    severity=self.severity,
+                    confidence=0.7,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by="C2_009_EnergyUnitRule",
+                    location={"offset": match.start()},
+                    evidence=snippet,
+                    auto_fix_value=corrected,
+                )
+            )
+        return issues
+
+
 # ============================================================================
 # F类规则 - 发布合规（补充规则）
 # ============================================================================
@@ -3882,7 +4375,7 @@ class ImageLicenseRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.1.0"  # Batch 1: 148条规则 (A1:23, A2:10, A3:70, A4:1, B:25, C:15, F:4)
+    VERSION = "1.2.0"  # Batch 2: 157条规则 (A1:23, A2:10, A3:70, A4:1, B:25, C:24, F:4)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -4026,8 +4519,8 @@ class DeterministicRuleEngine:
             A3_073_DanWuRule(),  # A3-073: 耽误
             # A4 子类 - 非正式用语（1条）
             InformalLanguageRule(),  # A4-014
-            # C类 - 数字与计量（15条）
-            # C1 子类 - 数字格式（9条）
+            # C类 - 数字与计量（24条）
+            # C1 子类 - 数字格式（15条）
             FullWidthDigitRule(),  # C1-006
             NumberSeparatorRule(),  # C1-001
             PercentageFormatRule(),  # C1-002: 百分比格式
@@ -4037,13 +4530,22 @@ class DeterministicRuleEngine:
             C1_007_TimeFormatRule(),  # C1-007: 时间格式
             C1_008_ScientificNotationRule(),  # C1-008: 科学计数法
             C1_009_OrdinalNumberRule(),  # C1-009: 序数格式
-            # C2 子类 - 单位格式（6条）
+            # C2 子类 - 单位格式（9条）
             KilometerUnificationRule(),  # C2-001: 公里/千米统一
             SquareMeterSymbolRule(),  # C2-002: 平方米符号
             C2_003_TemperatureUnitRule(),  # C2-003: 温度单位
             C2_004_WeightUnitRule(),  # C2-004: 重量单位
             C2_005_VolumeUnitRule(),  # C2-005: 体积单位
             C2_006_AreaUnitRule(),  # C2-006: 面积单位
+            C1_010_NegativeNumberRule(),  # C1-010: 负数格式
+            C1_011_NumberRangeRule(),  # C1-011: 数字范围
+            C1_012_PhoneNumberRule(),  # C1-012: 电话号码
+            C1_013_OrdinalNumberRule(),  # C1-013: 序数格式
+            C1_014_LargeNumberRule(),  # C1-014: 大数字表示
+            C1_015_MixedNumberFormatRule(),  # C1-015: 混用数字格式
+            C2_007_SpeedUnitRule(),  # C2-007: 速度单位
+            C2_008_PressureUnitRule(),  # C2-008: 压力单位
+            C2_009_EnergyUnitRule(),  # C2-009: 能量单位
             # F类 - 发布合规（4条）
             InvalidHeadingLevelRule(),  # F2-001
             FeaturedImageLandscapeRule(),  # F1-002
