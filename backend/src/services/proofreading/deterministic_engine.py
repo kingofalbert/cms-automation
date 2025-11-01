@@ -1780,6 +1780,217 @@ class A1_023_LikeRule(UnifiedTermRule):
 
 
 # ============================================================================
+# A2类 - 异形词规范（Variant Word Forms）
+# ============================================================================
+
+
+class VariantWordRule(DeterministicRule):
+    """Base class for variant word form rules (A2 subcategory)."""
+
+    def __init__(
+        self,
+        rule_id: str,
+        wrong_form: str,
+        correct_form: str,
+        description: str,
+        use_regex: bool = False,
+        exclusion_pattern: str | None = None,
+    ):
+        """
+        Initialize variant word rule.
+
+        Args:
+            rule_id: Rule identifier (e.g., "A2-001")
+            wrong_form: Incorrect or non-standard form (regex pattern if use_regex=True)
+            correct_form: Correct or preferred standard form
+            description: Description of the rule
+            use_regex: Whether wrong_form is a regex pattern
+            exclusion_pattern: Optional regex pattern to exclude from detection
+        """
+        super().__init__(
+            rule_id=rule_id,
+            category="A",
+            subcategory="A2",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+        self.wrong_form = wrong_form
+        self.correct_form = correct_form
+        self.description = description
+        self.use_regex = use_regex
+        self.exclusion_pattern = exclusion_pattern
+
+        # Compile patterns
+        if use_regex:
+            self.wrong_pattern = re.compile(wrong_form)
+        else:
+            self.wrong_pattern = re.compile(re.escape(wrong_form))
+
+        if exclusion_pattern:
+            self.exclusion = re.compile(exclusion_pattern)
+        else:
+            self.exclusion = None
+
+    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+        issues: List[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for match in self.wrong_pattern.finditer(content):
+            # Check exclusion pattern
+            if self.exclusion:
+                context_start = max(0, match.start() - 5)
+                context_end = min(len(content), match.end() + 5)
+                context = content[context_start:context_end]
+                if self.exclusion.search(context):
+                    continue
+
+            snippet_start = max(0, match.start() - 10)
+            snippet_end = min(len(content), match.end() + 10)
+            snippet = content[snippet_start:snippet_end]
+
+            issues.append(
+                ProofreadingIssue(
+                    rule_id=self.rule_id,
+                    category=self.category,
+                    subcategory=self.subcategory,
+                    message=f"异形词规范：'{match.group()}' 应写作 '{self.correct_form}'。{self.description}",
+                    suggestion=f"将 '{match.group()}' 替换为 '{self.correct_form}'。",
+                    severity=self.severity,
+                    confidence=0.95,
+                    can_auto_fix=self.can_auto_fix,
+                    blocks_publish=self.blocks_publish,
+                    source=RuleSource.SCRIPT,
+                    attributed_by=self.__class__.__name__,
+                    location={"offset": match.start()},
+                    snippet=snippet,
+                    auto_fix_value=self.correct_form,
+                )
+            )
+        return issues
+
+
+class A2_001_GouTongRule(VariantWordRule):
+    """勾通 → 沟通 (A2-001)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-001",
+            wrong_form="勾通",
+            correct_form="沟通",
+            description="表示「交流」时应使用「沟通」，而非「勾通」。",
+        )
+
+
+class A2_002_ZhangHuRule(VariantWordRule):
+    """帐户 → 账户 (A2-002)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-002",
+            wrong_form="帐户",
+            correct_form="账户",
+            description="现代标准用法中「账户」是正确形式。",
+        )
+
+
+class A2_003_BuFenRule(VariantWordRule):
+    """部份 → 部分 (A2-003)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-003",
+            wrong_form="部份",
+            correct_form="部分",
+            description="标准用法应使用「部分」，而非「部份」。",
+        )
+
+
+class A2_004_FenERule(VariantWordRule):
+    """分额 → 份额 (A2-004)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-004",
+            wrong_form="分额",
+            correct_form="份额",
+            description="表示「配额、定额」时应使用「份额」。",
+        )
+
+
+class A2_005_DuJiaRule(VariantWordRule):
+    """渡假 → 度假 (A2-005)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-005",
+            wrong_form="渡假",
+            correct_form="度假",
+            description="表示「休假旅游」时应使用「度假」，而非「渡假」。",
+        )
+
+
+class A2_006_BuShuRule(VariantWordRule):
+    """布署 → 部署 (A2-006)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-006",
+            wrong_form="布署",
+            correct_form="部署",
+            description="表示「安排、配置」时应使用「部署」，而非「布署」。",
+        )
+
+
+class A2_007_JiHuiZhuYiRule(VariantWordRule):
+    """机会主意 → 机会主义 (A2-007)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-007",
+            wrong_form="机会主意",
+            correct_form="机会主义",
+            description="「机会主义」是政治术语，不是「机会主意」。",
+        )
+
+
+class A2_008_XiuLianRule(VariantWordRule):
+    """修练 → 修炼 (A2-008)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-008",
+            wrong_form="修练",
+            correct_form="修炼",
+            description="表示「修行、炼功」时应使用「修炼」，而非「修练」。",
+        )
+
+
+class A2_009_JiaoDaiRule(VariantWordRule):
+    """交待 → 交代 (A2-009)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-009",
+            wrong_form="交待",
+            correct_form="交代",
+            description="现代标准用法推荐「交代」，而非「交待」。",
+        )
+
+
+class A2_010_FenLiangRule(VariantWordRule):
+    """份量 → 分量 (A2-010)."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="A2-010",
+            wrong_form="份量",
+            correct_form="分量",
+            description="表示「重量、轻重」时应使用「分量」，而非「份量」。",
+        )
+
+
+# ============================================================================
 # A3类 - 常见错字规则
 # ============================================================================
 
@@ -3323,7 +3534,7 @@ class ImageLicenseRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "0.9.0"  # Phase 2 Extended: 109条规则 (A1+20, A3+30, B+15, C+7)
+    VERSION = "1.0.0"  # Phase 2 Complete: 119条规则 (A1+20, A2+10, A3+30, B+15, C+7)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -3357,8 +3568,8 @@ class DeterministicRuleEngine:
             B7_001_DashFormatRule(),  # B7-001: 破折号格式
             B7_002_HyphenFormatRule(),  # B7-002: 连接号格式
             HalfWidthDashRule(),  # B7-004: 半角短横线
-            # A类 - 用字规范（63条）
-            # A1 子类 - 统一用字（22条）
+            # A类 - 用字规范（73条）
+            # A1 子类 - 统一用字（23条）
             UnifiedTermMeterRule(),  # A1-001
             A1_002_LiInsideRule(),  # A1-002: 裡/裏 → 里
             A1_003_MeQuestionRule(),  # A1-003: 麽 → 么
@@ -3382,6 +3593,17 @@ class DeterministicRuleEngine:
             A1_021_CheckRule(),  # A1-021: 檢 → 检
             A1_022_BodyRule(),  # A1-022: 體 → 体
             A1_023_LikeRule(),  # A1-023: 彷 → 仿
+            # A2 子类 - 异形词规范（10条）
+            A2_001_GouTongRule(),  # A2-001: 勾通 → 沟通
+            A2_002_ZhangHuRule(),  # A2-002: 帐户 → 账户
+            A2_003_BuFenRule(),  # A2-003: 部份 → 部分
+            A2_004_FenERule(),  # A2-004: 分额 → 份额
+            A2_005_DuJiaRule(),  # A2-005: 渡假 → 度假
+            A2_006_BuShuRule(),  # A2-006: 布署 → 部署
+            A2_007_JiHuiZhuYiRule(),  # A2-007: 机会主意 → 机会主义
+            A2_008_XiuLianRule(),  # A2-008: 修练 → 修炼
+            A2_009_JiaoDaiRule(),  # A2-009: 交待 → 交代
+            A2_010_FenLiangRule(),  # A2-010: 份量 → 分量
             # A3 子类 - 常见错字（40条）
             CommonTypoRule(),  # A3-004
             ZaiJieZaiLiTypoRule(),  # A3-005: 再接再厉
