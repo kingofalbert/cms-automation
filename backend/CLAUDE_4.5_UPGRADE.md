@@ -26,6 +26,7 @@
 | **发布日期** | 2024-10-22 | 2025-09-29 | 最新 |
 | **上下文窗口** | 200K tokens | 200K / 1M tokens (beta) | 5倍 |
 | **最大输出** | 8K tokens | 64K tokens | 8倍 |
+| **配置输出** | 4,096 tokens | 16,384 tokens | 4倍 |
 | **代码能力** | 优秀 | 卓越（SWE-bench top） | ⬆️ |
 | **推理能力** | 优秀 | 更强 | ⬆️ |
 | **价格** | $3/$15 | $3/$15 | 不变 |
@@ -37,6 +38,7 @@
 3. **代码卓越**: SWE-bench Verified 评测中表现最佳
 4. **长上下文**: Beta 支持 1M tokens 上下文窗口
 5. **知识更新**: 训练数据到 2025年7月（最可靠到 2025年1月）
+6. **大输出容量**: 最大输出 64K tokens（我们配置为 16K，4倍提升）
 
 ---
 
@@ -48,6 +50,8 @@
 ```diff
 - ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
 + ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+- ANTHROPIC_MAX_TOKENS=4096
++ ANTHROPIC_MAX_TOKENS=16384  # 提升到 16K（4倍）
 ```
 
 #### `src/config/settings.py`
@@ -57,6 +61,15 @@
 -     description="Claude model to use for generation",
 +     default="claude-sonnet-4-5-20250929",
 +     description="Claude model to use for generation (upgraded to 4.5 Sonnet)",
+  )
+  ANTHROPIC_MAX_TOKENS: int = Field(
+-     default=4096,
++     default=16384,
+      ge=1,
+-     le=8192,
++     le=65536,
+-     description="Maximum tokens for Claude responses",
++     description="Maximum tokens for Claude responses (Sonnet 4.5 supports up to 64K)",
   )
 ```
 
@@ -68,7 +81,7 @@ API 调用代码**无需修改**，只需更新模型名称：
 # src/services/proofreading/service.py:97-104
 response = await self.ai_client.messages.create(
     model="claude-sonnet-4-5-20250929",  # ✅ 已更新
-    max_tokens=4096,
+    max_tokens=16384,  # ✅ 提升到 16K（4倍）
     temperature=0.2,
     messages=[
         {"role": "system", "content": prompt["system"]},
@@ -220,17 +233,26 @@ async def test_performance():
 
 ### 成本影响
 
-- ✅ **零成本增加**: 价格完全相同
-- ✅ **性能提升**: 获得更好的质量，相同的价格
-- ✅ **ROI 提升**: 更高质量 + 相同成本 = 更好的投资回报
+- ⚠️ **输出容量提升**: MAX_TOKENS 从 4K 提升到 16K（4倍）
+- ⚠️ **潜在成本增加**: 如果充分利用输出容量，成本可能增加
+- ✅ **单价不变**: 输入/输出价格保持 $3/$15
+- ✅ **质量提升**: 更完整的输出，更详细的建议
 
-### 预算不变
+### 预算影响
 
-假设每月处理 10万篇文章，平均每篇 5000 tokens：
+假设每月处理 10万篇文章：
 
-- 总 tokens: 500M
-- 月度成本: 约 $1,500（输入）+ $7,500（输出）= $9,000
-- **成本保持不变**
+**保守估算**（平均使用 6K tokens 输出）:
+- 总输出 tokens: 600M
+- 月度成本（输出）: $9,000
+- **成本增加**: 约 +50%
+
+**激进估算**（平均使用 10K tokens 输出）:
+- 总输出 tokens: 1,000M
+- 月度成本（输出）: $15,000
+- **成本增加**: 约 +100%
+
+**实际影响**: 需要监控实际使用情况，大多数场景不会达到 16K 上限
 
 ---
 

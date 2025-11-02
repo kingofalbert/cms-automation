@@ -93,10 +93,10 @@ class Settings(BaseSettings):
         description="Claude model to use for generation (upgraded to 4.5 Sonnet)",
     )
     ANTHROPIC_MAX_TOKENS: int = Field(
-        default=4096,
+        default=16384,
         ge=1,
-        le=8192,
-        description="Maximum tokens for Claude responses",
+        le=65536,
+        description="Maximum tokens for Claude responses (Sonnet 4.5 supports up to 64K)",
     )
 
     # Google Drive Storage Configuration
