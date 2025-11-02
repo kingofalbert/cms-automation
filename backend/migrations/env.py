@@ -31,7 +31,11 @@ settings = get_settings()
 
 def get_url():
     """Get database URL from settings."""
-    return str(settings.DATABASE_URL)
+    url = str(settings.DATABASE_URL)
+    # Convert async URL to sync URL for migrations
+    if url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return url
 
 
 def run_migrations_offline() -> None:

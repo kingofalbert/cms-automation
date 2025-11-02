@@ -252,14 +252,14 @@ class GoogleDriveSyncService:
         existing = result.scalar_one_or_none()
 
         now = datetime.utcnow()
-        metadata = dict(existing.metadata if existing else {})
+        metadata = dict(existing.drive_metadata if existing else {})
         metadata.update(drive_metadata)
 
         if existing:
             existing.title = payload["title"]
             existing.content = payload["content"]
             existing.author = payload.get("author")
-            existing.metadata = metadata
+            existing.drive_metadata = metadata
             existing.tags = payload.get("tags", [])
             existing.categories = payload.get("categories", [])
             existing.meta_description = payload.get("meta_description")
@@ -281,7 +281,7 @@ class GoogleDriveSyncService:
             categories=payload.get("categories", []),
             meta_description=payload.get("meta_description"),
             seo_keywords=payload.get("seo_keywords", []),
-            metadata=metadata,
+            drive_metadata=metadata,
             notes=payload.get("notes") or [],
             synced_at=now,
         )

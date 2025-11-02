@@ -158,7 +158,7 @@ def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
         status=item.status.value if hasattr(item.status, "value") else item.status,
         author=item.author,
         article_id=item.article_id,
-        metadata=item.metadata or {},
+        metadata=item.drive_metadata or {},
         notes=item.notes or [],
         synced_at=item.synced_at,
         created_at=item.created_at,

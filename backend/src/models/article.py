@@ -179,6 +179,19 @@ class Article(Base, TimestampMixin):
         foreign_keys="UploadedFile.article_id",
     )
 
+    # Proofreading relationships (1:N)
+    proofreading_histories: Mapped[List["ProofreadingHistory"]] = relationship(
+        "ProofreadingHistory",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+
+    proofreading_decisions: Mapped[List["ProofreadingDecision"]] = relationship(
+        "ProofreadingDecision",
+        back_populates="article",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self) -> str:
         """String representation."""
         return f"<Article(id={self.id}, status={self.status}, title='{self.title[:50]}...')>"

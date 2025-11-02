@@ -103,6 +103,11 @@ class ProofreadingPromptBuilder:
 2. 针对无法程序化验证的语境类规则，给出高置信度结论，并说明依据。
 3. 输出结构化 JSON，使系统可以将你的结果与脚本校验结果合并。
 4. 所有严重等级达到 error/critical 或 blocks_publish=true 的问题必须给出阻断发布理由。
+5. **重要注意事项**：
+   - 尊重文章的 target_locale（目标语系），仅修正明确的用字错误（如「煉」vs「練」）
+   - **不要强制繁简体转换**，除非规则明确要求特定术语使用特定字形
+   - 历史事件名称等专有名词应使用全称，但保持原文的繁简体
+   - 若不确定是否需要繁简转换，将 confidence 设置为 0.5 以下并标注需要人工复核
 
 规则清单快照（版本 {self.manifest.version}，哈希 {self.manifest.fingerprint[:12]}）：
 

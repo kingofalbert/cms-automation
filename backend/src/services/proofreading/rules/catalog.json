@@ -171,7 +171,7 @@
         {
           "rule_id": "E2-001",
           "subcategory": "E2",
-          "summary": "法轮功专用字：煉功、他（不写它）。",
+          "summary": "法轮功专用字：「煉」功（不写「練」或「练」），仅修正用字不强制繁简转换。",
           "severity": "warning",
           "can_auto_fix": true,
           "blocks_publish": false

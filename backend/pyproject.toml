@@ -46,6 +46,7 @@ httpx = "^0.25.2"
 faker = "^20.1.0"
 safety = "^3.6.2"
 bandit = "^1.8.6"
+psycopg2-binary = "^2.9.11"
 
 [tool.black]
 line-length = 100

@@ -20,6 +20,15 @@ from src.models.topic_request import (
     TopicRequestStatus,
 )
 from src.models.uploaded_file import UploadedFile
+from src.models.proofreading import (
+    DecisionType,
+    FeedbackStatus,
+    TuningJobType,
+    TuningJobStatus,
+    ProofreadingHistory,
+    ProofreadingDecision,
+    FeedbackTuningJob,
+)
 
 __all__ = [
     # Base
@@ -51,4 +60,12 @@ __all__ = [
     "WorklistStatus",
     # Storage
     "UploadedFile",
+    # Proofreading
+    "DecisionType",
+    "FeedbackStatus",
+    "TuningJobType",
+    "TuningJobStatus",
+    "ProofreadingHistory",
+    "ProofreadingDecision",
+    "FeedbackTuningJob",
 ]

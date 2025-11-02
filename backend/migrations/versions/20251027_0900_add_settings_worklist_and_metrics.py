@@ -22,73 +22,74 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Create new tables and align enums/columns with updated models."""
     # ------------------------------------------------------------------
-    # Update provider enum values
+    # Update provider enum values (handle fresh database or migration)
     # ------------------------------------------------------------------
-    op.execute(
-        """
-        UPDATE publish_tasks
-        SET provider = 'computer_use'
-        WHERE provider IN ('anthropic', 'gemini');
-        """
-    )
+    # Check if provider_enum exists and update it
+    op.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'provider_enum') THEN
+                ALTER TYPE provider_enum RENAME TO provider_enum_old;
+                CREATE TYPE provider_enum AS ENUM ('playwright', 'computer_use', 'hybrid');
 
-    op.execute("ALTER TYPE provider_enum RENAME TO provider_enum_old;")
-    op.execute(
-        "CREATE TYPE provider_enum AS ENUM ('playwright', 'computer_use', 'hybrid');"
-    )
-    op.execute("ALTER TABLE publish_tasks ALTER COLUMN provider DROP DEFAULT;")
-    op.execute(
-        """
-        ALTER TABLE publish_tasks
-        ALTER COLUMN provider
-        TYPE provider_enum
-        USING provider::text::provider_enum;
-        """
-    )
-    op.execute(
-        "ALTER TABLE publish_tasks ALTER COLUMN provider SET DEFAULT 'playwright';"
-    )
-    op.execute("DROP TYPE provider_enum_old;")
+                IF EXISTS (SELECT 1 FROM information_schema.columns
+                          WHERE table_name = 'publish_tasks' AND column_name = 'provider') THEN
+                    ALTER TABLE publish_tasks ALTER COLUMN provider DROP DEFAULT;
+                    ALTER TABLE publish_tasks
+                    ALTER COLUMN provider
+                    TYPE provider_enum
+                    USING CASE
+                        WHEN provider::text IN ('anthropic', 'gemini') THEN 'computer_use'::provider_enum
+                        ELSE provider::text::provider_enum
+                    END;
+                    ALTER TABLE publish_tasks ALTER COLUMN provider SET DEFAULT 'playwright';
+                END IF;
+
+                DROP TYPE IF EXISTS provider_enum_old;
+            END IF;
+        END
+        $$;
+    """)
 
     # ------------------------------------------------------------------
-    # Update task status enum values
+    # Update task status enum values (handle fresh database or migration)
     # ------------------------------------------------------------------
-    op.execute(
-        """
-        UPDATE publish_tasks
-        SET status = 'publishing'
-        WHERE status = 'running';
-        """
-    )
+    op.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'task_status_enum') THEN
+                ALTER TYPE task_status_enum RENAME TO task_status_enum_old;
+                CREATE TYPE task_status_enum AS ENUM (
+                    'idle',
+                    'pending',
+                    'initializing',
+                    'logging_in',
+                    'creating_post',
+                    'uploading_images',
+                    'configuring_seo',
+                    'publishing',
+                    'completed',
+                    'failed'
+                );
 
-    op.execute("ALTER TYPE task_status_enum RENAME TO task_status_enum_old;")
-    op.execute(
-        """
-        CREATE TYPE task_status_enum AS ENUM (
-            'idle',
-            'pending',
-            'initializing',
-            'logging_in',
-            'creating_post',
-            'uploading_images',
-            'configuring_seo',
-            'publishing',
-            'completed',
-            'failed'
-        );
-        """
-    )
-    op.execute("ALTER TABLE publish_tasks ALTER COLUMN status DROP DEFAULT;")
-    op.execute(
-        """
-        ALTER TABLE publish_tasks
-        ALTER COLUMN status
-        TYPE task_status_enum
-        USING status::text::task_status_enum;
-        """
-    )
-    op.execute("ALTER TABLE publish_tasks ALTER COLUMN status SET DEFAULT 'pending';")
-    op.execute("DROP TYPE task_status_enum_old;")
+                IF EXISTS (SELECT 1 FROM information_schema.columns
+                          WHERE table_name = 'publish_tasks' AND column_name = 'status') THEN
+                    ALTER TABLE publish_tasks ALTER COLUMN status DROP DEFAULT;
+                    ALTER TABLE publish_tasks
+                    ALTER COLUMN status
+                    TYPE task_status_enum
+                    USING CASE
+                        WHEN status::text = 'running' THEN 'publishing'::task_status_enum
+                        ELSE status::text::task_status_enum
+                    END;
+                    ALTER TABLE publish_tasks ALTER COLUMN status SET DEFAULT 'pending';
+                END IF;
+
+                DROP TYPE IF EXISTS task_status_enum_old;
+            END IF;
+        END
+        $$;
+    """)
 
     # ------------------------------------------------------------------
     # Add progress tracking columns to publish_tasks

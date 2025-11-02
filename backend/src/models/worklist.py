@@ -94,7 +94,7 @@ class WorklistItem(Base, TimestampMixin):
         comment="SEO keywords for search engines (1-3 keywords)",
     )
 
-    metadata: Mapped[dict] = mapped_column(
+    drive_metadata: Mapped[dict] = mapped_column(
         JSONType,
         nullable=False,
         default=dict,
