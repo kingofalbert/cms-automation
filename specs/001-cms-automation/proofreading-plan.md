@@ -553,6 +553,7 @@ This plan outlines the implementation of a comprehensive proofreading service wi
 2. 📋 Design frontend proofreading UI
 3. 📋 Create user documentation
 4. 📋 Establish rule maintenance process
+5. 🆕 Build feedback capture & tuning pipeline（决策存储、调优批次、仪表盘）
 
 ---
 

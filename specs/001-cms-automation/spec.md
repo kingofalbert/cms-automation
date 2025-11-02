@@ -329,6 +329,42 @@ Published Article with SEO ✅
 
 ---
 
+### User Story 6 - Proofreading Feedback & Training Loop (Priority: P0) ⭐新增
+
+**As a** language quality lead  
+**I want to** capture用户对校对/SEO/TAG 建议的接受或拒绝，并跟踪是否用于后续脚本/Prompt 调优  
+**So that** 我们可以基于真实反馈迭代规则脚本和 AI Prompt，持续提高建议质量
+
+**Why this priority**: Feedback 数据是闭环优化的核心，缺少真实决策和使用状态无法指导下一轮模型/脚本升级。上线即需可用。
+
+**Independent Test**: 对 5 篇文章执行建议决策（接受/拒绝/部分采纳），生成反馈调优导出任务，验证 pending → completed 状态流转、反馈记录与仪表盘统计。
+
+**Acceptance Scenarios**:
+
+1. **Given** ProofreadingAnalysisService 已生成建议  
+   **When** 用户在 UI 点击“接受”或“拒绝”或“部分采纳”  
+   **Then** 系统记录 `proofreading_decisions` 条目，字段包含：suggestion_id、suggestion_type、rule_id、original_text、suggested_text、final_text、decision、feedback、feedback_status='pending'。
+
+2. **Given** 用户拒绝或部分采纳建议  
+   **When** UI 弹出反馈面板  
+   **Then** 用户可以选择预设原因（多选）或填写自定义说明（可选），前端提交批量决策时一并保存。
+
+3. **Given** 反馈调优导出 worker 每 10 分钟运行  
+   **When** worker 获取 `feedback_status='pending'` 的决策  
+   **Then** 它会标记记录为 `in_progress`，成功写入调优素材（供人工分析脚本/Prompt）后更新 `feedback_status='completed'`、记录 `tuning_batch_id`、`prompt_or_rule_version`、`feedback_processed_at`；失败时标记 `failed` 并写错误信息。
+
+4. **Given** 运营需要查看反馈使用情况  
+   **When** 访问反馈调优监控 API/仪表盘  
+   **Then** 可看到 pending/in_progress/completed/failed 数量、Prompt/规则版本统计、支持按时间/类型过滤；`proofreading_history` 汇总字段同步更新。
+
+5. **Given** 某条决策调优失败  
+   **When** 运营通过 `PATCH /proofreading/decisions/{id}/feedback-status` 将其重置为 `pending`  
+   **Then** 系统记录操作人与原因，并允许 worker 再次处理。
+
+**Dependencies**: User Story 2 (需要校对/SEO 建议输出), User Story 4 (监控与审计基础)
+
+---
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements

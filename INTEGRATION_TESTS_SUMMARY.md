@@ -13,7 +13,7 @@
 1. **Docker 测试环境** - 完整的隔离测试环境
 2. **WordPress 初始化** - 自动安装和配置
 3. **测试 Fixtures** - 共享的测试数据和工具
-4. **集成测试套件** - 5 个测试文件，22 个测试用例
+4. **集成测试套件** - 6 个测试文件，25 个测试用例
 5. **自动化脚本** - 一键运行所有测试
 6. **文档** - 完整的使用说明
 
@@ -33,12 +33,13 @@ tests/
 │   ├── test_01_login.py               # 登录功能（3 个测试）
 │   ├── test_02_article_creation.py    # 文章创建（5 个测试）
 │   ├── test_03_seo_configuration.py   # SEO 配置（5 个测试）
-│   └── test_04_full_publish.py        # 完整发布流程（4 个测试）
+│   ├── test_04_full_publish.py        # 完整发布流程（4 个测试）
+│   └── test_05_proofreading_feedback.py # 校对反馈与调优闭环（3 个测试）
 │
 └── run_integration_tests.sh           # 自动化测试脚本
 ```
 
-**总计**: 22 个集成测试用例
+**总计**: 25 个集成测试用例
 
 ---
 
@@ -82,6 +83,14 @@ tests/
 - ✅ `test_publish_without_images`: 无图片发布
 - ✅ `test_publish_with_retry`: 重试机制测试
 - ✅ `test_orchestrator_screenshot_creation`: 截图创建验证
+
+### Test 05: 校对反馈与调优闭环（3 个测试）⭐新增
+
+> 调优闭环指根据用户拒绝/修改的建议，由人工复盘并更新脚本或 Prompt，而非模型训练。
+
+- ✅ `test_submit_decisions_batch`: 批量提交接受/拒绝/部分采纳，验证数据库写入与统计更新
+- ✅ `test_get_decisions_with_feedback_status`: 查询接口返回反馈、反馈处理状态、分页过滤
+- ✅ `test_feedback_export_status_transition`: 模拟反馈调优导出 worker，覆盖 pending → in_progress → completed 及失败重置流程
 
 ---
 

@@ -15,7 +15,7 @@ This document provides a comprehensive checklist of all functional and non-funct
 
 ---
 
-## Functional Requirements (45 Total)
+## Functional Requirements (50 Total)
 
 ### 1. Article Import (Requirements: FR-001 to FR-010)
 
@@ -179,7 +179,7 @@ This document provides a comprehensive checklist of all functional and non-funct
   - Auto-detect Yoast SEO, Rank Math, All in One SEO
   - Use appropriate selectors for each plugin
 
-### 4. API Endpoints (Requirements: FR-036 to FR-045)
+### 4. API Endpoints (Requirements: FR-036 to FR-048)
 
 - [ ] **FR-036**: POST /v1/articles/import - Single article import
 
@@ -206,6 +206,49 @@ This document provides a comprehensive checklist of all functional and non-funct
 - [ ] **FR-045**: GET /v1/publish/tasks/{task_id}/logs - Get execution logs
   - Filters: log_level
   - Pagination: limit (default 100, max 1000)
+
+- [ ] **FR-046**: POST /v1/proofreading/decisions - 批量提交建议决策
+  - 接受/拒绝/部分采纳同一 history_id 的建议
+  - 校验 suggestion_id 是否有效且状态未锁定
+  - 更新 history 计数（accepted/rejected/modified/pending_feedback）
+
+- [ ] **FR-047**: GET /v1/proofreading/decisions?history_id=ID - 查询用户决策
+  - 返回决策详情、反馈信息、反馈处理状态
+  - 支持分页与过滤（decision、feedback_status、suggestion_type）
+
+- [ ] **FR-048**: PATCH /v1/proofreading/decisions/{id}/feedback-status - 运营重置反馈处理状态
+  - 允许将 failed/in_progress 重置为 pending
+  - 需要运营角色权限，写入审计日志
+
+### 5. 用户反馈与后调优闭环 (Requirements: FR-049 to FR-055) ⭐新增
+
+- [ ] **FR-049**: 每条建议生成唯一 suggestion_id，并保留原文/建议文本
+- [ ] **FR-050**: 用户可对每条建议执行接受、拒绝、部分采纳操作
+  - 拒绝/部分采纳需支持预设反馈选项 + 自定义文本（可选）
+  - UI 回传最终文本（若有编辑）并存储 diff
+
+- [ ] **FR-051**: 系统在 `proofreading_decisions` 记录用户决策
+  - 字段包含 suggestion_type、rule_id、decision、feedback、final_text
+  - 默认 `feedback_status='pending'`
+
+- [ ] **FR-052**: 反馈调优导出任务只处理 `feedback_status='pending'` 的记录
+  - 处理时标记为 `in_progress`
+  - 成功后写入 `tuning_batch_id`、`prompt_or_rule_version`、`feedback_processed_at` 并置为 `completed`
+  - 失败时标记 `failed` 并记录错误信息
+
+- [ ] **FR-053**: 运营可以查询反馈处理进度
+  - Dashboard/API 显示 pending/in_progress/completed/failed 数量
+  - 支持按模型版本、时间区间过滤
+
+- [ ] **FR-054**: `proofreading_history` 汇总决策统计字段
+  - accepted_count、rejected_count、modified_count、pending_feedback_count、feedback_completed_count
+  - 同步更新用于仪表盘与报表
+
+- [ ] **FR-055**: 调优批次管理（可选）
+  - `feedback_tuning_jobs` 记录每次调优闭环所使用的决策数量与目标 Prompt/规则版本
+  - 决策记录能够关联所属批次，支持溯源
+
+> 注：上述“调优”指基于用户反馈对 deterministic 脚本或 AI Prompt 进行人工复盘与调整，并非机器学习模型训练。
 
 ---
 
@@ -287,7 +330,7 @@ This document provides a comprehensive checklist of all functional and non-funct
 
 ---
 
-## Database Schema Requirements (8 Total)
+## Database Schema Requirements (10 Total)
 
 - [ ] **DB-001**: articles table with required fields
   - id, title, body, source, status, featured_image_path, created_at, updated_at
@@ -328,9 +371,19 @@ This document provides a comprehensive checklist of all functional and non-funct
   - update_article_status_on_seo() when SEO metadata created
   - update_article_status_on_publish() when publish task completed
 
+- [ ] **DB-009**: proofreading_decisions 表追踪用户决策
+  - 包含 suggestion_id、decision、feedback、feedback_status 等字段
+  - feedback_status 枚举：pending/in_progress/completed/failed
+  - 索引：history_id、suggestion_id、feedback_status
+
+- [ ] **DB-010**: feedback_tuning_jobs 表记录调优批次（可选）
+  - 字段：job_type、status、target_version、started_at、completed_at
+  - 决策表通过 tuning_batch_id 外键关联
+  - 提供视图/物化视图统计各批次决策数量
+
 ---
 
-## Testing Requirements (10 Total)
+## Testing Requirements (12 Total)
 
 - [ ] **TEST-001**: Unit tests with ≥ 80% code coverage
   - Test all service methods
@@ -376,6 +429,14 @@ This document provides a comprehensive checklist of all functional and non-funct
   - Playwright: Test on WordPress 6.4, 6.5, 6.6
   - Anthropic: Test on custom WordPress themes
   - Test SEO plugin detection (Yoast, Rank Math)
+
+- [ ] **TEST-011**: Proofreading决策 API 集成测试
+  - 提交接受/拒绝/部分采纳，验证数据库写入与 history 计数更新
+  - 查询接口返回反馈处理状态、反馈信息
+
+- [ ] **TEST-012**: 反馈调优导出与状态更新测试
+  - 模拟导出服务从 pending 获取数据并标记 in_progress
+  - 成功后更新为 completed，失败场景标记 failed 并支持重置
 
 ---
 

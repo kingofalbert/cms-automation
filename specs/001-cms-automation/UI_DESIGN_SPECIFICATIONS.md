@@ -839,6 +839,154 @@ Overflow-Y: Auto
 
 ---
 
+### 2.12 Proofreading Suggestion Card ⭐新增
+
+```
+┌───────────────────────────────┐
+│ [Rule Badge]  [Severity Tag]  │  ← Header (56px)
+│ Issue summary (single line)   │
+├───────────────────────────────┤
+│ Original: 「……」               │  ← Body (Stacked)
+│ Suggestion: 「……」             │
+│ Confidence: 0.85 (Claude)      │
+├───────────────────────────────┤
+│ [接受建議] [保留原文] [部分採用] │  ← Action Row (SM buttons)
+└───────────────────────────────┘
+```
+
+**Header**
+- Rule Badge：使用 `Badge Primary` 展示 `A1-001` 等编号。
+- Severity Tag：沿用 `Status Badge`（Error/Warning/Primary/Default）。
+- 来源标签：Script → Code icon + Gray-700；AI → Sparkles icon + Primary-500；Merged → Merge icon + Primary-700。
+
+**Body**
+- 文本使用 `Body Small 14px`，原文/建议对齐左侧，行距 20px。
+- 过长时折叠，显示 “展开全文” 链接，点击后展开 + “收起”。
+- 差异高亮：
+  - 添加 → 背景 `Success-100`，文字 `Success-700`。
+  - 删除 → 背景 `Error-100`，文字 `Error-700` + 删除线。
+  - 替换 → 两侧同时高亮并在 hover tooltip 中显示 “旧值 → 新值”。
+- 置信度信息位于底部：ShieldCheck icon + `Confidence: 0.85 (Claude)`，颜色 `Info-600`。
+
+**Action Row**
+- 按钮顺序：Primary「接受建議」、Secondary「保留原文」、Ghost「部分採用」。
+- 按钮尺寸：SM（32px 高），间距 12px。
+- 移动端改为垂直堆叠（Flex Column + Gap 12px）。
+- 再次点击已选决策时，按钮进入 `loading` 状态并禁用其它按钮。
+
+**Card 状态**
+| 状态 | Border | 背景 | Header 角标 |
+|------|--------|------|-------------|
+| Pending | 1px Gray-200 | White | 无 |
+| Accepted | 2px Success-500 | Success-50 | `已接受 ✓` + Success badge |
+| Rejected | 2px Error-500 | Error-50 | `保留原文 ✕` + Error badge |
+| Modified | 2px Warning-500 | Warning-50 | `部分採用 ✎` + Warning badge |
+
+**辅助信息**
+- Tooltip：Hover rule badge 显示“规则说明 + 示例”。
+- 快捷键：桌面端可使用 `A`（接受）、`K`（保留原文）、`P`（部分采用）。
+- Toast：操作成功后显示顶部右侧 Toast，文案如“已保留原文（3s 后自动消失）”。
+
+---
+
+### 2.13 Feedback Modal / Drawer ⭐新增
+
+> 触发场景：点击“保留原文”或“部分採用”按钮。
+
+**结构**
+```
+Header: 標題 + Close 按鈕
+Body:
+  1. 建議摘要 (可折疊)
+  2. 決策選擇 (Radio)
+  3. 反饋原因 (Checkbox，多選)
+  4. 最終文本編輯區 (僅部分採用時顯示)
+  5. 可選備註 Textarea
+Footer: [取消] [確認提交]
+```
+
+**詳細規則**
+1. **建議摘要卡片**  
+   - 預設展開，顯示原文/建議/置信度。  
+   - 右上角提供 “查看差異” → 開啟 Diff Viewer Overlay。  
+   - 折疊後僅顯示規則 + 單行摘要。
+2. **決策選擇 (Radio Group)**  
+   - 選項：接受建議 / 保留原文 / 部分採用。  
+   - 預設鎖定為觸發來源（如點擊「保留原文」則預選該項）。  
+   - 切換為“接受建議”時，隱藏下方反饋區域，只需確認即可。
+3. **反饋原因 (Checkbox Group)**  
+   - 列表（至多兩列，最多 6 項）：  
+     - 建議理解錯誤  
+     - 與風格指南不符  
+     - 語義/事實不準確  
+     - 上下文不完整  
+     - AI 建議過於激進  
+     - 其他（顯示額外輸入框）  
+   - 未選擇時，在確認按鈕左側顯示提醒 `建議選擇原因，幫助我們改進`（不阻止提交）。
+4. **最終文本編輯區**  
+   - 僅在「部分採用」展示。  
+   - 使用 `Textarea` + `Character Counter` + `Diff Toggle`。  
+   - 校驗：不可為空；若與原文完全一致則提示 `確認是否直接保留原文？`。  
+   - 提供 `套用 AI 建議` 按鈕快速填充。  
+5. **備註 Textarea**  
+   - 佔位：“可記錄更詳細的調整說明（僅內部可見）”。  
+   - 限制 500 字符，顯示字數計數。
+
+**Footer 按鈕**
+- Cancel：Secondary，點擊後關閉並重置。  
+- Confirm：Primary，Loading 狀態顯示 Spinner + `提交中…`。  
+- 當必填校驗失敗時，阻止關閉並聚焦第一個錯誤欄位。
+
+---
+
+### 2.14 Diff Viewer ⭐新增
+
+**檢視模式**
+1. **並排模式 (Desktop Default)**  
+   - 左側原文，右側最終文本。  
+   - 標題行：`原文` / `最終文本`，右側提供 `切換為行內模式` 按鈕。  
+   - 滾動同步，頂部顯示 `同步滾動` 切換開關。
+2. **行內模式 (Mobile Default)**  
+   - 使用 Inline Diff，新增以 `Success-100/700` 標示，刪除以 `Error-100/700` 標示。  
+   - 列表下方提供 “僅顯示差異” Toggle。
+
+**工具列**
+- `複製最終文本`（Primary Ghost Icon Button）  
+- `下載 Diff（.txt）`  
+- `上一處差異 / 下一處差異`（Chevron 按鈕）
+
+---
+
+### 2.15 Feedback Status Chip ⭐新增
+
+| 狀態 | 背景 | 文字 | Icon |
+|------|------|------|------|
+| pending | Gray-100 | Gray-700 | Clock |
+| in_progress | Info-100 | Info-700 | Loader (旋轉動畫) |
+| completed | Success-100 | Success-700 | CheckCircle |
+| failed | Error-100 | Error-700 | AlertCircle |
+
+- 高度 24px，Padding 0 12px，Icon 16px。
+- 在卡片／表格／儀表盤中統一使用。
+
+---
+
+### 2.16 Decisions Bulk Toolbar ⭐新增
+
+```
+┌────────────────────────────────────────────┐
+│ [Checkbox 全選] 已選 3 項                 │
+│  [標記待處理]  [導出 CSV]  [批量保留原文] │
+└────────────────────────────────────────────┘
+```
+
+- 背景 Gray-50，Border-Bottom Gray-200，Padding 0 24px，高度 56px。
+- 顯示於多選模式，從畫面頂部滑入（Slide Down 200ms ease-out）。
+- 右側操作按鈕全部為 Secondary/Primary SM，最右側保留原文按鈕觸發二次確認。
+- 提供 “取消選擇” 連結（放置在左側 Checkbox 旁），觸發後恢復列表狀態。
+
+---
+
 ## 📱 Part 3: Page Layouts & Wireframes
 
 ### 3.1 Article Import Page

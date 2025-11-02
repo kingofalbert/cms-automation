@@ -4007,11 +4007,164 @@ async def get_worklist(
 
 ---
 
+## Phase 7: Proofreading Feedback & Tuning Loop (2 weeks) ⭐新增
+
+**Goal**: Capture用户决策、收集反馈、沉淀反馈数据用于脚本/Prompt 调优、支撑模型/脚本持续迭代  
+**Duration**: 2 weeks (Week 16-17)  
+**Estimated Hours**: 58 hours  
+**Status**: Not Started
+
+---
+
+### Week 16: 数据模型与后端服务
+
+#### T7.1 [US2][P0] Proofreading 决策与反馈调优批次迁移
+
+**Description**: 创建 `proofreading_decisions`、`feedback_tuning_jobs`（可选）表，扩展 `proofreading_history` 统计字段与索引。
+
+**Dependencies**: T2A.5 ProofreadingAnalysisService
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- Alembic migration + downgrade
+- ORM/Pydantic 模型更新
+- 文档：`database_schema_updates.md`
+
+**Acceptance Criteria**:
+- [ ] 新表/字段在 dev/staging 通过迁移
+- [ ] `feedback_status` 枚举值齐全（pending/in_progress/completed/failed）
+- [ ] 待处理反馈数量通过 `pending_feedback_count` 正确统计
+
+**File Paths**:
+- backend/alembic/versions/*
+- backend/src/services/proofreading/models.py
+- backend/docs/database_schema_updates.md
+
+#### T7.2 [US2][P0] 决策写入服务与事件发布
+
+**Description**: 实现 `record_user_decisions`，批量写入用户决策、更新 history 统计、推送反馈调优事件。
+
+**Dependencies**: T7.1
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- Service/Repository 方法
+- Celery/Kafka 事件（`proofreading.decision.recorded`）
+- 单元测试覆盖成功/失败场景
+
+**Acceptance Criteria**:
+- [ ] 同一 history 的多条决策在事务内提交
+- [ ] 更新 accepted/rejected/modified/pending_feedback 计数
+- [ ] 事件包含 suggestion_type、rule_id、feedback 等关键字段
+
+**File Paths**:
+- backend/src/services/proofreading/service.py
+- backend/src/services/proofreading/events.py
+- backend/tests/services/test_proofreading_decisions.py
+
+#### T7.3 [US2][P0] 决策 API + 权限
+
+**Description**: 提供 `POST /proofreading/decisions`、`GET /proofreading/decisions`、`PATCH /proofreading/decisions/{id}/feedback-status`。
+
+**Dependencies**: T7.2
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- FastAPI 路由
+- OpenAPI 文档
+- 集成测试
+
+**Acceptance Criteria**:
+- [ ] 批量提交校验 suggestion_id/hints
+- [ ] 查询支持分页、按 decision/feedback_status 过滤
+- [ ] 仅运营角色可修改 feedback_status，并写入审计日志
+
+**File Paths**:
+- backend/src/api/routes/proofreading_decisions.py
+- specs/001-cms-automation/api-spec.yaml
+- backend/tests/api/test_proofreading_decisions.py
+
+### Week 17: 前端交互与反馈调优流水
+
+#### T7.4 [US4][P0] 决策交互与反馈 UI
+
+**Description**: 在 Proofreading/SEO/TAG 建议卡添加接受/拒绝/部分采纳操作与反馈弹窗，提交批量决策。
+
+**Dependencies**: T7.3
+
+**Estimated Hours**: 16 hours
+
+**Deliverables**:
+- UI 组件（按钮、反馈面板、diff 预览）
+- Hook：`useProofreadingDecisions`
+- 前端单元/端到端测试
+
+**Acceptance Criteria**:
+- [ ] 拒绝/部分采纳可选择预设反馈 + 自定义说明
+- [ ] 反馈可选，不强制
+- [ ] 决策状态在 UI 中明确展示，可撤销（提交前）
+
+**File Paths**:
+- frontend/src/components/ProofreadingSuggestionCard/*
+- frontend/src/hooks/useProofreadingDecisions.ts
+- frontend/tests/proofreading-decisions/*.test.tsx
+
+#### T7.5 [US2][P0] 反馈调优导出 Worker
+
+**Description**: 开发后台 worker 拉取 `pending` 决策 → 标记 `in_progress` → 导出调优素材（S3/数据湖）→ 更新状态。
+
+**Dependencies**: T7.2
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- Celery 任务 / 后台服务
+- S3/存储写入逻辑
+- 错误处理与重试策略
+
+**Acceptance Criteria**:
+- [ ] 避免并发重复消费（行锁或 skip locked）
+- [ ] 成功后写入 tuning_batch_id、prompt_or_rule_version、feedback_processed_at
+- [ ] 失败时记录错误并可重置为 pending
+
+**File Paths**:
+- backend/src/workers/feedback_export.py
+- backend/tests/workers/test_feedback_export.py
+- monitoring/feedback_export_dashboard.md
+
+#### T7.6 [US4][P1] 调优监控与仪表盘
+
+**Description**: 构建 pending/completed/failed 决策统计面板，支持按 Prompt/规则版本过滤。
+
+**Dependencies**: T7.5
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Grafana/Metabase dashboard
+- 查询 API 或 SQL 视图
+- 文档更新
+
+**Acceptance Criteria**:
+- [ ] 仪表盘展示实时数量与趋势
+- [ ] 支持导出/筛选模型版本
+- [ ] 文档包含使用指南与指标解释
+
+**File Paths**:
+- monitoring/dashboards/proofreading_feedback_tuning.json
+- monitoring/README.md
+- backend/docs/monitoring_guide.md
+
+---
+
 ## Summary
 
-**Total Tasks**: 78 tasks (48 core + 10 governance/deployment + 20 Google Drive automation)
-**Total Duration**: 15.5 weeks (~77 business days)
-**Total Estimated Hours**: ~500 hours
+**Total Tasks**: 84 tasks (48 core + 10 governance/deployment + 20 Google Drive automation + 6 feedback/调优闭环)
+**Total Duration**: 17.5 weeks (~87 business days)
+**Total Estimated Hours**: ~558 hours
 
 ### By Phase:
 - **Phase 0**: Governance (continuous)
@@ -4021,6 +4174,7 @@ async def get_worklist(
 - **Phase 4**: Frontend (2 weeks, 10 tasks, 80 hours)
 - **Phase 5**: Testing & Deployment (2 weeks, 12 tasks, 72 hours)
 - **Phase 6**: 🆕 Google Drive & Worklist (5 weeks, 20 tasks, 200 hours)
+- **Phase 7**: 🆕 Proofreading Feedback & Tuning Loop (2 weeks, 6 tasks, 58 hours)
 
 ### By User Story:
 - **US1** (Article Import): T1.5-T1.10 (6 tasks)
@@ -4029,6 +4183,7 @@ async def get_worklist(
 - **US4** (Monitoring): T4.5-T4.7 (3 tasks)
 - **US5** (Provider Comparison): T4.8 (1 task)
 - **US6** 🆕 (Google Drive Automation): T6.1-T6.20 (20 tasks)
+- **US7** 🆕 (Feedback & Tuning Loop): T7.1-T7.6 (6 tasks)
 
 ### Critical Path:
 1. Database migration (T1.1-T1.4) → Blocks all data operations
@@ -4038,6 +4193,7 @@ async def get_worklist(
 5. Integration tests (T5.1-T5.5) → Blocks production deployment
 6. 🆕 Google Drive integration (T6.1-T6.7) → Blocks Worklist backend
 7. 🆕 Worklist backend APIs (T6.14) → Blocks Worklist UI real-time updates
+8. 🆕 Proofreading decisions (T7.1-T7.5) → Blocks 调优闭环与 Prompt/规则迭代
 
 ### Parallel Work Opportunities:
 - Frontend (Phase 4) can start once Phase 3 APIs are defined
@@ -4045,6 +4201,7 @@ async def get_worklist(
 - Performance testing (T5.6) can start during Phase 4
 - 🆕 Google Drive backend (T6.1-T6.7) can develop in parallel with Worklist UI skeleton (T6.8-T6.10)
 - 🆕 Worklist frontend (T6.8-T6.13) can start once backend APIs are defined
+- 🆕 Proofreading feedback export (T7.5) can run alongside Phase 7 frontend (T7.4)
 - All [P] marked tasks have no blocking dependencies
 
 ### Phase 6 Highlights:
@@ -4053,6 +4210,7 @@ async def get_worklist(
 - **Real-time Updates**: WebSocket for instant status changes
 - **Status Tracking**: Complete audit trail for all document transitions
 - **Batch Operations**: Delete/retry/mark multiple documents at once
+- **Proofreading Feedback Loop**: 用户反馈沉淀为调优素材，支撑规则与 Prompt 快速迭代
 
 ---
 

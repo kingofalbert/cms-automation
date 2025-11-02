@@ -362,12 +362,19 @@ CREATE TABLE proofreading_history (
     statistics JSONB,                  -- 统计信息
     publish_validation JSONB,          -- ⭐新增：发布验证结果
     can_publish BOOLEAN DEFAULT true,  -- ⭐新增：是否可发布
+    accepted_count INTEGER DEFAULT 0,  -- ⭐新增：用户接受的建议数
+    rejected_count INTEGER DEFAULT 0,  -- ⭐新增：用户拒绝的建议数
+    modified_count INTEGER DEFAULT 0,  -- ⭐新增：用户部分采纳的建议数
+    pending_feedback_count INTEGER DEFAULT 0,   -- ⭐新增：待处理的反馈决策
+    feedback_completed_count INTEGER DEFAULT 0, -- ⭐新增：已用于规则/Prompt 调优的决策
+    last_feedback_processed_at TIMESTAMP,       -- ⭐新增：最近一次反馈处理时间
     created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE INDEX idx_proofreading_article ON proofreading_history(article_id);
 CREATE INDEX idx_proofreading_date ON proofreading_history(created_at);
 CREATE INDEX idx_proofreading_can_publish ON proofreading_history(can_publish);  -- ⭐新增
+CREATE INDEX idx_proofreading_feedback_pending ON proofreading_history(pending_feedback_count);
 ```
 
 #### 3.3.3 proofreading_config 表（校对配置）
@@ -384,6 +391,51 @@ CREATE TABLE proofreading_config (
     is_default BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### 3.3.4 proofreading_decisions 表（用户决策记录）
+
+```sql
+CREATE TABLE proofreading_decisions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    history_id INTEGER REFERENCES proofreading_history(id) ON DELETE CASCADE,
+    suggestion_id UUID NOT NULL,
+    suggestion_type VARCHAR(30) NOT NULL,       -- proofreading/seo/tag/segmentation/other
+    rule_id VARCHAR(20),
+    original_text TEXT,
+    suggested_text TEXT,
+    final_text TEXT,
+    decision VARCHAR(20) NOT NULL,              -- accepted/rejected/modified
+    feedback_option_id INTEGER REFERENCES feedback_options(id),
+    feedback_text TEXT,
+    decided_by INTEGER REFERENCES users(id),
+    decided_at TIMESTAMP DEFAULT NOW(),
+    feedback_status VARCHAR(20) DEFAULT 'pending',     -- pending/in_progress/completed/failed
+    feedback_processed_at TIMESTAMP,
+    tuning_batch_id UUID,
+    prompt_or_rule_version VARCHAR(50),
+    metadata JSONB DEFAULT '{}'::JSONB
+);
+
+CREATE INDEX idx_decisions_history ON proofreading_decisions(history_id);
+CREATE INDEX idx_decisions_suggestion ON proofreading_decisions(suggestion_id);
+CREATE INDEX idx_decisions_feedback_status ON proofreading_decisions(feedback_status, decided_at);
+```
+
+#### 3.3.5 feedback_tuning_jobs 表（可选，调优批次追踪）
+
+```sql
+CREATE TABLE feedback_tuning_jobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    job_type VARCHAR(50) NOT NULL,              -- e.g. prompt_iteration, script_rule_update
+    status VARCHAR(20) NOT NULL,                -- pending/running/completed/failed
+    target_version VARCHAR(50),
+    payload JSONB DEFAULT '{}'::JSONB,
+    created_at TIMESTAMP DEFAULT NOW(),
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    notes TEXT
 );
 ```
 
@@ -466,6 +518,58 @@ class ProofreadingResponse(BaseModel):
     publish_validation: Optional[PublishValidationResult] = None  # ⭐新增
     can_publish: bool = True  # ⭐新增
 ```
+
+### 4.3 用户决策模型 ⭐新增
+
+```python
+class DecisionFeedbackStatus(str, Enum):
+    pending = "pending"
+    in_progress = "in_progress"
+    completed = "completed"
+    failed = "failed"
+
+
+class ProofreadingDecision(BaseModel):
+    """用户对建议的决策记录"""
+
+    decision_id: UUID
+    history_id: int
+    suggestion_id: UUID
+    suggestion_type: str
+    rule_id: Optional[str] = None
+    original_text: str
+    suggested_text: Optional[str] = None
+    final_text: Optional[str] = None
+    decision: Literal["accepted", "rejected", "modified"]
+    feedback_option_id: Optional[int] = None
+    feedback_text: Optional[str] = None
+    decided_by: int
+    decided_at: datetime
+    feedback_status: DecisionFeedbackStatus = DecisionFeedbackStatus.pending
+    feedback_processed_at: Optional[datetime] = None
+    tuning_batch_id: Optional[UUID] = None
+    prompt_or_rule_version: Optional[str] = None
+
+
+class ProofreadingDecisionInput(BaseModel):
+    """前端提交的单条决策"""
+
+    suggestion_id: UUID
+    suggestion_type: str
+    decision: Literal["accepted", "rejected", "modified"]
+    final_text: Optional[str] = None
+    feedback_option_id: Optional[int] = None
+    feedback_text: Optional[str] = None
+
+
+class UserDecisionPayload(BaseModel):
+    """批量提交用户决策"""
+
+    history_id: int
+    decisions: List[ProofreadingDecisionInput]
+```
+
+> **说明**：上述“反馈状态”字段用于跟踪客户反馈在内部“脚本/Prompt 调优”流程中的处理进度。系统并不会触发机器学习模型训练；而是在运营/语言质量团队审查拒绝原因后，更新 deterministic 规则或 Prompt。完成调优后，将 `feedback_status` 更新为 `completed` 并记录批次与版本。
 
 ---
 
@@ -674,6 +778,73 @@ PUT /api/v1/proofreading/config
 
 ```
 GET /api/v1/proofreading/history/{article_id}
+```
+
+#### 5.1.7 提交用户决策（⭐新增）
+
+```
+POST /api/v1/proofreading/decisions
+```
+
+**说明:** 批量提交同一 `history_id` 下的建议决策（接受/拒绝/部分采纳），用于记录用户反馈以支撑脚本/Prompt 调优。
+
+**请求体:**
+```json
+{
+  "history_id": 456,
+  "decisions": [
+    {
+      "suggestion_id": "78c0f2d6-6d4a-4a7a-9d9d-8f2e1d8b5c01",
+      "suggestion_type": "proofreading",
+      "decision": "accepted"
+    },
+    {
+      "suggestion_id": "a1b2c3d4-5566-7788-9900-aabbccddeeff",
+      "suggestion_type": "seo",
+      "decision": "rejected",
+      "feedback_option_id": 3,
+      "feedback_text": "关键词建议与文章主题不符",
+      "final_text": "保留原句"
+    }
+  ]
+}
+```
+
+**响应:**
+```json
+{
+  "history_id": 456,
+  "accepted_count": 12,
+  "rejected_count": 3,
+  "modified_count": 1,
+  "pending_feedback_count": 4
+}
+```
+
+#### 5.1.8 获取用户决策（⭐新增）
+
+```
+GET /api/v1/proofreading/decisions?history_id=456
+```
+
+**说明:** 返回指定历史记录下所有决策及反馈处理状态，供前端回显或运营查看。
+
+**响应示例:**
+```json
+{
+  "history_id": 456,
+  "decisions": [
+    {
+      "decision_id": "f9c4c6d1-3b6a-4a8a-9012-0d9f7a6b5c3d",
+      "suggestion_id": "78c0f2d6-6d4a-4a7a-9d9d-8f2e1d8b5c01",
+      "suggestion_type": "proofreading",
+      "decision": "accepted",
+      "feedback_status": "completed",
+      "feedback_processed_at": "2025-11-12T03:12:45Z",
+      "prompt_or_rule_version": "proofread-prompt-v12"
+    }
+  ]
+}
 ```
 
 ---

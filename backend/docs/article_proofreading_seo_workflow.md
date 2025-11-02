@@ -422,6 +422,45 @@ class ArticleFinalVersion:
     final_version_number: Integer  # 版本号（支持多次修改）
 ```
 
+### 4.2 用户决策与调优追踪 ⭐新增
+
+```python
+class ProofreadingDecisionRecord:
+    decision_id: UUID
+    history_id: Integer
+    suggestion_id: UUID
+    suggestion_type: String  # proofreading / seo / tag / segmentation / other
+    rule_id: Optional[String]
+    original_text: Text
+    suggested_text: Optional[Text]
+    final_text: Optional[Text]
+    decision: String  # accepted / rejected / modified
+    feedback_option_id: Optional[Integer]
+    feedback_text: Optional[Text]
+    decided_by: Integer
+    decided_at: DateTime
+    feedback_status: String  # pending / in_progress / completed / failed
+    feedback_processed_at: Optional[DateTime]
+    tuning_batch_id: Optional[UUID]
+    prompt_or_rule_version: Optional[String]
+```
+
+> 注：此处“调优”指语言质量团队根据用户反馈手动复盘并调整 deterministic 规则或 AI Prompt，而非自动化模型训练。
+
+**流程说明：**
+1. UI 对每条建议提供「接受」「保留原文」「部分采用」操作。  
+2. 当用户选择非接受路径时，弹出可选反馈（多选项 + 自定义文本）。  
+3. 前端以批量方式调用 `POST /proofreading/decisions` 将决策写入 `proofreading_decisions`。  
+4. 后端在保存时同步更新 `proofreading_history` 的 `accepted_count` / `rejected_count` / `modified_count` 与 `pending_feedback_count`。  
+5. 调优导出任务依据 `feedback_status='pending'` 拉取数据，标记为 `in_progress`，成功完成人工复盘并用于脚本/Prompt 调优后更新为 `completed`，同时记录 `tuning_batch_id` / `prompt_or_rule_version` / `feedback_processed_at`。  
+6. 若调优失败或暂未处理，标记 `failed` 并记录原因，允许运营重置为 `pending` 重新纳入复盘队列。  
+7. 统计报表可通过 `pending_feedback_count`、`feedback_completed_count` 追踪未处理/已吸收的反馈比例。
+
+**调优批次管理（可选）**
+- `feedback_tuning_jobs` 表记录每次 prompt 或脚本调整所使用的反馈集合，支持溯源。  
+- 导出/复盘完成后，将相关决策关联到对应批次，便于回顾是谁在何时基于哪些反馈做了哪些调整。  
+- 监控面板展示各批次进度、失败率、涉及的 Prompt/规则版本。
+
 ### 4.3 版本状态机
 
 #### 状态定义
