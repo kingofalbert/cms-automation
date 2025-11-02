@@ -89,8 +89,8 @@ class Settings(BaseSettings):
         min_length=10,
     )
     ANTHROPIC_MODEL: str = Field(
-        default="claude-3-5-sonnet-20241022",
-        description="Claude model to use for generation",
+        default="claude-sonnet-4-5-20250929",
+        description="Claude model to use for generation (upgraded to 4.5 Sonnet)",
     )
     ANTHROPIC_MAX_TOKENS: int = Field(
         default=4096,
