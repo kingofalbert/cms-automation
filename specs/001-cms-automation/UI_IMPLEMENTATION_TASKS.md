@@ -10,7 +10,7 @@
 
 ## 任务总览
 
-根据 [UI Gaps Analysis](../../docs/UI_GAPS_ANALYSIS.md)，需要实现 **6 个核心模块**，共 **48 个 UI 组件** 和 **12+ 个 API 端点**。
+根据 [UI Gaps Analysis](../../docs/UI_GAPS_ANALYSIS.md)，以及 Phase 6/7 追加需求，需要实现 **8 个核心模块**，共 **54 个 UI 组件** 和 **14+ 个 API 端点**。
 
 ### 模块分布
 
@@ -22,8 +22,10 @@
 | **Module 4**: Task Monitoring UI | 🟡 P1 | 7 | 44h | Week 3-4 |
 | **Module 5**: Provider Comparison Dashboard | 🟢 P2 | 6 | 30h | Week 5-6 |
 | **Module 6**: Settings Page | 🟢 P2 | 5 | 22h | Week 5-6 |
-| **Backend APIs** | 🔴 P0 | - | 76h | Week 1-6 |
-| **Testing** | 🔴 P0 | - | 20h | Week 5-6 |
+| **Module 7**: Worklist UI | 🔴 P0 | 8 | 48h | Week 7-8 |
+| **Module 8: Proofreading Feedback & Tuning UI** | 🔴 P0 | 6 | 45h | Week 9 |
+| **Backend APIs** | 🔴 P0 | - | 76h | Week 1-9 |
+| **Testing** | 🔴 P0 | - | 20h | Week 5-9 |
 
 ---
 
@@ -1485,6 +1487,81 @@ async def worklist_websocket(websocket: WebSocket):
 
 ---
 
+## Phase 4: Module 8 - Proofreading Feedback & Tuning UI (Week 9)
+
+### 目标
+为校对/SEO/TAG 建议提供全链路反馈调优界面，覆盖推荐卡、反馈采集、差异对比、状态管理及运营面板。
+
+---
+
+#### T-UI-8.1 [P0] Refactor Proofreading Suggestion Card
+**Estimated Hours**: 8h  
+**Dependencies**: API `GET/POST /proofreading/decisions`
+
+**Acceptance Criteria**
+- [ ] Header 展示规则编号、严重程度、来源标签
+- [ ] Body 支持差异高亮、折叠/展开、置信度提示
+- [ ] 动作按钮含快捷键与 loading 状态
+- [ ] 卡片根据 `decision`/`feedback_status` 渲染不同边框与背景
+
+---
+
+#### T-UI-8.2 [P0] Feedback Modal & Validation
+**Estimated Hours**: 12h  
+**Dependencies**: T-UI-8.1
+
+**Acceptance Criteria**
+- [ ] 根据选择（接受/保留/部分采用）动态展示字段
+- [ ] 反馈多选、其他说明、字数限制与错误提示符合规范
+- [ ] “部分采用”必须提供最终文本、并提示与原文完全一致的情况
+- [ ] 提交成功关闭弹窗并触发 Toast
+
+---
+
+#### T-UI-8.3 [P0] Diff Viewer Component
+**Estimated Hours**: 10h  
+**Dependencies**: T-UI-8.2
+
+**Acceptance Criteria**
+- [ ] 提供 Side-by-Side / Inline 两种模式，支持滚动同步
+- [ ] 差异高亮颜色、上一/下一差异导航、复制/导出功能完备
+- [ ] 移动端默认 Inline，提供“仅显示差异”开关
+
+---
+
+#### T-UI-8.4 [P0] Feedback Status Chip & Bulk Toolbar
+**Estimated Hours**: 6h  
+**Dependencies**: T-UI-8.1
+
+**Acceptance Criteria**
+- [ ] Chip 四种状态样式统一（含动画）
+- [ ] 多选工具栏在桌面顶部/移动端底部显隐可控
+- [ ] 批量保留操作检查选项并弹出确认
+
+---
+
+#### T-UI-8.5 [P1] Feedback List & Filters (运营视图)
+**Estimated Hours**: 9h  
+**Dependencies**: 决策查询 API
+
+**Acceptance Criteria**
+- [ ] 表格列包含规则、摘要、决策、反馈状态、决策人、时间、调优批次
+- [ ] 支持多维筛选与 CSV 导出
+- [ ] 抽屉展示全文、差异、操作历史，可触发状态重置
+
+---
+
+#### T-BE-8.6 [P0] API Enhancements for Feedback Workflow
+**Estimated Hours**: 12h  
+**Dependencies**: Phase 7 backend 任务
+
+**Acceptance Criteria**
+- [ ] `GET /proofreading/decisions` 支持分页、过滤、统计汇总
+- [ ] 新增批量保留原文/重置状态接口，写入审计日志
+- [ ] 提供导出端点（CSV/JSON）并更新 OpenAPI
+
+---
+
 ## 总结
 
 ### 工时分布
@@ -1497,26 +1574,26 @@ async def worklist_websocket(websocket: WebSocket):
 | Module 4: Monitoring UI | 44h | - | - | 44h |
 | Module 5: Comparison Dashboard | 30h | 16h | - | 46h |
 | Module 6: Settings | 22h | - | - | 22h |
-| **Module 7: 🆕 Worklist UI** | **48h** | **20h** | **4h** | **72h** |
-| **Google Drive Backend (Phase 6)** | **-** | **80h** | **10h** | **90h** |
+| Module 7: Worklist UI | 48h | 20h | 4h | 72h |
+| Module 8: Feedback & Tuning UI | 45h | 12h | 6h | 63h |
+| Google Drive Backend (Phase 6) | - | 80h | 10h | 90h |
 | E2E Testing | - | - | 20h | 20h |
-| **总计** | **284h** | **156h** | **54h** | **494h** |
+| **总计** | **329h** | **168h** | **40h** | **537h** |
 
 **团队配置**:
-- 2 名前端工程师 × 10 周 = 400 小时
-- 1 名后端工程师 × 10 周 = 400 小时（含 Google Drive 集成）
-- QA 工程师兼职测试（3 周）
+- 2 名前端工程师 × 11 周 ≈ 440 小时
+- 1 名后端工程师 × 11 周 ≈ 440 小时（含 Google Drive 与反馈 API）
+- QA 工程师兼职测试（3-4 周）
 
-**新增功能亮点** (Module 7):
-- ✅ 7 种状态追踪（pending → proofreading → under_review → ready_to_publish → publishing → published/failed）
-- ✅ WebSocket 实时更新（<2s 延迟）
-- ✅ 完整状态历史记录
-- ✅ 批量操作支持
-- ✅ Google Drive 自动导入
+**新增亮点** (Module 8):
+- ✅ 建议卡状态同步 & 快捷键操作
+- ✅ 反馈弹窗支持多选原因与部分采用流程
+- ✅ Diff Viewer 多模式切换
+- ✅ 运营视图支持筛选/导出/重置
 
 ---
 
 **下一步**:
 1. Phase 1-2 (Week 1-6): 实施 Module 1-6（核心 UI）
-2. Phase 3 (Week 7-10): 实施 Google Drive + Worklist（自动化层）
+2. Phase 3 (Week 7-10): 实施 Google Drive + Worklist + Feedback 调优功能
 3. Phase 4 (Week 11): 集成测试和上线准备
