@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from src.services.proofreading.rule_specs import (
+    A4_INFORMAL_SPECS,
     D_TRANSLATION_SPECS,
     E_SPECIAL_SPECS,
 )
@@ -8466,7 +8467,7 @@ class F4_010_SocialMetaTagRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "1.9.0"  # Batch 9: 355条规则 (A1:50, A2:30, A3:70, A4:1, B:60, C:24, D:40, E:40, F:40)
+    VERSION = "2.0.0"  # Batch 10: 384条规则 - 100%覆盖达成 (A1:50, A2:30, A3:70, A4:30, B:60, C:24, D:40, E:40, F:40)
 
     def __init__(self) -> None:
         self.rules: List[DeterministicRule] = [
@@ -8694,8 +8695,9 @@ class DeterministicRuleEngine:
             A3_071_ZuoKeRule(),  # A3-071: 作客
             A3_072_ChuanDaiRule(),  # A3-072: 穿戴
             A3_073_DanWuRule(),  # A3-073: 耽误
-            # A4 子类 - 非正式用语（1条）
-            InformalLanguageRule(),  # A4-014
+            # A4 子类 - 非正式用语（30条）
+            *build_dictionary_rules(A4_INFORMAL_SPECS),  # A4-001 到 A4-029: 字典规则
+            InformalLanguageRule(),  # A4-014: 特殊实现规则（保留兼容）
             # C类 - 数字与计量（24条）
             # C1 子类 - 数字格式（15条）
             FullWidthDigitRule(),  # C1-006
