@@ -1,0 +1,66 @@
+.rule-draft-card {
+  margin-bottom: 16px;
+  transition: all 0.3s;
+}
+
+.rule-draft-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.card-meta {
+  margin: 16px 0;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #666;
+}
+
+.meta-label {
+  font-weight: 500;
+  color: #333;
+}
+
+.meta-value {
+  color: #666;
+}
+
+.card-progress {
+  margin-top: 16px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 14px;
+  color: #666;
+}
+
+.progress-stats {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.progress-stats .ant-tag {
+  margin: 0;
+}

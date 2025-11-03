@@ -1,0 +1,49 @@
+.rule-detail-page {
+  padding: 20px;
+}
+
+.page-header {
+  margin-bottom: 20px;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-left h2 {
+  margin: 0;
+}
+
+.progress-card {
+  margin-bottom: 20px;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.progress-stats {
+  display: flex;
+  gap: 8px;
+}
+
+.action-bar {
+  margin-bottom: 20px;
+}
+
+.rules-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

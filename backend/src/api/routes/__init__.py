@@ -9,6 +9,7 @@ from src.api.routes import (
     files_routes,
     import_routes,
     monitoring_routes,
+    proofreading_decisions,
     publish_routes,
     seo_routes,
     settings_routes,
@@ -39,4 +40,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(settings_routes.router, prefix="/v1", tags=["Settings"])
     app.include_router(worklist_routes.router, prefix="/v1", tags=["Worklist"])
 
-    logger.info("api_routes_registered", route_count=11)
+    # Note: proofreading_decisions router already has its own prefix
+    app.include_router(proofreading_decisions.router)
+
+    logger.info("api_routes_registered", route_count=12)

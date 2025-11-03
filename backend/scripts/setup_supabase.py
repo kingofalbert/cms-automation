@@ -201,8 +201,9 @@ def main():
 
     # 檢查環境文件
     env_files = [
-        Path(__file__).parent.parent.parent / ".env.supabase",
-        Path(__file__).parent.parent.parent / ".env"
+        Path(__file__).parent.parent.parent / ".env",
+        Path(__file__).parent.parent.parent / ".env.supabase.local",
+        Path(__file__).parent.parent.parent / ".env.supabase"
     ]
 
     env_file = None

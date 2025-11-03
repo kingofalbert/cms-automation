@@ -1,0 +1,68 @@
+.test-results {
+  padding: 16px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.stat-item:last-child {
+  border-bottom: none;
+}
+
+.stat-label {
+  font-weight: 500;
+  color: #333;
+}
+
+.stat-value {
+  color: #595959;
+}
+
+.confidence-distribution {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.confidence-distribution h4 {
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.confidence-item {
+  margin-bottom: 12px;
+}
+
+.confidence-item span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: #595959;
+}
+
+.change-type-stats {
+  padding: 16px;
+}
+
+.type-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.type-stat:last-child {
+  border-bottom: none;
+}
+
+.type-count {
+  font-weight: 500;
+  color: #333;
+  min-width: 60px;
+}

@@ -104,3 +104,4 @@ tests/fixtures/images/
 
 # Credentials directory
 backend/credentials/
+.env.supabase.local

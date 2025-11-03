@@ -1,0 +1,66 @@
+.batch-review-panel {
+  padding: 16px 0;
+}
+
+.review-summary {
+  padding: 12px;
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.batch-mode {
+  padding: 16px 0;
+}
+
+.batch-action {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.batch-action > span {
+  font-weight: 500;
+}
+
+.batch-comment {
+  margin-bottom: 20px;
+}
+
+.batch-comment > span {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.individual-mode {
+  padding: 16px 0;
+}
+
+.type-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.type-stat:last-child {
+  border-bottom: none;
+}
+
+.type-count {
+  font-weight: 500;
+  color: #333;
+  margin-right: 12px;
+}

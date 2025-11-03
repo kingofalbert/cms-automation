@@ -1,0 +1,37 @@
+.example-manager {
+  padding: 16px;
+}
+
+.manager-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.manager-header h4 {
+  margin: 0;
+  color: #333;
+}
+
+.examples-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.example-tips {
+  margin-top: 20px;
+  padding: 12px;
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  border-radius: 4px;
+}
+
+.example-tips p {
+  margin: 0;
+  color: #52c41a;
+  font-size: 13px;
+}

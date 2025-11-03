@@ -18,6 +18,11 @@ const WorklistPage = lazy(() => import('./pages/WorklistPage'));
 const ScheduleManagerPage = lazy(() => import('./pages/ScheduleManagerPage'));
 const TagsPage = lazy(() => import('./pages/TagsPage'));
 
+// Proofreading components
+const RuleDraftList = lazy(() => import('./components/proofreading/RuleManagement/RuleDraftList'));
+const RuleDetailPage = lazy(() => import('./components/proofreading/RuleDetail/RuleDetailPage'));
+const RuleTestPage = lazy(() => import('./pages/RuleTestPage'));
+
 /**
  * Loading fallback component.
  */
@@ -47,6 +52,11 @@ export function AppRoutes() {
         <Route path="/worklist" element={<WorklistPage />} />
         <Route path="/schedule" element={<ScheduleManagerPage />} />
         <Route path="/tags" element={<TagsPage />} />
+
+        {/* Proofreading routes */}
+        <Route path="/proofreading/rules" element={<RuleDraftList />} />
+        <Route path="/proofreading/draft/:draftId" element={<RuleDetailPage />} />
+        <Route path="/proofreading/test/:draftId" element={<RuleTestPage />} />
       </Routes>
     </Suspense>
   );

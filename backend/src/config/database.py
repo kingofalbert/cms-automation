@@ -145,3 +145,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     db_config = get_db_config()
     async with db_config.session() as session:
         yield session
+
+
+# Alias for backward compatibility
+get_async_session = get_session
