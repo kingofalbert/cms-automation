@@ -11,8 +11,8 @@ from src.models import TopicRequestPriority, TopicRequestStatus
 class TopicRequestCreate(BaseSchema):
     """Schema for creating a topic request."""
 
-    topic_description: str = Field(
-        ..., min_length=10, max_length=5000, description="Article topic description"
+    title: str = Field(
+        ..., min_length=10, max_length=500, description="Article topic title"
     )
     outline: str | None = Field(
         None, max_length=10000, description="Optional structured outline"
@@ -38,7 +38,7 @@ class TopicRequestResponse(TimestampSchema):
     """Schema for topic request response."""
 
     id: int
-    topic_description: str
+    title: str
     outline: str | None
     style_tone: str
     target_word_count: int
@@ -53,7 +53,7 @@ class TopicRequestListResponse(BaseSchema):
     """Schema for topic request list response."""
 
     id: int
-    topic_description: str
+    title: str
     status: TopicRequestStatus
     priority: TopicRequestPriority
     created_at: datetime

@@ -10,10 +10,11 @@ import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database import get_session
-from ...services.claude_rule_compiler import create_claude_compiler
-from ...schemas.proofreading_decision import (
+from src.config.database import get_session
+from src.services.claude_rule_compiler import create_claude_compiler
+from src.schemas.proofreading_decision import (
     DraftRule,
+    Example,
     PublishRulesRequest,
     ReviewStatus
 )
@@ -87,11 +88,19 @@ async def compile_batch_rules_with_claude(
         # 將字典轉換為 DraftRule 對象
         draft_rules = []
         for rule_dict in rules:
+            # 轉換 examples 為 Example 對象
+            examples = []
+            for ex in rule_dict.get("examples", []):
+                if isinstance(ex, dict):
+                    examples.append(Example(before=ex["before"], after=ex["after"]))
+                else:
+                    examples.append(ex)
+
             draft_rule = DraftRule(
                 rule_id=rule_dict.get("rule_id", f"R{len(draft_rules)+1:03d}"),
                 rule_type=rule_dict.get("rule_type", "unknown"),
                 natural_language=rule_dict["natural_language"],
-                examples=rule_dict.get("examples", []),
+                examples=examples,
                 conditions=rule_dict.get("conditions", {}),
                 confidence=rule_dict.get("confidence", 0.5),
                 review_status=ReviewStatus.PENDING

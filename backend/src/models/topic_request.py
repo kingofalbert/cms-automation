@@ -35,10 +35,10 @@ class TopicRequest(Base, TimestampMixin):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 
     # Topic information
-    topic_description: Mapped[str] = mapped_column(
-        Text,
+    title: Mapped[str] = mapped_column(
+        String(500),
         nullable=False,
-        comment="User-provided topic or outline",
+        comment="Topic title",
     )
     outline: Mapped[str | None] = mapped_column(
         Text,
@@ -103,4 +103,4 @@ class TopicRequest(Base, TimestampMixin):
 
     def __repr__(self) -> str:
         """String representation."""
-        return f"<TopicRequest(id={self.id}, status={self.status}, topic='{self.topic_description[:50]}...')>"
+        return f"<TopicRequest(id={self.id}, status={self.status}, title='{self.title[:50] if len(self.title) > 50 else self.title}')>"

@@ -10,10 +10,10 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Path as PathParam
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...database import get_session
-from ...services.proofreading_decision_service import ProofreadingDecisionService
-from ...services.rule_compiler import rule_compiler
-from ...schemas.proofreading_decision import (
+from src.config.database import get_session
+from src.services.proofreading_decision import ProofreadingDecisionService
+from src.services.rule_compiler import rule_compiler
+from src.schemas.proofreading_decision import (
     PublishRulesRequest,
     PublishRulesResponse,
     DraftStatus,

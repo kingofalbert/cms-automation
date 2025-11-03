@@ -36,7 +36,7 @@ async def create_topic_request(
     """
     # Create topic request
     topic_request = TopicRequest(
-        topic_description=topic_data.topic_description,
+        title=topic_data.title,
         outline=topic_data.outline,
         style_tone=topic_data.style_tone,
         target_word_count=topic_data.target_word_count,

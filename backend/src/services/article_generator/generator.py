@@ -59,12 +59,12 @@ class ArticleGeneratorService:
             logger.info(
                 "article_generation_started",
                 topic_request_id=topic_request_id,
-                topic=topic_request.topic_description[:100],
+                topic=topic_request.title[:100],
             )
 
             # Generate article using Claude
             result = await self.claude_client.generate_article(
-                topic=topic_request.topic_description,
+                topic=topic_request.title,
                 style_tone=topic_request.style_tone,
                 target_word_count=topic_request.target_word_count,
                 outline=topic_request.outline,

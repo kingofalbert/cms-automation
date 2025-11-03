@@ -446,9 +446,18 @@ class ClaudeRuleCompiler:
 
         async def compile_with_limit(rule: DraftRule):
             async with semaphore:
+                # 將 Example 對象轉換為字典
+                examples_dict = []
+                if rule.examples:
+                    for ex in rule.examples:
+                        if hasattr(ex, 'before') and hasattr(ex, 'after'):
+                            examples_dict.append({"before": ex.before, "after": ex.after})
+                        elif isinstance(ex, dict):
+                            examples_dict.append(ex)
+
                 return await self.compile_natural_language_to_rule_async(
                     rule.natural_language,
-                    rule.examples,
+                    examples_dict if examples_dict else None,
                     rule.conditions
                 )
 
@@ -457,10 +466,22 @@ class ClaudeRuleCompiler:
 
         # 處理異常
         compiled_rules = []
-        for result in results:
+        for i, result in enumerate(results):
             if isinstance(result, Exception):
                 print(f"編譯失敗: {result}")
-                compiled_rules.append(self._enhanced_fallback_compile("", None))
+                # 使用原規則的信息作為回退
+                rule = rules[i]
+                examples_dict = []
+                if rule.examples:
+                    for ex in rule.examples:
+                        if hasattr(ex, 'before') and hasattr(ex, 'after'):
+                            examples_dict.append({"before": ex.before, "after": ex.after})
+                        elif isinstance(ex, dict):
+                            examples_dict.append(ex)
+                compiled_rules.append(self._enhanced_fallback_compile(
+                    rule.natural_language,
+                    examples_dict if examples_dict else None
+                ))
             else:
                 compiled_rules.append(result)
 

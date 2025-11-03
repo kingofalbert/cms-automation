@@ -43,4 +43,12 @@ def register_routes(app: FastAPI) -> None:
     # Note: proofreading_decisions router already has its own prefix
     app.include_router(proofreading_decisions.router)
 
+    # Include enhanced proofreading routes
+    from src.api.routes.proofreading_decisions_enhanced import router as enhanced_router
+    app.include_router(enhanced_router)
+
+    # Include Claude-powered proofreading routes
+    from src.api.routes.proofreading_decisions_claude import router as claude_router
+    app.include_router(claude_router)
+
     logger.info("api_routes_registered", route_count=12)
