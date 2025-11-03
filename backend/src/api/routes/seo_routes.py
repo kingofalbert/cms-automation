@@ -12,7 +12,6 @@ from src.api.schemas.seo_analysis import (
 )
 from src.config.logging import get_logger
 from src.workers.celery_app import celery_app
-from src.workers.tasks import analyze_seo_batch_task, analyze_seo_single_task
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -34,6 +33,9 @@ async def analyze_article_seo(article_id: int) -> SEOAnalysisSingleResponse:
         HTTPException: If task queuing fails
     """
     try:
+        # Lazy import to avoid circular dependency
+        from src.workers.tasks import analyze_seo_single_task
+
         task = analyze_seo_single_task.delay(article_id)
 
         logger.info(
@@ -78,6 +80,9 @@ async def analyze_batch_seo(limit: Optional[int] = None) -> SEOAnalysisBatchResp
         HTTPException: If task queuing fails
     """
     try:
+        # Lazy import to avoid circular dependency
+        from src.workers.tasks import analyze_seo_batch_task
+
         task = analyze_seo_batch_task.delay(limit)
 
         logger.info(

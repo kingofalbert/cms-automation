@@ -20,10 +20,6 @@ from src.api.schemas.publishing import (
 from src.config.database import get_session
 from src.config.logging import get_logger
 from src.models import Article, Provider, PublishTask, TaskStatus
-from src.workers.tasks.publishing import (
-    publish_article_task,
-    retry_publish_article_task,
-)
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/publish", tags=["Publishing"])
@@ -62,6 +58,9 @@ async def submit_publish_task(
 
     try:
         await session.flush()
+
+        # Lazy import to avoid circular dependency
+        from src.workers.tasks.publishing import publish_article_task
 
         celery_task = publish_article_task.delay(
             publish_task_id=task.id,
@@ -179,6 +178,9 @@ async def retry_publish_task(
 
     try:
         task.increment_retry()
+
+        # Lazy import to avoid circular dependency
+        from src.workers.tasks.publishing import retry_publish_article_task
 
         celery_task = retry_publish_article_task.delay(
             publish_task_id=task.id,

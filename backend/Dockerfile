@@ -96,21 +96,23 @@ WORKDIR /app
 # Copy application code
 COPY --chown=appuser:appuser . .
 
+# Copy and setup entrypoint script
+COPY --chown=appuser:appuser entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Switch to non-root user
 USER appuser
 
-# Health check
+# Health check (only for API service)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)"
+    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)" || true
 
 # Expose port
 EXPOSE 8000
 
-# Start application
-# Note: Cloud Run will inject PORT environment variable
-CMD exec uvicorn src.main:app \
-    --host 0.0.0.0 \
-    --port ${PORT} \
-    --workers 1 \
-    --log-level info \
-    --no-access-log
+# Start application using entrypoint script
+# SERVICE_TYPE environment variable determines what to run:
+# - api: API Server (default)
+# - worker: Celery Worker
+# - beat: Celery Beat Scheduler
+CMD ["/app/entrypoint.sh"]

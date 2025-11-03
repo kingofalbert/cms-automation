@@ -15,7 +15,6 @@ from src.api.schemas.import_schema import (
 )
 from src.config.logging import get_logger
 from src.workers.celery_app import celery_app
-from src.workers.tasks import import_articles_task
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -117,6 +116,9 @@ async def import_articles(
 
     # Queue import task
     try:
+        # Lazy import to avoid circular dependency
+        from src.workers.tasks import import_articles_task
+
         task = import_articles_task.delay(
             file_path=str(temp_file),
             file_format=file_format,

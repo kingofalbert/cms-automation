@@ -11,7 +11,6 @@ from src.api.schemas.topic_request import (
 )
 from src.config.database import get_session
 from src.models import TopicRequest
-from src.workers.tasks.generate_article import generate_article_task
 
 router = APIRouter()
 
@@ -49,6 +48,9 @@ async def create_topic_request(
     await session.refresh(topic_request)
 
     # Dispatch background task for article generation
+    # Lazy import to avoid circular dependency
+    from src.workers.tasks.generate_article import generate_article_task
+
     generate_article_task.delay(topic_request.id)
 
     return topic_request

@@ -4,10 +4,6 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
 from src.config import get_logger, get_settings
-from src.workers.tasks.computer_use_tasks import (
-    publish_article_with_computer_use_task,
-    test_computer_use_environment_task,
-)
 
 logger = get_logger(__name__)
 settings = get_settings()
@@ -94,6 +90,9 @@ async def publish_article_with_computer_use(
         cms_type=request.cms_type,
     )
 
+    # Lazy import to avoid circular dependency
+    from src.workers.tasks.computer_use_tasks import publish_article_with_computer_use_task
+
     # Trigger Celery task
     task = publish_article_with_computer_use_task.delay(
         article_id=request.article_id,
@@ -170,6 +169,9 @@ async def test_computer_use_environment() -> dict:
         dict: Test results for each component
     """
     logger.info("computer_use_environment_test_requested")
+
+    # Lazy import to avoid circular dependency
+    from src.workers.tasks.computer_use_tasks import test_computer_use_environment_task
 
     task = test_computer_use_environment_task.delay()
     result = task.get(timeout=10)  # Wait up to 10 seconds
