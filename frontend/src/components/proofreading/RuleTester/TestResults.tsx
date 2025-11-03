@@ -143,7 +143,7 @@ const TestResults: React.FC<TestResultsProps> = ({ results }) => {
                     />
                   </div>
                   <div className="confidence-item">
-                    <span>低置信度 (<70%):</span>
+                    <span>低置信度 (&lt;70%):</span>
                     <Progress
                       percent={
                         (results.changes.filter(c => c.confidence < 0.7).length / results.changes.length) * 100

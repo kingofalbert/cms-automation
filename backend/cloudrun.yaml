@@ -1,0 +1,115 @@
+# Google Cloud Run Service Configuration
+# This file defines the Cloud Run service for CMS Automation Backend
+
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: cms-automation-backend
+  labels:
+    app: cms-automation
+    component: backend
+    environment: production
+spec:
+  template:
+    metadata:
+      annotations:
+        # Autoscaling configuration
+        autoscaling.knative.dev/minScale: '0'        # Scale to zero when idle
+        autoscaling.knative.dev/maxScale: '10'       # Max 10 instances
+        autoscaling.knative.dev/target: '80'         # Target 80% utilization
+        
+        # Timeout configuration
+        run.googleapis.com/execution-environment: gen2  # Use second generation execution environment
+        run.googleapis.com/startup-cpu-boost: 'true'   # Faster cold starts
+        
+      labels:
+        app: cms-automation
+        component: backend
+        
+    spec:
+      # Service account with Secret Manager access
+      serviceAccountName: cms-automation-backend@PROJECT_ID.iam.gserviceaccount.com
+      
+      # Container timeout (max 60 minutes for Cloud Run)
+      timeoutSeconds: 600  # 10 minutes for publishing tasks
+      
+      containers:
+      - name: backend
+        # Image will be set during deployment
+        image: gcr.io/PROJECT_ID/cms-automation-backend:TAG
+        
+        # Resource limits
+        resources:
+          limits:
+            memory: 1Gi
+            cpu: '1000m'  # 1 vCPU
+          requests:
+            memory: 512Mi
+            cpu: '500m'
+        
+        # Health checks
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+          
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        
+        # Port configuration
+        ports:
+        - name: http1
+          containerPort: 8000
+        
+        # Environment variables
+        env:
+        # Application configuration
+        - name: ENVIRONMENT
+          value: 'production'
+        - name: LOG_LEVEL
+          value: 'INFO'
+        - name: PORT
+          value: '8000'
+          
+        # Playwright configuration
+        - name: PLAYWRIGHT_BROWSERS_PATH
+          value: '/ms-playwright'
+          
+        # Credential storage (GCP Secret Manager)
+        - name: CREDENTIAL_STORAGE_BACKEND
+          value: 'gcp_secret_manager'
+        - name: GCP_PROJECT_ID
+          value: 'PROJECT_ID'
+        - name: GCP_SECRET_PREFIX
+          value: 'cms-automation-'
+          
+        # Database connection (from Secret Manager)
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: cms-automation-database-url
+              key: latest
+              
+        # Redis connection (from Secret Manager)
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: cms-automation-redis-url
+              key: latest
+              
+        # API keys (from Secret Manager)
+        - name: ANTHROPIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cms-automation-anthropic-api-key
+              key: latest

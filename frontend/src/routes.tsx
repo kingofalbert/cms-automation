@@ -1,62 +1,75 @@
 /**
  * React Router route definitions for CMS Automation UI.
+ *
+ * Uses lazy loading with code splitting for optimal performance.
+ * Enhanced with preloading and skeleton screens.
  */
 
-import { Route, Routes } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
-
-// Lazy load pages for code splitting
-const HomePage = lazy(() => import('./pages/HomePage'));
-const ArticleGeneratorPage = lazy(() => import('./pages/ArticleGeneratorPage'));
-const ArticleImportPage = lazy(() => import('./pages/ArticleImportPage'));
-const ArticleListPage = lazy(() => import('./pages/ArticleListPage'));
-const ArticleReviewPage = lazy(() => import('./pages/ArticleReviewPage'));
-const PublishTasksPage = lazy(() => import('./pages/PublishTasksPage'));
-const ProviderComparisonPage = lazy(() => import('./pages/ProviderComparisonPage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const WorklistPage = lazy(() => import('./pages/WorklistPage'));
-const ScheduleManagerPage = lazy(() => import('./pages/ScheduleManagerPage'));
-const TagsPage = lazy(() => import('./pages/TagsPage'));
-
-// Proofreading components
-const RuleDraftList = lazy(() => import('./components/proofreading/RuleManagement/RuleDraftList'));
-const RuleDetailPage = lazy(() => import('./components/proofreading/RuleDetail/RuleDetailPage'));
-const RuleTestPage = lazy(() => import('./pages/RuleTestPage'));
+import { Route, Routes, useLocation } from 'react-router-dom';
+import { Suspense, useEffect } from 'react';
+import { routes, getRouteConfig, type RouteConfig } from './config/routes';
+import {
+  RouteLoadingFallback,
+  ListPageSkeleton,
+  DetailPageSkeleton,
+  DashboardSkeleton,
+} from './components/ui/RouteLoadingFallback';
 
 /**
- * Loading fallback component.
+ * Get appropriate loading component based on route type
  */
-function LoadingFallback() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-gray-600">Loading...</div>
-    </div>
-  );
+function getLoadingFallback(routeConfig?: RouteConfig) {
+  if (!routeConfig) {
+    return <RouteLoadingFallback />;
+  }
+
+  switch (routeConfig.loadingType) {
+    case 'list':
+      return <ListPageSkeleton />;
+    case 'detail':
+      return <DetailPageSkeleton />;
+    case 'dashboard':
+      return <DashboardSkeleton />;
+    default:
+      return <RouteLoadingFallback />;
+  }
 }
 
 /**
- * Application routes component.
+ * Application routes component with enhanced lazy loading.
  */
 export function AppRoutes() {
-  return (
-    <Suspense fallback={<LoadingFallback />}>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/generate" element={<ArticleGeneratorPage />} />
-        <Route path="/import" element={<ArticleImportPage />} />
-        <Route path="/articles" element={<ArticleListPage />} />
-        <Route path="/articles/:id/review" element={<ArticleReviewPage />} />
-        <Route path="/tasks" element={<PublishTasksPage />} />
-        <Route path="/comparison" element={<ProviderComparisonPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/worklist" element={<WorklistPage />} />
-        <Route path="/schedule" element={<ScheduleManagerPage />} />
-        <Route path="/tags" element={<TagsPage />} />
+  const location = useLocation();
+  const currentRoute = getRouteConfig(location.pathname);
 
-        {/* Proofreading routes */}
-        <Route path="/proofreading/rules" element={<RuleDraftList />} />
-        <Route path="/proofreading/draft/:draftId" element={<RuleDetailPage />} />
-        <Route path="/proofreading/test/:draftId" element={<RuleTestPage />} />
+  // Update document title when route changes
+  useEffect(() => {
+    if (currentRoute?.title) {
+      document.title = currentRoute.title;
+    }
+
+    // Update meta description
+    if (currentRoute?.description) {
+      let metaDesc = document.querySelector('meta[name="description"]');
+      if (!metaDesc) {
+        metaDesc = document.createElement('meta');
+        metaDesc.setAttribute('name', 'description');
+        document.head.appendChild(metaDesc);
+      }
+      metaDesc.setAttribute('content', currentRoute.description);
+    }
+  }, [currentRoute]);
+
+  return (
+    <Suspense fallback={getLoadingFallback(currentRoute)}>
+      <Routes>
+        {routes.map((route) => (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={<route.component />}
+          />
+        ))}
       </Routes>
     </Suspense>
   );

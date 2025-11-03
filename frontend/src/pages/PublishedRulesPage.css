@@ -1,0 +1,25 @@
+.published-rules-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.published-rules-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.published-rules-page .page-header h2 {
+  margin: 0;
+}
+
+.published-rules-page .ant-table {
+  background: white;
+}
+
+.published-rules-page .ant-modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}

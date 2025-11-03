@@ -72,6 +72,7 @@ class CMSAuthHandler:
         cms_type: str,
         base_url: str,
         credentials: dict[str, str],
+        http_auth: tuple[str, str] | None = None,
     ) -> None:
         """Initialize CMS authentication handler.
 
@@ -79,10 +80,12 @@ class CMSAuthHandler:
             cms_type: CMS platform type (wordpress, strapi, etc.)
             base_url: CMS base URL
             credentials: Authentication credentials
+            http_auth: Optional HTTP Basic Auth tuple (username, password) for site-level auth
         """
         self.cms_type = cms_type.lower()
         self.base_url = base_url
         self.credentials = credentials
+        self.http_auth = http_auth
         self._auth_handler = self._create_auth_handler()
 
     def _create_auth_handler(self) -> WordPressAuth | TokenAuth:
@@ -126,6 +129,9 @@ class CMSAuthHandler:
         headers = self.get_headers()
 
         try:
+            # Create auth tuple for HTTP Basic Auth if provided
+            auth = self.http_auth if self.http_auth else None
+
             async with httpx.AsyncClient() as client:
                 # Try to access a basic endpoint to verify auth
                 if self.cms_type == "wordpress":
@@ -135,7 +141,7 @@ class CMSAuthHandler:
                 else:
                     url = f"{self.base_url}/api/user"
 
-                response = await client.get(url, headers=headers, timeout=10.0)
+                response = await client.get(url, headers=headers, auth=auth, timeout=10.0)
 
                 if response.status_code == 200:
                     logger.info(

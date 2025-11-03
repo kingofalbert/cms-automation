@@ -1,0 +1,83 @@
+.proofreading-stats-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: #f0f2f5;
+  min-height: 100vh;
+}
+
+.proofreading-stats-page .page-header {
+  margin-bottom: 24px;
+}
+
+.proofreading-stats-page .page-header h2 {
+  margin: 0;
+  color: #262626;
+}
+
+.proofreading-stats-page .loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.proofreading-stats-page .ant-card {
+  border-radius: 8px;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03),
+              0 1px 6px -1px rgba(0, 0, 0, 0.02),
+              0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.3s ease;
+}
+
+.proofreading-stats-page .ant-card:hover {
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.1);
+}
+
+.proofreading-stats-page .ant-statistic-title {
+  color: #8c8c8c;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.proofreading-stats-page .ant-statistic-content {
+  font-size: 24px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.proofreading-stats-page .ant-timeline {
+  margin-top: 16px;
+}
+
+.proofreading-stats-page .ant-timeline-item-content {
+  margin-left: 24px;
+}
+
+.proofreading-stats-page .ant-progress-circle {
+  margin-top: 12px;
+}
+
+.proofreading-stats-page .ant-table {
+  background: white;
+}
+
+.proofreading-stats-page .ant-table-thead > tr > th {
+  background-color: #fafafa;
+  font-weight: 600;
+}
+
+.proofreading-stats-page .ant-divider {
+  margin: 16px 0;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+  .proofreading-stats-page {
+    padding: 16px;
+  }
+
+  .proofreading-stats-page .ant-statistic-content {
+    font-size: 20px;
+  }
+}

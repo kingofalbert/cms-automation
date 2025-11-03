@@ -130,6 +130,14 @@ class Settings(BaseSettings):
         default="",
         description="CMS API token (for token-based auth)",
     )
+    CMS_HTTP_AUTH_USERNAME: str = Field(
+        default="",
+        description="HTTP Basic Auth username (site-level authentication)",
+    )
+    CMS_HTTP_AUTH_PASSWORD: str = Field(
+        default="",
+        description="HTTP Basic Auth password (site-level authentication)",
+    )
 
     # Article Generation Settings
     MAX_ARTICLE_WORD_COUNT: int = Field(default=10000, ge=100, le=50000)

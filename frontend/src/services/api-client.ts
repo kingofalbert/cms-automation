@@ -3,6 +3,8 @@
  */
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
+import type { APIError as APIErrorType } from '../types/api';
+import { logAPIError } from '../utils/errorLogger';
 
 /**
  * Base API URL from environment variables.
@@ -11,13 +13,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 /**
  * API error response interface.
+ * @deprecated Use APIError from '../types/api' instead
  */
-export interface APIError {
-  error: string;
-  message: string;
-  request_id?: string;
-  details?: Record<string, string>;
-}
+export interface APIError extends APIErrorType {}
+
+/**
+ * Type alias for the error type used by Axios.
+ */
+type APIAxiosError = AxiosError<APIErrorType>;
 
 /**
  * Create configured axios instance for API requests.
@@ -47,17 +50,22 @@ function createAPIClient(): AxiosInstance {
   // Response interceptor: Handle errors
   client.interceptors.response.use(
     (response) => response,
-    (error: AxiosError<APIError>) => {
-      // Log error with request ID if available
+    (error: APIAxiosError) => {
+      // Extract error details
+      const status = error.response?.status || 0;
+      const message = error.response?.data?.message || error.message;
       const requestId = error.response?.data?.request_id;
-      console.error('API Error:', {
-        message: error.response?.data?.message || error.message,
-        status: error.response?.status,
-        requestId,
+      const endpoint = error.config?.url || 'unknown';
+
+      // Log API error
+      logAPIError(endpoint, status, message, {
+        request_id: requestId,
+        method: error.config?.method,
+        data: error.config?.data,
       });
 
       // Handle 401 Unauthorized - clear token and redirect to login
-      if (error.response?.status === 401) {
+      if (status === 401) {
         localStorage.removeItem('auth_token');
         // TODO: Redirect to CMS login page
         window.location.href = '/login';
