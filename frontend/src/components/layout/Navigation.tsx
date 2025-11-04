@@ -24,7 +24,7 @@ export default function Navigation() {
           </Link>
 
           {/* Navigation Links */}
-          <div className="flex space-x-1">
+          <div className="flex flex-nowrap space-x-1 overflow-x-auto">
             {navRoutes.map((route) => {
               const isActive = location.pathname === route.path;
               return (
@@ -32,7 +32,7 @@ export default function Navigation() {
                   key={route.path}
                   to={route.path}
                   className={`
-                    px-4 py-2 rounded-md text-sm font-medium transition-colors
+                    px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap
                     ${
                       isActive
                         ? 'bg-blue-100 text-blue-700'
