@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.TEST_LOCAL === '1'
-  ? 'http://localhost:5173'
+  ? 'http://localhost:3001'
   : 'https://storage.googleapis.com/cms-automation-frontend-2025';
 
 test.describe('Navigation Component', () => {
@@ -14,7 +14,7 @@ test.describe('Navigation Component', () => {
       const desktopNav = page.locator('nav div.hidden.md\\:flex');
       await expect(desktopNav).toBeVisible();
 
-      // Verify all expected navigation items are present
+      // Verify all expected navigation items are present in desktop nav
       const expectedNavItems = [
         '首頁',
         '生成文章',
@@ -32,7 +32,8 @@ test.describe('Navigation Component', () => {
       ];
 
       for (const item of expectedNavItems) {
-        await expect(page.getByRole('link', { name: item })).toBeVisible();
+        // Target links specifically in desktop nav
+        await expect(desktopNav.getByRole('link', { name: item })).toBeVisible();
       }
     });
 
@@ -55,8 +56,9 @@ test.describe('Navigation Component', () => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(BASE_URL);
 
-      // Home page should be active by default
-      const homeLink = page.getByRole('link', { name: '首頁' });
+      // Home page should be active by default in desktop nav
+      const desktopNav = page.locator('nav div.hidden.md\\:flex');
+      const homeLink = desktopNav.getByRole('link', { name: '首頁' });
       await expect(homeLink).toHaveClass(/bg-blue-100/);
       await expect(homeLink).toHaveClass(/text-blue-700/);
     });
@@ -65,14 +67,15 @@ test.describe('Navigation Component', () => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(BASE_URL);
 
-      // Click on "文章列表" link
-      await page.getByRole('link', { name: '文章列表' }).click();
+      // Click on "文章列表" link in desktop nav
+      const desktopNav = page.locator('nav div.hidden.md\\:flex');
+      await desktopNav.getByRole('link', { name: '文章列表' }).click();
 
       // Verify URL changed
       await expect(page).toHaveURL(/\/articles/);
 
-      // Verify the link is now active
-      const articlesLink = page.getByRole('link', { name: '文章列表' });
+      // Verify the link is now active in desktop nav
+      const articlesLink = desktopNav.getByRole('link', { name: '文章列表' });
       await expect(articlesLink).toHaveClass(/bg-blue-100/);
     });
 
@@ -80,9 +83,12 @@ test.describe('Navigation Component', () => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(BASE_URL);
 
-      // Mobile menu button should not be visible
+      // Mobile menu button should be hidden (has md:hidden class)
       const mobileMenuButton = page.locator('button[aria-label="Toggle menu"]');
-      await expect(mobileMenuButton).not.toBeVisible();
+      await expect(mobileMenuButton).toHaveClass(/md:hidden/);
+
+      // Check CSS computed style - button should not be displayed on desktop
+      await expect(mobileMenuButton).toHaveCSS('display', 'none');
     });
   });
 
@@ -95,9 +101,9 @@ test.describe('Navigation Component', () => {
       const mobileMenuButton = page.locator('button[aria-label="Toggle menu"]');
       await expect(mobileMenuButton).toBeVisible();
 
-      // Desktop navigation should be hidden
+      // Desktop navigation should have display: none on mobile
       const desktopNav = page.locator('nav div.hidden.md\\:flex');
-      await expect(desktopNav).not.toBeVisible();
+      await expect(desktopNav).toHaveCSS('display', 'none');
     });
 
     test('should open mobile menu when clicking hamburger', async ({ page }) => {
@@ -109,15 +115,15 @@ test.describe('Navigation Component', () => {
       await mobileMenuButton.click();
 
       // Wait for menu to be visible
-      const drawer = page.locator('div.fixed.top-0.right-0');
+      const drawer = page.locator('div.fixed.top-0.right-0').last();
       await expect(drawer).toBeVisible();
 
       // Verify menu title
       await expect(page.getByRole('heading', { name: '菜單' })).toBeVisible();
 
-      // Verify navigation items are present
-      await expect(page.getByRole('link', { name: '首頁' })).toBeVisible();
-      await expect(page.getByRole('link', { name: '生成文章' })).toBeVisible();
+      // Verify navigation items are present in mobile drawer
+      await expect(drawer.getByRole('link', { name: '首頁' })).toBeVisible();
+      await expect(drawer.getByRole('link', { name: '生成文章' })).toBeVisible();
     });
 
     test('should close mobile menu when clicking close button', async ({ page }) => {
@@ -148,15 +154,18 @@ test.describe('Navigation Component', () => {
       const mobileMenuButton = page.locator('button[aria-label="Toggle menu"]');
       await mobileMenuButton.click();
 
+      // Wait for drawer to open
+      const drawer = page.locator('div.fixed.top-0.right-0').last();
+      await expect(drawer).not.toHaveClass(/translate-x-full/);
+
       // Wait for backdrop to be visible
       const backdrop = page.locator('div.fixed.inset-0.bg-black');
       await expect(backdrop).toBeVisible();
 
       // Click backdrop
-      await backdrop.click();
+      await backdrop.click({ force: true });
 
       // Menu should close
-      const drawer = page.locator('div.fixed.top-0.right-0');
       await expect(drawer).toHaveClass(/translate-x-full/);
     });
 
@@ -169,11 +178,11 @@ test.describe('Navigation Component', () => {
       await mobileMenuButton.click();
 
       // Wait for menu to open
-      const drawer = page.locator('div.fixed.top-0.right-0');
+      const drawer = page.locator('div.fixed.top-0.right-0').last();
       await expect(drawer).toBeVisible();
 
-      // Click a navigation link
-      await page.getByRole('link', { name: '文章列表' }).click();
+      // Click a navigation link in the drawer
+      await drawer.getByRole('link', { name: '文章列表' }).click();
 
       // Menu should close
       await expect(drawer).toHaveClass(/translate-x-full/);
@@ -222,9 +231,9 @@ test.describe('Navigation Component', () => {
       const desktopNav = page.locator('nav div.hidden.md\\:flex');
       await expect(desktopNav).toBeVisible();
 
-      // Mobile menu button should not be visible
+      // Mobile menu button should have display: none
       const mobileMenuButton = page.locator('button[aria-label="Toggle menu"]');
-      await expect(mobileMenuButton).not.toBeVisible();
+      await expect(mobileMenuButton).toHaveCSS('display', 'none');
 
       // Resize to mobile
       await page.setViewportSize({ width: 767, height: 768 });
@@ -232,10 +241,10 @@ test.describe('Navigation Component', () => {
       // Wait a bit for CSS to apply
       await page.waitForTimeout(100);
 
-      // Desktop nav should be hidden
-      await expect(desktopNav).not.toBeVisible();
+      // Desktop nav should have display: none
+      await expect(desktopNav).toHaveCSS('display', 'none');
 
-      // Mobile menu button should be visible
+      // Mobile menu button should be visible now
       await expect(mobileMenuButton).toBeVisible();
     });
   });
