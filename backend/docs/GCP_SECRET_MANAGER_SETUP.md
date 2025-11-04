@@ -52,7 +52,7 @@ gcloud services list --enabled | grep secretmanager
 
 ```bash
 # 設置變量
-export PROJECT_ID="your-gcp-project-id"
+export PROJECT_ID="cms-automation-2025"
 export SERVICE_ACCOUNT_NAME="cms-automation-secrets"
 export SERVICE_ACCOUNT_EMAIL="${SERVICE_ACCOUNT_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 
@@ -110,7 +110,7 @@ chmod 600 /path/to/cms_automation/backend/credentials/gcp-credentials.json
 
 ```bash
 # 設置項目
-export PROJECT_ID="your-gcp-project-id"
+export PROJECT_ID="cms-automation-2025"
 
 # 創建 secrets
 gcloud secrets create ANTHROPIC_API_KEY \
@@ -174,7 +174,7 @@ from dotenv import load_dotenv
 load_dotenv('/path/to/cms_automation/.env')
 
 # 初始化 client
-project_id = "your-gcp-project-id"
+project_id = "cms-automation-2025"
 client = secretmanager.SecretManagerServiceClient()
 parent = f"projects/{project_id}"
 
@@ -249,7 +249,7 @@ poetry run python scripts/migrate_secrets_to_gcp.py
 CREDENTIAL_STORAGE_BACKEND=gcp_secret_manager
 
 # GCP Configuration
-GCP_PROJECT_ID=your-gcp-project-id
+GCP_PROJECT_ID=cms-automation-2025
 
 # Optional: Prefix for secrets (useful for multi-environment)
 # GCP_SECRET_PREFIX=cms-automation-prod-
@@ -280,7 +280,7 @@ import asyncio
 import os
 
 os.environ['CREDENTIAL_STORAGE_BACKEND'] = 'gcp_secret_manager'
-os.environ['GCP_PROJECT_ID'] = 'your-gcp-project-id'
+os.environ['GCP_PROJECT_ID'] = 'cms-automation-2025'
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = '/path/to/gcp-credentials.json'
 
 from src.services.credentials import get_credential_manager
@@ -327,7 +327,7 @@ gcloud iam service-accounts add-iam-policy-binding \
 **環境變量**：
 ```bash
 CREDENTIAL_STORAGE_BACKEND=gcp_secret_manager
-GCP_PROJECT_ID=your-project-id
+GCP_PROJECT_ID=cms-automation-2025
 # GOOGLE_APPLICATION_CREDENTIALS 不需要設置（自動使用 Workload Identity）
 ```
 
@@ -338,7 +338,7 @@ GCP_PROJECT_ID=your-project-id
 ```bash
 # 環境變量
 CREDENTIAL_STORAGE_BACKEND=gcp_secret_manager
-GCP_PROJECT_ID=your-project-id
+GCP_PROJECT_ID=cms-automation-2025
 # ADC 會自動使用實例的服務帳戶
 ```
 
@@ -347,7 +347,7 @@ GCP_PROJECT_ID=your-project-id
 ```bash
 # 僅用於測試環境
 CREDENTIAL_STORAGE_BACKEND=gcp_secret_manager
-GCP_PROJECT_ID=your-project-id
+GCP_PROJECT_ID=cms-automation-2025
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/credentials.json
 ```
 

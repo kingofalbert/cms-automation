@@ -2,16 +2,52 @@
 
 ## Overview
 
-The CMS Automation system uses Google Drive as the primary file storage backend for uploaded images and documents. This guide covers setup, configuration, and usage of the Google Drive integration.
+The CMS Automation system uses Google Drive for document synchronization and optional file backup. This guide covers setup, configuration, and usage of the Google Drive integration.
+
+---
+
+## ⚠️ Important: Feature Classification
+
+### Google Drive serves TWO purposes in this system:
+
+| Feature | Status | Permission | Description |
+|---------|--------|-----------|-------------|
+| **📄 Document Sync** | ✅ **Required** | Viewer (Read-only) | Sync YAML documents from Drive to Worklist |
+| **📁 File Upload Backup** | ⚠️ **Optional** | Editor (Write) | Upload images/files to Drive as backup |
+
+### Current Configuration
+
+**Recommended Setup**: Use **Viewer (Read-only)** permission
+- ✅ Supports core document synchronization
+- ✅ More secure (read-only access)
+- ✅ Sufficient for production use
+
+**About Image Publishing**:
+- ✅ Computer Use handles image upload to WordPress directly
+- ✅ Images do NOT need to go through Google Drive
+- ⚠️ Google Drive file upload is OPTIONAL (for backup/archival only)
+
+**When to use Editor permission**:
+- Only if you need to backup images to Google Drive
+- Only if you want Drive as a central media repository
+- Not required for normal publishing workflow
+
+---
 
 ## Features
 
+### Core Features (Required - Read-only access)
+- 📄 **Document Synchronization**: Read YAML documents from Drive folder
+- 🔄 **Worklist Integration**: Auto-create/update Worklist items from documents
 - 🔐 **Service Account Authentication**: Server-to-server access without user interaction
-- ☁️ **Cloud Storage**: All files stored in Google Drive with public access links
-- 📊 **Database Tracking**: Complete file metadata tracked in PostgreSQL
-- 🔄 **CRUD Operations**: Full upload, download, list, and delete functionality
-- 🖼️ **Image Support**: Optimized for article images and media files
-- 📁 **Folder Organization**: Configurable folder structure in Google Drive
+- 📊 **Metadata Parsing**: Extract tags, categories, SEO data from YAML front matter
+
+### Optional Features (File Backup - Write access)
+- ☁️ **Cloud Storage**: Store files in Google Drive with public access links (optional)
+- 📊 **Database Tracking**: File metadata tracked in PostgreSQL (optional)
+- 🔄 **CRUD Operations**: Upload, download, list, and delete functionality (optional)
+- 🖼️ **Image Backup**: Backup article images to Drive (optional)
+- 📁 **Folder Organization**: Configurable folder structure (optional)
 
 ## Architecture
 
@@ -51,7 +87,7 @@ The CMS Automation system uses Google Drive as the primary file storage backend 
 Or use gcloud CLI:
 
 ```bash
-gcloud services enable drive.googleapis.com --project=YOUR_PROJECT_ID
+gcloud services enable drive.googleapis.com --project=cms-automation-2025
 ```
 
 ### 3. Create Service Account
@@ -80,10 +116,10 @@ Example key structure:
 ```json
 {
   "type": "service_account",
-  "project_id": "your-project-id",
+  "project_id": "cms-automation-2025",
   "private_key_id": "...",
   "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  "client_email": "cms-automation-drive-service@your-project-id.iam.gserviceaccount.com",
+  "client_email": "cms-automation-drive-service@cms-automation-2025.iam.gserviceaccount.com",
   "client_id": "...",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://oauth2.googleapis.com/token",
@@ -98,8 +134,16 @@ Example key structure:
 2. Create a new folder (e.g., "CMS Automation Files")
 3. Right-click the folder → **Share**
 4. Add the service account email (from JSON key: `client_email`)
-5. Give it **Editor** permission
+5. **Choose permission based on needs**:
+   - **Viewer** (Recommended): For document sync only ✅
+   - **Editor**: Only if you need file upload backup feature ⚠️
 6. Click **Share**
+
+**Permission Guide**:
+| Use Case | Permission | Why |
+|----------|-----------|-----|
+| Document sync only | Viewer | Read YAML documents, more secure |
+| With file backup | Editor | Upload images to Drive for backup |
 
 **Get Folder ID**:
 - Open the folder in Google Drive
@@ -499,10 +543,21 @@ LIMIT 20;
 
 ### 2. Folder Permissions
 
-- Use **Editor** permission for service account (not Owner)
+**Recommended Permission**: **Viewer** (Read-only)
+- ✅ Sufficient for document synchronization (core feature)
+- ✅ More secure (principle of least privilege)
+- ✅ Prevents accidental file modifications
+
+**Use Editor permission ONLY if**:
+- You need file upload backup functionality
+- You want to store images in Drive as backup
+- Not needed for normal publishing workflow (Computer Use handles it)
+
+**Additional Security**:
 - Create dedicated folder for CMS files only
 - Don't share folder publicly
 - Service account access should be folder-specific, not Drive-wide
+- Never use Owner permission
 
 ### 3. File Access Control
 
@@ -589,7 +644,9 @@ docker compose exec backend ls -la /app/credentials/
 1. Open Google Drive folder
 2. Click **Share**
 3. Add service account email (from JSON key: `client_email`)
-4. Grant **Editor** permission
+4. Choose permission:
+   - **Viewer** (recommended): For document sync only
+   - **Editor**: Only if you need file upload backup
 5. Click **Share**
 
 ### Error: "File upload failed: API rate limit exceeded"

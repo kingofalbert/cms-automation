@@ -19,7 +19,7 @@
 | **Database URL** | ✅ | Docker PostgreSQL 连接 |
 | **Redis URL** | ✅ | Docker Redis 连接 |
 | **Google Drive 凭证** | ✅ | 文件存在 (2.4K) |
-| **Google Drive 文件夹** | ✅ | 1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx |
+| **Google Drive 文件夹** | ✅ | 1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG |
 
 **配置检查结果**: 12/12 全部通过 ✅
 
@@ -44,7 +44,7 @@
 ### 3. Google Drive Folder ID
 - **发现位置**: Backend Docker 容器环境变量
 - **命令**: `docker compose exec backend printenv | grep GOOGLE_DRIVE`
-- **值**: `1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx`
+- **值**: `1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG`
 - **状态**: ✅ 已同步到 `.env` 文件
 
 ---
@@ -99,7 +99,7 @@ REDIS_URL=redis://redis:6379/0
 
 # ============= Google Drive =============
 GOOGLE_DRIVE_CREDENTIALS_PATH=/app/credentials/google-drive-credentials.json
-GOOGLE_DRIVE_FOLDER_ID=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 
 # ============= Anthropic API =============
 ANTHROPIC_API_KEY=sk-ant-api03-*** (已隐藏)
@@ -181,7 +181,7 @@ categories:
 
 #### 2. 上传到 Google Drive
 
-- 文件夹 ID: `1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx`
+- 文件夹 ID: `1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG`
 - 文件名: `tags-mvp-test.txt`
 
 #### 3. 触发同步

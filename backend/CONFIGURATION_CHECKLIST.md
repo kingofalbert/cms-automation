@@ -151,7 +151,7 @@ CMS_APPLICATION_PASSWORD=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 **Step 2: 启用 Google Drive API**
 ```bash
-gcloud services enable drive.googleapis.com --project=YOUR_PROJECT_ID
+gcloud services enable drive.googleapis.com --project=cms-automation-2025
 ```
 
 **Step 3: 创建服务账号**

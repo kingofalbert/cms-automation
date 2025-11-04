@@ -6,6 +6,25 @@
 
 ---
 
+## ⚠️ 重要说明
+
+### Google Drive 功能分类
+
+| 功能 | 状态 | 权限需求 | 说明 |
+|------|------|---------|------|
+| **📄 文档同步** | ✅ **必需** | Viewer（只读） | 从 Drive 读取 YAML 文档同步到 Worklist |
+| **📁 图片上传备份** | ⚠️ **可选** | Editor（编辑） | 上传图片到 Drive 作为备份（非必需） |
+
+**推荐配置**:
+- 对于核心功能，只需配置 **Viewer（查看者）** 权限
+- Computer Use 会直接处理图片上传到 WordPress，不需要通过 Google Drive
+
+**本指南适用于**:
+- ✅ 设置文档同步功能（只读权限）
+- ⚠️ 设置图片备份功能（可选，需要编辑权限）
+
+---
+
 ## 📋 设置步骤概览
 
 ```
@@ -39,7 +58,7 @@
 
 3. **记录项目 ID**
    - 项目创建后，记下 **项目 ID**
-   - 例如: `cms-automation-123456`
+   - 例如: `cms-automation-2025`
 
 ---
 
@@ -57,7 +76,7 @@
 
 ```bash
 # 如果你安装了 gcloud CLI
-gcloud services enable drive.googleapis.com --project=YOUR_PROJECT_ID
+gcloud services enable drive.googleapis.com --project=cms-automation-2025
 ```
 
 **验证**: 启用后会看到 "API 已启用" 的消息
@@ -112,10 +131,10 @@ gcloud services enable drive.googleapis.com --project=YOUR_PROJECT_ID
 ```json
 {
   "type": "service_account",
-  "project_id": "cms-automation-123456",
+  "project_id": "cms-automation-2025",
   "private_key_id": "abc123...",
   "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
-  "client_email": "cms-automation-drive-service@cms-automation-123456.iam.gserviceaccount.com",
+  "client_email": "cms-automation-drive-service@cms-automation-2025.iam.gserviceaccount.com",
   "client_id": "123456789...",
   "auth_uri": "https://accounts.google.com/o/oauth2/auth",
   "token_uri": "https://oauth2.googleapis.com/token",
@@ -154,8 +173,8 @@ gcloud services enable drive.googleapis.com --project=YOUR_PROJECT_ID
    ```
 
    **示例**:
-   - URL: `https://drive.google.com/drive/folders/1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx`
-   - Folder ID: `1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx`
+   - URL: `https://drive.google.com/drive/folders/1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG`
+   - Folder ID: `1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG`
 
 4. **记录文件夹 ID**
    - 将 Folder ID 保存到记事本，后面配置时需要
@@ -173,17 +192,27 @@ gcloud services enable drive.googleapis.com --project=YOUR_PROJECT_ID
 2. **添加服务账号**
    - 在 "添加人员和组" 输入框中
    - 粘贴服务账号邮箱 (从 Step 4 的 JSON 文件中的 `client_email`)
-   - 例如: `cms-automation-drive-service@cms-automation-123456.iam.gserviceaccount.com`
+   - 例如: `cms-automation-drive-service@cms-automation-2025.iam.gserviceaccount.com`
 
-3. **设置权限**
-   - 从下拉菜单选择 **编辑者** (Editor)
-   - ⚠️ **必须是编辑者权限**，系统需要上传和删除文件
+3. **设置权限** ⚠️ **重要**
+
+   **根据功能需求选择权限**:
+
+   | 功能需求 | 权限选择 | 说明 |
+   |---------|---------|------|
+   | 仅文档同步（核心功能） | **查看者** (Viewer) | ✅ 推荐：只读权限即可 |
+   | 包含图片备份（可选） | **编辑者** (Editor) | ⚠️ 仅在需要备份时使用 |
+
+   **推荐配置**: 选择 **查看者** (Viewer)
+   - ✅ 满足文档同步需求
+   - ✅ 更安全（只读权限）
+   - ✅ Computer Use 会直接处理图片上传到 WordPress
 
 4. **发送共享邀请**
    - 取消勾选 "通知用户" (服务账号不需要通知)
    - 点击 "共享" 或 "发送"
 
-**验证**: 共享列表中应该能看到服务账号邮箱，权限为 "编辑者"
+**验证**: 共享列表中应该能看到服务账号邮箱和相应权限
 
 ---
 
@@ -200,7 +229,7 @@ mkdir -p backend/credentials
 
 # 复制下载的 JSON 文件
 # 替换 ~/Downloads/your-service-account-key.json 为实际路径
-cp ~/Downloads/cms-automation-123456-abc123def456.json \
+cp ~/Downloads/cms-automation-2025-abc123def456.json \
    backend/credentials/google-drive-credentials.json
 
 # 设置文件权限（重要！）
@@ -225,7 +254,7 @@ nano .env
 
 # 找到 Google Drive 配置部分，更新为：
 GOOGLE_DRIVE_CREDENTIALS_PATH=/app/credentials/google-drive-credentials.json
-GOOGLE_DRIVE_FOLDER_ID=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx  # 替换为你的 Folder ID
+GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG  # 替换为你的 Folder ID
 ```
 
 **完整 Google Drive 配置示例**:
@@ -238,7 +267,7 @@ GOOGLE_DRIVE_FOLDER_ID=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx  # 替换为你的 Fold
 GOOGLE_DRIVE_CREDENTIALS_PATH=/app/credentials/google-drive-credentials.json
 
 # 文件夹 ID（从 Step 5 获取）
-GOOGLE_DRIVE_FOLDER_ID=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 ```
 
 #### 7.3 验证 Docker 挂载配置
@@ -289,7 +318,7 @@ docker compose exec backend printenv | grep GOOGLE_DRIVE
 
 # 预期输出:
 # GOOGLE_DRIVE_CREDENTIALS_PATH=/app/credentials/google-drive-credentials.json
-# GOOGLE_DRIVE_FOLDER_ID=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+# GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 
 # 方法 2: 检查凭证文件
 docker compose exec backend ls -lh /app/credentials/

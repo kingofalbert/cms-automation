@@ -1,18 +1,40 @@
 # Google Drive 文件夹信息
 
-**文件夹 ID**: `1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx`
+**文件夹 ID**: `1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG`
 
-**访问 URL**: https://drive.google.com/drive/folders/1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+**访问 URL**: https://drive.google.com/drive/folders/1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
+
+**环境**: 开发环境 (Development)
+
+---
+
+## ⚠️ 重要说明：功能分类
+
+### Google Drive 在本系统中的使用分为两类：
+
+| 功能 | 状态 | 权限需求 | 说明 |
+|------|------|---------|------|
+| **📄 文档同步** | ✅ **必需，已配置** | Viewer（只读） | 从 Drive 读取 YAML 文档同步到 Worklist |
+| **📁 图片上传备份** | ⚠️ **可选，未启用** | Editor（编辑） | 上传图片到 Drive 作为备份（非必需） |
+
+**当前配置**: 仅启用**只读访问**（Viewer 权限），足够支持核心的文档同步功能。
+
+**关于图片处理**:
+- ✅ Computer Use 发布时会**直接处理图片上传到 WordPress**
+- ✅ 图片**不需要**经过 Google Drive 存储即可正常发布
+- ⚠️ Google Drive 图片上传功能仅用于**可选的备份和归档需求**
 
 ---
 
 ## 📋 文件夹用途
 
-这个 Google Drive 文件夹在系统中有**两个主要用途**：
+这个 Google Drive 文件夹在系统中有**两个用途**（一个必需，一个可选）：
 
-### 1. 📄 文档同步源（Worklist Sync）
+### 1. 📄 文档同步源（Worklist Sync）✅ **必需功能**
 
 **功能**: 从 Google Drive 文件夹中读取文档，自动同步到 Worklist
+
+**权限需求**: ✅ **Viewer（查看者）** - 只读权限即可
 
 **工作流程**:
 ```
@@ -75,15 +97,19 @@ POST /api/v1/worklist/sync
 # 同步特定文件夹
 POST /api/v1/worklist/sync
 {
-  "folder_id": "1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx"
+  "folder_id": "1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG"
 }
 ```
 
 ---
 
-### 2. 📁 文件上传存储（File Upload Storage）
+### 2. 📁 文件上传存储（File Upload Storage）⚠️ **可选功能，未启用**
 
-**功能**: 存储上传的文件（图片、文档、视频等）
+**功能**: 存储上传的文件（图片、文档、视频等）作为备份
+
+**权限需求**: ⚠️ **Editor（编辑者）** - 需要写入权限
+
+**当前状态**: **未启用** - 因为图片发布由 Computer Use 直接处理，不需要通过 Google Drive
 
 **工作流程**:
 ```
@@ -135,7 +161,7 @@ Content-Type: multipart/form-data
 - article_id: [可选]
 
 # 列出文件夹中的文件
-GET /api/v1/files/?folder_id=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+GET /api/v1/files/?folder_id=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 ```
 
 ---
@@ -146,13 +172,19 @@ GET /api/v1/files/?folder_id=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
 
 **服务账号邮箱**: 从凭证文件中的 `client_email` 字段获取
 
-**权限**: 需要对此文件夹有 **Editor（编辑者）** 权限
+**当前配置权限**: ✅ **Viewer（查看者）** - 只读权限
 
-**设置步骤**:
+**权限说明**:
+| 功能 | 所需权限 | 当前状态 |
+|------|---------|---------|
+| 文档同步（核心功能） | Viewer（只读） | ✅ 已配置 |
+| 图片上传备份（可选） | Editor（编辑） | ❌ 未配置 |
+
+**设置步骤**（当前只需只读权限）:
 1. 打开 Google Drive 文件夹
 2. 右键 → 共享
 3. 添加服务账号邮箱
-4. 权限设置为 "编辑者"
+4. 权限设置为 **"查看者"**（核心功能）或 "编辑者"（如需备份功能）
 5. 发送共享邀请
 
 **凭证文件**: `backend/credentials/google-drive-credentials.json`
@@ -164,6 +196,7 @@ ls -lh backend/credentials/google-drive-credentials.json
 
 # 查看服务账号邮箱
 cat backend/credentials/google-drive-credentials.json | grep client_email
+# 应该显示: "client_email": "cms-automation-drive-service@cms-automation-2025.iam.gserviceaccount.com"
 ```
 
 ---
@@ -198,7 +231,7 @@ categories:
 ```
 
 2. **上传到 Google Drive**:
-   - 打开: https://drive.google.com/drive/folders/1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+   - 打开: https://drive.google.com/drive/folders/1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
    - 上传文件: `tags-mvp-test.txt`
 
 3. **触发同步**:
@@ -240,7 +273,7 @@ curl -X POST http://localhost:8000/api/v1/worklist/{item_id}/publish \
 
 **示例文档列表**:
 ```
-/1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx/
+/1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG/
 ├── article-001.txt  (带 YAML front matter)
 ├── article-002.txt
 ├── article-003.txt
@@ -252,14 +285,20 @@ curl -X POST http://localhost:8000/api/v1/worklist/{item_id}/publish \
 
 ---
 
-### 场景 3: 图片存储和引用
+### 场景 3: 图片存储和引用 ⚠️ **可选功能，未启用**
 
-**目标**: 上传文章图片并在发布时使用
+**目标**: 上传文章图片到 Google Drive 作为备份
 
-**步骤**:
-1. 上传图片到同一文件夹
-2. 系统生成公开 URL
-3. Computer Use 发布时自动上传到 WordPress
+**注意**: ⚠️ **此功能为可选，当前未启用**
+- Computer Use 发布时会**直接处理图片上传到 WordPress**
+- **不需要**将图片先上传到 Google Drive
+- 此功能仅用于需要在 Google Drive 中保留图片备份的场景
+
+**步骤**（如需启用备份功能）:
+1. 升级服务账号权限为 Editor
+2. 上传图片到 Google Drive 文件夹
+3. 系统生成公开 URL 并记录到数据库
+4. 发布时从 Drive 下载到临时目录，再上传到 WordPress
 
 **上传示例**:
 ```bash
@@ -284,7 +323,7 @@ curl -X POST http://localhost:8000/api/v1/files/upload \
 ### 推荐的组织方式
 
 ```
-/CMS Automation Files (1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx)/
+/CMS Automation Files (1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG)/
 │
 ├── 📄 articles/                    # 待同步的文章文档
 │   ├── 2025-10/
@@ -323,7 +362,7 @@ curl -X POST http://localhost:8000/api/v1/files/upload \
 ```bash
 # Google Drive 配置
 GOOGLE_DRIVE_CREDENTIALS_PATH=/app/credentials/google-drive-credentials.json
-GOOGLE_DRIVE_FOLDER_ID=1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 ```
 
 ### Settings 类定义
@@ -368,7 +407,7 @@ class Settings(BaseSettings):
 
 ```bash
 # 方法 1: 通过浏览器
-# 访问: https://drive.google.com/drive/folders/1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+# 访问: https://drive.google.com/drive/folders/1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 # 检查是否可以看到文件夹内容
 
 # 方法 2: 通过 API 测试
@@ -389,10 +428,10 @@ print(f'Folder ID: {settings.GOOGLE_DRIVE_FOLDER_ID}')
 cat backend/credentials/google-drive-credentials.json | grep client_email
 
 # 示例输出:
-# "client_email": "cms-automation-drive-service@project-id.iam.gserviceaccount.com"
+# "client_email": "cms-automation-drive-service@cms-automation-2025.iam.gserviceaccount.com"
 
 # 在 Google Drive 中验证:
-# 1. 打开文件夹: https://drive.google.com/drive/folders/1VUbEJRaiOMzitaKZG8-j-GMOtTAIm1Rx
+# 1. 打开文件夹: https://drive.google.com/drive/folders/1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 # 2. 点击右上角"共享"图标
 # 3. 检查服务账号邮箱是否在共享列表中
 # 4. 确认权限为"编辑者"
@@ -410,5 +449,6 @@ cat backend/credentials/google-drive-credentials.json | grep client_email
 
 ---
 
-**最后更新**: 2025-10-31
-**状态**: ✅ 配置完成，可正常使用
+**最后更新**: 2025-11-03
+**状态**: ✅ 核心功能已配置（只读文档同步）
+**可选功能**: ⚠️ 图片上传备份功能未启用（非必需）
