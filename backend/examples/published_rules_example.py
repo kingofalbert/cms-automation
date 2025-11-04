@@ -2,10 +2,7 @@
 範例：展示規則發布和使用的完整流程
 """
 
-import asyncio
-import json
 from datetime import datetime
-from pathlib import Path
 
 # 假設這些模組已經生成
 # from published_rules.python.rules_20241103_120000 import ProofreadingEngine
@@ -186,7 +183,7 @@ export class ProofreadingEngine {
 
     print("\n📊 變更詳情：")
     for change in changes:
-        print(f"  - 規則 {change['rule_id']}: "{change['original']}" → "{change['replacement']}"")
+        print(f"  - 規則 {change['rule_id']}: \"{change['original']}\" → \"{change['replacement']}\"")
         print(f"    位置: {change['position']}")
 
     # 6. 下載連結

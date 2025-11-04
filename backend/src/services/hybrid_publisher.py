@@ -7,8 +7,10 @@ This service automatically selects the best publishing method based on:
 - Publishing volume
 """
 
+from __future__ import annotations
+
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.api.schemas.seo import SEOMetadata
 from src.config import get_logger, get_settings
@@ -45,8 +47,8 @@ class HybridPublisher:
     def __init__(
         self,
         strategy: PublishingStrategy = PublishingStrategy.AUTO,
-        playwright_config_path: Optional[str] = None,
-        cost_budget_usd: Optional[float] = None,
+        playwright_config_path: str | None = None,
+        cost_budget_usd: float | None = None,
     ) -> None:
         """Initialize hybrid publisher.
 
@@ -95,9 +97,10 @@ class HybridPublisher:
         article_title: str,
         article_body: str,
         seo_data: SEOMetadata,
-        article_images: List[Dict] = None,
-        article_metadata: Dict = None,
-    ) -> Dict[str, Any]:
+        article_images: list[dict[str, Any]] | None = None,
+        article_metadata: dict[str, Any] | None = None,
+        publish_mode: str = "publish",
+    ) -> dict[str, Any]:
         """Publish article using best available method.
 
         Args:
@@ -115,7 +118,7 @@ class HybridPublisher:
         """
         # Determine which method to use
         use_method = self._decide_publishing_method(
-            article_metadata=article_metadata or {},
+                article_metadata=article_metadata or {},
             has_images=bool(article_images),
         )
 
@@ -136,6 +139,7 @@ class HybridPublisher:
                     article_body=article_body,
                     seo_data=seo_data,
                     article_images=article_images,
+                    publish_mode=publish_mode,
                 )
             else:  # computer_use
                 result = await self._publish_with_computer_use(
@@ -146,6 +150,7 @@ class HybridPublisher:
                     article_body=article_body,
                     seo_data=seo_data,
                     article_images=article_images,
+                    publish_mode=publish_mode,
                 )
 
             # Add method to result
@@ -179,6 +184,7 @@ class HybridPublisher:
                         article_body=article_body,
                         seo_data=seo_data,
                         article_images=article_images,
+                        publish_mode=publish_mode,
                     )
                     result["publishing_method"] = "computer_use_fallback"
                     return result
@@ -196,7 +202,7 @@ class HybridPublisher:
 
     def _decide_publishing_method(
         self,
-        article_metadata: Dict,
+        article_metadata: dict[str, Any],
         has_images: bool,
     ) -> str:
         """Decide which publishing method to use.
@@ -253,7 +259,7 @@ class HybridPublisher:
         # Simple articles use Playwright if available
         return "playwright"
 
-    def _is_article_complex(self, metadata: Dict) -> bool:
+    def _is_article_complex(self, metadata: dict[str, Any]) -> bool:
         """Determine if article is complex and needs AI intelligence.
 
         Args:
@@ -283,8 +289,9 @@ class HybridPublisher:
         article_title: str,
         article_body: str,
         seo_data: SEOMetadata,
-        article_images: List[Dict],
-    ) -> Dict[str, Any]:
+        article_images: list[dict[str, Any]],
+        publish_mode: str,
+    ) -> dict[str, Any]:
         """Publish using Playwright (free).
 
         Args:
@@ -314,6 +321,7 @@ class HybridPublisher:
             seo_data=seo_data,
             article_images=article_images or [],
             headless=True,
+            publish_mode=publish_mode,
         )
 
         return result
@@ -326,8 +334,9 @@ class HybridPublisher:
         article_title: str,
         article_body: str,
         seo_data: SEOMetadata,
-        article_images: List[Dict],
-    ) -> Dict[str, Any]:
+        article_images: list[dict[str, Any]],
+        publish_mode: str,
+    ) -> dict[str, Any]:
         """Publish using Computer Use (paid, intelligent).
 
         Args:
@@ -352,11 +361,12 @@ class HybridPublisher:
             cms_username=username,
             cms_password=password,
             article_images=article_images or [],
+            publish_mode=publish_mode,
         )
 
         return result
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get publishing statistics.
 
         Returns:
@@ -371,7 +381,7 @@ class HybridPublisher:
 
 async def create_hybrid_publisher(
     strategy: str = "auto",
-    playwright_config_path: Optional[str] = None,
+    playwright_config_path: str | None = None,
 ) -> HybridPublisher:
     """Factory function to create hybrid publisher.
 

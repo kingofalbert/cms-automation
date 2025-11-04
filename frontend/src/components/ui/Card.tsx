@@ -52,9 +52,9 @@ Card.displayName = 'Card';
 /**
  * Card Header component.
  */
-export interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {
-  title?: string;
-  description?: string;
+export interface CardHeaderProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
+  title?: ReactNode;
+  description?: ReactNode;
   action?: ReactNode;
 }
 
@@ -67,11 +67,11 @@ export const CardHeader = forwardRef<HTMLDivElement, CardHeaderProps>(
         {...props}
       >
         <div className="flex-1">
-          {title && (
+          {title !== undefined && title !== null && (
             <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           )}
-          {description && (
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
+          {description !== undefined && description !== null && (
+            <div className="mt-1 text-sm text-gray-500">{description}</div>
           )}
           {children}
         </div>

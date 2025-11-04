@@ -1,6 +1,6 @@
 """Base SQLAlchemy models and mixins."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -48,7 +48,7 @@ class SoftDeleteMixin:
 
     def soft_delete(self) -> None:
         """Mark record as deleted."""
-        self.deleted_at = datetime.now(timezone.utc)
+        self.deleted_at = datetime.now(UTC)
 
     def restore(self) -> None:
         """Restore soft deleted record."""

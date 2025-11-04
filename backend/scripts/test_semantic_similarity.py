@@ -11,19 +11,17 @@
 
 import asyncio
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 # 添加項目根目錄到路徑
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from src.config.database import get_db_config
-from src.services.semantic_similarity import get_semantic_service
 from src.models.article import Article
-from src.models.topic_embedding import TopicEmbedding
+from src.services.semantic_similarity import get_semantic_service
 
 
 async def test_basic_embedding():
@@ -58,14 +56,13 @@ async def test_basic_embedding():
         print("\n📊 文本相似度矩陣:")
         print("-" * 40)
 
-        import numpy as np
         from sklearn.metrics.pairwise import cosine_similarity
 
         similarity_matrix = cosine_similarity(embeddings)
 
         for i, text1 in enumerate(test_texts):
             print(f"\n文本 {i+1}: {text1[:30]}...")
-            for j, text2 in enumerate(test_texts):
+            for j, _text2 in enumerate(test_texts):
                 if i != j:
                     similarity = similarity_matrix[i][j]
                     print(f"  與文本 {j+1} 相似度: {similarity:.2%}")
@@ -128,7 +125,7 @@ async def test_article_operations():
 
         for article in created_articles:
             try:
-                embedding = await service.store_article_embedding(session, article.id)
+                await service.store_article_embedding(session, article.id)
                 print(f"✅ 存儲嵌入: 文章 {article.id} - {article.title[:30]}...")
             except Exception as e:
                 print(f"❌ 失敗: {e}")
@@ -171,7 +168,7 @@ async def test_article_operations():
         )
 
         if duplicate:
-            print(f"⚠️  發現重複內容!")
+            print("⚠️  發現重複內容!")
             print(f"   文章: {duplicate.title}")
             print(f"   ID: {duplicate.id}")
         else:
@@ -315,7 +312,7 @@ async def main():
         embedding = await test_basic_embedding()
 
         if embedding:
-            articles = await test_article_operations()
+            await test_article_operations()
             await test_batch_operations()
             await test_similarity_search()
             await test_performance()

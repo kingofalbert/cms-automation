@@ -1,7 +1,6 @@
 """Analytics models for provider performance metrics."""
 
 from datetime import date, datetime
-from typing import Optional
 
 from sqlalchemy import Date, Float, Integer
 from sqlalchemy.orm import Mapped, mapped_column
@@ -50,17 +49,17 @@ class ProviderMetrics(Base):
         default=0.0,
         comment="Success rate percentage (0-100)",
     )
-    avg_duration_seconds: Mapped[Optional[float]] = mapped_column(
+    avg_duration_seconds: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         comment="Average task duration (seconds)",
     )
-    avg_cost_usd: Mapped[Optional[float]] = mapped_column(
+    avg_cost_usd: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         comment="Average cost per task (USD)",
     )
-    total_cost_usd: Mapped[Optional[float]] = mapped_column(
+    total_cost_usd: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         comment="Total cost for provider (USD)",

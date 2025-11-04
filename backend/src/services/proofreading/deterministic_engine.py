@@ -4,18 +4,17 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List
-
-from src.services.proofreading.rule_specs import (
-    A4_INFORMAL_SPECS,
-    D_TRANSLATION_SPECS,
-    E_SPECIAL_SPECS,
-)
+from typing import Any
 
 from src.services.proofreading.models import (
     ArticlePayload,
     ProofreadingIssue,
     RuleSource,
+)
+from src.services.proofreading.rule_specs import (
+    A4_INFORMAL_SPECS,
+    D_TRANSLATION_SPECS,
+    E_SPECIAL_SPECS,
 )
 
 
@@ -30,7 +29,7 @@ class DeterministicRule:
     blocks_publish: bool = False
     can_auto_fix: bool = False
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
         """Run rule on payload returning 0..n issues."""
         raise NotImplementedError
 
@@ -44,7 +43,7 @@ class DictionaryReplacementRule(DeterministicRule):
         rule_id: str,
         category: str,
         subcategory: str,
-        patterns: List[Any],
+        patterns: list[Any],
         correct: str | None,
         description: str,
         message: str | None = None,
@@ -62,7 +61,7 @@ class DictionaryReplacementRule(DeterministicRule):
             blocks_publish=blocks_publish,
             can_auto_fix=can_auto_fix,
         )
-        self._patterns: List[re.Pattern[str]] = []
+        self._patterns: list[re.Pattern[str]] = []
         for entry in patterns:
             if isinstance(entry, dict):
                 value = entry["value"]
@@ -81,8 +80,8 @@ class DictionaryReplacementRule(DeterministicRule):
         self.suggestion_template = suggestion
         self.confidence = confidence
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for pattern in self._patterns:
@@ -129,11 +128,11 @@ class DictionaryReplacementRule(DeterministicRule):
 
 
 def build_dictionary_rules(
-    specs: List[Dict[str, Any]]
-) -> List[DictionaryReplacementRule]:
+    specs: list[dict[str, Any]]
+) -> list[DictionaryReplacementRule]:
     """Instantiate dictionary-backed deterministic rules."""
 
-    rules: List[DictionaryReplacementRule] = []
+    rules: list[DictionaryReplacementRule] = []
     for spec in specs:
         rules.append(
             DictionaryReplacementRule(
@@ -169,8 +168,8 @@ class HalfWidthCommaRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         matches = list(self.HALF_WIDTH_COMMA_PATTERN.finditer(payload.original_content))
         for match in matches:
             snippet_start = max(0, match.start() - 12)
@@ -211,10 +210,10 @@ class InvalidHeadingLevelRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
         if not payload.html_content:
             return []
-        issues: List[ProofreadingIssue] = []
+        issues: list[ProofreadingIssue] = []
         for match in self.INVALID_HEADING_PATTERN.finditer(payload.html_content):
             level = match.group(1)
             issues.append(
@@ -250,7 +249,7 @@ class FeaturedImageLandscapeRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
         featured = payload.featured_image
         if not featured or not featured.width or not featured.height:
             return []
@@ -298,8 +297,8 @@ class MissingPunctuationRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.SENTENCE_END_PATTERN.finditer(content):
@@ -350,8 +349,8 @@ class QuotationNestingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.INCORRECT_NESTING.finditer(content):
@@ -395,8 +394,8 @@ class HalfWidthDashRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.HALF_WIDTH_DASH_PATTERN.finditer(content):
@@ -443,8 +442,8 @@ class EllipsisFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.IRREGULAR_ELLIPSIS.finditer(content):
@@ -492,8 +491,8 @@ class QuestionMarkAbuseRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.MULTIPLE_QUESTION_MARKS.finditer(content):
@@ -539,8 +538,8 @@ class ExclamationMarkAbuseRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.MULTIPLE_EXCLAMATION_MARKS.finditer(content):
@@ -587,8 +586,8 @@ class MixedPunctuationRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ENGLISH_PUNCT_IN_CHINESE.finditer(content):
@@ -642,8 +641,8 @@ class QuotationMatchingRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查引号配对：「」和『』
@@ -706,8 +705,8 @@ class BookTitleMatchingRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查书名号配对：《》
@@ -757,8 +756,8 @@ class B1_006_ColonFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # Check for halfwidth colon in Chinese text
@@ -809,8 +808,8 @@ class B1_007_SemicolonFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.HALFWIDTH_SEMICOLON.finditer(content):
@@ -860,8 +859,8 @@ class B1_008_ConsecutivePunctuationRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CONSECUTIVE_PUNCT.finditer(content):
@@ -909,8 +908,8 @@ class B1_009_PunctuationSpacingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.PUNCT_EXTRA_SPACE.finditer(content):
@@ -954,8 +953,8 @@ class B1_010_ChinesePeriodRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ENGLISH_PERIOD.finditer(content):
@@ -1014,8 +1013,8 @@ class B2_003_DunhaoUsageRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.COMMA_FOR_DUNHAO.finditer(content):
@@ -1064,8 +1063,8 @@ class B2_004_CommaAbuseRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CONSECUTIVE_COMMAS.finditer(content):
@@ -1109,8 +1108,8 @@ class B2_005_SerialCommaRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.SERIAL_PATTERN.finditer(content):
@@ -1155,8 +1154,8 @@ class B4_001_ParenthesesMatchingRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查各种括号配对
@@ -1209,8 +1208,8 @@ class B4_002_ParenthesesFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.HALFWIDTH_PAREN.finditer(content):
@@ -1261,8 +1260,8 @@ class B5_001_DoubleQuoteMisuseRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ENGLISH_DOUBLE_QUOTE.finditer(content):
@@ -1312,8 +1311,8 @@ class B5_002_SingleQuoteMisuseRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ENGLISH_SINGLE_QUOTE.finditer(content):
@@ -1363,8 +1362,8 @@ class B6_001_EmphasisMarkRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.EMPHASIS_PATTERN.finditer(content):
@@ -1409,8 +1408,8 @@ class B7_001_DashFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.SINGLE_DASH.finditer(content):
@@ -1454,8 +1453,8 @@ class B7_002_HyphenFormatRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.HYPHEN_PATTERN.finditer(content):
@@ -1499,8 +1498,8 @@ class B2_001_CommaSpacingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.COMMA_NO_SPACE.finditer(content):
@@ -1544,8 +1543,8 @@ class B2_006_ConsecutiveCommasRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CONSECUTIVE_COMMAS.finditer(content):
@@ -1589,8 +1588,8 @@ class B2_007_DunhaoCommaMixRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.DUNHAO_COMMA_MIX.finditer(content):
@@ -1622,7 +1621,7 @@ class B3_004_EmptyQuoteRule(DeterministicRule):
     """Check empty quotes (B3-004)."""
 
     # 空引号检测
-    EMPTY_QUOTE = re.compile(r"[「『""''][\s]*[」』""'']")
+    EMPTY_QUOTE = re.compile(r"[「『"r"''][\s]*[」』""'']")
 
     def __init__(self) -> None:
         super().__init__(
@@ -1634,8 +1633,8 @@ class B3_004_EmptyQuoteRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.EMPTY_QUOTE.finditer(content):
@@ -1679,8 +1678,8 @@ class B3_005_BookTitleQuoteMixRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.TITLE_IN_QUOTE.finditer(content):
@@ -1726,8 +1725,8 @@ class B4_003_ParenthesisSpacingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # Check space before parenthesis
@@ -1796,8 +1795,8 @@ class B4_004_ParenthesisInnerSpaceRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.INNER_SPACE.finditer(content):
@@ -1841,8 +1840,8 @@ class B5_003_QuoteMixRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.QUOTE_MIX.finditer(content):
@@ -1891,8 +1890,8 @@ class B6_002_DunhaoMisuseRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.DUNHAO_VERB.finditer(content):
@@ -1936,8 +1935,8 @@ class B6_003_IntervalMarkMisuseRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.INTERVAL_MISUSE.finditer(content):
@@ -1981,8 +1980,8 @@ class B7_003_HyphenFormatRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.NUMBER_HYPHEN.finditer(content):
@@ -2026,8 +2025,8 @@ class B7_005_EllipsisDengRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ELLIPSIS_DENG.finditer(content):
@@ -2071,8 +2070,8 @@ class B7_006_DashLengthRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.SHORT_DASH.finditer(content):
@@ -2116,8 +2115,8 @@ class B1_011_ParagraphEndPunctuationRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.PARA_NO_PUNCT.finditer(content):
@@ -2162,8 +2161,8 @@ class B1_012_PunctuationStackingRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.PUNCT_STACK.finditer(content):
@@ -2212,8 +2211,8 @@ class B1_013_EnglishPunctuationInChineseRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ENG_PUNCT_IN_CN.finditer(content):
@@ -2256,8 +2255,8 @@ class B1_014_PunctuationLeadingSpaceRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.PUNCT_LEADING_SPACE.finditer(content):
@@ -2303,8 +2302,8 @@ class B2_008_DunhaoInMixedTextRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.DUNHAO_WITH_ENG.finditer(content):
@@ -2346,8 +2345,8 @@ class B2_009_OxfordCommaRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.OXFORD_PATTERN.finditer(content):
@@ -2389,8 +2388,8 @@ class B2_010_MissingDunhaoRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.PARALLEL_NO_DUNHAO.finditer(content):
@@ -2432,8 +2431,8 @@ class B2_011_DunhaoInLongClausesRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.LONG_DUNHAO.finditer(content):
@@ -2475,8 +2474,8 @@ class B2_012_CommaInShortPhrasesRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.SHORT_COMMA.finditer(content):
@@ -2522,8 +2521,8 @@ class B2_013_CommaSpacingEnglishRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ENG_COMMA_NO_SPACE.finditer(content):
@@ -2564,8 +2563,8 @@ class B2_014_DunhaoWithDengRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.DUNHAO_DENG.finditer(content):
@@ -2607,8 +2606,8 @@ class B2_015_CommaSemicolonMixRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.COMMA_SEMI_MIX.finditer(content):
@@ -2655,8 +2654,8 @@ class B3_006_QuoteMisuseRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.QUOTE_EMPHASIS.finditer(content):
@@ -2698,8 +2697,8 @@ class B3_007_BookTitleOveruseRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 常见的非作品名词汇
@@ -2752,8 +2751,8 @@ class B4_005_MixedParenthesesRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CN_OPEN_ENG_CLOSE.finditer(content):
@@ -2816,8 +2815,8 @@ class B4_006_NestedParenthesesRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.NESTED_PAREN.finditer(content):
@@ -2864,8 +2863,8 @@ class B7_007_DashForParallelRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.DASH_PARALLEL.finditer(content):
@@ -2907,8 +2906,8 @@ class B7_008_HyphenInconsistencyRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 统计使用的连接符类型
@@ -2961,8 +2960,8 @@ class B7_009_EllipsisMisplacementRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ELLIPSIS_START.finditer(content):
@@ -3009,8 +3008,8 @@ class B8_001_ExcessiveChineseSpacingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CN_SPACING.finditer(content):
@@ -3052,8 +3051,8 @@ class B8_002_ChineseEnglishSpacingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CN_ENG_NO_SPACE.finditer(content):
@@ -3100,8 +3099,8 @@ class B8_003_LineSpacingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         lines = content.split('\n')
@@ -3150,8 +3149,8 @@ class UnifiedTermMeterRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.METER_PATTERN.finditer(content):
@@ -3199,8 +3198,8 @@ class UnifiedTermOccupyRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.OCCUPY_PATTERN.finditer(content):
@@ -3259,8 +3258,8 @@ class UnifiedTermRule(DeterministicRule):
             re.compile(exclusion_pattern) if exclusion_pattern else None
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.wrong_pattern.finditer(content):
@@ -3927,8 +3926,8 @@ class VariantWordRule(DeterministicRule):
         else:
             self.exclusion = None
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.wrong_pattern.finditer(content):
@@ -4345,8 +4344,8 @@ class CommonTypoRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.TYPO_PATTERN.finditer(content):
@@ -4401,8 +4400,8 @@ class TypoReplacementRule(DeterministicRule):
         self.correct_form = correct_form
         self.description = description
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.wrong_pattern.finditer(content):
@@ -5293,8 +5292,8 @@ class InformalLanguageRule(DeterministicRule):
         pattern_str = "|".join(re.escape(term) for term in self.INFORMAL_TERMS)
         self.pattern = re.compile(pattern_str)
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.pattern.finditer(content):
@@ -5342,8 +5341,8 @@ class FullWidthDigitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.FULL_WIDTH_DIGIT_PATTERN.finditer(content):
@@ -5393,8 +5392,8 @@ class NumberSeparatorRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.LARGE_NUMBER_PATTERN.finditer(content):
@@ -5410,7 +5409,7 @@ class NumberSeparatorRule(DeterministicRule):
                     pass
 
             # 添加千位分隔符
-            formatted = "{:,}".format(int(number_str))
+            formatted = f"{int(number_str):,}"
 
             snippet_start = max(0, match.start() - 10)
             snippet_end = min(len(content), match.end() + 10)
@@ -5452,8 +5451,8 @@ class PercentageFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.NO_SPACE_PERCENTAGE.finditer(content):
@@ -5469,7 +5468,7 @@ class PercentageFormatRule(DeterministicRule):
                     rule_id=self.rule_id,
                     category=self.category,
                     subcategory=self.subcategory,
-                    message=f"百分比格式：数字与 '%' 之间建议保留空格。",
+                    message="百分比格式：数字与 '%' 之间建议保留空格。",
                     suggestion=f"将 '{original}' 改为 '{corrected}'。",
                     severity=self.severity,
                     confidence=0.7,
@@ -5500,8 +5499,8 @@ class DecimalPointRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CHINESE_DECIMAL.finditer(content):
@@ -5548,8 +5547,8 @@ class DateFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.CHINESE_DATE.finditer(content):
@@ -5601,8 +5600,8 @@ class CurrencyFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.SPACE_IN_CURRENCY.finditer(content):
@@ -5654,8 +5653,8 @@ class KilometerUnificationRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.QIAN_MI_PATTERN.finditer(content):
@@ -5699,8 +5698,8 @@ class SquareMeterSymbolRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.TEXT_SQUARE_METER.finditer(content):
@@ -5750,8 +5749,8 @@ class C1_007_TimeFormatRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.IMPROPER_TIME.finditer(content):
@@ -5765,7 +5764,7 @@ class C1_007_TimeFormatRule(DeterministicRule):
                     category=self.category,
                     subcategory=self.subcategory,
                     message="时间格式：建议使用标准格式如 '14:30' 或 '下午2点30分'。",
-                    suggestion=f"统一时间表示格式。",
+                    suggestion="统一时间表示格式。",
                     severity=self.severity,
                     confidence=0.6,
                     can_auto_fix=self.can_auto_fix,
@@ -5795,8 +5794,8 @@ class C1_008_ScientificNotationRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.LARGE_NUMBER.finditer(content):
@@ -5843,8 +5842,8 @@ class C1_009_OrdinalNumberRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ORDINAL_PATTERN.finditer(content):
@@ -5890,8 +5889,8 @@ class C2_003_TemperatureUnitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.TEMP_PATTERN.finditer(content):
@@ -5943,8 +5942,8 @@ class C2_004_WeightUnitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.WEIGHT_PATTERN.finditer(content):
@@ -6003,8 +6002,8 @@ class C2_005_VolumeUnitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.VOLUME_PATTERN.finditer(content):
@@ -6063,8 +6062,8 @@ class C2_006_AreaUnitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.AREA_PATTERN.finditer(content):
@@ -6121,8 +6120,8 @@ class C1_010_NegativeNumberRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.NEGATIVE_PATTERN.finditer(content):
@@ -6170,8 +6169,8 @@ class C1_011_NumberRangeRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.RANGE_PATTERN.finditer(content):
@@ -6224,8 +6223,8 @@ class C1_012_PhoneNumberRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.PHONE_PATTERN.finditer(content):
@@ -6279,8 +6278,8 @@ class C1_013_OrdinalNumberRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ORDINAL_PATTERN.finditer(content):
@@ -6333,8 +6332,8 @@ class C1_014_LargeNumberRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.LARGE_NUMBER_PATTERN.finditer(content):
@@ -6388,12 +6387,12 @@ class C1_015_MixedNumberFormatRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.MIXED_PATTERN.finditer(content):
-            original = match.group()
+            match.group()
 
             snippet_start = max(0, match.start() - 10)
             snippet_end = min(len(content), match.end() + 10)
@@ -6435,8 +6434,8 @@ class C2_007_SpeedUnitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.SPEED_PATTERN.finditer(content):
@@ -6492,8 +6491,8 @@ class C2_008_PressureUnitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.PRESSURE_PATTERN.finditer(content):
@@ -6553,8 +6552,8 @@ class C2_009_EnergyUnitRule(DeterministicRule):
             can_auto_fix=True,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.ENERGY_PATTERN.finditer(content):
@@ -6616,8 +6615,8 @@ class ImageWidthRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         # 检查文章中的图片
         if not payload.images:
@@ -6667,8 +6666,8 @@ class ImageLicenseRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         # 检查文章中的图片是否有授权信息
         if not payload.images:
@@ -6715,8 +6714,8 @@ class F1_003_ImageAltTextRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         if not payload.images:
             return []
@@ -6760,8 +6759,8 @@ class F1_004_ImageFileSizeRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         if not payload.images:
             return []
@@ -6806,8 +6805,8 @@ class F1_005_ImageCountRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         if payload.images and len(payload.images) > self.MAX_IMAGES:
             issues.append(
@@ -6846,8 +6845,8 @@ class F1_006_ImageFormatRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         if not payload.images:
             return []
@@ -6891,8 +6890,8 @@ class F1_007_ImageDuplicationRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         if not payload.images or len(payload.images) < 2:
             return []
@@ -6945,8 +6944,8 @@ class F2_002_ArticleLengthRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 计算中文字符数（去除空格、标点）
@@ -7024,8 +7023,8 @@ class F2_003_ParagraphLengthRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 按双换行符分段
@@ -7071,8 +7070,8 @@ class F2_004_HeadingHierarchyRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         headings = []
@@ -7127,9 +7126,8 @@ class F2_005_ListFormatRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
-        content = payload.original_content
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         # 这个规则主要是提示性的，检查是否有明显的列表模式
         # 实际实现可能需要更复杂的逻辑
@@ -7152,8 +7150,8 @@ class F2_006_LinkValidityRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查markdown链接
@@ -7203,8 +7201,8 @@ class F3_002_CitationSourceRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         # 这个规则需要更复杂的逻辑来判断是否是引用
         # 暂时返回空列表
         return issues
@@ -7223,8 +7221,8 @@ class F3_003_OriginalContentRatioRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         # 这个规则需要AI或其他工具来检测原创性
         # 暂时返回空列表
         return issues
@@ -7246,8 +7244,8 @@ class F4_001_MetaDescriptionLengthRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         if not payload.meta_description:
             issues.append(
@@ -7321,8 +7319,8 @@ class F4_002_KeywordUsageRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         if not payload.seo_keywords or len(payload.seo_keywords) == 0:
             issues.append(
@@ -7378,8 +7376,8 @@ class F4_003_InternalLinkRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查是否有内部链接
@@ -7430,8 +7428,8 @@ class F1_008_ImageCompressionRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         # 占位符：需要实际图片数据才能检查压缩质量
         # 建议：使用图片分析工具检查压缩率
         return issues
@@ -7450,8 +7448,8 @@ class F1_009_ImageAspectRatioRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         # 占位符：需要实际图片数据才能检查宽高比
         # 建议：常见宽高比 16:9, 4:3, 1:1
         return issues
@@ -7472,8 +7470,8 @@ class F1_010_ImageNamingRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.IMAGE_REF_PATTERN.finditer(content):
@@ -7525,8 +7523,8 @@ class F2_007_HeadingLengthRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.HEADING_PATTERN.finditer(content):
@@ -7570,8 +7568,8 @@ class F2_008_FirstParagraphLengthRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 获取第一段（去除标题）
@@ -7640,8 +7638,8 @@ class F2_009_ContentSegmentationRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 计算中文字符数
@@ -7688,8 +7686,8 @@ class F2_010_BlockquoteFormatRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.BLOCKQUOTE_PATTERN.finditer(content):
@@ -7746,8 +7744,8 @@ class F3_004_SensitiveContentRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for pattern in self.SENSITIVE_PATTERNS:
@@ -7786,8 +7784,8 @@ class F3_005_DuplicateContentRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 将内容分段
@@ -7837,8 +7835,8 @@ class F3_006_ExternalLinkQualityRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         for match in self.LINK_PATTERN.finditer(content):
@@ -7883,8 +7881,8 @@ class F3_007_ReadabilityRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 计算平均句子长度
@@ -7939,8 +7937,8 @@ class F3_008_TimelinessRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查是否包含时间相关信息
@@ -7989,8 +7987,8 @@ class F3_009_FactCheckPromptRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查是否有数据或研究引用
@@ -8040,8 +8038,8 @@ class F3_010_CitationFormatRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检测不同的引用格式
@@ -8066,7 +8064,7 @@ class F3_010_CitationFormatRule(DeterministicRule):
                     source=RuleSource.SCRIPT,
                     attributed_by="F3_010_CitationFormatRule",
                     location={},
-                    evidence=f"Multiple citation formats detected",
+                    evidence="Multiple citation formats detected",
                 )
             )
         return issues
@@ -8093,8 +8091,8 @@ class F4_004_TitleSEORule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         # 使用 payload 的 title 字段
         title = payload.title if hasattr(payload, 'title') and payload.title else None
@@ -8161,8 +8159,8 @@ class F4_005_KeywordDensityRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         # 如果 payload 有 seo_keywords，检查密度
         if hasattr(payload, 'seo_keywords') and payload.seo_keywords:
@@ -8232,8 +8230,8 @@ class F4_006_NofollowLinkRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         external_links = 0
@@ -8285,8 +8283,8 @@ class F4_007_StructuredDataRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # 检查是否包含结构化数据提示
@@ -8328,8 +8326,8 @@ class F4_008_ImageSEORule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         images_without_alt = 0
@@ -8377,8 +8375,8 @@ class F4_009_URLFriendlinessRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         # 如果 payload 有 url/slug 字段，检查友好性
         url = None
@@ -8423,8 +8421,8 @@ class F4_010_SocialMetaTagRule(DeterministicRule):
             can_auto_fix=False,
         )
 
-    def evaluate(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
-        issues: List[ProofreadingIssue] = []
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
 
         # 检查是否有 meta_description（Open Graph 的基础）
         has_meta = hasattr(payload, 'meta_description') and payload.meta_description
@@ -8470,7 +8468,7 @@ class DeterministicRuleEngine:
     VERSION = "2.0.0"  # Batch 10: 384条规则 - 100%覆盖达成 (A1:50, A2:30, A3:70, A4:30, B:60, C:24, D:40, E:40, F:40)
 
     def __init__(self) -> None:
-        self.rules: List[DeterministicRule] = [
+        self.rules: list[DeterministicRule] = [
             # B类 - 标点符号与排版（60条）
             # B1 子类 - 基本标点（14条）
             MissingPunctuationRule(),  # B1-001
@@ -8774,9 +8772,9 @@ class DeterministicRuleEngine:
             F4_010_SocialMetaTagRule(),  # F4-010: 社交媒体标签
         ]
 
-    def run(self, payload: ArticlePayload) -> List[ProofreadingIssue]:
+    def run(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
         """Execute all deterministic rules."""
-        issues: List[ProofreadingIssue] = []
+        issues: list[ProofreadingIssue] = []
         for rule in self.rules:
             issues.extend(rule.evaluate(payload))
         return issues

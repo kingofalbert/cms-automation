@@ -2,23 +2,23 @@
 增強版校對決策API - 包含完整的規則發布功能
 """
 
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
-from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Body, Path as PathParam
+from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import Path as PathParam
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.database import get_session
-from src.services.proofreading_decision import ProofreadingDecisionService
-from src.services.rule_compiler import rule_compiler
 from src.schemas.proofreading_decision import (
+    DraftStatus,
     PublishRulesRequest,
     PublishRulesResponse,
-    DraftStatus,
-    ReviewStatus
+    ReviewStatus,
 )
+from src.services.rule_compiler import rule_compiler
 
 router = APIRouter(prefix="/api/v1/proofreading/decisions", tags=["proofreading"])
 
@@ -294,8 +294,8 @@ async def apply_published_rules(
         module_name = ruleset["module_name"]
 
         # 動態導入生成的模組
-        import sys
         import importlib.util
+        import sys
 
         module_path = PUBLISHED_RULES_DIR / "python" / f"{module_name}.py"
 
@@ -355,7 +355,7 @@ async def get_published_ruleset_detail(
         json_path = Path(ruleset["json_config"])
         if json_path.exists():
             import json
-            with open(json_path, "r", encoding="utf-8") as f:
+            with open(json_path, encoding="utf-8") as f:
                 config = json.load(f)
         else:
             config = {}

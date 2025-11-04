@@ -20,16 +20,25 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
   currentDailySpend = 0,
   currentMonthlySpend = 0,
 }) => {
-  const updateLimits = (updates: Partial<CostLimits>) => {
-    onChange({ ...limits, ...updates });
+  // Provide safe defaults for when backend returns empty objects
+  const safeLimits = {
+    daily_limit: limits.daily_limit ?? 100,
+    monthly_limit: limits.monthly_limit ?? 3000,
+    per_task_limit: limits.per_task_limit ?? 10,
+    alert_threshold: limits.alert_threshold ?? 80,
+    auto_pause_on_limit: limits.auto_pause_on_limit ?? true,
   };
 
-  const dailyPercentage = (currentDailySpend / limits.daily_limit) * 100;
-  const monthlyPercentage = (currentMonthlySpend / limits.monthly_limit) * 100;
+  const updateLimits = (updates: Partial<CostLimits>) => {
+    onChange({ ...safeLimits, ...updates });
+  };
+
+  const dailyPercentage = (currentDailySpend / safeLimits.daily_limit) * 100;
+  const monthlyPercentage = (currentMonthlySpend / safeLimits.monthly_limit) * 100;
 
   const getProgressColor = (percentage: number) => {
     if (percentage >= 100) return 'bg-red-500';
-    if (percentage >= limits.alert_threshold) return 'bg-yellow-500';
+    if (percentage >= safeLimits.alert_threshold) return 'bg-yellow-500';
     return 'bg-green-500';
   };
 
@@ -51,7 +60,7 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600">今日消费</span>
                 <span className="font-medium">
-                  ${currentDailySpend.toFixed(2)} / ${limits.daily_limit.toFixed(2)}
+                  ${currentDailySpend.toFixed(2)} / ${safeLimits.daily_limit.toFixed(2)}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -69,7 +78,7 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
               <div className="flex justify-between text-sm mb-1">
                 <span className="text-gray-600">本月消费</span>
                 <span className="font-medium">
-                  ${currentMonthlySpend.toFixed(2)} / ${limits.monthly_limit.toFixed(2)}
+                  ${currentMonthlySpend.toFixed(2)} / ${safeLimits.monthly_limit.toFixed(2)}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -84,16 +93,16 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
           </div>
 
           {/* Alert */}
-          {(dailyPercentage >= limits.alert_threshold ||
-            monthlyPercentage >= limits.alert_threshold) && (
+          {(dailyPercentage >= safeLimits.alert_threshold ||
+            monthlyPercentage >= safeLimits.alert_threshold) && (
             <div className="mt-3 flex items-start p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
               <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
               <div className="text-sm text-yellow-700">
                 <p className="font-medium">成本预警</p>
                 <p>
-                  {dailyPercentage >= limits.alert_threshold &&
+                  {dailyPercentage >= safeLimits.alert_threshold &&
                     `今日消费已达 ${dailyPercentage.toFixed(1)}%。`}
-                  {monthlyPercentage >= limits.alert_threshold &&
+                  {monthlyPercentage >= safeLimits.alert_threshold &&
                     `本月消费已达 ${monthlyPercentage.toFixed(1)}%。`}
                 </p>
               </div>
@@ -106,7 +115,7 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
           <Input
             type="number"
             label="每日限额 (USD)"
-            value={limits.daily_limit}
+            value={safeLimits.daily_limit}
             onChange={(e) =>
               updateLimits({ daily_limit: parseFloat(e.target.value) })
             }
@@ -118,7 +127,7 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
           <Input
             type="number"
             label="每月限额 (USD)"
-            value={limits.monthly_limit}
+            value={safeLimits.monthly_limit}
             onChange={(e) =>
               updateLimits({ monthly_limit: parseFloat(e.target.value) })
             }
@@ -130,7 +139,7 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
           <Input
             type="number"
             label="单任务限额 (USD)"
-            value={limits.per_task_limit}
+            value={safeLimits.per_task_limit}
             onChange={(e) =>
               updateLimits({ per_task_limit: parseFloat(e.target.value) })
             }
@@ -142,7 +151,7 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
           <Input
             type="number"
             label="预警阈值 (%)"
-            value={limits.alert_threshold}
+            value={safeLimits.alert_threshold}
             onChange={(e) =>
               updateLimits({ alert_threshold: parseInt(e.target.value) })
             }
@@ -155,7 +164,7 @@ export const CostLimitsSection: React.FC<CostLimitsSectionProps> = ({
             <input
               type="checkbox"
               id="auto-pause"
-              checked={limits.auto_pause_on_limit}
+              checked={safeLimits.auto_pause_on_limit}
               onChange={(e) =>
                 updateLimits({ auto_pause_on_limit: e.target.checked })
               }

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import time
 from hashlib import sha256
-from typing import Any, Dict
+from typing import Any
 
 from anthropic import AsyncAnthropic
 
@@ -92,7 +92,7 @@ class ProofreadingAnalysisService:
 
         return merged_result
 
-    async def _call_ai(self, prompt: Dict[str, str]) -> Dict[str, Any]:
+    async def _call_ai(self, prompt: dict[str, str]) -> dict[str, Any]:
         """Invoke Anthropic Messages API with the combined prompt."""
         response = await self.ai_client.messages.create(
             model=self.model,
@@ -118,7 +118,7 @@ class ProofreadingAnalysisService:
         )
         return {"text": text_content, "tokens": token_info}
 
-    def _parse_ai_result(self, ai_payload: Dict[str, Any]) -> ProofreadingResult:
+    def _parse_ai_result(self, ai_payload: dict[str, Any]) -> ProofreadingResult:
         """Parse AI JSON payload into ProofreadingResult."""
         text = ai_payload["text"]
         parsed = self._extract_json(text)
@@ -165,7 +165,7 @@ class ProofreadingAnalysisService:
         return result
 
     @staticmethod
-    def _extract_json(text: str) -> Dict[str, Any]:
+    def _extract_json(text: str) -> dict[str, Any]:
         """Extract JSON object from Claude response."""
         start = text.find("{")
         end = text.rfind("}") + 1
@@ -175,13 +175,13 @@ class ProofreadingAnalysisService:
         return json.loads(json_blob)
 
     @staticmethod
-    def _hash_prompt(prompt: Dict[str, str]) -> str:
+    def _hash_prompt(prompt: dict[str, str]) -> str:
         """Return SHA256 hash covering system+user prompt."""
         payload = prompt["system"] + "\n" + prompt["user"]
         return sha256(payload.encode("utf-8")).hexdigest()
 
     @staticmethod
-    def _calc_total_tokens(token_info: Dict[str, Any]) -> int | None:
+    def _calc_total_tokens(token_info: dict[str, Any]) -> int | None:
         try:
             return int(token_info.get("input") or 0) + int(
                 token_info.get("output") or 0

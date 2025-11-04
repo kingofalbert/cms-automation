@@ -3,7 +3,6 @@
 from typing import Any
 
 from celery import Task
-from celery.exceptions import MaxRetriesExceededError
 
 from src.config.logging import get_logger
 from src.config.settings import get_settings

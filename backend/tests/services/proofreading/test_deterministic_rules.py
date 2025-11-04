@@ -1,6 +1,5 @@
 """Unit tests for deterministic proofreading rules."""
 
-import pytest
 
 from src.services.proofreading.deterministic_engine import (
     CommonTypoRule,
@@ -21,7 +20,6 @@ from src.services.proofreading.deterministic_engine import (
 )
 from src.services.proofreading.models import ArticlePayload, ImageMetadata
 
-
 # ============================================================================
 # B类规则测试 - 标点符号与排版
 # ============================================================================
@@ -32,8 +30,7 @@ class TestHalfWidthCommaRule:
 
     def test_detects_half_width_comma_in_chinese(self):
         rule = HalfWidthCommaRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这是一个测试,应该检测到半角逗号。"
         )
         issues = rule.evaluate(payload)
@@ -45,8 +42,7 @@ class TestHalfWidthCommaRule:
 
     def test_ignores_comma_in_numbers(self):
         rule = HalfWidthCommaRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="价格是 1,000 美元。"
         )
         issues = rule.evaluate(payload)
@@ -55,8 +51,7 @@ class TestHalfWidthCommaRule:
 
     def test_multiple_half_width_commas(self):
         rule = HalfWidthCommaRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="第一句,第二句,第三句。"
         )
         issues = rule.evaluate(payload)
@@ -69,8 +64,7 @@ class TestMissingPunctuationRule:
 
     def test_detects_missing_punctuation(self):
         rule = MissingPunctuationRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这是第一句\n这是第二句"
         )
         issues = rule.evaluate(payload)
@@ -80,8 +74,7 @@ class TestMissingPunctuationRule:
 
     def test_ignores_proper_punctuation(self):
         rule = MissingPunctuationRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这是第一句。\n这是第二句。"
         )
         issues = rule.evaluate(payload)
@@ -96,8 +89,7 @@ class TestQuotationNestingRule:
 
     def test_detects_incorrect_nesting(self):
         rule = QuotationNestingRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="他说『这是「错误」的嵌套』。"
         )
         issues = rule.evaluate(payload)
@@ -108,8 +100,7 @@ class TestQuotationNestingRule:
 
     def test_ignores_correct_nesting(self):
         rule = QuotationNestingRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="他说「这是『正确』的嵌套」。"
         )
         issues = rule.evaluate(payload)
@@ -122,8 +113,7 @@ class TestHalfWidthDashRule:
 
     def test_detects_dash_in_chinese(self):
         rule = HalfWidthDashRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这是一个测试-应该检测到。"
         )
         issues = rule.evaluate(payload)
@@ -133,8 +123,7 @@ class TestHalfWidthDashRule:
 
     def test_ignores_dash_in_english_or_numbers(self):
         rule = HalfWidthDashRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="Time: 2024-10-31, URL: https://example.com/path-to-file"
         )
         issues = rule.evaluate(payload)
@@ -152,8 +141,7 @@ class TestUnifiedTermMeterRule:
 
     def test_detects_electric_meter(self):
         rule = UnifiedTermMeterRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="检查電錶读数。"
         )
         issues = rule.evaluate(payload)
@@ -164,8 +152,7 @@ class TestUnifiedTermMeterRule:
 
     def test_detects_water_meter(self):
         rule = UnifiedTermMeterRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="水錶需要更换。"
         )
         issues = rule.evaluate(payload)
@@ -174,8 +161,7 @@ class TestUnifiedTermMeterRule:
 
     def test_ignores_watch(self):
         rule = UnifiedTermMeterRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="我买了一块手錶。"
         )
         issues = rule.evaluate(payload)
@@ -188,8 +174,7 @@ class TestUnifiedTermOccupyRule:
 
     def test_detects_traditional_occupy(self):
         rule = UnifiedTermOccupyRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="佔用空间很大。"
         )
         issues = rule.evaluate(payload)
@@ -200,8 +185,7 @@ class TestUnifiedTermOccupyRule:
 
     def test_multiple_occurrences(self):
         rule = UnifiedTermOccupyRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="佔用了佔位符。"
         )
         issues = rule.evaluate(payload)
@@ -214,8 +198,7 @@ class TestCommonTypoRule:
 
     def test_detects_mo_ming_qi_miao(self):
         rule = CommonTypoRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这件事莫明其妙。"
         )
         issues = rule.evaluate(payload)
@@ -226,8 +209,7 @@ class TestCommonTypoRule:
 
     def test_ignores_correct_spelling(self):
         rule = CommonTypoRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这件事莫名其妙。"
         )
         issues = rule.evaluate(payload)
@@ -256,8 +238,7 @@ class TestInformalLanguageRule:
 
     def test_ignores_formal_language(self):
         rule = InformalLanguageRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这位企业家非常成功。"
         )
         issues = rule.evaluate(payload)
@@ -275,8 +256,7 @@ class TestFullWidthDigitRule:
 
     def test_detects_full_width_digits(self):
         rule = FullWidthDigitRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="共有１２３４５个。"
         )
         issues = rule.evaluate(payload)
@@ -287,8 +267,7 @@ class TestFullWidthDigitRule:
 
     def test_ignores_half_width_digits(self):
         rule = FullWidthDigitRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="共有12345个。"
         )
         issues = rule.evaluate(payload)
@@ -301,8 +280,7 @@ class TestNumberSeparatorRule:
 
     def test_suggests_separator_for_large_numbers(self):
         rule = NumberSeparatorRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="总计 10000 美元。"
         )
         issues = rule.evaluate(payload)
@@ -313,8 +291,7 @@ class TestNumberSeparatorRule:
 
     def test_ignores_years(self):
         rule = NumberSeparatorRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="在 2024 年发生的事情。"
         )
         issues = rule.evaluate(payload)
@@ -323,8 +300,7 @@ class TestNumberSeparatorRule:
 
     def test_ignores_small_numbers(self):
         rule = NumberSeparatorRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="有 999 个。"
         )
         issues = rule.evaluate(payload)
@@ -342,8 +318,7 @@ class TestInvalidHeadingLevelRule:
 
     def test_detects_invalid_h1(self):
         rule = InvalidHeadingLevelRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
         )
         issues = rule.evaluate(payload)
 
@@ -353,8 +328,7 @@ class TestInvalidHeadingLevelRule:
 
     def test_detects_invalid_h4_h5_h6(self):
         rule = InvalidHeadingLevelRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
         )
         issues = rule.evaluate(payload)
 
@@ -362,8 +336,7 @@ class TestInvalidHeadingLevelRule:
 
     def test_ignores_valid_h2_h3(self):
         rule = InvalidHeadingLevelRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
         )
         issues = rule.evaluate(payload)
 
@@ -375,8 +348,7 @@ class TestFeaturedImageLandscapeRule:
 
     def test_detects_portrait_image(self):
         rule = FeaturedImageLandscapeRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             featured_image=ImageMetadata(
                 id="img1",
                 path="/test.jpg",
@@ -393,8 +365,7 @@ class TestFeaturedImageLandscapeRule:
 
     def test_detects_square_image(self):
         rule = FeaturedImageLandscapeRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             featured_image=ImageMetadata(
                 id="img1",
                 path="/test.jpg",
@@ -408,8 +379,7 @@ class TestFeaturedImageLandscapeRule:
 
     def test_accepts_landscape_image(self):
         rule = FeaturedImageLandscapeRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             featured_image=ImageMetadata(
                 id="img1",
                 path="/test.jpg",
@@ -427,8 +397,7 @@ class TestImageWidthRule:
 
     def test_validates_landscape_image_width(self):
         rule = ImageWidthRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             images=[
                 ImageMetadata(
                     id="img1",
@@ -446,8 +415,7 @@ class TestImageWidthRule:
 
     def test_validates_portrait_image_width(self):
         rule = ImageWidthRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             images=[
                 ImageMetadata(
                     id="img1",
@@ -464,8 +432,7 @@ class TestImageWidthRule:
 
     def test_accepts_correct_widths(self):
         rule = ImageWidthRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             images=[
                 ImageMetadata(id="img1", path="/landscape.jpg", width=600, height=400),
                 ImageMetadata(id="img2", path="/portrait.jpg", width=450, height=600),
@@ -481,8 +448,7 @@ class TestImageLicenseRule:
 
     def test_detects_missing_license(self):
         rule = ImageLicenseRule()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             images=[
                 ImageMetadata(
                     id="img1",
@@ -526,7 +492,6 @@ class TestDeterministicRuleEngine:
     def test_engine_runs_all_rules(self):
         engine = DeterministicRuleEngine()
         payload = ArticlePayload(title="Test",
-            original_content="",
             original_content="测试文本,包含半角逗号和佔用。莫明其妙的网红。",
             html_content="<h1>标题</h1>",
         )
@@ -543,8 +508,7 @@ class TestDeterministicRuleEngine:
 
     def test_engine_returns_empty_for_clean_content(self):
         engine = DeterministicRuleEngine()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="这是一篇完全正确的文章。",
         )
         issues = engine.run(payload)
@@ -554,8 +518,7 @@ class TestDeterministicRuleEngine:
 
     def test_engine_combines_multiple_issue_types(self):
         engine = DeterministicRuleEngine()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="電錶读数10000,佔用空间。",
         )
         issues = engine.run(payload)
@@ -575,6 +538,7 @@ class TestEdgeCases:
 
     def test_empty_content(self):
         engine = DeterministicRuleEngine()
+        payload = ArticlePayload(title="Test", original_content="")
         issues = engine.run(payload)
 
         assert isinstance(issues, list)
@@ -582,8 +546,7 @@ class TestEdgeCases:
 
     def test_none_html_content(self):
         engine = DeterministicRuleEngine()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="测试",
         )
         issues = engine.run(payload)
@@ -592,8 +555,7 @@ class TestEdgeCases:
 
     def test_unicode_characters(self):
         engine = DeterministicRuleEngine()
-        payload = ArticlePayload(title="Test", 
-            original_content="",
+        payload = ArticlePayload(title="Test",
             original_content="😀 Emoji 测试，包含各种Unicode字符。🎉"
         )
         issues = engine.run(payload)

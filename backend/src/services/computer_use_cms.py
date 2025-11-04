@@ -1,12 +1,13 @@
 """Computer Use service for automated CMS operations."""
 
-import base64
+from __future__ import annotations
+
 import json
 import time
 from datetime import datetime
 from typing import Any
 
-from anthropic import Anthropic, AnthropicBedrock
+from anthropic import Anthropic
 from anthropic.types.beta import BetaMessage, BetaMessageParam, BetaToolResultBlockParam
 
 from src.api.schemas.seo import ComputerUseMetadata, SEOMetadata
@@ -36,9 +37,10 @@ class ComputerUseCMSService:
         cms_username: str,
         cms_password: str,
         cms_type: str = "wordpress",
-        tags: list[str] = None,
-        categories: list[str] = None,
-        article_images: list[dict] = None,
+        tags: list[str] | None = None,
+        categories: list[str] | None = None,
+        article_images: list[dict[str, Any]] | None = None,
+        publish_mode: str = "publish",
     ) -> dict[str, Any]:
         """Publish article to CMS using Computer Use API.
 
@@ -53,6 +55,7 @@ class ComputerUseCMSService:
             tags: List of WordPress post tags (3-6 recommended)
             categories: List of WordPress post categories (1-3 recommended)
             article_images: List of image metadata dicts with local_path for upload
+            publish_mode: "publish" to make the post live, "draft" to save without publishing
 
         Returns:
             dict: Publishing result with status, URL, metadata
@@ -63,11 +66,16 @@ class ComputerUseCMSService:
         start_time = time.time()
         session_id = f"cu_{int(time.time())}"
 
+        publish_mode = (publish_mode or "publish").lower()
+        if publish_mode not in {"publish", "draft"}:
+            raise ValueError(f"Unsupported publish_mode: {publish_mode}")
+
         logger.info(
             "computer_use_cms_started",
             session_id=session_id,
             cms_type=cms_type,
             article_title=article_title[:100],
+            publish_mode=publish_mode,
         )
 
         metadata = ComputerUseMetadata(
@@ -90,6 +98,7 @@ class ComputerUseCMSService:
                 tags=tags,
                 categories=categories,
                 article_images=article_images or [],
+                publish_mode=publish_mode,
             )
 
             # Initialize Computer Use tools
@@ -203,6 +212,22 @@ class ComputerUseCMSService:
                     metadata.status = "completed"
                     metadata.screenshots = screenshots
                     metadata.execution_time_seconds = execution_time
+                    metadata_dict = metadata.model_dump()
+                    metadata_dict["publish_mode"] = publish_mode
+
+                    status_value = "draft" if publish_mode == "draft" else "published"
+                    article_id = final_result.get("article_id")
+                    article_url = final_result.get("article_url")
+                    editor_url = final_result.get("editor_url") or final_result.get("edit_url")
+
+                    if publish_mode == "draft":
+                        result_message = "Article saved as draft via Computer Use"
+                        public_url = None
+                        editor_reference = editor_url or article_url
+                    else:
+                        result_message = "Article published successfully via Computer Use"
+                        public_url = article_url or editor_url
+                        editor_reference = editor_url
 
                     logger.info(
                         "computer_use_cms_completed",
@@ -213,10 +238,12 @@ class ComputerUseCMSService:
 
                     return {
                         "success": True,
-                        "cms_article_id": final_result.get("article_id"),
-                        "url": final_result.get("article_url"),
-                        "metadata": metadata.model_dump(),
-                        "message": "Article published successfully via Computer Use",
+                        "cms_article_id": article_id,
+                        "url": public_url,
+                        "editor_url": editor_reference,
+                        "metadata": metadata_dict,
+                        "message": result_message,
+                        "status": status_value,
                     }
 
                 # Continue conversation with tool results
@@ -236,6 +263,8 @@ class ComputerUseCMSService:
             metadata.status = "failed"
             metadata.errors.append(str(e))
             metadata.execution_time_seconds = execution_time
+            metadata_dict = metadata.model_dump()
+            metadata_dict["publish_mode"] = publish_mode
 
             logger.error(
                 "computer_use_cms_failed",
@@ -248,7 +277,7 @@ class ComputerUseCMSService:
             return {
                 "success": False,
                 "error": str(e),
-                "metadata": metadata.model_dump(),
+                "metadata": metadata_dict,
             }
 
     def _build_cms_instructions(
@@ -260,9 +289,10 @@ class ComputerUseCMSService:
         article_title: str,
         article_body: str,
         seo_data: SEOMetadata,
-        tags: list[str],
-        categories: list[str],
-        article_images: list[dict],
+        tags: list[str] | None,
+        categories: list[str] | None,
+        article_images: list[dict[str, Any]],
+        publish_mode: str,
     ) -> str:
         """Build Computer Use instructions for CMS publishing.
 
@@ -283,7 +313,16 @@ class ComputerUseCMSService:
         """
         if cms_type == "wordpress":
             return self._build_wordpress_instructions(
-                cms_url, cms_username, cms_password, article_title, article_body, seo_data, article_images, tags, categories
+                cms_url=cms_url,
+                username=cms_username,
+                password=cms_password,
+                title=article_title,
+                body=article_body,
+                seo_data=seo_data,
+                article_images=article_images,
+                tags=tags,
+                categories=categories,
+                publish_mode=publish_mode,
             )
         else:
             raise ValueError(f"Unsupported CMS type: {cms_type}")
@@ -296,62 +335,229 @@ class ComputerUseCMSService:
         title: str,
         body: str,
         seo_data: SEOMetadata,
-        article_images: list[dict],
-        tags: list[str] = None,
-        categories: list[str] = None,
+        article_images: list[dict[str, Any]],
+        tags: list[str] | None = None,
+        categories: list[str] | None = None,
+        publish_mode: str = "publish",
     ) -> str:
-        """Build WordPress-specific instructions.
+        """Build WordPress-specific instructions."""
 
-        Args:
-            cms_url: WordPress admin URL
-            username: WordPress username
-            password: Application password
-            title: Article title
-            body: Article body
-            seo_data: SEO metadata
-            article_images: List of article images with local paths
-            tags: List of WordPress post tags (3-6 recommended)
-            categories: List of WordPress post categories (1-3 recommended)
+        tags = tags or []
+        categories = categories or []
+        has_images = bool(article_images)
 
-        Returns:
-            str: WordPress publishing instructions
-        """
-        # Truncate body for instruction (full body will be pasted via editor tool)
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
-        # Prepare image upload instructions
-        has_images = len(article_images) > 0
-        image_info = ""
         if has_images:
-            image_info = "\n**Article Images to Upload:**\n"
-            for idx, img in enumerate(article_images, 1):
-                image_info += f"  {idx}. {img['filename']} (local path: {img['local_path']})\n"
+            image_info = "\n**Article Images to Upload:**\n" + "\n".join(
+                f"  - {img['filename']} (local path: {img['local_path']})"
+                for img in article_images
+            )
+        else:
+            image_info = ""
 
-        # Prepare tags and categories info
-        tags_info = ""
         if tags:
-            tags_info = "\n**WordPress Tags to Add:**\n"
-            for tag in tags:
-                tags_info += f"  - {tag}\n"
+            tags_info = "\n**WordPress Tags to Add:**\n" + "\n".join(f"  - {tag}" for tag in tags)
+        else:
+            tags_info = ""
 
-        categories_info = ""
         if categories:
-            categories_info = "\n**WordPress Categories to Select/Create:**\n"
-            for category in categories:
-                categories_info += f"  - {category}\n"
+            categories_info = "\n**WordPress Categories to Select/Create:**\n" + "\n".join(
+                f"  - {category}" for category in categories
+            )
+        else:
+            categories_info = ""
 
-        instructions = f"""You are an AI assistant helping to publish an article to a WordPress website with proper SEO configuration.
+        publish_summary = (
+            "Save the article as a draft (do not publish to the live site)"
+            if publish_mode == "draft"
+            else "Publish the article to the live site"
+        )
+
+        summary_steps = [
+            "Navigate to the WordPress admin dashboard",
+            "Log in if needed",
+            "Create a new post",
+            "Set article title and content",
+            (
+                "Upload article images to the WordPress media library and insert them into the content"
+                if has_images
+                else "Skip image upload (no images provided)"
+            ),
+            (
+                "Set WordPress tags and categories"
+                if tags or categories
+                else "Skip tags/categories (none provided)"
+            ),
+            "Configure SEO metadata (Yoast SEO or Rank Math)",
+            publish_summary,
+            "Return the post ID and relevant URLs",
+        ]
+
+        summary_block = "\n".join(f"{idx}. {item}" for idx, item in enumerate(summary_steps, start=1))
+
+        steps: list[str] = []
+        step_no = 1
+
+        def add_step(title_text: str, bullet_points: list[str]) -> None:
+            nonlocal step_no
+            bullets = "\n   - ".join(bullet_points)
+            steps.append(f"{step_no}. **{title_text}**\n   - {bullets}")
+            step_no += 1
+
+        add_step(
+            "Navigate to WordPress Admin",
+            [
+                f"Open {cms_url}/wp-admin in the browser using the computer tool",
+                "Wait for the login page to load completely",
+                "Take a screenshot for verification",
+            ],
+        )
+
+        add_step(
+            "Log In",
+            [
+                f"Enter username: {username}",
+                f"Enter password: {password}",
+                'Click the "Log In" button and wait for the dashboard',
+                "Capture a screenshot of the dashboard once loaded",
+            ],
+        )
+
+        add_step(
+            "Create a New Post",
+            [
+                'Use the dashboard navigation to open "Posts" → "Add New" (or the "+ New" shortcut)',
+                "Allow the Gutenberg editor to load fully",
+                "Take a screenshot of the blank editor",
+            ],
+        )
+
+        add_step(
+            "Set the Article Title",
+            [
+                'Click the title field (usually labelled "Add title")',
+                f"Paste the article title: {title}",
+                "Take a screenshot once the title is entered",
+            ],
+        )
+
+        if has_images:
+            add_step(
+                "Upload Article Images",
+                [
+                    'Open the media uploader from the editor ("Add Block" → Image or "Add media")',
+                    "Upload each provided file and wait for uploads to complete",
+                    "After uploads, insert the images into appropriate locations in the content",
+                    "Ensure any placeholder URLs are replaced with the new WordPress image URLs",
+                    "Take a screenshot showing the uploaded media in the library or editor",
+                ],
+            )
+
+        add_step(
+            "Add Article Content",
+            [
+                "Click inside the content area of the editor",
+                "Use the text editor tool to paste the full article body (provided below)",
+                "Ensure formatting is preserved (headings, paragraphs, lists, etc.)",
+                (
+                    "Confirm that uploaded images appear in the correct locations within the content"
+                    if has_images
+                    else "No images were provided, so focus on text formatting only"
+                ),
+                "Take a screenshot of the populated editor",
+            ],
+        )
+
+        if tags or categories:
+            tag_instructions = (
+                [
+                    'In the right sidebar, expand the "Tags" panel',
+                    f"Add each tag from the list: {', '.join(tags)}",
+                    "Verify that every tag appears as a chip/pill under the input field",
+                ]
+                if tags
+                else ["No tags provided; skip this section"]
+            )
+
+            category_instructions = (
+                [
+                    'In the right sidebar, expand the "Categories" panel',
+                    "Select existing categories or create new ones matching the list below",
+                    f"Categories to apply: {', '.join(categories)}",
+                    "Confirm the chosen categories are checked",
+                ]
+                if categories
+                else ["No categories provided; skip this section"]
+            )
+
+            add_step(
+                "Set Tags and Categories",
+                tag_instructions + category_instructions + ["Capture a screenshot of the sidebar selections"],
+            )
+
+        add_step(
+            "Configure SEO Metadata",
+            [
+                "Scroll to the Yoast SEO (or Rank Math) panel",
+                f"Set the focus keyphrase to: {seo_data.focus_keyword}",
+                f"Update the SEO title to: {seo_data.meta_title}",
+                f"Update the meta description to: {seo_data.meta_description}",
+                "Review the SEO analysis indicator (green is ideal, orange is acceptable)",
+                "Take a screenshot of the SEO configuration",
+            ],
+        )
+
+        if publish_mode == "draft":
+            add_step(
+                "Save as Draft (Do NOT Publish)",
+                [
+                    'Click the "Save draft" button at the top right',
+                    'Wait for the "Draft saved" confirmation message',
+                    'Verify the post status indicator shows "Draft"',
+                    "Capture a screenshot of the confirmation/status indicator",
+                ],
+            )
+        else:
+            add_step(
+                "Publish the Article",
+                [
+                    'Click the "Publish" button and confirm if prompted',
+                    'Wait for the "Post published" success message',
+                    "Capture a screenshot of the confirmation",
+                ],
+            )
+
+        add_step(
+            "Capture Post Links and ID",
+            [
+                'Copy the "View Post" link if available (for drafts, copy the editor URL)',
+                "Note the WordPress post ID (visible in the URL as ?post=ID or post=ID)",
+                "Take a final screenshot for records",
+            ],
+        )
+
+        result_example = (
+            '{"article_id": "<POST_ID>", "article_url": "<PUBLIC_URL>", "editor_url": "<EDITOR_URL>", "status": "published"}'
+            if publish_mode != "draft"
+            else '{"article_id": "<POST_ID>", "article_url": null, "editor_url": "<EDITOR_URL>", "status": "draft"}'
+        )
+
+        add_step(
+            "Return Results",
+            [
+                "Respond with a JSON object containing the post ID, URLs, and status.",
+                f"Example payload: {result_example}",
+                "Ensure URLs are absolute and valid.",
+            ],
+        )
+
+        detailed_block = "\n\n".join(steps)
+
+        instructions = f"""You are an AI assistant helping to prepare an article in WordPress with full SEO configuration.
 
 **Your Task:**
-1. Navigate to the WordPress admin dashboard
-2. Log in if needed
-3. Create a new post
-4. Set article title and content
-5. {'Upload article images to WordPress media library' if has_images else 'Skip image upload (no images)'}
-6. {'Set WordPress tags and categories' if tags or categories else 'Skip tags/categories (none provided)'}
-7. Configure SEO metadata (Yoast SEO or Rank Math)
-8. Publish the article
-9. Return the published article URL and ID
+{summary_block}
 
 **WordPress Details:**
 - Admin URL: {cms_url}/wp-admin
@@ -363,118 +569,32 @@ Title: {title}
 Body Preview: {body_preview}
 [Full body content will be provided when needed]{image_info}{tags_info}{categories_info}
 
-**SEO Configuration (use Yoast SEO or Rank Math if available):**
+**SEO Configuration (Yoast SEO / Rank Math):**
 - Meta Title: {seo_data.meta_title}
 - Meta Description: {seo_data.meta_description}
 - Focus Keyword: {seo_data.focus_keyword}
 - Additional Keywords: {', '.join(seo_data.keywords)}
 - Canonical URL: {seo_data.canonical_url or 'Auto-generate'}
-
-**Open Graph Tags:**
 - OG Title: {seo_data.og_title or seo_data.meta_title}
 - OG Description: {seo_data.og_description or seo_data.meta_description}
 
 **Step-by-Step Instructions:**
-
-1. **Navigate to WordPress Admin**
-   - Use the computer tool to open a browser
-   - Go to: {cms_url}/wp-admin
-   - Take a screenshot to verify the login page loaded
-
-2. **Login**
-   - Enter username: {username}
-   - Enter password: {password}
-   - Click "Log In"
-   - Wait for dashboard to load
-   - Take a screenshot of the dashboard
-
-3. **Create New Post**
-   - Click "Posts" → "Add New" (or "+ New" → "Post")
-   - Wait for the block editor to load
-   - Take a screenshot
-
-4. **Set Article Title**
-   - Click on the title field
-   - Enter title: {title}
-   - Take a screenshot
-
-{"5. **Upload Article Images to WordPress Media Library**" + '''
-   - For each image file provided in the article images list above:
-     a. Click "+ Add Block" or the Insert Media button
-     b. Click "Upload" or "Media Library"
-     c. Use the computer tool to upload the image file from its local path
-     d. Wait for upload to complete
-     e. Note the image URL from WordPress media library
-   - After all images are uploaded, you can insert them into the article content
-   - Take a screenshot showing uploaded media
-   - IMPORTANT: Replace any Google Drive image references in the article body with the WordPress media URLs
-
-6. ''' if has_images else "5. "}**Add Article Content**
-   - Click on the content area
-   - Use the text editor tool to paste the full article body
-   - {"Insert the uploaded images at appropriate locations in the content" if has_images else "Format the content appropriately (headings, paragraphs, etc.)"}
-   - Take a screenshot
-
-{"7" if has_images else "6"}. **Set WordPress Tags and Categories**
-
-   {"**Tags:**" if tags else "**Tags:** None provided - skip this section"}
-   {f'''- In the right sidebar, scroll down to find the "Tags" panel
-   - If the panel is collapsed (you see a closed arrow), click the panel title to expand it
-   - Look for a text input field, usually labeled "Add New Tag" or just a white input box
-   - Type each tag and press Enter after each one to create it:
-     {chr(10).join(f"     • {tag}" for tag in tags)}
-   - WordPress will automatically create tags if they don't already exist
-   - After adding all tags, you should see them displayed as colored pills/badges below the input
-   - Verify all {len(tags)} tags are showing
-   - Take a screenshot showing all tags added''' if tags else '- Skip (no tags provided)'}
-
-   {"**Categories:**" if categories else "**Categories:** None provided - skip this section"}
-   {f'''- In the right sidebar, find the "Categories" panel (usually below Tags)
-   - If the panel is collapsed, click to expand it
-   - You will see a list of existing categories with checkboxes
-   - For each category to add:
-     {chr(10).join(f"     • {cat}" for cat in categories)}
-   - For each one:
-     a. Look for a checkbox with that exact category name
-     b. If you find it: Check the checkbox
-     c. If you don't find it: Click "+ Add New Category" link, enter the category name, and press Enter
-   - After selecting/creating all categories, verify they are checked
-   - Take a screenshot showing all categories selected''' if categories else '- Skip (no categories provided)'}
-
-{"8" if has_images else "7"}. **Configure Yoast SEO / Rank Math (if available)**
-   - Scroll down to the SEO meta box (usually below the editor or in sidebar)
-   - Set Focus Keyword: {seo_data.focus_keyword}
-   - Edit Meta Title to: {seo_data.meta_title}
-   - Edit Meta Description to: {seo_data.meta_description}
-   - Verify SEO score is green/acceptable
-   - Take a screenshot of SEO settings
-
-{"9" if has_images else "8"}. **Publish Article**
-   - Click the "Publish" button (top right)
-   - If prompted, click "Publish" again to confirm
-   - Wait for "Post published" confirmation
-   - Take a screenshot of the success message
-
-{"10" if has_images else "9"}. **Capture Article URL and ID**
-   - Look for the "View Post" link or the article URL in the success message
-   - Note the post ID (usually in the URL as ?post=123)
-   - Take a final screenshot
-
-{"11" if has_images else "10"}. **Return Results**
-   - Provide the article URL and post ID in your final response
-   - Format: {{"article_url": "...", "article_id": "..."}}
+{detailed_block}
 
 **Important Notes:**
-- Take screenshots at each major step for verification
-- If you encounter any errors, document them and try to resolve
-- If the SEO plugin (Yoast/Rank Math) is not available, skip those steps
-- Use the bash tool if you need to verify network connectivity
-- The full article body is:
+- Take screenshots at each major step for audit purposes.
+- If any errors appear, document them and attempt a reasonable recovery.
+- If the SEO plugin is unavailable, note it and continue.
+- Current publishing mode: "{publish_mode}". If it is "draft", never click the Publish button.
+- Use the bash tool only if network diagnostics are required.
+- The full article body is provided below for reference.
 
+--- FULL ARTICLE BODY START ---
 {body}
+--- FULL ARTICLE BODY END ---
 
-**Start the task now. Good luck!**
-"""
+Begin the task now and follow the steps carefully."""
+
         return instructions
 
     def _execute_tool(

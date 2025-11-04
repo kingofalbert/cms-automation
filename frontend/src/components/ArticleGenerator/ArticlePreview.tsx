@@ -8,7 +8,7 @@ interface ArticlePreviewProps {
   article: {
     id: number;
     title: string;
-    body: string;
+    body?: string;
     status: string;
     created_at: string;
     article_metadata?: {
@@ -30,7 +30,8 @@ export function ArticlePreview({ article, onView }: ArticlePreviewProps) {
     failed: 'bg-red-100 text-red-800',
   };
 
-  const getExcerpt = (body: string, length: number = 200) => {
+  const getExcerpt = (body: string | undefined, length: number = 200) => {
+    if (!body) return '';
     if (body.length <= length) return body;
     return body.substring(0, length) + '...';
   };

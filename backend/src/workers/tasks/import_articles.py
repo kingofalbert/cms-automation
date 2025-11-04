@@ -1,6 +1,6 @@
 """Celery task for article import."""
 
-from typing import Any, Optional
+from typing import Any
 
 from src.config.database import DatabaseConfig
 from src.config.logging import get_logger
@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 def import_articles_task(
     self,
     file_path: str,
-    file_format: Optional[str] = None,
+    file_format: str | None = None,
 ) -> dict[str, Any]:
     """Background task to import articles from a file.
 

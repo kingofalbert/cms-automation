@@ -39,7 +39,7 @@ export const ArticleList: React.FC<ArticleListProps> = ({
 }) => {
   // Memoize render function to prevent recreating on every render
   const renderArticle = useCallback(
-    (article: Article, index: number) => {
+    (article: Article) => {
       return (
         <div className="px-4" key={article.id}>
           <ArticleCard
@@ -54,9 +54,7 @@ export const ArticleList: React.FC<ArticleListProps> = ({
   );
 
   // Memoize key extraction function
-  const getItemKey = useCallback((article: Article, index: number) => {
-    return article.id;
-  }, []);
+  const getItemKey = useCallback((article: Article) => article.id, []);
 
   // Custom loading component
   const loadingComponent = (

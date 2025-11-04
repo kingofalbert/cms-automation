@@ -3,21 +3,16 @@
 整合 AI 編譯功能的完整實現
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Body, Path as PathParam
-from typing import Optional, List, Dict, Any
 from datetime import datetime
-import asyncio
+from typing import Any
 
+from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import Path as PathParam
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.database import get_session
+from src.schemas.proofreading_decision import DraftRule, Example, PublishRulesRequest, ReviewStatus
 from src.services.claude_rule_compiler import create_claude_compiler
-from src.schemas.proofreading_decision import (
-    DraftRule,
-    Example,
-    PublishRulesRequest,
-    ReviewStatus
-)
 
 router = APIRouter(prefix="/api/v1/proofreading/claude", tags=["claude-proofreading"])
 
@@ -25,8 +20,8 @@ router = APIRouter(prefix="/api/v1/proofreading/claude", tags=["claude-proofread
 @router.post("/compile-rule")
 async def compile_rule_with_claude(
     natural_language: str = Body(..., description="自然語言規則描述"),
-    examples: Optional[List[Dict[str, str]]] = Body(default=None, description="示例列表"),
-    context: Optional[Dict[str, Any]] = Body(default=None, description="上下文信息")
+    examples: list[dict[str, str]] | None = Body(default=None, description="示例列表"),
+    context: dict[str, Any] | None = Body(default=None, description="上下文信息")
 ):
     """
     使用 Claude 3.5 Sonnet 編譯單個規則
@@ -71,7 +66,7 @@ async def compile_rule_with_claude(
 
 @router.post("/compile-batch")
 async def compile_batch_rules_with_claude(
-    rules: List[Dict[str, Any]] = Body(..., description="規則列表")
+    rules: list[dict[str, Any]] = Body(..., description="規則列表")
 ):
     """
     批量使用 Claude 編譯多個規則
@@ -254,7 +249,7 @@ async def publish_rules_with_claude_compilation(
 
         # 創建增強的規則對象
         enhanced_rules = []
-        for original_rule, compiled_data in zip(rules_to_compile, compiled_rules):
+        for original_rule, compiled_data in zip(rules_to_compile, compiled_rules, strict=False):
             # 更新原規則的模式和替換
             original_rule.pattern = compiled_data.get("pattern", "")
             original_rule.replacement = compiled_data.get("replacement", "")

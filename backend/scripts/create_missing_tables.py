@@ -3,8 +3,8 @@
 創建缺失的表並修正表名以完全滿足系統需求
 """
 
+
 import psycopg2
-from datetime import datetime
 
 # Supabase connection string
 db_url = 'postgresql://postgres.twsbhjmlmspjwfystpti:Xieping890$@aws-1-us-east-1.pooler.supabase.com:5432/postgres'

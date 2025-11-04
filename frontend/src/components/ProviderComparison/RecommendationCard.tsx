@@ -5,6 +5,7 @@
 
 import { Recommendation } from '@/types/analytics';
 import { Card, Badge } from '@/components/ui';
+import type { BadgeProps } from '@/components/ui';
 import { Star, CheckCircle, XCircle } from 'lucide-react';
 
 export interface RecommendationCardProps {
@@ -30,7 +31,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
     return 'text-red-600';
   };
 
-  const getScoreBadgeVariant = (score: number) => {
+  const getScoreBadgeVariant = (score: number): NonNullable<BadgeProps['variant']> => {
     if (score >= 90) return 'success';
     if (score >= 75) return 'info';
     if (score >= 60) return 'warning';
@@ -49,10 +50,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
             <Star className="w-5 h-5 ml-2 text-yellow-500 fill-current" />
           )}
         </div>
-        <Badge
-          variant={getScoreBadgeVariant(recommendation.score) as any}
-          size="lg"
-        >
+        <Badge variant={getScoreBadgeVariant(recommendation.score)} size="lg">
           <span className={`text-lg font-bold ${getScoreColor(recommendation.score)}`}>
             {recommendation.score}
           </span>

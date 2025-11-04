@@ -2,9 +2,8 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import List, Optional
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text, JSON
+from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
@@ -60,34 +59,34 @@ class WorklistItem(Base, TimestampMixin):
         nullable=False,
         comment="Document content (Markdown/HTML)",
     )
-    author: Mapped[Optional[str]] = mapped_column(
+    author: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         comment="Document author",
     )
 
     # WordPress taxonomy (parsed from YAML front matter)
-    tags: Mapped[Optional[List[str]]] = mapped_column(
+    tags: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(100)) if ARRAY is not None else JSONType,
         nullable=True,
         default=list,
         comment="WordPress post tags (3-6 categories for internal navigation)",
     )
 
-    categories: Mapped[Optional[List[str]]] = mapped_column(
+    categories: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(100)) if ARRAY is not None else JSONType,
         nullable=True,
         default=list,
         comment="WordPress post categories (hierarchical taxonomy)",
     )
 
-    meta_description: Mapped[Optional[str]] = mapped_column(
+    meta_description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="SEO meta description (150-160 chars)",
     )
 
-    seo_keywords: Mapped[Optional[List[str]]] = mapped_column(
+    seo_keywords: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(100)) if ARRAY is not None else JSONType,
         nullable=True,
         default=list,
@@ -100,13 +99,13 @@ class WorklistItem(Base, TimestampMixin):
         default=dict,
         comment="Drive metadata (links, owners, custom fields)",
     )
-    notes: Mapped[List] = mapped_column(
+    notes: Mapped[list] = mapped_column(
         JSONType,
         nullable=False,
         default=list,
         comment="Reviewer notes and history",
     )
-    article_id: Mapped[Optional[int]] = mapped_column(
+    article_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("articles.id", ondelete="SET NULL"),
         nullable=True,

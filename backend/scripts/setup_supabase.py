@@ -5,13 +5,12 @@ Supabase 數據庫設置腳本
 """
 
 import os
-import sys
-import asyncio
-from pathlib import Path
-from dotenv import load_dotenv
-import psycopg2
-from psycopg2 import sql
 import subprocess
+import sys
+from pathlib import Path
+
+import psycopg2
+from dotenv import load_dotenv
 
 # 添加項目根目錄到 Python 路徑
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -24,14 +23,14 @@ def test_connection(connection_string: str) -> bool:
         if connection_string.startswith("postgresql+asyncpg://"):
             connection_string = connection_string.replace("postgresql+asyncpg://", "postgresql://")
 
-        print(f"🔍 測試連接...")
+        print("🔍 測試連接...")
         conn = psycopg2.connect(connection_string)
         cursor = conn.cursor()
 
         # 測試基本查詢
         cursor.execute("SELECT version();")
         version = cursor.fetchone()
-        print(f"✅ 成功連接到 PostgreSQL")
+        print("✅ 成功連接到 PostgreSQL")
         print(f"   版本: {version[0]}")
 
         # 檢查數據庫信息

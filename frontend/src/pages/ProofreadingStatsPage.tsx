@@ -7,7 +7,6 @@ import {
   Table,
   Tag,
   Typography,
-  Space,
   Spin,
   Empty,
   Progress,
@@ -16,12 +15,10 @@ import {
 } from 'antd';
 import {
   CheckCircleOutlined,
-  CloseCircleOutlined,
   ClockCircleOutlined,
   FileTextOutlined,
   ThunderboltOutlined,
-  RiseOutlined,
-  FallOutlined
+  RiseOutlined
 } from '@ant-design/icons';
 import ruleManagementAPI from '../services/ruleManagementAPI';
 import './ProofreadingStatsPage.css';
@@ -116,7 +113,7 @@ const ProofreadingStatsPage: React.FC = () => {
       }
 
       if (draftsResponse.success) {
-        setDrafts(draftsResponse.data.drafts || []);
+        setDrafts(draftsResponse.data.items || []);
       }
     } catch (error) {
       console.error('載入統計數據失敗:', error);
@@ -148,9 +145,9 @@ const ProofreadingStatsPage: React.FC = () => {
   // 草稿統計
   const draftStats = {
     total: drafts.length,
-    pending: drafts.filter(d => d.status === 'pending').length,
+    pending: drafts.filter(d => d.status === 'pending_review').length,
     inReview: drafts.filter(d => d.status === 'in_review').length,
-    published: drafts.filter(d => d.status === 'published').length
+    published: drafts.filter(d => d.status === 'ready_to_publish' || d.status === 'published').length
   };
 
   // 計算發佈率

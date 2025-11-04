@@ -1,7 +1,6 @@
 """API routes for file upload and management via Google Drive."""
 
 import io
-from typing import Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,9 +47,9 @@ def _classify_file_type(mime_type: str) -> str:
 )
 async def upload_file(
     file: UploadFile = File(..., description="File to upload"),
-    article_id: Optional[int] = Form(None, description="Associated article ID"),
-    file_type: Optional[str] = Form(None, description="File type classification"),
-    folder_id: Optional[str] = Form(None, description="Google Drive folder ID"),
+    article_id: int | None = Form(None, description="Associated article ID"),
+    file_type: str | None = Form(None, description="File type classification"),
+    folder_id: str | None = Form(None, description="Google Drive folder ID"),
     session: AsyncSession = Depends(get_session),
 ) -> FileUploadResponse:
     """Upload a file to Google Drive and track it in the database.
@@ -150,8 +149,8 @@ async def upload_file(
 )
 async def upload_bulk_files(
     files: list[UploadFile] = File(..., description="Files to upload"),
-    article_id: Optional[int] = Form(None, description="Associated article ID"),
-    folder_id: Optional[str] = Form(None, description="Google Drive folder ID"),
+    article_id: int | None = Form(None, description="Associated article ID"),
+    folder_id: str | None = Form(None, description="Google Drive folder ID"),
     session: AsyncSession = Depends(get_session),
 ) -> BulkUploadResponse:
     """Upload multiple files to Google Drive in bulk.
@@ -302,8 +301,8 @@ async def get_file_metadata(
 async def list_files(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(50, ge=1, le=100, description="Files per page"),
-    article_id: Optional[int] = Query(None, description="Filter by article ID"),
-    file_type: Optional[str] = Query(None, description="Filter by file type"),
+    article_id: int | None = Query(None, description="Filter by article ID"),
+    file_type: str | None = Query(None, description="Filter by file type"),
     session: AsyncSession = Depends(get_session),
 ) -> FileListResponse:
     """List uploaded files with pagination and filtering.
@@ -318,7 +317,7 @@ async def list_files(
     Returns:
         FileListResponse with paginated file list
     """
-    from sqlalchemy import select, func
+    from sqlalchemy import func, select
 
     # Build query
     query = select(UploadedFile).where(UploadedFile.deleted_at.is_(None))

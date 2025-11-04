@@ -2,7 +2,7 @@
 
 import csv
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from src.config import get_logger
 from src.models import ArticleStatus
@@ -66,7 +66,7 @@ class CSVImporter(ArticleImporter):
         articles: list[ImportedArticle] = []
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 reader = csv.DictReader(f)
 
                 # Validate required columns
@@ -145,7 +145,7 @@ class CSVImporter(ArticleImporter):
 
         return article
 
-    def _parse_status(self, status_str: Optional[str]) -> ArticleStatus:
+    def _parse_status(self, status_str: str | None) -> ArticleStatus:
         """Parse article status from string.
 
         Args:
@@ -175,7 +175,7 @@ class CSVImporter(ArticleImporter):
 
         return status_map.get(status_str, ArticleStatus.IMPORTED)
 
-    def _parse_seo_metadata(self, row: dict[str, str]) -> Optional[dict[str, Any]]:
+    def _parse_seo_metadata(self, row: dict[str, str]) -> dict[str, Any] | None:
         """Parse SEO metadata from CSV row.
 
         Args:
@@ -234,7 +234,7 @@ class CSVImporter(ArticleImporter):
 
         return seo_metadata if seo_metadata else None
 
-    async def validate_article(self, article: ImportedArticle) -> tuple[bool, Optional[str]]:
+    async def validate_article(self, article: ImportedArticle) -> tuple[bool, str | None]:
         """Validate a single article.
 
         Args:
@@ -265,7 +265,7 @@ class CSVImporter(ArticleImporter):
 
         return True, None
 
-    def _validate_seo_metadata(self, seo_metadata: dict[str, Any]) -> tuple[bool, Optional[str]]:
+    def _validate_seo_metadata(self, seo_metadata: dict[str, Any]) -> tuple[bool, str | None]:
         """Validate SEO metadata fields.
 
         Args:

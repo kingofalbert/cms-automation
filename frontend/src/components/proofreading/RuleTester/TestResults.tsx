@@ -1,10 +1,9 @@
-import React from 'react';
+import type { FC } from 'react';
 import { Card, Statistic, Row, Col, Tag, Progress, Alert } from 'antd';
 import {
   CheckCircleOutlined,
   EditOutlined,
   ClockCircleOutlined,
-  FileTextOutlined
 } from '@ant-design/icons';
 import { TestResult } from '../../../types/proofreading';
 import './TestResults.css';
@@ -13,7 +12,7 @@ interface TestResultsProps {
   results: TestResult;
 }
 
-const TestResults: React.FC<TestResultsProps> = ({ results }) => {
+const TestResults: FC<TestResultsProps> = ({ results }) => {
   // 計算文字變更統計
   const calculateStats = () => {
     const originalLength = results.original.length;

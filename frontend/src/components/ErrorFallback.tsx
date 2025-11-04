@@ -5,7 +5,6 @@
  * Use this for more granular error handling within pages or features.
  */
 
-import React from 'react';
 import { Alert, Button, Space } from 'antd';
 import { ReloadOutlined, CloseCircleOutlined } from '@ant-design/icons';
 

@@ -12,8 +12,6 @@ import type {
   ArticleListParams,
   PaginatedResponse,
   APIResponse,
-  CSVImportRequest,
-  JSONImportRequest,
   ImportResult,
 } from '../types/api';
 
@@ -22,31 +20,31 @@ export const articlesAPI = {
    * Get paginated list of articles with optional filters.
    */
   list: (params?: ArticleListParams) =>
-    api.get<APIResponse<PaginatedResponse<Article>>>('/api/v1/articles', { params }),
+    api.get<APIResponse<PaginatedResponse<Article>>>('v1/articles', { params }),
 
   /**
    * Get a single article by ID.
    */
   get: (id: number) =>
-    api.get<APIResponse<Article>>(`/api/v1/articles/${id}`),
+    api.get<APIResponse<Article>>(`api/v1/articles/${id}`),
 
   /**
    * Create a new article.
    */
   create: (data: ArticleCreateRequest) =>
-    api.post<APIResponse<Article>>('/api/v1/articles', data),
+    api.post<APIResponse<Article>>('v1/articles', data),
 
   /**
    * Update an existing article.
    */
   update: (id: number, data: ArticleUpdateRequest) =>
-    api.put<APIResponse<Article>>(`/api/v1/articles/${id}`, data),
+    api.put<APIResponse<Article>>(`api/v1/articles/${id}`, data),
 
   /**
    * Delete an article.
    */
   delete: (id: number) =>
-    api.delete<APIResponse<void>>(`/api/v1/articles/${id}`),
+    api.delete<APIResponse<void>>(`api/v1/articles/${id}`),
 
   /**
    * Import articles from CSV file.
@@ -58,7 +56,7 @@ export const articlesAPI = {
       formData.append('validate_only', 'true');
     }
 
-    return api.post<APIResponse<ImportResult>>('/api/v1/articles/import/csv', formData, {
+    return api.post<APIResponse<ImportResult>>('v1/articles/import/csv', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -75,7 +73,7 @@ export const articlesAPI = {
       formData.append('validate_only', 'true');
     }
 
-    return api.post<APIResponse<ImportResult>>('/api/v1/articles/import/json', formData, {
+    return api.post<APIResponse<ImportResult>>('v1/articles/import/json', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -91,7 +89,7 @@ export const articlesAPI = {
     formData.append('type', type);
 
     return api.post<APIResponse<{ path: string }>>(
-      `/api/v1/articles/${articleId}/images`,
+      `api/v1/articles/${articleId}/images`,
       formData,
       {
         headers: {
@@ -105,7 +103,7 @@ export const articlesAPI = {
    * Delete an image from an article.
    */
   deleteImage: (articleId: number, imagePath: string) =>
-    api.delete<APIResponse<void>>(`/api/v1/articles/${articleId}/images`, {
+    api.delete<APIResponse<void>>(`api/v1/articles/${articleId}/images`, {
       data: { image_path: imagePath },
     }),
 };

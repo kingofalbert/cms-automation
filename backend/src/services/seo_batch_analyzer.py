@@ -1,6 +1,5 @@
 """Batch SEO analysis service for imported articles."""
 
-from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,8 +120,8 @@ class SEOBatchAnalyzer:
 
     async def analyze_imported_articles(
         self,
-        limit: Optional[int] = None,
-    ) -> tuple[int, int, List[str]]:
+        limit: int | None = None,
+    ) -> tuple[int, int, list[str]]:
         """Analyze all imported articles without SEO metadata.
 
         Args:

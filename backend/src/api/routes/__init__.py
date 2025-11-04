@@ -13,8 +13,8 @@ from src.api.routes import (
     publish_routes,
     seo_routes,
     settings_routes,
-    worklist_routes,
     topics,
+    worklist_routes,
 )
 from src.config.logging import get_logger
 

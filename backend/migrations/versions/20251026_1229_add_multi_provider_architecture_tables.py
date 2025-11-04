@@ -10,17 +10,17 @@ This migration adds support for:
 - Execution logging with partitioning
 - Enhanced article tracking (source, images, published_url)
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects.postgresql import ARRAY, ENUM, JSONB
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 
 # revision identifiers, used by Alembic.
 revision: str = "20251026_1229"
-down_revision: Union[str, None] = "3824f61361b3"  # Previous: rename_metadata_to_article_metadata
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "3824f61361b3"  # Previous: rename_metadata_to_article_metadata
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:

@@ -3,10 +3,10 @@ AI 驅動的規則編譯器
 使用 LLM 將自然語言描述轉換為可執行的規則代碼
 """
 
-import re
 import json
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
+import re
+from typing import Any
+
 import openai
 from anthropic import Anthropic
 
@@ -16,7 +16,7 @@ from ..schemas.proofreading_decision import DraftRule
 class AIRuleCompiler:
     """使用 AI 進行規則編譯的智能編譯器"""
 
-    def __init__(self, ai_provider: str = "openai", api_key: Optional[str] = None):
+    def __init__(self, ai_provider: str = "openai", api_key: str | None = None):
         """
         初始化 AI 編譯器
 
@@ -35,9 +35,9 @@ class AIRuleCompiler:
     def compile_natural_language_to_rule(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None,
+        context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         使用 AI 將自然語言描述轉換為規則代碼
 
@@ -59,9 +59,9 @@ class AIRuleCompiler:
     def _compile_with_openai(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None,
+        context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """使用 OpenAI GPT 進行編譯"""
 
         # 構建提示詞
@@ -137,9 +137,9 @@ class AIRuleCompiler:
     def _compile_with_anthropic(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None,
+        context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """使用 Anthropic Claude 進行編譯"""
 
         prompt = f"""<task>
@@ -183,7 +183,7 @@ class AIRuleCompiler:
 
         try:
             response = self.client.messages.create(
-                model="claude-3-opus-20240229",
+                model="claude-sonnet-4-5-20250929",  # Upgraded to Sonnet 4.5
                 max_tokens=500,
                 temperature=0.1,
                 messages=[{"role": "user", "content": prompt}]
@@ -204,9 +204,9 @@ class AIRuleCompiler:
     def _compile_with_local_llm(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None,
+        context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """使用本地 LLM 進行編譯（如 Llama, ChatGLM 等）"""
 
         # 這裡可以接入本地部署的模型
@@ -226,7 +226,7 @@ class AIRuleCompiler:
 輸入：{natural_language}
 輸出 JSON：
 """
-            response = generator(prompt, max_length=200)
+            generator(prompt, max_length=200)
             # 解析響應...
 
         except Exception as e:
@@ -237,8 +237,8 @@ class AIRuleCompiler:
     def _fallback_compile(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None
+    ) -> dict[str, Any]:
         """基礎的回退編譯方法"""
 
         # 使用規則分析自然語言
@@ -293,9 +293,9 @@ class AIRuleCompiler:
 
     def batch_compile_rules(
         self,
-        rules: List[DraftRule],
+        rules: list[DraftRule],
         use_parallel: bool = True
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """批量編譯規則
 
         Args:
@@ -340,7 +340,7 @@ class AIRuleCompiler:
 
         return compiled_rules
 
-    def validate_compiled_rule(self, rule: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    def validate_compiled_rule(self, rule: dict[str, Any]) -> tuple[bool, list[str]]:
         """驗證編譯後的規則
 
         Args:
@@ -378,13 +378,13 @@ class AIRuleCompiler:
         # 驗證置信度
         if 'confidence' in rule:
             if not (0.0 <= rule['confidence'] <= 1.0):
-                errors.append(f"置信度必須在 0.0 到 1.0 之間")
+                errors.append("置信度必須在 0.0 到 1.0 之間")
 
         return len(errors) == 0, errors
 
 
 # 工廠函數
-def create_ai_compiler(provider: str = "openai", api_key: Optional[str] = None) -> AIRuleCompiler:
+def create_ai_compiler(provider: str = "openai", api_key: str | None = None) -> AIRuleCompiler:
     """創建 AI 編譯器實例
 
     Args:

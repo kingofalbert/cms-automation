@@ -1,12 +1,11 @@
 """Article import service - unified entry point for all importers."""
 
 from pathlib import Path
-from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_logger
-from src.models import Article, SEOMetadata, UploadedFile
+from src.models import Article, SEOMetadata
 from src.services.article_importer.base import ArticleImporter, ImportedArticle, ImportResult
 from src.services.article_importer.csv_importer import CSVImporter
 from src.services.article_importer.json_importer import JSONImporter
@@ -40,7 +39,7 @@ class ArticleImportService:
     async def import_from_file(
         self,
         file_path: str,
-        file_format: Optional[str] = None,
+        file_format: str | None = None,
     ) -> ImportResult:
         """Import articles from a file.
 

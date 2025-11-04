@@ -7,6 +7,8 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 
+type IntervalHandle = ReturnType<typeof setInterval>;
+
 export interface UsePollingOptions {
   /**
    * Polling interval in milliseconds
@@ -121,7 +123,7 @@ export function usePolling(
   const [isPolling, setIsPolling] = useState(enabled);
   const [errorCount, setErrorCount] = useState(0);
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<IntervalHandle | null>(null);
   const callbackRef = useRef(callback);
   const isPollingRef = useRef(isPolling);
   const errorCountRef = useRef(errorCount);

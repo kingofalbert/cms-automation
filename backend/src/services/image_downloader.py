@@ -1,7 +1,6 @@
 """Image downloader service for importing images from URLs to Google Drive."""
 
 import io
-from typing import Optional
 from urllib.parse import urlparse
 
 import httpx
@@ -29,8 +28,8 @@ class ImageDownloader:
     async def download_and_upload(
         self,
         image_url: str,
-        article_id: Optional[int] = None,
-        filename: Optional[str] = None,
+        article_id: int | None = None,
+        filename: str | None = None,
     ) -> UploadedFile:
         """Download image from URL and upload to Google Drive.
 

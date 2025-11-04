@@ -377,6 +377,7 @@ export interface TimeSeriesData {
 
 export type RuleType = 'grammar' | 'style' | 'punctuation' | 'spelling' | 'consistency';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected' | 'modified';
+export type ReviewAction = 'approve' | 'modify' | 'reject';
 export type DraftStatus = 'draft' | 'pending_review' | 'in_review' | 'ready_to_publish' | 'published';
 
 export interface DraftRule {
@@ -390,6 +391,9 @@ export interface DraftRule {
   conditions?: Record<string, unknown>;
   review_status: ReviewStatus;
   review_comment?: string;
+  user_feedback?: string;
+  modified_at?: string;
+  modified_by?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -397,6 +401,14 @@ export interface Example {
   before: string;
   after: string;
   description?: string;
+}
+
+export interface ReviewProgress {
+  total: number;
+  reviewed: number;
+  approved: number;
+  modified: number;
+  rejected: number;
 }
 
 export interface RuleDraft {
@@ -407,6 +419,8 @@ export interface RuleDraft {
   metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
+  created_by?: string;
+  review_progress?: ReviewProgress;
   total_rules: number;
   approved_count: number;
   rejected_count: number;
@@ -427,8 +441,10 @@ export interface SaveDraftRequest {
 
 export interface ReviewItem {
   rule_id: string;
-  status: ReviewStatus;
+  action: ReviewAction;
+  status?: ReviewStatus;
   comment?: string;
+  natural_language?: string;
   modified_pattern?: string;
   modified_replacement?: string;
 }
@@ -442,6 +458,9 @@ export interface PublishRulesRequest {
   description?: string;
   version?: string;
   module_name?: string;
+  include_rejected?: boolean;
+  test_mode?: boolean;
+  activation_date?: string;
 }
 
 export interface PublishedRuleset {
@@ -458,20 +477,23 @@ export interface PublishedRuleset {
 }
 
 export interface TestRulesRequest {
-  rules: DraftRule[];
+  ruleset_id?: string;
+  rules?: DraftRule[];
   test_content: string;
-  options?: {
-    show_step_by_step?: boolean;
-    apply_conditions?: boolean;
-  };
+  options?: Record<string, boolean>;
 }
 
 export interface TestResult {
-  original_text: string;
-  final_text: string;
-  total_suggestions: number;
-  applied_suggestions: number;
-  suggestions: Suggestion[];
+  original: string;
+  result: string;
+  changes: Array<{
+    rule_id: string;
+    type: string;
+    position: [number, number];
+    original: string;
+    replacement: string;
+    confidence: number;
+  }>;
   execution_time_ms: number;
 }
 
@@ -543,7 +565,7 @@ export interface User {
 // ============================================================================
 
 export interface WebSocketMessage {
-  type: 'task_update' | 'worklist_update' | 'notification';
+  type: 'task_update' | 'worklist_update' | 'notification' | 'pong';
   data: unknown;
   timestamp: string;
 }

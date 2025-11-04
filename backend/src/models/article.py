@@ -2,8 +2,7 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
-
-from typing import List, Optional
+from typing import Optional
 
 from sqlalchemy import Enum, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
@@ -72,13 +71,13 @@ class Article(Base, TimestampMixin):
     )
 
     # Image management
-    featured_image_path: Mapped[Optional[str]] = mapped_column(
+    featured_image_path: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         comment="Path to featured image in storage",
     )
 
-    additional_images: Mapped[Optional[List]] = mapped_column(
+    additional_images: Mapped[list | None] = mapped_column(
         JSONB,
         nullable=True,
         default=list,
@@ -86,21 +85,21 @@ class Article(Base, TimestampMixin):
     )
 
     # WordPress taxonomy
-    tags: Mapped[Optional[List[str]]] = mapped_column(
+    tags: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(100)),
         nullable=True,
         default=list,
         comment="WordPress post tags (3-6 natural categories for internal navigation)",
     )
 
-    categories: Mapped[Optional[List[str]]] = mapped_column(
+    categories: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(100)),
         nullable=True,
         default=list,
         comment="WordPress post categories (hierarchical taxonomy)",
     )
 
-    proofreading_issues: Mapped[List] = mapped_column(
+    proofreading_issues: Mapped[list] = mapped_column(
         JSONB,
         nullable=False,
         default=list,
@@ -121,7 +120,7 @@ class Article(Base, TimestampMixin):
         comment="CMS platform's article ID",
     )
 
-    published_url: Mapped[Optional[str]] = mapped_column(
+    published_url: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         index=True,
@@ -165,14 +164,14 @@ class Article(Base, TimestampMixin):
     )
 
     # Publishing tasks (1:N relationship)
-    publish_tasks: Mapped[List["PublishTask"]] = relationship(
+    publish_tasks: Mapped[list["PublishTask"]] = relationship(
         "PublishTask",
         back_populates="article",
         cascade="all, delete-orphan",
     )
 
     # Uploaded files (1:N relationship)
-    uploaded_files: Mapped[List["UploadedFile"]] = relationship(
+    uploaded_files: Mapped[list["UploadedFile"]] = relationship(
         "UploadedFile",
         back_populates="article",
         cascade="all, delete-orphan",
@@ -180,13 +179,13 @@ class Article(Base, TimestampMixin):
     )
 
     # Proofreading relationships (1:N)
-    proofreading_histories: Mapped[List["ProofreadingHistory"]] = relationship(
+    proofreading_histories: Mapped[list["ProofreadingHistory"]] = relationship(
         "ProofreadingHistory",
         back_populates="article",
         cascade="all, delete-orphan",
     )
 
-    proofreading_decisions: Mapped[List["ProofreadingDecision"]] = relationship(
+    proofreading_decisions: Mapped[list["ProofreadingDecision"]] = relationship(
         "ProofreadingDecision",
         back_populates="article",
         cascade="all, delete-orphan",

@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import re
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
 
 try:
     from googleapiclient.errors import HttpError
@@ -29,7 +29,7 @@ logger = get_logger(__name__)
 class GoogleDriveSyncService:
     """Synchronize Google Drive documents into the worklist."""
 
-    def __init__(self, session: AsyncSession, folder_id: Optional[str] = None) -> None:
+    def __init__(self, session: AsyncSession, folder_id: str | None = None) -> None:
         self.session = session
         self.settings = get_settings()
         self.folder_id = folder_id or self.settings.GOOGLE_DRIVE_FOLDER_ID
@@ -90,7 +90,7 @@ class GoogleDriveSyncService:
             self._storage = await create_google_drive_storage()
         return self._storage
 
-    async def _hydrate_document(self, storage, file_metadata: dict) -> Optional[dict[str, Any]]:
+    async def _hydrate_document(self, storage, file_metadata: dict) -> dict[str, Any] | None:
         """Retrieve and parse Drive document into worklist payload."""
         mime_type = file_metadata.get("mimeType")
         file_id = file_metadata.get("id")

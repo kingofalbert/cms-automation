@@ -14,13 +14,13 @@ from src.api.schemas.base import (
     SuccessResponse,
     TimestampSchema,
 )
+from src.api.schemas.monitoring import ExecutionLogEntry, TaskFilters, TaskStatistics
 from src.api.schemas.proofreading import (
     ProcessingMetadataSchema,
     ProofreadingIssueSchema,
     ProofreadingResponse,
     ProofreadingStatisticsSchema,
 )
-from src.api.schemas.monitoring import ExecutionLogEntry, TaskFilters, TaskStatistics
 from src.api.schemas.publishing import (
     PublishOptions,
     PublishRequest,

@@ -10,7 +10,7 @@ Research: See specs/001-cms-automation/research.md Section 4.1
 """
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from playwright.async_api import CDPSession, Page, expect
 
@@ -46,8 +46,8 @@ class CDPPerformanceMonitor:
             cdp_session: Active CDP session from Playwright
         """
         self.cdp = cdp_session
-        self.metrics_log: List[Dict[str, Any]] = []
-        self.network_requests: List[Dict[str, Any]] = []
+        self.metrics_log: list[dict[str, Any]] = []
+        self.network_requests: list[dict[str, Any]] = []
 
     async def start(self) -> None:
         """Enable performance monitoring domains."""
@@ -73,7 +73,7 @@ class CDPPerformanceMonitor:
             total_requests=len(self.network_requests)
         )
 
-    async def get_metrics(self) -> Dict[str, Any]:
+    async def get_metrics(self) -> dict[str, Any]:
         """Get current performance metrics.
 
         Returns:
@@ -110,14 +110,14 @@ class CDPPerformanceMonitor:
 
         return performance_data
 
-    def _get_metric_value(self, metrics: List[Dict], name: str) -> float:
+    def _get_metric_value(self, metrics: list[dict], name: str) -> float:
         """Extract metric value by name."""
         for metric in metrics:
             if metric['name'] == name:
                 return metric['value']
         return 0.0
 
-    def _on_request(self, params: Dict[str, Any]) -> None:
+    def _on_request(self, params: dict[str, Any]) -> None:
         """Handle network request event."""
         self.network_requests.append({
             'url': params['request']['url'],
@@ -125,7 +125,7 @@ class CDPPerformanceMonitor:
             'timestamp': params['timestamp']
         })
 
-    def _on_response(self, params: Dict[str, Any]) -> None:
+    def _on_response(self, params: dict[str, Any]) -> None:
         """Handle network response event."""
         # Track response timing
         response = params.get('response', {})
@@ -147,7 +147,7 @@ class NetworkStats:
     total_requests: int
     blocked_requests: int
     total_bytes_downloaded: int
-    requests_by_type: Dict[str, int]
+    requests_by_type: dict[str, int]
 
 
 class CDPNetworkOptimizer:
@@ -202,7 +202,7 @@ class CDPNetworkOptimizer:
             blocked_requests=self.stats['blocked_requests']
         )
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get network optimization statistics."""
         return {
             'total_requests': self.stats['total_requests'],
@@ -214,7 +214,7 @@ class CDPNetworkOptimizer:
             'requests_by_type': self.stats['requests_by_type']
         }
 
-    async def _on_request_intercepted(self, params: Dict[str, Any]) -> None:
+    async def _on_request_intercepted(self, params: dict[str, Any]) -> None:
         """Handle intercepted request."""
         interception_id = params['interceptionId']
         request = params.get('request', {})
@@ -264,7 +264,7 @@ class VisualDiff:
     """Visual difference report."""
     baseline_path: str
     current_path: str
-    diff_path: Optional[str]
+    diff_path: str | None
     diff_pixels: int
     diff_percentage: float
     passed: bool
@@ -433,7 +433,7 @@ class CDPDOMInspector:
         """
         self.cdp = cdp_session
 
-    async def get_element_box_model(self, selector: str) -> Dict[str, Any]:
+    async def get_element_box_model(self, selector: str) -> dict[str, Any]:
         """Get element bounding box via CDP.
 
         Args:
@@ -488,7 +488,7 @@ class CDPDOMInspector:
             )
             return False
 
-    async def get_element_attributes(self, selector: str) -> Dict[str, str]:
+    async def get_element_attributes(self, selector: str) -> dict[str, str]:
         """Get element attributes via CDP.
 
         Args:

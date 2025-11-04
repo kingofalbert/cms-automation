@@ -6,8 +6,9 @@ import { useState } from 'react';
 import { DragDropZone } from './DragDropZone';
 import { Button, Spinner } from '@/components/ui';
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-import { ArticleImportRequest } from '@/types/article';
+import axios, { type AxiosError } from 'axios';
+import type { ImportResult } from '@/types/api';
+import type { ArticleImportRequest } from '@/types/article';
 
 interface JSONPreviewData {
   articles: ArticleImportRequest[];
@@ -19,78 +20,76 @@ export const JSONUploadForm: React.FC = () => {
   const [previewData, setPreviewData] = useState<JSONPreviewData | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
 
-  const parseJSONPreview = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        const data = JSON.parse(text);
+  const isArticleImportRequest = (value: unknown): value is ArticleImportRequest => {
+    if (!value || typeof value !== 'object') {
+      return false;
+    }
+    const article = value as Partial<ArticleImportRequest>;
+    return typeof article.title === 'string' && typeof article.content === 'string';
+  };
 
-        // Validate JSON structure
-        if (!data.articles || !Array.isArray(data.articles)) {
-          setParseError('JSON 格式错误：缺少 articles 数组');
-          return;
-        }
+  const parseJSONPreview = async (file: File) => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text) as { articles?: unknown };
 
-        // Validate each article
-        const validArticles = data.articles.filter((article: any) => {
-          return article.title && article.content;
-        });
-
-        if (validArticles.length === 0) {
-          setParseError('没有有效的文章数据（必须包含 title 和 content）');
-          return;
-        }
-
-        setPreviewData({
-          articles: validArticles.slice(0, 5), // Preview first 5
-          totalCount: validArticles.length,
-        });
-        setParseError(null);
-      } catch (error) {
-        setParseError('JSON 解析失败：' + (error as Error).message);
+      if (!Array.isArray(data.articles)) {
+        setParseError('JSON 格式错误：缺少 articles 数组');
+        return;
       }
-    };
 
-    reader.readAsText(file);
+      const validArticles = data.articles.filter(isArticleImportRequest);
+
+      if (validArticles.length === 0) {
+        setParseError('没有有效的文章数据（必须包含 title 和 content）');
+        return;
+      }
+
+      setPreviewData({
+        articles: validArticles.slice(0, 5),
+        totalCount: validArticles.length,
+      });
+      setParseError(null);
+    } catch (error) {
+      setParseError('JSON 解析失败：' + (error as Error).message);
+    }
   };
 
   const handleFileAccepted = (files: File[]) => {
     const file = files[0];
     setSelectedFile(file);
-    parseJSONPreview(file);
+    void parseJSONPreview(file);
   };
 
-  const uploadMutation = useMutation({
+  const uploadMutation = useMutation<ImportResult, AxiosError<{ message?: string }>, File>({
     mutationFn: async (file: File) => {
-      const reader = new FileReader();
-      return new Promise((resolve, reject) => {
-        reader.onload = async (e) => {
-          try {
-            const text = e.target?.result as string;
-            const data = JSON.parse(text);
+      const text = await file.text();
+      const payload = JSON.parse(text) as { articles?: unknown };
 
-            const response = await axios.post(
-              '/api/v1/articles/import/batch',
-              data
-            );
-            resolve(response.data);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
+      if (!Array.isArray(payload.articles)) {
+        throw new Error('JSON 格式错误：缺少 articles 数组');
+      }
+
+      const articles = payload.articles.filter(isArticleImportRequest);
+      if (articles.length === 0) {
+        throw new Error('没有有效的文章数据（必须包含 title 和 content）');
+      }
+
+      const response = await axios.post<ImportResult>(
+        '/v1/articles/import/batch',
+        { articles }
+      );
+      return response.data;
     },
-    onSuccess: (data: any) => {
+    onSuccess: (data) => {
       alert(
         `导入成功！\n总计: ${data.total}\n成功: ${data.success}\n失败: ${data.failed}`
       );
       handleReset();
     },
-    onError: (error: any) => {
-      alert(`导入失败: ${error.response?.data?.message || error.message}`);
+    onError: (error) => {
+      const message = error.response?.data?.message ?? error.message;
+      alert(`导入失败: ${message}`);
     },
   });
 

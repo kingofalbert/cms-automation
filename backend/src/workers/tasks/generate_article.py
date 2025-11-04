@@ -1,6 +1,5 @@
 """Celery task for article generation."""
 
-from src.config.database import get_db_config
 from src.config.logging import get_logger
 from src.services.article_generator import create_article_generator
 from src.workers.base_task import DatabaseTask
@@ -28,6 +27,7 @@ def generate_article_task(self, topic_request_id: int) -> dict:
         Exception: If generation fails after retries
     """
     import asyncio
+
     import nest_asyncio
 
     # Allow nested event loops (for Celery + asyncio)

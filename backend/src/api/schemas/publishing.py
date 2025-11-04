@@ -1,7 +1,6 @@
 """Schemas for publishing API."""
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import Field
 
@@ -18,10 +17,10 @@ class PublishOptions(BaseSchema):
         default=True,
         description="Publish immediately instead of scheduling for later",
     )
-    tags: Optional[List[str]] = Field(
+    tags: list[str] | None = Field(
         default=None, description="Tags to assign to the article"
     )
-    categories: Optional[List[str]] = Field(
+    categories: list[str] | None = Field(
         default=None, description="Categories to assign to the article"
     )
 
@@ -56,7 +55,7 @@ class Screenshot(BaseSchema):
         ..., description="Timestamp when screenshot was captured"
     )
     image_url: str = Field(..., description="Location of the screenshot image")
-    description: Optional[str] = Field(
+    description: str | None = Field(
         default=None, description="Optional description for the screenshot"
     )
 
@@ -75,21 +74,21 @@ class PublishTaskResponse(BaseSchema):
     completed_steps: int = Field(
         ..., ge=0, description="Number of completed workflow steps"
     )
-    screenshots: List[Screenshot] = Field(
+    screenshots: list[Screenshot] = Field(
         default_factory=list, description="Captured screenshots for the task"
     )
-    error_message: Optional[str] = Field(
+    error_message: str | None = Field(
         default=None, description="Error message when task fails"
     )
-    started_at: Optional[datetime] = Field(
+    started_at: datetime | None = Field(
         default=None, description="Timestamp when task execution started"
     )
-    completed_at: Optional[datetime] = Field(
+    completed_at: datetime | None = Field(
         default=None, description="Timestamp when task execution finished"
     )
-    duration: Optional[int] = Field(
+    duration: int | None = Field(
         default=None, description="Total execution duration in seconds"
     )
-    cost: Optional[float] = Field(
+    cost: float | None = Field(
         default=None, ge=0, description="Cost in USD for this task"
     )

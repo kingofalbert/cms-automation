@@ -2,7 +2,7 @@
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from src.config import get_logger
 from src.models import ArticleStatus
@@ -105,7 +105,7 @@ class WordPressImporter(ArticleImporter):
         logger.info("wordpress_parse_completed", total_articles=len(articles))
         return articles
 
-    def _parse_item(self, item: ET.Element, index: int) -> Optional[ImportedArticle]:
+    def _parse_item(self, item: ET.Element, index: int) -> ImportedArticle | None:
         """Parse a single WordPress item into ImportedArticle.
 
         Args:
@@ -226,7 +226,7 @@ class WordPressImporter(ArticleImporter):
 
         return status_map.get(wp_status.lower(), ArticleStatus.IMPORTED)
 
-    def _extract_featured_image(self, item: ET.Element) -> Optional[str]:
+    def _extract_featured_image(self, item: ET.Element) -> str | None:
         """Extract featured image URL from WordPress postmeta.
 
         Args:
@@ -248,7 +248,7 @@ class WordPressImporter(ArticleImporter):
 
         return None
 
-    def _extract_seo_metadata(self, item: ET.Element) -> Optional[dict[str, Any]]:
+    def _extract_seo_metadata(self, item: ET.Element) -> dict[str, Any] | None:
         """Extract SEO metadata from Yoast or Rank Math plugins.
 
         Args:
@@ -297,7 +297,7 @@ class WordPressImporter(ArticleImporter):
 
         return seo_metadata if seo_metadata else None
 
-    async def validate_article(self, article: ImportedArticle) -> tuple[bool, Optional[str]]:
+    async def validate_article(self, article: ImportedArticle) -> tuple[bool, str | None]:
         """Validate a single article.
 
         Args:

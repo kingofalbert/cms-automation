@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """测试 Pydantic 安装和基本功能"""
 
+
 from pydantic import BaseModel, Field, ValidationError
-from typing import List, Optional
 
 
 class TestArticle(BaseModel):
     """测试文章模型"""
     title: str = Field(..., min_length=1, max_length=200)
     content: str = Field(..., min_length=1)
-    author: Optional[str] = None
-    tags: List[str] = []
+    author: str | None = None
+    tags: list[str] = []
 
 
 def main():
@@ -44,7 +44,7 @@ def main():
         print(f"❌ 应该失败但成功了: {invalid}")
         return 1
     except ValidationError as e:
-        print(f"✅ 正确捕获验证错误:")
+        print("✅ 正确捕获验证错误:")
         print(f"   {e.error_count()} 个错误")
 
     # 测试 3: JSON 序列化
@@ -55,7 +55,7 @@ def main():
             content="测试 JSON 序列化功能"
         )
         json_str = article.model_dump_json(indent=2)
-        print(f"✅ JSON 序列化成功:")
+        print("✅ JSON 序列化成功:")
         print(f"   {json_str[:100]}...")
 
         # 反序列化
@@ -72,7 +72,7 @@ def main():
             title="最小文章",
             content="只有必填字段"
         )
-        print(f"✅ 默认值工作正常:")
+        print("✅ 默认值工作正常:")
         print(f"   author: {minimal.author} (None)")
         print(f"   tags: {minimal.tags} ([])")
     except Exception as e:

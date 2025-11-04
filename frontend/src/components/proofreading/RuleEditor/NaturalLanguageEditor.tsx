@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import {
   Modal,
   Input,
@@ -14,16 +14,12 @@ import {
   message
 } from 'antd';
 import {
-  PlusOutlined,
-  DeleteOutlined,
-  CodeOutlined,
   SaveOutlined,
   ExperimentOutlined,
-  EyeOutlined
 } from '@ant-design/icons';
-import { DraftRule, Example } from '../../../types/proofreading';
+import { DraftRule, Example, TestResult } from '../../../types/proofreading';
 import ruleManagementAPI from '../../../services/ruleManagementAPI';
-import CodePreview from './CodePreview';
+import CodePreview, { type GeneratedRulePreview } from './CodePreview';
 import ExampleManager from './ExampleManager';
 import './NaturalLanguageEditor.css';
 
@@ -38,7 +34,7 @@ interface NaturalLanguageEditorProps {
   onCancel: () => void;
 }
 
-const NaturalLanguageEditor: React.FC<NaturalLanguageEditorProps> = ({
+const NaturalLanguageEditor: FC<NaturalLanguageEditorProps> = ({
   visible,
   rule,
   draftId,
@@ -54,32 +50,34 @@ const NaturalLanguageEditor: React.FC<NaturalLanguageEditorProps> = ({
     'ignore_quotes': false,
     'case_sensitive': false
   });
-  const [generatedCode, setGeneratedCode] = useState<any>(null);
+  const [generatedCode, setGeneratedCode] = useState<GeneratedRulePreview | null>(null);
   const [loading, setLoading] = useState(false);
   const [testContent, setTestContent] = useState('');
-  const [testResult, setTestResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
 
   useEffect(() => {
-    if (rule) {
-      setNaturalLanguage(rule.natural_language);
-      setExamples(rule.examples || []);
-      if (rule.conditions) {
-        setConditions({
-          ...conditions,
-          ...rule.conditions
-        });
-      }
-      form.setFieldsValue({
-        natural_language: rule.natural_language
-      });
+    if (!rule) {
+      return;
     }
-  }, [rule]);
+
+    setNaturalLanguage(rule.natural_language);
+    setExamples(rule.examples || []);
+    if (rule.conditions) {
+      setConditions((prev) => ({
+        ...prev,
+        ...rule.conditions,
+      }));
+    }
+    form.setFieldsValue({
+      natural_language: rule.natural_language,
+    });
+  }, [rule, form]);
 
   // 生成規則代碼預覽
   const generateCodePreview = () => {
     // 模擬從自然語言生成代碼
     // 實際應用中，這裡會調用後端 API
-    const code = {
+    const code: GeneratedRulePreview = {
       pattern: extractPattern(naturalLanguage),
       replacement: extractReplacement(naturalLanguage),
       conditions: Object.entries(conditions)
@@ -322,10 +320,10 @@ const NaturalLanguageEditor: React.FC<NaturalLanguageEditorProps> = ({
                     <strong>修改後:</strong>
                     <pre>{testResult.result}</pre>
                   </div>
-                  {testResult.changes && testResult.changes.length > 0 && (
+                  {testResult.changes.length > 0 && (
                     <div className="changes-section">
                       <strong>變更詳情:</strong>
-                      {testResult.changes.map((change: any, index: number) => (
+                      {testResult.changes.map((change, index) => (
                         <div key={index} className="change-item">
                           <Tag color="blue">{change.type}</Tag>
                           <span>

@@ -3,12 +3,11 @@
 import io
 import os
 from pathlib import Path
-from typing import BinaryIO, Optional
+from typing import BinaryIO
 
-from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload, MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseDownload, MediaIoBaseUpload
 
 from src.config import get_logger, get_settings
 
@@ -70,7 +69,7 @@ class GoogleDriveStorage:
         file_content: BinaryIO,
         filename: str,
         mime_type: str = "application/octet-stream",
-        folder_id: Optional[str] = None,
+        folder_id: str | None = None,
     ) -> dict:
         """Upload file to Google Drive.
 
@@ -137,8 +136,8 @@ class GoogleDriveStorage:
     async def upload_file_from_path(
         self,
         file_path: str,
-        filename: Optional[str] = None,
-        folder_id: Optional[str] = None,
+        filename: str | None = None,
+        folder_id: str | None = None,
     ) -> dict:
         """Upload file from local path to Google Drive.
 
@@ -383,7 +382,7 @@ class GoogleDriveStorage:
 
         return mime_types.get(extension, "application/octet-stream")
 
-    async def list_files(self, folder_id: Optional[str] = None, max_results: int = 100) -> list[dict]:
+    async def list_files(self, folder_id: str | None = None, max_results: int = 100) -> list[dict]:
         """List files in folder.
 
         Args:

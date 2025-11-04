@@ -1,10 +1,8 @@
-import React, { useState } from 'react';
+import { useState, type FC } from 'react';
 import { Card, Tag, Button, Space, Checkbox, Tooltip, Collapse } from 'antd';
 import {
   CheckOutlined,
   CloseOutlined,
-  EditOutlined,
-  ExperimentOutlined,
   InfoCircleOutlined,
   CodeOutlined
 } from '@ant-design/icons';
@@ -18,17 +16,13 @@ interface RuleCardProps {
   selected: boolean;
   onSelect: (selected: boolean) => void;
   onReview: (ruleId: string, action: ReviewAction, comment?: string) => void;
-  onEdit: () => void;
-  onTest: () => void;
 }
 
-const RuleCard: React.FC<RuleCardProps> = ({
+const RuleCard: FC<RuleCardProps> = ({
   rule,
   selected,
   onSelect,
   onReview,
-  onEdit,
-  onTest
 }) => {
   const [expanded, setExpanded] = useState(false);
 
@@ -63,7 +57,7 @@ const RuleCard: React.FC<RuleCardProps> = ({
   };
 
   // 格式化條件顯示
-  const formatConditions = (conditions?: Record<string, any>) => {
+  const formatConditions = (conditions?: Record<string, unknown>) => {
     if (!conditions || Object.keys(conditions).length === 0) {
       return '無特殊條件';
     }
@@ -202,13 +196,6 @@ const RuleCard: React.FC<RuleCardProps> = ({
                 批准
               </Button>
               <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={onEdit}
-              >
-                修改
-              </Button>
-              <Button
                 danger
                 size="small"
                 icon={<CloseOutlined />}
@@ -218,13 +205,6 @@ const RuleCard: React.FC<RuleCardProps> = ({
               </Button>
             </>
           )}
-          <Button
-            size="small"
-            icon={<ExperimentOutlined />}
-            onClick={onTest}
-          >
-            測試
-          </Button>
         </Space>
       </div>
     </Card>

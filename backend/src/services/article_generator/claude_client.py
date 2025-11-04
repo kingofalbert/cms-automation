@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from anthropic import Anthropic, AsyncAnthropic
+from anthropic import AsyncAnthropic
 
 from src.config import get_logger, get_settings
 
@@ -108,32 +108,32 @@ class ClaudeClient:
         """
         prompt_parts = [
             f"Write a comprehensive, well-structured article about: {topic}",
-            f"",
-            f"Requirements:",
+            "",
+            "Requirements:",
             f"- Writing style: {style_tone}",
             f"- Target length: approximately {target_word_count} words",
-            f"- Format: Use Markdown formatting",
-            f"- Include a compelling title",
-            f"- Use clear headings and subheadings",
-            f"- Include examples where appropriate",
+            "- Format: Use Markdown formatting",
+            "- Include a compelling title",
+            "- Use clear headings and subheadings",
+            "- Include examples where appropriate",
         ]
 
         if outline:
             prompt_parts.extend(
                 [
-                    f"",
-                    f"Suggested outline:",
+                    "",
+                    "Suggested outline:",
                     outline,
                 ]
             )
 
         prompt_parts.extend(
             [
-                f"",
-                f"Format the response as:",
-                f"# [Title Here]",
-                f"",
-                f"[Article body in Markdown...]",
+                "",
+                "Format the response as:",
+                "# [Title Here]",
+                "",
+                "[Article body in Markdown...]",
             ]
         )
 

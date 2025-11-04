@@ -4,7 +4,7 @@ AI 編譯器演示
 """
 
 import json
-from typing import Dict, Any
+from typing import Any
 
 
 def demonstrate_ai_compilation():
@@ -65,12 +65,12 @@ def demonstrate_ai_compilation():
             test.get('context')
         )
 
-        print(f"✅ AI 編譯結果：")
+        print("✅ AI 編譯結果：")
         print(json.dumps(compiled_rule, ensure_ascii=False, indent=2))
 
         # 驗證結果
         if test.get('examples'):
-            print(f"\n🧪 驗證示例：")
+            print("\n🧪 驗證示例：")
             for ex in test['examples']:
                 result = apply_rule(compiled_rule, ex['before'])
                 status = "✓" if result == ex['after'] else "✗"
@@ -81,7 +81,7 @@ def simulate_ai_compilation(
     description: str,
     examples: list = None,
     context: dict = None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     模擬 AI 編譯過程
     實際使用時會調用 OpenAI/Claude API
@@ -187,7 +187,7 @@ def simulate_ai_compilation(
     }
 
 
-def apply_rule(rule: Dict[str, Any], text: str) -> str:
+def apply_rule(rule: dict[str, Any], text: str) -> str:
     """應用編譯後的規則到文本"""
     import re
 
@@ -310,10 +310,10 @@ def demonstrate_complex_ai_compilation():
         print("\n🤖 AI 編譯結果：")
         print(json.dumps(rule['ai_result'], ensure_ascii=False, indent=2))
         print("\n💡 AI 的理解：")
-        print(f"  - 識別了多個條件限制")
-        print(f"  - 理解了例外情況")
-        print(f"  - 生成了複雜的正則表達式")
-        print(f"  - 設置了合適的置信度")
+        print("  - 識別了多個條件限制")
+        print("  - 理解了例外情況")
+        print("  - 生成了複雜的正則表達式")
+        print("  - 設置了合適的置信度")
 
 
 if __name__ == "__main__":

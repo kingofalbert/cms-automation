@@ -16,8 +16,18 @@ export interface ScreenshotRetentionSectionProps {
 export const ScreenshotRetentionSection: React.FC<
   ScreenshotRetentionSectionProps
 > = ({ retention, onChange, estimatedStorageUsage = 0 }) => {
+  // Provide safe defaults for when backend returns empty objects
+  const safeRetention = {
+    retention_days: retention.retention_days ?? 30,
+    max_screenshots_per_task: retention.max_screenshots_per_task ?? 10,
+    compress_screenshots: retention.compress_screenshots ?? true,
+    compression_quality: retention.compression_quality ?? 80,
+    delete_on_success: retention.delete_on_success ?? false,
+    delete_on_failure: retention.delete_on_failure ?? false,
+  };
+
   const updateRetention = (updates: Partial<ScreenshotRetention>) => {
-    onChange({ ...retention, ...updates });
+    onChange({ ...safeRetention, ...updates });
   };
 
   const formatStorage = (mb: number) => {
@@ -58,7 +68,7 @@ export const ScreenshotRetentionSection: React.FC<
           <Input
             type="number"
             label="保留天数"
-            value={retention.retention_days}
+            value={safeRetention.retention_days}
             onChange={(e) =>
               updateRetention({ retention_days: parseInt(e.target.value) })
             }
@@ -70,7 +80,7 @@ export const ScreenshotRetentionSection: React.FC<
           <Input
             type="number"
             label="每任务最大截图数"
-            value={retention.max_screenshots_per_task}
+            value={safeRetention.max_screenshots_per_task}
             onChange={(e) =>
               updateRetention({
                 max_screenshots_per_task: parseInt(e.target.value),
@@ -85,7 +95,7 @@ export const ScreenshotRetentionSection: React.FC<
             <input
               type="checkbox"
               id="compress-screenshots"
-              checked={retention.compress_screenshots}
+              checked={safeRetention.compress_screenshots}
               onChange={(e) =>
                 updateRetention({ compress_screenshots: e.target.checked })
               }
@@ -99,11 +109,11 @@ export const ScreenshotRetentionSection: React.FC<
             </label>
           </div>
 
-          {retention.compress_screenshots && (
+          {safeRetention.compress_screenshots && (
             <Input
               type="number"
               label="压缩质量 (%)"
-              value={retention.compression_quality}
+              value={safeRetention.compression_quality}
               onChange={(e) =>
                 updateRetention({ compression_quality: parseInt(e.target.value) })
               }
@@ -124,7 +134,7 @@ export const ScreenshotRetentionSection: React.FC<
                 <input
                   type="checkbox"
                   id="delete-on-success"
-                  checked={retention.delete_on_success}
+                  checked={safeRetention.delete_on_success}
                   onChange={(e) =>
                     updateRetention({ delete_on_success: e.target.checked })
                   }
@@ -142,7 +152,7 @@ export const ScreenshotRetentionSection: React.FC<
                 <input
                   type="checkbox"
                   id="delete-on-failure"
-                  checked={retention.delete_on_failure}
+                  checked={safeRetention.delete_on_failure}
                   onChange={(e) =>
                     updateRetention({ delete_on_failure: e.target.checked })
                   }

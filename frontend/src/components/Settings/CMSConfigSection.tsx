@@ -19,6 +19,16 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
   onChange,
   onTestConnection,
 }) => {
+  // Provide safe defaults for when backend returns empty objects
+  const safeConfig = {
+    wordpress_url: config.wordpress_url ?? '',
+    username: config.username ?? '',
+    password: config.password ?? '',
+    verify_ssl: config.verify_ssl ?? true,
+    timeout: config.timeout ?? 30000,
+    max_retries: config.max_retries ?? 3,
+  };
+
   const [showPassword, setShowPassword] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
@@ -40,7 +50,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
   };
 
   const updateConfig = (updates: Partial<CMSConfig>) => {
-    onChange({ ...config, ...updates });
+    onChange({ ...safeConfig, ...updates });
   };
 
   return (
@@ -53,7 +63,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
         <Input
           type="url"
           label="WordPress URL"
-          value={config.wordpress_url}
+          value={safeConfig.wordpress_url}
           onChange={(e) => updateConfig({ wordpress_url: e.target.value })}
           placeholder="https://example.com"
           required
@@ -62,7 +72,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
         <Input
           type="text"
           label="用户名"
-          value={config.username}
+          value={safeConfig.username}
           onChange={(e) => updateConfig({ username: e.target.value })}
           required
         />
@@ -71,7 +81,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
           <Input
             type={showPassword ? 'text' : 'password'}
             label="密码"
-            value={config.password}
+            value={safeConfig.password}
             onChange={(e) => updateConfig({ password: e.target.value })}
             required
           />
@@ -92,7 +102,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
           <input
             type="checkbox"
             id="verify-ssl"
-            checked={config.verify_ssl}
+            checked={safeConfig.verify_ssl}
             onChange={(e) => updateConfig({ verify_ssl: e.target.checked })}
             className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
           />
@@ -104,7 +114,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
         <Input
           type="number"
           label="超时时间 (毫秒)"
-          value={config.timeout}
+          value={safeConfig.timeout}
           onChange={(e) => updateConfig({ timeout: parseInt(e.target.value) })}
           min={1000}
           max={60000}
@@ -113,7 +123,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
         <Input
           type="number"
           label="最大重试次数"
-          value={config.max_retries}
+          value={safeConfig.max_retries}
           onChange={(e) => updateConfig({ max_retries: parseInt(e.target.value) })}
           min={0}
           max={5}
@@ -124,7 +134,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
           <Button
             variant="outline"
             onClick={handleTestConnection}
-            disabled={testing || !config.wordpress_url || !config.username || !config.password}
+            disabled={testing || !safeConfig.wordpress_url || !safeConfig.username || !safeConfig.password}
             className="w-full"
           >
             {testing ? '测试中...' : '测试连接'}

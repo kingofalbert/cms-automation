@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { DragDropZone } from './DragDropZone';
 import { Button, Spinner } from '@/components/ui';
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
+import axios, { type AxiosError, type AxiosProgressEvent } from 'axios';
+import type { ImportResult } from '@/types/api';
 
 interface CSVPreviewData {
   headers: string[];
@@ -21,8 +22,8 @@ export const CSVUploadForm: React.FC = () => {
 
   const parseCSVPreview = (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
+    reader.onload = (event) => {
+      const text = typeof event.target?.result === 'string' ? event.target.result : '';
       const lines = text.split('\n').filter((line) => line.trim());
 
       if (lines.length === 0) {
@@ -51,14 +52,14 @@ export const CSVUploadForm: React.FC = () => {
     parseCSVPreview(file);
   };
 
-  const uploadMutation = useMutation({
+  const uploadMutation = useMutation<ImportResult, AxiosError<{ message?: string }>, File>({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await axios.post('/api/v1/articles/import/batch', formData, {
+      const response = await axios.post('v1/articles/import/batch', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        onUploadProgress: (progressEvent) => {
+        onUploadProgress: (progressEvent: AxiosProgressEvent) => {
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / (progressEvent.total || 1)
           );
@@ -76,8 +77,9 @@ export const CSVUploadForm: React.FC = () => {
       setPreviewData(null);
       setUploadProgress(0);
     },
-    onError: (error: any) => {
-      alert(`导入失败: ${error.response?.data?.message || error.message}`);
+    onError: (error) => {
+      const errorMessage = error.response?.data?.message ?? error.message;
+      alert(`导入失败: ${errorMessage}`);
       setUploadProgress(0);
     },
   });

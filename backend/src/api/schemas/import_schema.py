@@ -1,6 +1,6 @@
 """API schemas for article import."""
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import Field
 
@@ -39,8 +39,8 @@ class ImportTaskStatusSchema(BaseSchema):
 
     task_id: str = Field(..., description="Celery task ID")
     status: str = Field(..., description="Task status (PENDING, STARTED, SUCCESS, FAILURE)")
-    result: Optional[ImportResultSchema] = Field(None, description="Task result if completed")
-    error: Optional[str] = Field(None, description="Error message if failed")
+    result: ImportResultSchema | None = Field(None, description="Task result if completed")
+    error: str | None = Field(None, description="Error message if failed")
 
 
 class ImportInitiateResponse(BaseSchema):

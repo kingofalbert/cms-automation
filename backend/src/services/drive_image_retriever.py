@@ -1,10 +1,7 @@
 """Service for retrieving images from Google Drive for publishing."""
 
-import io
-import os
 import tempfile
 from pathlib import Path
-from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,10 +30,10 @@ class DriveImageRetriever:
             session: Database session for querying uploaded_files
         """
         self.session = session
-        self.temp_dir: Optional[Path] = None
-        self.downloaded_files: List[dict] = []
+        self.temp_dir: Path | None = None
+        self.downloaded_files: list[dict] = []
 
-    async def get_article_images(self, article_id: int) -> List[dict]:
+    async def get_article_images(self, article_id: int) -> list[dict]:
         """Get all images associated with an article from Google Drive.
 
         Args:

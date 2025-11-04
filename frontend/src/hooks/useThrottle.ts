@@ -7,12 +7,14 @@
 
 import { useCallback, useRef, useEffect } from 'react';
 
+type TimeoutHandle = ReturnType<typeof setTimeout>;
+
 export function useThrottle<T extends (...args: any[]) => any>(
   callback: T,
   delay: number = 300
 ): T {
   const lastRan = useRef(Date.now());
-  const timeoutRef = useRef<NodeJS.Timeout>();
+  const timeoutRef = useRef<TimeoutHandle>();
 
   // Clean up on unmount
   useEffect(() => {

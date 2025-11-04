@@ -1,9 +1,8 @@
 """Schemas for file upload operations."""
 
 from datetime import datetime
-from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class FileUploadResponse(BaseModel):
@@ -14,11 +13,11 @@ class FileUploadResponse(BaseModel):
     filename: str = Field(description="Original filename")
     file_type: str = Field(description="File type classification (image, document, video, other)")
     mime_type: str = Field(description="MIME type")
-    file_size: Optional[int] = Field(None, description="File size in bytes")
-    web_view_link: Optional[str] = Field(None, description="Google Drive web view link")
-    web_content_link: Optional[str] = Field(None, description="Google Drive direct download link")
-    public_url: Optional[str] = Field(None, description="Public access URL")
-    article_id: Optional[int] = Field(None, description="Associated article ID")
+    file_size: int | None = Field(None, description="File size in bytes")
+    web_view_link: str | None = Field(None, description="Google Drive web view link")
+    web_content_link: str | None = Field(None, description="Google Drive direct download link")
+    public_url: str | None = Field(None, description="Public access URL")
+    article_id: int | None = Field(None, description="Associated article ID")
     created_at: datetime = Field(description="Upload timestamp")
 
     class Config:
@@ -31,16 +30,16 @@ class FileMetadataResponse(BaseModel):
     file_id: int
     filename: str
     drive_file_id: str
-    drive_folder_id: Optional[str] = None
+    drive_folder_id: str | None = None
     mime_type: str
-    file_size: Optional[int] = None
+    file_size: int | None = None
     file_type: str
-    web_view_link: Optional[str] = None
-    web_content_link: Optional[str] = None
-    public_url: Optional[str] = None
-    article_id: Optional[int] = None
-    uploaded_by: Optional[int] = None
-    file_metadata: Optional[dict] = None
+    web_view_link: str | None = None
+    web_content_link: str | None = None
+    public_url: str | None = None
+    article_id: int | None = None
+    uploaded_by: int | None = None
+    file_metadata: dict | None = None
     created_at: datetime
     updated_at: datetime
 

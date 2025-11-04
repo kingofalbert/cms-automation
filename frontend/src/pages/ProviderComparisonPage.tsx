@@ -23,7 +23,7 @@ export default function ProviderComparisonPage() {
     queryKey: ['provider-comparison', timeRange],
     queryFn: async () => {
       const response = await axios.get<ProviderComparison>(
-        '/api/v1/analytics/provider-comparison',
+        '/v1/analytics/provider-comparison',
         { params: { time_range: timeRange } }
       );
       return response.data;

@@ -42,10 +42,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('should display reload button', () => {
-    const { location } = window;
-    delete (window as any).location;
-    window.location = { ...location, reload: vi.fn() };
-
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
@@ -54,8 +50,6 @@ describe('ErrorBoundary', () => {
 
     const reloadButton = screen.getByRole('button', { name: /重新加載/i });
     expect(reloadButton).toBeInTheDocument();
-
-    window.location = location;
   });
 
   it('should display home button', () => {
@@ -97,9 +91,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('should show error details in development mode', () => {
-    const originalEnv = import.meta.env.DEV;
-    (import.meta.env as any).DEV = true;
-
     render(
       <ErrorBoundary showDetails={true}>
         <ThrowError shouldThrow={true} />
@@ -109,8 +100,6 @@ describe('ErrorBoundary', () => {
     // Should have a button to show details
     const detailsButton = screen.getByRole('button', { name: /顯示詳情/i });
     expect(detailsButton).toBeInTheDocument();
-
-    (import.meta.env as any).DEV = originalEnv;
   });
 
   it('should toggle error details when details button is clicked', async () => {
@@ -169,12 +158,7 @@ describe('ErrorBoundary', () => {
 
   it('should reload page when reload button is clicked', async () => {
     const user = userEvent.setup();
-    const mockReload = vi.fn();
-
-    // Mock window.location.reload
-    const { location } = window;
-    delete (window as any).location;
-    window.location = { ...location, reload: mockReload };
+    const reloadSpy = vi.spyOn(window.location, 'reload').mockImplementation(() => {});
 
     render(
       <ErrorBoundary>
@@ -185,21 +169,13 @@ describe('ErrorBoundary', () => {
     const reloadButton = screen.getByRole('button', { name: /重新加載/i });
     await user.click(reloadButton);
 
-    expect(mockReload).toHaveBeenCalled();
-
-    // Restore window.location
-    window.location = location;
+    expect(reloadSpy).toHaveBeenCalled();
+    reloadSpy.mockRestore();
   });
 
   it('should navigate to home when home button is clicked', async () => {
     const user = userEvent.setup();
-    const mockAssign = vi.fn();
-
-    // Mock window.location.href setter
-    Object.defineProperty(window, 'location', {
-      writable: true,
-      value: { href: '', assign: mockAssign },
-    });
+    const assignSpy = vi.spyOn(window.location, 'assign').mockImplementation(() => {});
 
     render(
       <ErrorBoundary>
@@ -214,6 +190,7 @@ describe('ErrorBoundary', () => {
     // Note: In the actual implementation, it sets window.location.href
     // which we can't fully test in JSDOM, but we can verify the button exists and is clickable
     expect(homeButton).toBeInTheDocument();
+    assignSpy.mockRestore();
   });
 
   it('should log error to console', () => {

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 from src.services.proofreading.models import ArticlePayload
 
@@ -17,19 +18,19 @@ DEFAULT_RULE_FILE = RULES_DIR / "catalog.json"
 class RuleManifest:
     """Utility wrapper around machine-readable rule metadata."""
 
-    def __init__(self, data: Dict[str, Any], version: str) -> None:
+    def __init__(self, data: dict[str, Any], version: str) -> None:
         self.data = data
         self.version = version
 
     @classmethod
-    def from_json(cls, payload: Dict[str, Any]) -> "RuleManifest":
+    def from_json(cls, payload: dict[str, Any]) -> RuleManifest:
         """Construct from JSON payload ensuring version is present."""
         version = payload.get("version")
         if not version:
             raise ValueError("Rule manifest must include a 'version' field")
         return cls(data=payload, version=str(version))
 
-    def iter_rules(self) -> Iterable[Dict[str, Any]]:
+    def iter_rules(self) -> Iterable[dict[str, Any]]:
         """Iterate over flattened rule definitions."""
         for category in self.data.get("categories", []):
             for rule in category.get("rules", []):
@@ -45,7 +46,7 @@ class RuleManifest:
 
     def to_prompt_table(self) -> str:
         """Render a condensed markdown table for the prompt."""
-        rows: List[str] = [
+        rows: list[str] = [
             "| 规则ID | 类别 | 级别 | 阻断发布 | 自动修正 | 简述 |",
             "|--------|------|------|----------|----------|------|",
         ]
@@ -87,7 +88,7 @@ class ProofreadingPromptBuilder:
     ) -> None:
         self.manifest = manifest or load_default_manifest()
 
-    def build_prompt(self, payload: ArticlePayload) -> Dict[str, str]:
+    def build_prompt(self, payload: ArticlePayload) -> dict[str, str]:
         """Construct user + system prompts.
 
         Returns a dict with `system` and `user` keys so the caller can compose
@@ -182,7 +183,7 @@ class ProofreadingPromptBuilder:
         metadata_preview = json.dumps(
             payload.metadata, ensure_ascii=False, indent=2
         )
-        image_lines: List[str] = []
+        image_lines: list[str] = []
         if payload.featured_image:
             image_lines.append(
                 f"- Featured: {payload.featured_image.width}x{payload.featured_image.height} ({payload.featured_image.file_format})"

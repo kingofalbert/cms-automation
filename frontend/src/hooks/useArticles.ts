@@ -40,7 +40,7 @@ export function useArticles(skip = 0, limit = 20) {
       const response = await api.get<ArticleListItem[]>('/v1/articles', {
         params: { skip, limit },
       });
-      return response.data;
+      return response;
     },
   });
 }
@@ -50,7 +50,7 @@ export function useArticle(articleId: number) {
     queryKey: ['article', articleId],
     queryFn: async () => {
       const response = await api.get<Article>(`/v1/articles/${articleId}`);
-      return response.data;
+      return response;
     },
     enabled: !!articleId,
   });

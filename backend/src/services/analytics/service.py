@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -98,7 +98,7 @@ class AnalyticsService:
 
         usage: list[dict[str, Any]] = []
         for row in rows:
-            bucket_ts: Optional[datetime] = row.bucket
+            bucket_ts: datetime | None = row.bucket
             usage.append(
                 {
                     "date": bucket_ts.date().isoformat() if bucket_ts else None,
@@ -185,7 +185,7 @@ class AnalyticsService:
             "metrics": metrics,
         }
 
-    def _resolve_time_range(self, time_range: str) -> Optional[datetime]:
+    def _resolve_time_range(self, time_range: str) -> datetime | None:
         """Map time range string to starting datetime."""
         if not time_range or time_range == "all":
             return None

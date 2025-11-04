@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button, message, Spin } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
@@ -7,7 +7,7 @@ import ruleManagementAPI from '../services/ruleManagementAPI';
 import TestPanel from '../components/proofreading/RuleTester/TestPanel';
 import './RuleTestPage.css';
 
-const RuleTestPage: React.FC = () => {
+const RuleTestPage: FC = () => {
   const { draftId } = useParams<{ draftId: string }>();
   const navigate = useNavigate();
   const [rules, setRules] = useState<DraftRule[]>([]);

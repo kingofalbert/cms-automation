@@ -3,7 +3,8 @@
 from celery import Celery
 from celery.signals import setup_logging, worker_ready
 
-from src.config import get_settings, setup_logging as setup_app_logging
+from src.config import get_settings
+from src.config import setup_logging as setup_app_logging
 
 settings = get_settings()
 

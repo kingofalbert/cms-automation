@@ -26,7 +26,7 @@ export default function PublishTasksPage() {
       if (statusFilter !== 'all') params.status = statusFilter;
       if (providerFilter !== 'all') params.provider = providerFilter;
 
-      const response = await axios.get<PublishTask[]>('/api/v1/publish/tasks', {
+      const response = await axios.get<PublishTask[]>('v1/publish/tasks', {
         params,
       });
       return response.data;

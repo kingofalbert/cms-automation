@@ -18,11 +18,10 @@ interface TopicFormData {
 }
 
 export default function ArticleGeneratorPage() {
-  const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(true);
   const [generatingTopicId, setGeneratingTopicId] = useState<number | null>(null);
 
-  const { data: articles, isLoading: articlesLoading, refetch: refetchArticles } = useArticles(0, 10);
+  const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles } = useArticles(0, 10);
   const createTopicMutation = useCreateTopicRequest();
 
   const handleSubmitTopic = async (data: TopicFormData) => {
@@ -35,7 +34,7 @@ export default function ArticleGeneratorPage() {
     }
   };
 
-  const handleGenerationComplete = (articleId: number) => {
+  const handleGenerationComplete = (_articleId: number) => {
     // Refresh articles list when generation completes
     refetchArticles();
     // Clear generating state after a short delay to show success message
@@ -52,8 +51,7 @@ export default function ArticleGeneratorPage() {
     }, 5000);
   };
 
-  const handleViewArticle = (articleId: number) => {
-    setSelectedArticleId(articleId);
+  const handleViewArticle = (_articleId: number) => {
     setShowForm(false);
   };
 
@@ -111,7 +109,7 @@ export default function ArticleGeneratorPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
               <p className="mt-4 text-gray-600">Loading articles...</p>
             </div>
-          ) : articles && articles.length > 0 ? (
+          ) : articles.length > 0 ? (
             <div className="space-y-4">
               {articles.map((article) => (
                 <ArticlePreview

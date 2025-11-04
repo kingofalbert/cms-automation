@@ -92,7 +92,7 @@ class LoadTester:
             avg_time = mean(creation_times) if creation_times else 0
             median_time = median(creation_times) if creation_times else 0
 
-            print(f"\nResults:")
+            print("\nResults:")
             print(f"  Total requests: {num_requests}")
             print(f"  Successful: {successful}")
             print(f"  Failed: {num_requests - successful}")
@@ -188,13 +188,13 @@ class LoadTester:
         print(f"  Total time: {total_elapsed:.1f}s ({total_elapsed/60:.1f} minutes)")
 
         if self.metrics["processing_times"]:
-            print(f"\nProcessing Time Statistics:")
+            print("\nProcessing Time Statistics:")
             print(f"  Average: {avg_processing:.2f}s")
             print(f"  Median: {median_processing:.2f}s")
             print(f"  Min: {min_processing:.2f}s")
             print(f"  Max: {max_processing:.2f}s")
             print(f"  Std Dev: {stddev_processing:.2f}s")
-            print(f"\nSLA Compliance (< 300s):")
+            print("\nSLA Compliance (< 300s):")
             sla_compliant = sum(1 for t in self.metrics["processing_times"] if t < 300)
             print(f"  Compliant: {sla_compliant}/{len(self.metrics['processing_times'])} ({sla_compliant/len(self.metrics['processing_times'])*100:.1f}%)")
 
@@ -260,12 +260,12 @@ class LoadTester:
             print(f"Articles verified: {articles_created}/{len(completed_topic_ids)}")
 
             if word_counts:
-                print(f"\nContent Statistics:")
+                print("\nContent Statistics:")
                 print(f"  Avg word count: {mean(word_counts):.0f}")
                 print(f"  Total words generated: {sum(word_counts)}")
 
             if costs:
-                print(f"\nCost Statistics:")
+                print("\nCost Statistics:")
                 print(f"  Avg cost per article: ${mean(costs):.4f}")
                 print(f"  Total cost: ${sum(costs):.4f}")
 
@@ -293,7 +293,7 @@ class LoadTester:
         failed = sum(1 for r in self.results if r["status"] == "FAIL")
         total = len(self.results)
 
-        print(f"\nTest Results:")
+        print("\nTest Results:")
         print(f"  Total Tests: {total}")
         print(f"  ✅ Passed: {passed}")
         print(f"  ⚠️  Partial: {partial}")
@@ -303,7 +303,7 @@ class LoadTester:
             success_rate = (passed / total) * 100
             print(f"  Success Rate: {success_rate:.1f}%")
 
-        print(f"\nSystem Performance:")
+        print("\nSystem Performance:")
         print(f"  Articles generated: {self.metrics['success_count']}")
         print(f"  Failed generations: {self.metrics['failure_count']}")
 

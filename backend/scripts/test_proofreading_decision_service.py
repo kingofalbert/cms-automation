@@ -6,36 +6,26 @@
 
 import asyncio
 import sys
-from pathlib import Path
 from datetime import datetime, timedelta
-from typing import List
-import json
+from pathlib import Path
 
 # 添加項目根目錄到路徑
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
 
 from src.config.database import get_db_config
+from src.config.logging import get_logger
+from src.models.article import Article
+from src.models.proofreading import DecisionType, ProofreadingDecision, ProofreadingHistory
 from src.services.proofreading_decision import (
+    DateRange,
+    DecisionInput,
+    DecisionPatterns,
     ProofreadingDecisionService,
     get_decision_service,
-    DecisionInput,
-    DateRange,
-    DecisionPatterns,
-    UserPreferences,
-    LearningRule,
-    FeedbackAggregation,
-    QualityMetrics
 )
-from src.models.article import Article
-from src.models.proofreading import (
-    ProofreadingHistory,
-    ProofreadingDecision,
-    DecisionType
-)
-from src.config.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -125,7 +115,7 @@ async def test_decision_recording(
     service: ProofreadingDecisionService,
     session: AsyncSession,
     test_data: dict
-) -> List[ProofreadingDecision]:
+) -> list[ProofreadingDecision]:
     """測試決策記錄功能"""
     print("\n🧪 測試 1: 決策記錄")
     print("-" * 40)

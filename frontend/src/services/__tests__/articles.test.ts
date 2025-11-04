@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { articlesAPI } from '../articles';
-import { api, apiClient } from '../api-client';
+import { api } from '../api-client';
 import {
   mockArticle,
   mockArticles,
@@ -15,12 +15,6 @@ import {
 // Mock the api module
 vi.mock('../api-client', () => ({
   api: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-  apiClient: {
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
@@ -44,7 +38,7 @@ describe('Articles API', () => {
 
       const result = await articlesAPI.list();
 
-      expect(api.get).toHaveBeenCalledWith('/api/v1/articles', { params: undefined });
+      expect(api.get).toHaveBeenCalledWith('/v1/articles', { params: undefined });
       expect(result).toEqual(mockResponse);
     });
 
@@ -60,7 +54,7 @@ describe('Articles API', () => {
 
       const result = await articlesAPI.list(filters);
 
-      expect(api.get).toHaveBeenCalledWith('/api/v1/articles', { params: filters });
+      expect(api.get).toHaveBeenCalledWith('/v1/articles', { params: filters });
       expect(result).toEqual(mockResponse);
     });
 
@@ -79,7 +73,7 @@ describe('Articles API', () => {
 
       const result = await articlesAPI.get(1);
 
-      expect(api.get).toHaveBeenCalledWith('/api/v1/articles/1');
+      expect(api.get).toHaveBeenCalledWith('/v1/articles/1');
       expect(result).toEqual(mockResponse);
     });
 
@@ -104,7 +98,7 @@ describe('Articles API', () => {
 
       const result = await articlesAPI.create(newArticle);
 
-      expect(api.post).toHaveBeenCalledWith('/api/v1/articles', newArticle);
+      expect(api.post).toHaveBeenCalledWith('/v1/articles', newArticle);
       expect(result).toEqual(mockResponse);
     });
 
@@ -126,7 +120,7 @@ describe('Articles API', () => {
       const updates = { title: 'Updated Title' };
       const result = await articlesAPI.update(1, updates);
 
-      expect(api.put).toHaveBeenCalledWith('/api/v1/articles/1', updates);
+      expect(api.put).toHaveBeenCalledWith('/v1/articles/1', updates);
       expect(result).toEqual(mockResponse);
     });
   });
@@ -138,7 +132,7 @@ describe('Articles API', () => {
 
       const result = await articlesAPI.delete(1);
 
-      expect(api.delete).toHaveBeenCalledWith('/api/v1/articles/1');
+      expect(api.delete).toHaveBeenCalledWith('/v1/articles/1');
       expect(result).toEqual(mockResponse);
     });
   });
@@ -160,7 +154,7 @@ describe('Articles API', () => {
 
       expect(api.post).toHaveBeenCalled();
       const call = (api.post as any).mock.calls[0];
-      expect(call[0]).toBe('/api/v1/articles/import/csv');
+      expect(call[0]).toBe('/v1/articles/import/csv');
       expect(call[1]).toBeInstanceOf(FormData);
       expect(result).toEqual(mockResponse);
     });
@@ -196,7 +190,7 @@ describe('Articles API', () => {
 
       expect(api.post).toHaveBeenCalled();
       const call = (api.post as any).mock.calls[0];
-      expect(call[0]).toBe('/api/v1/articles/1/images');
+      expect(call[0]).toBe('/v1/articles/1/images');
       expect(call[1]).toBeInstanceOf(FormData);
       expect(result).toEqual(mockResponse);
     });
@@ -209,7 +203,7 @@ describe('Articles API', () => {
 
       const result = await articlesAPI.deleteImage(1, '/images/test.jpg');
 
-      expect(api.delete).toHaveBeenCalledWith('/api/v1/articles/1/images', {
+      expect(api.delete).toHaveBeenCalledWith('/v1/articles/1/images', {
         data: { image_path: '/images/test.jpg' },
       });
       expect(result).toEqual(mockResponse);

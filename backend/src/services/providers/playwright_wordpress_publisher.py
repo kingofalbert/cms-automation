@@ -1,9 +1,10 @@
 """Playwright-based WordPress publisher (free alternative to Computer Use API)."""
 
+from __future__ import annotations
+
 import asyncio
 import json
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Literal
 
 from playwright.async_api import Browser, Page, async_playwright
 
@@ -26,14 +27,14 @@ class PlaywrightWordPressPublisher:
     - Configuration file with element selectors
     """
 
-    def __init__(self, config_path: Optional[str] = None) -> None:
+    def __init__(self, config_path: str | None = None) -> None:
         """Initialize Playwright publisher.
 
         Args:
             config_path: Path to WordPress selectors configuration JSON file
         """
-        self.browser: Optional[Browser] = None
-        self.page: Optional[Page] = None
+        self.browser: Browser | None = None
+        self.page: Page | None = None
 
         # Load WordPress selectors configuration
         if config_path:
@@ -48,7 +49,7 @@ class PlaywrightWordPressPublisher:
             seo_plugin=self.config.get("metadata", {}).get("seo_plugin"),
         )
 
-    def _load_config(self, config_path: str) -> Dict:
+    def _load_config(self, config_path: str) -> dict[str, Any]:
         """Load WordPress configuration from JSON file.
 
         Args:
@@ -58,7 +59,7 @@ class PlaywrightWordPressPublisher:
             Configuration dictionary
         """
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 config = json.load(f)
             logger.info("wordpress_config_loaded", path=config_path)
             return config
@@ -71,7 +72,7 @@ class PlaywrightWordPressPublisher:
             # Fall back to default config
             return self._get_default_config()
 
-    def _get_default_config(self) -> Dict:
+    def _get_default_config(self) -> dict[str, Any]:
         """Get default WordPress selectors configuration.
 
         This works for standard WordPress with Gutenberg editor and Yoast SEO.
@@ -117,6 +118,8 @@ class PlaywrightWordPressPublisher:
                 "publish_button": ".editor-post-publish-button__button",
                 "publish_panel_toggle": ".editor-post-publish-panel__toggle",
                 "post_publish_button": ".editor-post-publish-button",
+                "save_draft_button": ".editor-post-save-draft",
+                "draft_saved_notice": "text=Draft saved",
             },
             "waits": {
                 "after_login": 2000,
@@ -125,6 +128,7 @@ class PlaywrightWordPressPublisher:
                 "media_upload": 3000,
                 "before_publish": 1000,
                 "after_publish": 2000,
+                "after_save": 1500,
             },
         }
 
@@ -136,9 +140,10 @@ class PlaywrightWordPressPublisher:
         article_title: str,
         article_body: str,
         seo_data: SEOMetadata,
-        article_images: List[Dict] = None,
+        article_images: list[dict[str, Any]] | None = None,
         headless: bool = False,
-    ) -> Dict[str, Any]:
+        publish_mode: Literal["publish", "draft"] = "publish",
+    ) -> dict[str, Any]:
         """Publish article to WordPress using Playwright.
 
         Args:
@@ -159,6 +164,7 @@ class PlaywrightWordPressPublisher:
                 "playwright_publish_started",
                 title=article_title[:50],
                 has_images=bool(article_images),
+                publish_mode=publish_mode,
             )
 
             # Start Playwright
@@ -193,23 +199,29 @@ class PlaywrightWordPressPublisher:
 
                 await self._step_set_content(article_body)
                 await self._step_configure_seo(seo_data)
-                article_url, article_id = await self._step_publish()
+                article_location, article_id = await self._step_publish(publish_mode=publish_mode)
 
                 # Take final screenshot
                 screenshot_path = f"/tmp/playwright_success_{article_id}.png"
                 await self.page.screenshot(path=screenshot_path)
 
+                status_value = "draft" if publish_mode == "draft" else "published"
+
                 logger.info(
                     "playwright_publish_completed",
                     article_id=article_id,
-                    url=article_url,
+                    url=article_location if publish_mode != "draft" else None,
+                    editor_url=article_location if publish_mode == "draft" else None,
+                    publish_mode=publish_mode,
                 )
 
                 return {
                     "success": True,
                     "cms_article_id": article_id,
-                    "url": article_url,
+                    "url": article_location if publish_mode != "draft" else None,
+                    "editor_url": article_location if publish_mode == "draft" else None,
                     "screenshot": screenshot_path,
+                    "status": status_value,
                 }
 
         except Exception as e:
@@ -223,7 +235,7 @@ class PlaywrightWordPressPublisher:
             if self.page:
                 try:
                     await self.page.screenshot(path="/tmp/playwright_error.png")
-                except:
+                except Exception:
                     pass
 
             return {
@@ -280,7 +292,7 @@ class PlaywrightWordPressPublisher:
         try:
             # Try direct link click
             await self.page.click(new_post_link)
-        except:
+        except Exception:
             # Fallback: navigate directly to post-new.php
             current_url = self.page.url
             base_url = current_url.split("/wp-admin")[0]
@@ -314,7 +326,7 @@ class PlaywrightWordPressPublisher:
 
         logger.info("playwright_title_set")
 
-    async def _step_upload_images(self, images: List[Dict]) -> List[Dict]:
+    async def _step_upload_images(self, images: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Step 4: Upload images to WordPress media library.
 
         Args:
@@ -325,7 +337,7 @@ class PlaywrightWordPressPublisher:
         """
         logger.info("playwright_step_upload_images", count=len(images))
 
-        uploaded = []
+        uploaded: list[dict[str, Any]] = []
 
         for idx, image in enumerate(images):
             try:
@@ -434,17 +446,39 @@ class PlaywrightWordPressPublisher:
             )
             # Continue without SEO configuration
 
-    async def _step_publish(self) -> tuple[str, str]:
-        """Step 7: Publish article.
+    async def _step_publish(self, publish_mode: Literal["publish", "draft"] = "publish") -> tuple[str | None, str]:
+        """Step 7: Publish article or save as draft.
+
+        Args:
+            publish_mode: Publishing mode
 
         Returns:
-            Tuple of (article_url, article_id)
+            Tuple of (result_url, article_id)
         """
-        logger.info("playwright_step_publish")
+        logger.info("playwright_step_publish", publish_mode=publish_mode)
 
         # Scroll to top
         await self.page.evaluate("window.scrollTo(0, 0)")
         await asyncio.sleep(0.5)
+
+        if publish_mode == "draft":
+            save_selector = self.config["publish"].get("save_draft_button")
+            if not save_selector:
+                raise ValueError("Save draft selector not configured")
+
+            await self.page.click(save_selector)
+            await asyncio.sleep(self.config["waits"].get("after_save", 1000) / 1000)
+
+            draft_notice = self.config["publish"].get("draft_saved_notice")
+            if draft_notice:
+                try:
+                    await self.page.wait_for_selector(draft_notice, timeout=5000)
+                except Exception:
+                    logger.warning("draft_saved_notice_not_found")
+
+            current_url = self.page.url
+            draft_article_id = self._extract_post_id(current_url)
+            return current_url, draft_article_id
 
         # Click publish button
         publish_button = self.config["publish"]["publish_button"]
@@ -455,7 +489,7 @@ class PlaywrightWordPressPublisher:
         try:
             confirm_button = self.config["publish"]["post_publish_button"]
             await self.page.click(confirm_button)
-        except:
+        except Exception:
             pass  # May not need confirmation
 
         # Wait for publish complete
@@ -469,6 +503,7 @@ class PlaywrightWordPressPublisher:
             "playwright_publish_completed",
             article_id=article_id,
             url=article_url,
+            publish_mode=publish_mode,
         )
 
         return article_url, article_id
@@ -499,7 +534,7 @@ class PlaywrightWordPressPublisher:
     def _replace_image_references(
         self,
         content: str,
-        uploaded_images: List[Dict],
+        uploaded_images: list[dict[str, Any]],
     ) -> str:
         """Replace Google Drive image references with WordPress URLs.
 
@@ -524,7 +559,7 @@ class PlaywrightWordPressPublisher:
 
 
 async def create_playwright_publisher(
-    config_path: Optional[str] = None,
+    config_path: str | None = None,
 ) -> PlaywrightWordPressPublisher:
     """Factory function to create Playwright publisher.
 

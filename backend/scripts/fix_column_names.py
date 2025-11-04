@@ -3,8 +3,8 @@
 修復表列名與模型定義不匹配的問題
 """
 
+
 import psycopg2
-from datetime import datetime
 
 # Supabase connection string
 db_url = 'postgresql://postgres.twsbhjmlmspjwfystpti:Xieping890$@aws-1-us-east-1.pooler.supabase.com:5432/postgres'

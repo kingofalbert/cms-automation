@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import axios from 'axios';
+import { api } from '@/services/api-client';
 import { Button } from '@/components/ui';
 import { ProviderConfigSection } from '@/components/Settings/ProviderConfigSection';
 import { CMSConfigSection } from '@/components/Settings/CMSConfigSection';
@@ -19,12 +19,20 @@ export default function SettingsPage() {
   const [localSettings, setLocalSettings] = useState<AppSettings | null>(null);
 
   // Fetch settings
-  const { data: settings, isLoading, refetch } = useQuery({
+  const { data: settings, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['app-settings'],
     queryFn: async () => {
-      const response = await axios.get<AppSettings>('/api/v1/settings');
-      return response.data;
+      const response = await api.get<AppSettings>('v1/settings');
+
+      // Check if response contains an error field (backend returns 200 with error message)
+      if (response && 'error' in response) {
+        throw new Error((response as any).message || 'Failed to load settings');
+      }
+
+      return response;
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Update local settings when data changes
@@ -38,8 +46,8 @@ export default function SettingsPage() {
   // Update settings mutation
   const updateMutation = useMutation({
     mutationFn: async (updates: SettingsUpdateRequest) => {
-      const response = await axios.put<AppSettings>('/api/v1/settings', updates);
-      return response.data;
+      const response = await api.put<AppSettings>('v1/settings', updates);
+      return response;
     },
     onSuccess: () => {
       alert('设置保存成功！');
@@ -56,25 +64,27 @@ export default function SettingsPage() {
     if (!localSettings) return false;
 
     try {
-      const response = await axios.post('/api/v1/settings/test-connection', {
+      const response = await api.post<{ success: boolean }>('v1/settings/test-connection', {
         cms_config: localSettings.cms_config,
       });
-      return response.data.success;
+      return response.success;
     } catch {
       return false;
     }
   };
 
-  // Fetch current cost usage
+  // Fetch current cost usage - DISABLED due to API mismatch
+  // Backend returns list[CostUsageEntry] but frontend expects {daily_spend, monthly_spend}
   const { data: costUsage } = useQuery({
     queryKey: ['cost-usage'],
     queryFn: async () => {
-      const response = await axios.get<{
+      const response = await api.get<{
         daily_spend: number;
         monthly_spend: number;
-      }>('/api/v1/analytics/cost-usage');
-      return response.data;
+      }>('v1/analytics/cost-usage');
+      return response;
     },
+    enabled: false, // Disabled until backend provides aggregated endpoint
     refetchInterval: 60000, // Refresh every minute
   });
 
@@ -82,10 +92,10 @@ export default function SettingsPage() {
   const { data: storageUsage } = useQuery({
     queryKey: ['storage-usage'],
     queryFn: async () => {
-      const response = await axios.get<{ total_mb: number }>(
-        '/api/v1/analytics/storage-usage'
+      const response = await api.get<{ total_mb: number }>(
+        'v1/analytics/storage-usage'
       );
-      return response.data;
+      return response;
     },
   });
 
@@ -109,7 +119,37 @@ export default function SettingsPage() {
     }
   };
 
-  if (isLoading || !localSettings) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
+        <div className="text-gray-600">加载中...</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md">
+          <div className="text-red-600 mb-4">
+            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">无法加载设置</h2>
+          <p className="text-gray-600 mb-6">
+            {error instanceof Error ? error.message : '连接到后端服务失败。请确保后端服务正在运行。'}
+          </p>
+          <Button onClick={() => refetch()} variant="primary">
+            重试
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!localSettings) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-gray-600">加载中...</div>

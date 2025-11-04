@@ -4,10 +4,10 @@
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field, validator
 from enum import Enum
+from typing import Any
 
+from pydantic import BaseModel, Field, validator
 
 # ============================================================================
 # 枚舉類型
@@ -61,7 +61,7 @@ class PriorityLevel(str, Enum):
 class BaseResponse(BaseModel):
     """基礎響應模型"""
     success: bool = Field(default=True, description="操作是否成功")
-    message: Optional[str] = Field(default=None, description="響應消息")
+    message: str | None = Field(default=None, description="響應消息")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="響應時間戳")
 
 
@@ -73,8 +73,8 @@ class PaginationParams(BaseModel):
 
 class DateRangeParams(BaseModel):
     """日期範圍參數"""
-    start_date: Optional[datetime] = Field(default=None, description="開始日期")
-    end_date: Optional[datetime] = Field(default=None, description="結束日期")
+    start_date: datetime | None = Field(default=None, description="開始日期")
+    end_date: datetime | None = Field(default=None, description="結束日期")
 
     @validator("end_date")
     def validate_date_range(cls, v, values):
@@ -94,9 +94,9 @@ class DecisionRequest(BaseModel):
     proofreading_history_id: int = Field(..., gt=0, description="校對歷史ID")
     suggestion_id: str = Field(..., min_length=1, description="建議ID")
     decision: DecisionTypeEnum = Field(..., description="決策類型")
-    custom_correction: Optional[str] = Field(default=None, description="自定義修正")
-    decision_reason: Optional[str] = Field(default=None, description="決策原因")
-    tags: Optional[List[str]] = Field(default=None, description="標籤列表")
+    custom_correction: str | None = Field(default=None, description="自定義修正")
+    decision_reason: str | None = Field(default=None, description="決策原因")
+    tags: list[str] | None = Field(default=None, description="標籤列表")
 
     class Config:
         schema_extra = {
@@ -115,16 +115,16 @@ class BatchDecisionItem(BaseModel):
     """批量決策項"""
     suggestion_id: str = Field(..., min_length=1, description="建議ID")
     decision: DecisionTypeEnum = Field(..., description="決策類型")
-    custom_correction: Optional[str] = Field(default=None, description="自定義修正")
-    reason: Optional[str] = Field(default=None, description="決策原因")
-    tags: Optional[List[str]] = Field(default=None, description="標籤")
+    custom_correction: str | None = Field(default=None, description="自定義修正")
+    reason: str | None = Field(default=None, description="決策原因")
+    tags: list[str] | None = Field(default=None, description="標籤")
 
 
 class BatchDecisionRequest(BaseModel):
     """批量決策請求"""
     article_id: int = Field(..., gt=0, description="文章ID")
     proofreading_history_id: int = Field(..., gt=0, description="校對歷史ID")
-    decisions: List[BatchDecisionItem] = Field(..., min_items=1, description="決策列表")
+    decisions: list[BatchDecisionItem] = Field(..., min_items=1, description="決策列表")
 
     class Config:
         schema_extra = {
@@ -149,10 +149,10 @@ class BatchDecisionRequest(BaseModel):
 
 class DecisionUpdateRequest(BaseModel):
     """決策更新請求"""
-    decision: Optional[DecisionTypeEnum] = Field(default=None, description="新的決策類型")
-    custom_correction: Optional[str] = Field(default=None, description="新的自定義修正")
-    decision_reason: Optional[str] = Field(default=None, description="新的決策原因")
-    tags: Optional[List[str]] = Field(default=None, description="新的標籤")
+    decision: DecisionTypeEnum | None = Field(default=None, description="新的決策類型")
+    custom_correction: str | None = Field(default=None, description="新的自定義修正")
+    decision_reason: str | None = Field(default=None, description="新的決策原因")
+    tags: list[str] | None = Field(default=None, description="新的標籤")
 
 
 # ============================================================================
@@ -169,12 +169,12 @@ class DecisionResponse(BaseModel):
     original_text: str = Field(..., description="原始文本")
     suggested_text: str = Field(..., description="建議文本")
     decision: DecisionTypeEnum = Field(..., description="決策類型")
-    custom_correction: Optional[str] = Field(default=None, description="自定義修正")
-    decision_reason: Optional[str] = Field(default=None, description="決策原因")
+    custom_correction: str | None = Field(default=None, description="自定義修正")
+    decision_reason: str | None = Field(default=None, description="決策原因")
     confidence_score: float = Field(..., ge=0, le=1, description="置信度分數")
-    context_before: Optional[str] = Field(default=None, description="前文")
-    context_after: Optional[str] = Field(default=None, description="後文")
-    tags: List[str] = Field(default_factory=list, description="標籤")
+    context_before: str | None = Field(default=None, description="前文")
+    context_after: str | None = Field(default=None, description="後文")
+    tags: list[str] = Field(default_factory=list, description="標籤")
     created_at: datetime = Field(..., description="創建時間")
     updated_at: datetime = Field(..., description="更新時間")
 
@@ -184,7 +184,7 @@ class DecisionResponse(BaseModel):
 
 class DecisionListResponse(BaseResponse):
     """決策列表響應"""
-    data: List[DecisionResponse] = Field(..., description="決策列表")
+    data: list[DecisionResponse] = Field(..., description="決策列表")
     total: int = Field(..., ge=0, description="總數")
     page: int = Field(..., ge=1, description="當前頁碼")
     limit: int = Field(..., ge=1, description="每頁數量")
@@ -195,8 +195,8 @@ class BatchDecisionResponse(BaseResponse):
     processed: int = Field(..., ge=0, description="處理數量")
     successful: int = Field(..., ge=0, description="成功數量")
     failed: int = Field(..., ge=0, description="失敗數量")
-    decisions: List[DecisionResponse] = Field(..., description="決策結果")
-    errors: Optional[List[Dict[str, str]]] = Field(default=None, description="錯誤信息")
+    decisions: list[DecisionResponse] = Field(..., description="決策結果")
+    errors: list[dict[str, str]] | None = Field(default=None, description="錯誤信息")
 
 
 # ============================================================================
@@ -209,7 +209,7 @@ class PatternDetail(BaseModel):
     frequency: int = Field(..., ge=0, description="出現頻率")
     rate: float = Field(..., ge=0, le=1, description="比率")
     confidence: float = Field(..., ge=0, le=1, description="置信度")
-    examples: List[str] = Field(default_factory=list, description="示例")
+    examples: list[str] = Field(default_factory=list, description="示例")
 
 
 class CorrectionPattern(BaseModel):
@@ -219,30 +219,30 @@ class CorrectionPattern(BaseModel):
     correction_pattern: str = Field(..., description="修正模式")
     frequency: int = Field(..., ge=0, description="頻率")
     confidence: float = Field(..., ge=0, le=1, description="置信度")
-    context: Dict[str, Any] = Field(default_factory=dict, description="上下文")
+    context: dict[str, Any] = Field(default_factory=dict, description="上下文")
 
 
 class TimePattern(BaseModel):
     """時間模式"""
     period: str = Field(..., description="時間段")
     trend: TrendType = Field(..., description="趨勢")
-    metrics: Dict[str, float] = Field(..., description="指標")
+    metrics: dict[str, float] = Field(..., description="指標")
 
 
 class PatternAnalysisRequest(BaseModel):
     """模式分析請求"""
-    start_date: Optional[datetime] = Field(default=None, description="開始日期")
-    end_date: Optional[datetime] = Field(default=None, description="結束日期")
+    start_date: datetime | None = Field(default=None, description="開始日期")
+    end_date: datetime | None = Field(default=None, description="結束日期")
     min_occurrences: int = Field(default=5, ge=1, description="最小出現次數")
 
 
 class PatternAnalysisResponse(BaseResponse):
     """模式分析響應"""
-    common_acceptances: List[PatternDetail] = Field(..., description="常見接受模式")
-    common_rejections: List[PatternDetail] = Field(..., description="常見拒絕模式")
-    custom_corrections: List[CorrectionPattern] = Field(..., description="自定義修正模式")
-    time_patterns: List[TimePattern] = Field(..., description="時間模式")
-    confidence_scores: Dict[str, float] = Field(default_factory=dict, description="置信度分數")
+    common_acceptances: list[PatternDetail] = Field(..., description="常見接受模式")
+    common_rejections: list[PatternDetail] = Field(..., description="常見拒絕模式")
+    custom_corrections: list[CorrectionPattern] = Field(..., description="自定義修正模式")
+    time_patterns: list[TimePattern] = Field(..., description="時間模式")
+    confidence_scores: dict[str, float] = Field(default_factory=dict, description="置信度分數")
 
 
 # ============================================================================
@@ -259,9 +259,9 @@ class StylePreferences(BaseModel):
 class UserPreferencesResponse(BaseResponse):
     """用戶偏好響應"""
     style_preferences: StylePreferences = Field(..., description="風格偏好")
-    vocabulary_preferences: List[str] = Field(default_factory=list, description="詞彙偏好")
-    grammar_rules: List[str] = Field(default_factory=list, description="語法規則")
-    punctuation_habits: Dict[str, str] = Field(default_factory=dict, description="標點習慣")
+    vocabulary_preferences: list[str] = Field(default_factory=list, description="詞彙偏好")
+    grammar_rules: list[str] = Field(default_factory=list, description="語法規則")
+    punctuation_habits: dict[str, str] = Field(default_factory=dict, description="標點習慣")
     confidence_level: float = Field(..., ge=0, le=1, description="置信度")
 
 
@@ -274,10 +274,10 @@ class LearningRule(BaseModel):
     rule_id: str = Field(..., description="規則ID")
     rule_type: str = Field(..., description="規則類型")
     pattern: str = Field(..., description="模式")
-    replacement: Optional[str] = Field(default=None, description="替換內容")
+    replacement: str | None = Field(default=None, description="替換內容")
     confidence: float = Field(..., ge=0, le=1, description="置信度")
-    context_conditions: Dict[str, Any] = Field(default_factory=dict, description="上下文條件")
-    example_applications: List[str] = Field(default_factory=list, description="應用示例")
+    context_conditions: dict[str, Any] = Field(default_factory=dict, description="上下文條件")
+    example_applications: list[str] = Field(default_factory=list, description="應用示例")
 
 
 class GenerateRulesRequest(BaseModel):
@@ -289,7 +289,7 @@ class GenerateRulesRequest(BaseModel):
 
 class GenerateRulesResponse(BaseResponse):
     """生成規則響應"""
-    rules: List[LearningRule] = Field(..., description="規則列表")
+    rules: list[LearningRule] = Field(..., description="規則列表")
     total_rules: int = Field(..., ge=0, description="規則總數")
     generation_timestamp: datetime = Field(..., description="生成時間")
 
@@ -299,14 +299,14 @@ class RuleApplication(BaseModel):
     rule_id: str = Field(..., description="規則ID")
     original_text: str = Field(..., description="原始文本")
     modified_text: str = Field(..., description="修改後文本")
-    position: List[int] = Field(..., min_items=2, max_items=2, description="位置")
+    position: list[int] = Field(..., min_items=2, max_items=2, description="位置")
     confidence: float = Field(..., ge=0, le=1, description="置信度")
 
 
 class ApplyRulesRequest(BaseModel):
     """應用規則請求"""
     content: str = Field(..., min_length=1, description="內容")
-    rule_ids: Optional[List[str]] = Field(default=None, description="規則ID列表")
+    rule_ids: list[str] | None = Field(default=None, description="規則ID列表")
     apply_all: bool = Field(default=False, description="應用所有規則")
 
 
@@ -314,7 +314,7 @@ class ApplyRulesResponse(BaseResponse):
     """應用規則響應"""
     original_content: str = Field(..., description="原始內容")
     modified_content: str = Field(..., description="修改後內容")
-    applications: List[RuleApplication] = Field(..., description="應用記錄")
+    applications: list[RuleApplication] = Field(..., description="應用記錄")
     total_changes: int = Field(..., ge=0, description="總修改數")
 
 
@@ -325,7 +325,7 @@ class ApplyRulesResponse(BaseResponse):
 class FeedbackStatsRequest(BaseModel):
     """反饋統計請求"""
     aggregation_period: AggregationPeriod = Field(default=AggregationPeriod.DAILY, description="聚合週期")
-    date: Optional[datetime] = Field(default=None, description="指定日期")
+    date: datetime | None = Field(default=None, description="指定日期")
 
 
 class FeedbackStatsResponse(BaseResponse):
@@ -334,8 +334,8 @@ class FeedbackStatsResponse(BaseResponse):
     acceptance_rate: float = Field(..., ge=0, le=1, description="接受率")
     rejection_rate: float = Field(..., ge=0, le=1, description="拒絕率")
     modification_rate: float = Field(..., ge=0, le=1, description="修改率")
-    suggestion_type_distribution: Dict[str, int] = Field(..., description="建議類型分布")
-    user_activity: Dict[str, Any] = Field(..., description="用戶活動")
+    suggestion_type_distribution: dict[str, int] = Field(..., description="建議類型分布")
+    user_activity: dict[str, Any] = Field(..., description="用戶活動")
     time_period: str = Field(..., description="時間段")
 
 
@@ -352,8 +352,8 @@ class PrepareDatasetResponse(BaseResponse):
     positive_examples: int = Field(..., ge=0, description="正例數量")
     negative_examples: int = Field(..., ge=0, description="負例數量")
     custom_examples: int = Field(..., ge=0, description="自定義例數量")
-    metadata: Dict[str, Any] = Field(..., description="元數據")
-    download_url: Optional[str] = Field(default=None, description="下載URL")
+    metadata: dict[str, Any] = Field(..., description="元數據")
+    download_url: str | None = Field(default=None, description="下載URL")
 
 
 # ============================================================================
@@ -362,8 +362,8 @@ class PrepareDatasetResponse(BaseResponse):
 
 class QualityEvaluationRequest(BaseModel):
     """質量評估請求"""
-    start_date: Optional[datetime] = Field(default=None, description="開始日期")
-    end_date: Optional[datetime] = Field(default=None, description="結束日期")
+    start_date: datetime | None = Field(default=None, description="開始日期")
+    end_date: datetime | None = Field(default=None, description="結束日期")
 
 
 class QualityEvaluationResponse(BaseResponse):
@@ -372,7 +372,7 @@ class QualityEvaluationResponse(BaseResponse):
     relevance: float = Field(..., ge=0, le=1, description="相關性")
     usefulness: float = Field(..., ge=0, le=1, description="有用性")
     trend: TrendType = Field(..., description="趨勢")
-    details: Dict[str, Any] = Field(..., description="詳細信息")
+    details: dict[str, Any] = Field(..., description="詳細信息")
 
 
 class ImprovementArea(BaseModel):
@@ -381,7 +381,7 @@ class ImprovementArea(BaseModel):
     current_performance: float = Field(..., ge=0, le=1, description="當前性能")
     target_performance: float = Field(..., ge=0, le=1, description="目標性能")
     priority: PriorityLevel = Field(..., description="優先級")
-    suggestions: List[str] = Field(..., description="建議")
+    suggestions: list[str] = Field(..., description="建議")
 
 
 class ImprovementAreasRequest(BaseModel):
@@ -391,7 +391,7 @@ class ImprovementAreasRequest(BaseModel):
 
 class ImprovementAreasResponse(BaseResponse):
     """改進領域響應"""
-    improvement_areas: List[ImprovementArea] = Field(..., description="改進領域")
+    improvement_areas: list[ImprovementArea] = Field(..., description="改進領域")
     total_areas: int = Field(..., ge=0, description="總領域數")
 
 
@@ -403,7 +403,7 @@ class ErrorDetail(BaseModel):
     """錯誤詳情"""
     code: str = Field(..., description="錯誤碼")
     message: str = Field(..., description="錯誤消息")
-    details: Optional[Dict[str, Any]] = Field(default=None, description="詳細信息")
+    details: dict[str, Any] | None = Field(default=None, description="詳細信息")
 
 
 class ErrorResponse(BaseModel):
@@ -462,23 +462,23 @@ class DraftRule(BaseModel):
     rule_id: str = Field(..., description="規則ID")
     rule_type: str = Field(..., description="規則類型")
     natural_language: str = Field(..., description="自然語言描述")
-    pattern: Optional[str] = Field(default=None, description="匹配模式")
-    replacement: Optional[str] = Field(default=None, description="替換文本")
-    conditions: Optional[Dict[str, Any]] = Field(default=None, description="應用條件")
+    pattern: str | None = Field(default=None, description="匹配模式")
+    replacement: str | None = Field(default=None, description="替換文本")
+    conditions: dict[str, Any] | None = Field(default=None, description="應用條件")
     confidence: float = Field(..., ge=0, le=1, description="置信度")
-    examples: List[Example] = Field(default_factory=list, description="示例列表")
+    examples: list[Example] = Field(default_factory=list, description="示例列表")
     review_status: ReviewStatus = Field(default=ReviewStatus.PENDING, description="審查狀態")
-    user_feedback: Optional[str] = Field(default=None, description="用戶反饋")
-    modified_at: Optional[datetime] = Field(default=None, description="修改時間")
-    modified_by: Optional[str] = Field(default=None, description="修改者")
+    user_feedback: str | None = Field(default=None, description="用戶反饋")
+    modified_at: datetime | None = Field(default=None, description="修改時間")
+    modified_by: str | None = Field(default=None, description="修改者")
 
 class RuleDraft(BaseModel):
     """規則草稿"""
     draft_id: str = Field(..., description="草稿ID")
-    rules: List[DraftRule] = Field(..., description="規則列表")
+    rules: list[DraftRule] = Field(..., description="規則列表")
     status: DraftStatus = Field(..., description="草稿狀態")
-    description: Optional[str] = Field(default=None, description="描述")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="元數據")
+    description: str | None = Field(default=None, description="描述")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="元數據")
     created_at: datetime = Field(..., description="創建時間")
     created_by: str = Field(..., description="創建者")
     review_progress: ReviewProgress = Field(..., description="審查進度")
@@ -487,19 +487,19 @@ class RuleDraft(BaseModel):
 
 class SaveDraftRequest(BaseModel):
     """保存草稿請求"""
-    rules: List[LearningRule] = Field(..., description="規則列表")
-    description: Optional[str] = Field(default=None, description="描述")
-    metadata: Optional[Dict[str, Any]] = Field(default=None, description="元數據")
+    rules: list[LearningRule] = Field(..., description="規則列表")
+    description: str | None = Field(default=None, description="描述")
+    metadata: dict[str, Any] | None = Field(default=None, description="元數據")
 
 class SaveDraftResponse(BaseModel):
     """保存草稿響應"""
     success: bool = Field(..., description="是否成功")
-    data: Dict[str, Any] = Field(..., description="響應數據")
+    data: dict[str, Any] = Field(..., description="響應數據")
 
 class DraftListResponse(BaseModel):
     """草稿列表響應"""
     success: bool = Field(..., description="是否成功")
-    data: Dict[str, Any] = Field(..., description="響應數據")
+    data: dict[str, Any] = Field(..., description="響應數據")
 
 class DraftDetailResponse(BaseModel):
     """草稿詳情響應"""
@@ -509,54 +509,54 @@ class DraftDetailResponse(BaseModel):
 class ModifyRuleRequest(BaseModel):
     """修改規則請求"""
     natural_language: str = Field(..., description="自然語言描述")
-    examples: Optional[List[Example]] = Field(default=None, description="示例")
-    conditions: Optional[Dict[str, Any]] = Field(default=None, description="條件")
+    examples: list[Example] | None = Field(default=None, description="示例")
+    conditions: dict[str, Any] | None = Field(default=None, description="條件")
 
 class ModifyRuleResponse(BaseModel):
     """修改規則響應"""
     success: bool = Field(..., description="是否成功")
-    data: Dict[str, Any] = Field(..., description="響應數據")
+    data: dict[str, Any] = Field(..., description="響應數據")
 
 class ReviewItem(BaseModel):
     """審查項目"""
     rule_id: str = Field(..., description="規則ID")
     action: ReviewAction = Field(..., description="審查動作")
-    comment: Optional[str] = Field(default=None, description="評論")
-    natural_language: Optional[str] = Field(default=None, description="修改後的自然語言描述")
+    comment: str | None = Field(default=None, description="評論")
+    natural_language: str | None = Field(default=None, description="修改後的自然語言描述")
 
 class BatchReviewRequest(BaseModel):
     """批量審查請求"""
-    reviews: List[ReviewItem] = Field(..., description="審查列表")
+    reviews: list[ReviewItem] = Field(..., description="審查列表")
 
 class BatchReviewResponse(BaseModel):
     """批量審查響應"""
     success: bool = Field(..., description="是否成功")
-    data: Dict[str, Any] = Field(..., description="響應數據")
+    data: dict[str, Any] = Field(..., description="響應數據")
 
 class PublishRulesRequest(BaseModel):
     """發布規則請求"""
     name: str = Field(..., description="規則集名稱")
-    description: Optional[str] = Field(default=None, description="描述")
+    description: str | None = Field(default=None, description="描述")
     include_rejected: bool = Field(default=False, description="是否包含拒絕的規則")
-    activation_date: Optional[datetime] = Field(default=None, description="激活日期")
+    activation_date: datetime | None = Field(default=None, description="激活日期")
     test_mode: bool = Field(default=False, description="測試模式")
 
 class PublishRulesResponse(BaseModel):
     """發布規則響應"""
     success: bool = Field(..., description="是否成功")
-    data: Dict[str, Any] = Field(..., description="響應數據")
+    data: dict[str, Any] = Field(..., description="響應數據")
 
 class TestRulesRequest(BaseModel):
     """測試規則請求"""
-    ruleset_id: Optional[str] = Field(default=None, description="規則集ID")
-    rules: Optional[List[DraftRule]] = Field(default=None, description="要測試的規則")
+    ruleset_id: str | None = Field(default=None, description="規則集ID")
+    rules: list[DraftRule] | None = Field(default=None, description="要測試的規則")
     test_content: str = Field(..., description="測試內容")
-    options: Optional[Dict[str, bool]] = Field(default=None, description="測試選項")
+    options: dict[str, bool] | None = Field(default=None, description="測試選項")
 
 class TestRulesResponse(BaseModel):
     """測試規則響應"""
     success: bool = Field(..., description="是否成功")
-    data: Dict[str, Any] = Field(..., description="測試結果")
+    data: dict[str, Any] = Field(..., description="測試結果")
 
 # ============================================================================
 # WebSocket 消息模型
@@ -565,7 +565,7 @@ class TestRulesResponse(BaseModel):
 class WSMessage(BaseModel):
     """WebSocket 消息"""
     type: str = Field(..., description="消息類型")
-    data: Dict[str, Any] = Field(..., description="消息數據")
+    data: dict[str, Any] = Field(..., description="消息數據")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="時間戳")
 
 
@@ -573,4 +573,4 @@ class WSDecisionUpdate(BaseModel):
     """決策更新消息"""
     decision_id: int = Field(..., description="決策ID")
     action: str = Field(..., description="動作: created|updated|deleted")
-    decision: Optional[DecisionResponse] = Field(default=None, description="決策數據")
+    decision: DecisionResponse | None = Field(default=None, description="決策數據")

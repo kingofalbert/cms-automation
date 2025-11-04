@@ -2,6 +2,7 @@
 """性能测试脚本 - 测试 384 条规则的引擎性能"""
 
 import time
+
 from src.services.proofreading.deterministic_engine import DeterministicRuleEngine
 from src.services.proofreading.models import ArticlePayload
 
@@ -114,7 +115,7 @@ def test_rule_efficiency():
         if rule.can_auto_fix:
             auto_fix_count += 1
 
-    print(f"\n规则分类统计:")
+    print("\n规则分类统计:")
     for cat in sorted(categories.keys()):
         print(f"  {cat} 类: {categories[cat]:3d} 条")
 

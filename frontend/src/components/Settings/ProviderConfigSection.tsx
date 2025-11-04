@@ -3,7 +3,12 @@
  * Configure settings for different publishing providers.
  */
 
-import { ProviderConfig } from '@/types/settings';
+import type {
+  ProviderConfig,
+  PlaywrightConfig,
+  ComputerUseConfig,
+  HybridConfig,
+} from '@/types/settings';
 import { Card, Input, Select, Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui';
 
 export interface ProviderConfigSectionProps {
@@ -15,21 +20,21 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
   config,
   onChange,
 }) => {
-  const updatePlaywright = (updates: Partial<typeof config.playwright>) => {
+  const updatePlaywright = (updates: Partial<PlaywrightConfig>) => {
     onChange({
       ...config,
       playwright: { ...config.playwright, ...updates },
     });
   };
 
-  const updateComputerUse = (updates: Partial<typeof config.computer_use>) => {
+  const updateComputerUse = (updates: Partial<ComputerUseConfig>) => {
     onChange({
       ...config,
       computer_use: { ...config.computer_use, ...updates },
     });
   };
 
-  const updateHybrid = (updates: Partial<typeof config.hybrid>) => {
+  const updateHybrid = (updates: Partial<HybridConfig>) => {
     onChange({
       ...config,
       hybrid: { ...config.hybrid, ...updates },
@@ -56,7 +61,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="playwright-enabled"
-                checked={config.playwright.enabled}
+                checked={safeConfig.playwright.enabled || false}
                 onChange={(e) => updatePlaywright({ enabled: e.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
@@ -69,7 +74,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="playwright-headless"
-                checked={config.playwright.headless}
+                checked={safeConfig.playwright.headless || false}
                 onChange={(e) => updatePlaywright({ headless: e.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
@@ -82,7 +87,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="playwright-screenshot"
-                checked={config.playwright.screenshot_on_error}
+                checked={safeConfig.playwright.screenshot_on_error || false}
                 onChange={(e) =>
                   updatePlaywright({ screenshot_on_error: e.target.checked })
                 }
@@ -95,7 +100,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
 
             <Select
               label="浏览器"
-              value={config.playwright.browser}
+              value={safeConfig.playwright.browser || 'chromium'}
               onChange={(e) =>
                 updatePlaywright({ browser: e.target.value as any })
               }
@@ -109,7 +114,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="超时时间 (毫秒)"
-              value={config.playwright.timeout}
+              value={safeConfig.playwright.timeout || 30000}
               onChange={(e) =>
                 updatePlaywright({ timeout: parseInt(e.target.value) })
               }
@@ -118,7 +123,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="重试次数"
-              value={config.playwright.retry_count}
+              value={safeConfig.playwright.retry_count || 0}
               onChange={(e) =>
                 updatePlaywright({ retry_count: parseInt(e.target.value) })
               }
@@ -135,7 +140,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="computer-use-enabled"
-                checked={config.computer_use.enabled}
+                checked={safeConfig.computer_use.enabled || false}
                 onChange={(e) => updateComputerUse({ enabled: e.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
@@ -147,15 +152,16 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="text"
               label="模型"
-              value={config.computer_use.model}
+              value={safeConfig.computer_use.model || 'claude-3-5-sonnet-20241022'}
               onChange={(e) => updateComputerUse({ model: e.target.value })}
-              helperText="例如: claude-3-5-sonnet-20241022"
+              disabled
+              helperText="Computer Use API 目前仅支持 claude-3-5-sonnet-20241022 (由 Anthropic API 限制)"
             />
 
             <Input
               type="number"
               label="最大 Tokens"
-              value={config.computer_use.max_tokens}
+              value={safeConfig.computer_use.max_tokens || 4096}
               onChange={(e) =>
                 updateComputerUse({ max_tokens: parseInt(e.target.value) })
               }
@@ -164,7 +170,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="超时时间 (毫秒)"
-              value={config.computer_use.timeout}
+              value={safeConfig.computer_use.timeout || 300000}
               onChange={(e) =>
                 updateComputerUse({ timeout: parseInt(e.target.value) })
               }
@@ -173,7 +179,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="截图间隔 (毫秒)"
-              value={config.computer_use.screenshot_interval}
+              value={safeConfig.computer_use.screenshot_interval || 5000}
               onChange={(e) =>
                 updateComputerUse({ screenshot_interval: parseInt(e.target.value) })
               }
@@ -183,7 +189,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="重试次数"
-              value={config.computer_use.retry_count}
+              value={safeConfig.computer_use.retry_count || 0}
               onChange={(e) =>
                 updateComputerUse({ retry_count: parseInt(e.target.value) })
               }
@@ -200,7 +206,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="hybrid-enabled"
-                checked={config.hybrid.enabled}
+                checked={safeConfig.hybrid.enabled || false}
                 onChange={(e) => updateHybrid({ enabled: e.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
@@ -211,7 +217,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
 
             <Select
               label="首选 Provider"
-              value={config.hybrid.primary_provider}
+              value={safeConfig.hybrid.primary_provider || 'playwright'}
               onChange={(e) =>
                 updateHybrid({ primary_provider: e.target.value as any })
               }
@@ -225,7 +231,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="hybrid-fallback"
-                checked={config.hybrid.fallback_enabled}
+                checked={safeConfig.hybrid.fallback_enabled || false}
                 onChange={(e) => updateHybrid({ fallback_enabled: e.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
@@ -238,7 +244,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="hybrid-error-fallback"
-                checked={config.hybrid.fallback_on_error}
+                checked={safeConfig.hybrid.fallback_on_error || false}
                 onChange={(e) => updateHybrid({ fallback_on_error: e.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
@@ -250,7 +256,7 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="自动切换阈值 (%)"
-              value={config.hybrid.auto_switch_threshold}
+              value={safeConfig.hybrid.auto_switch_threshold || 80}
               onChange={(e) =>
                 updateHybrid({ auto_switch_threshold: parseInt(e.target.value) })
               }

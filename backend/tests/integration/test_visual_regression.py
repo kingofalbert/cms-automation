@@ -10,7 +10,6 @@ from playwright.async_api import async_playwright, expect
 
 from src.services.providers.cdp_utils import VisualRegressionTester
 
-
 pytestmark = pytest.mark.asyncio
 
 

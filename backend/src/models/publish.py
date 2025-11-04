@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Dict, List, Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -79,7 +78,7 @@ class PublishTask(Base):
     )
 
     # Task identification
-    task_id: Mapped[Optional[str]] = mapped_column(
+    task_id: Mapped[str | None] = mapped_column(
         String(100),
         unique=True,
         nullable=True,
@@ -103,7 +102,7 @@ class PublishTask(Base):
         comment="Target CMS type (wordpress, drupal, etc.)",
     )
 
-    cms_url: Mapped[Optional[str]] = mapped_column(
+    cms_url: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         comment="Target CMS URL",
@@ -161,45 +160,45 @@ class PublishTask(Base):
         comment="Maximum retry attempts allowed",
     )
 
-    error_message: Mapped[Optional[str]] = mapped_column(
+    error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Error message if task failed",
     )
 
     # Execution metadata
-    session_id: Mapped[Optional[str]] = mapped_column(
+    session_id: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
         comment="Computer Use session ID",
     )
 
     # Screenshots array: [{url: str, step: str, timestamp: str, description: str}]
-    screenshots: Mapped[Optional[List]] = mapped_column(
+    screenshots: Mapped[list | None] = mapped_column(
         JSONB,
         nullable=True,
         default=list,
         comment="Array of screenshot metadata {url, step, timestamp}",
     )
 
-    cost_usd: Mapped[Optional[float]] = mapped_column(
+    cost_usd: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         comment="Cost in USD for this publishing task",
     )
 
     # Timing
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         comment="When task execution started",
     )
 
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         comment="When task completed (success or failure)",
     )
 
-    duration_seconds: Mapped[Optional[int]] = mapped_column(
+    duration_seconds: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
         comment="Total execution duration in seconds",
@@ -219,7 +218,7 @@ class PublishTask(Base):
         foreign_keys=[article_id],
     )
 
-    execution_logs: Mapped[List["ExecutionLog"]] = relationship(
+    execution_logs: Mapped[list["ExecutionLog"]] = relationship(
         "ExecutionLog",
         back_populates="task",
         cascade="all, delete-orphan",
@@ -293,7 +292,7 @@ class PublishTask(Base):
         self,
         url: str,
         step: str,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> None:
         """Add a screenshot to the task.
 
@@ -349,7 +348,7 @@ class PublishTask(Base):
         self.completed_steps = 0
         self.started_at = datetime.utcnow()
 
-    def mark_completed(self, cost_usd: Optional[float] = None) -> None:
+    def mark_completed(self, cost_usd: float | None = None) -> None:
         """Mark task as completed successfully.
 
         Args:
@@ -423,20 +422,20 @@ class ExecutionLog(Base):
         comment="Log severity level",
     )
 
-    step_name: Mapped[Optional[str]] = mapped_column(
+    step_name: Mapped[str | None] = mapped_column(
         String(100),
         nullable=True,
         comment="Publishing step name",
     )
 
-    message: Mapped[Optional[str]] = mapped_column(
+    message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Log message",
     )
 
     # Structured details (JSONB for flexibility)
-    details: Mapped[Optional[Dict]] = mapped_column(
+    details: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         default=dict,
@@ -444,25 +443,25 @@ class ExecutionLog(Base):
     )
 
     # Action tracking
-    action_type: Mapped[Optional[str]] = mapped_column(
+    action_type: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         comment="Action type (navigate, click, type, upload, screenshot)",
     )
 
-    action_target: Mapped[Optional[str]] = mapped_column(
+    action_target: Mapped[str | None] = mapped_column(
         String(200),
         nullable=True,
         comment="Target element (CSS selector, URL, etc.)",
     )
 
-    action_result: Mapped[Optional[str]] = mapped_column(
+    action_result: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         comment="Action result (success, failed, timeout)",
     )
 
-    screenshot_url: Mapped[Optional[str]] = mapped_column(
+    screenshot_url: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
         comment="Associated screenshot URL",
@@ -497,12 +496,12 @@ class ExecutionLog(Base):
         task_id: int,
         message: str,
         level: LogLevel = LogLevel.INFO,
-        step_name: Optional[str] = None,
-        action_type: Optional[str] = None,
-        action_target: Optional[str] = None,
-        action_result: Optional[str] = None,
-        screenshot_url: Optional[str] = None,
-        details: Optional[Dict] = None,
+        step_name: str | None = None,
+        action_type: str | None = None,
+        action_target: str | None = None,
+        action_result: str | None = None,
+        screenshot_url: str | None = None,
+        details: dict | None = None,
     ) -> "ExecutionLog":
         """Factory method to create a log entry.
 

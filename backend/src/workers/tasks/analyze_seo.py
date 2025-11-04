@@ -1,7 +1,7 @@
 """Celery task for SEO analysis."""
 
 import asyncio
-from typing import Any, Optional
+from typing import Any
 
 from src.config.database import DatabaseConfig
 from src.config.logging import get_logger
@@ -84,7 +84,7 @@ def analyze_seo_single_task(self, article_id: int) -> dict[str, Any]:
     name="analyze_seo_batch",
     queue="seo_analysis",
 )
-def analyze_seo_batch_task(self, limit: Optional[int] = None) -> dict[str, Any]:
+def analyze_seo_batch_task(self, limit: int | None = None) -> dict[str, Any]:
     """Background task to analyze SEO for all imported articles.
 
     Args:

@@ -3,10 +3,11 @@
 Fix enum types and run migrations for Supabase
 """
 
-import psycopg2
 import subprocess
 import sys
 from pathlib import Path
+
+import psycopg2
 
 # Supabase connection string
 db_url = 'postgresql://postgres.twsbhjmlmspjwfystpti:Xieping890$@aws-1-us-east-1.pooler.supabase.com:5432/postgres'

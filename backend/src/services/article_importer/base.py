@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from src.models import ArticleStatus
 
@@ -19,16 +19,16 @@ class ImportedArticle:
     # Optional fields
     status: ArticleStatus = ArticleStatus.IMPORTED
     source: str = "csv_import"
-    featured_image_path: Optional[str] = None
-    additional_images: Optional[list[str]] = None
-    cms_article_id: Optional[str] = None
-    published_url: Optional[str] = None
-    published_at: Optional[datetime] = None
+    featured_image_path: str | None = None
+    additional_images: list[str] | None = None
+    cms_article_id: str | None = None
+    published_url: str | None = None
+    published_at: datetime | None = None
     article_metadata: dict[str, Any] = field(default_factory=dict)
     formatting: dict[str, Any] = field(default_factory=dict)
 
     # SEO metadata (optional)
-    seo_metadata: Optional[dict[str, Any]] = None
+    seo_metadata: dict[str, Any] | None = None
 
     # Raw data for debugging
     raw_data: dict[str, Any] = field(default_factory=dict)
@@ -105,7 +105,7 @@ class ArticleImporter(ABC):
         pass
 
     @abstractmethod
-    async def validate_article(self, article: ImportedArticle) -> tuple[bool, Optional[str]]:
+    async def validate_article(self, article: ImportedArticle) -> tuple[bool, str | None]:
         """Validate a single article.
 
         Args:
@@ -135,7 +135,7 @@ class ArticleImporter(ABC):
         # Use hash to create integer ID (take absolute value and modulo to keep reasonable)
         return abs(hash(combined)) % 1_000_000_000
 
-    def _parse_datetime(self, value: Any) -> Optional[datetime]:
+    def _parse_datetime(self, value: Any) -> datetime | None:
         """Parse datetime from various formats.
 
         Args:

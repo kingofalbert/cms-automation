@@ -12,7 +12,7 @@ import { vi } from 'vitest';
 
 // Create a new QueryClient for each test
 export function createTestQueryClient() {
-  return new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
@@ -22,12 +22,9 @@ export function createTestQueryClient() {
         retry: false,
       },
     },
-    logger: {
-      log: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    },
   });
+
+  return queryClient;
 }
 
 interface AllTheProvidersProps {

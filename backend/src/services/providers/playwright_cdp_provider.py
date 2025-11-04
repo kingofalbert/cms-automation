@@ -11,12 +11,9 @@ Research: See specs/001-cms-automation/research.md Section 4.1
 
 import time
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from playwright.async_api import (
-    Browser,
-    BrowserContext,
-    CDPSession,
     Page,
     async_playwright,
     expect,
@@ -27,12 +24,11 @@ from src.services.providers.base import (
     ComputerUseProvider,
     ExecutionResult,
     ExecutionStep,
-    ProviderType,
     Screenshot,
 )
 from src.services.providers.cdp_utils import (
-    CDPPerformanceMonitor,
     CDPNetworkOptimizer,
+    CDPPerformanceMonitor,
     VisualRegressionTester,
 )
 
@@ -58,7 +54,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     - Performance-critical workflows
     """
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         """Initialize Playwright CDP provider.
 
         Args:
@@ -79,14 +75,14 @@ class PlaywrightCDPProvider(ComputerUseProvider):
         self.enable_network_optimization = config.get('enable_network_optimization', True)
 
         # CDP utilities
-        self.performance_monitor: Optional[CDPPerformanceMonitor] = None
-        self.network_optimizer: Optional[CDPNetworkOptimizer] = None
-        self.visual_tester: Optional[VisualRegressionTester] = None
+        self.performance_monitor: CDPPerformanceMonitor | None = None
+        self.network_optimizer: CDPNetworkOptimizer | None = None
+        self.visual_tester: VisualRegressionTester | None = None
 
     async def execute(
         self,
         instructions: str,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> ExecutionResult:
         """Execute WordPress publishing with CDP enhancements.
 
@@ -109,10 +105,10 @@ class PlaywrightCDPProvider(ComputerUseProvider):
             ExecutionResult with steps, screenshots, performance metrics
         """
         start_time = time.time()
-        steps: List[ExecutionStep] = []
-        screenshots: List[Screenshot] = []
-        performance_metrics: Dict[str, Any] = {}
-        network_stats: Dict[str, Any] = {}
+        steps: list[ExecutionStep] = []
+        screenshots: list[Screenshot] = []
+        performance_metrics: dict[str, Any] = {}
+        network_stats: dict[str, Any] = {}
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=self.headless)
@@ -271,7 +267,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_login(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 1: Login to WordPress admin."""
         start_time = datetime.utcnow()
@@ -324,7 +320,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_new_post(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 2: Navigate to new post page."""
         start_time = datetime.utcnow()
@@ -365,7 +361,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_fill_title(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 3: Fill article title."""
         start_time = datetime.utcnow()
@@ -403,7 +399,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_fill_content(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 4: Fill article content (Gutenberg)."""
         start_time = datetime.utcnow()
@@ -441,7 +437,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_upload_image(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 5: Upload featured image."""
         start_time = datetime.utcnow()
@@ -486,7 +482,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_fill_seo_fields(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 6: Fill SEO plugin fields (Yoast/Rank Math)."""
         start_time = datetime.utcnow()
@@ -536,7 +532,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_set_taxonomy(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 7: Set categories and tags."""
         start_time = datetime.utcnow()
@@ -586,7 +582,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _step_publish(
         self,
         page: Page,
-        context: Dict[str, Any]
+        context: dict[str, Any]
     ) -> tuple[ExecutionStep, Screenshot]:
         """Step 8: Publish article."""
         start_time = datetime.utcnow()
@@ -651,7 +647,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
             status="accessible"
         )
 
-    async def _detect_seo_plugin(self, page: Page) -> Optional[str]:
+    async def _detect_seo_plugin(self, page: Page) -> str | None:
         """Detect installed SEO plugin."""
         # Check for Yoast SEO
         yoast = await page.query_selector('#yoast-seo-metabox')
@@ -673,7 +669,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _fill_yoast_fields(
         self,
         page: Page,
-        seo_metadata: Dict[str, Any]
+        seo_metadata: dict[str, Any]
     ) -> None:
         """Fill Yoast SEO fields."""
         # Open Yoast panel
@@ -694,7 +690,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _fill_rankmath_fields(
         self,
         page: Page,
-        seo_metadata: Dict[str, Any]
+        seo_metadata: dict[str, Any]
     ) -> None:
         """Fill Rank Math SEO fields."""
         # Open Rank Math panel
@@ -715,7 +711,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
     async def _fill_aioseo_fields(
         self,
         page: Page,
-        seo_metadata: Dict[str, Any]
+        seo_metadata: dict[str, Any]
     ) -> None:
         """Fill All in One SEO fields."""
         # Open AIOSEO panel

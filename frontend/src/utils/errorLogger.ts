@@ -97,7 +97,7 @@ export function logError(
     timestamp: new Date().toISOString(),
     message: error.message || error.toString(),
     stack: error.stack,
-    componentStack: errorInfo?.componentStack,
+    componentStack: errorInfo?.componentStack ?? undefined,
     url: window.location.href,
     userAgent: navigator.userAgent,
     sessionId: getOrCreateSessionId(),
@@ -128,8 +128,11 @@ export function logError(
  * Send error to external error tracking service
  */
 async function sendToErrorTrackingService(errorLog: ErrorLog): Promise<void> {
+  const enableReportingEnv = import.meta.env.VITE_ENABLE_ERROR_REPORTING ?? 'true';
+  const enableReporting = String(enableReportingEnv).toLowerCase() === 'true';
+
   // Skip in development unless explicitly enabled
-  if (import.meta.env.DEV && !import.meta.env.VITE_ENABLE_ERROR_TRACKING) {
+  if (import.meta.env.DEV && !enableReporting) {
     return;
   }
 

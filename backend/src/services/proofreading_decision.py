@@ -5,30 +5,26 @@
 """
 
 import hashlib
-import json
-from datetime import datetime, timedelta
-from typing import List, Optional, Tuple, Dict, Any
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
-from collections import defaultdict, Counter
-from functools import lru_cache
+from datetime import datetime, timedelta
+from typing import Any
 
+from sqlalchemy import and_, case, distinct, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, or_, func, distinct, case
 from sqlalchemy.orm import selectinload
 
-from src.models.proofreading import (
-    ProofreadingHistory,
-    ProofreadingDecision,
-    FeedbackTuningJob,
-    DecisionType,
-    FeedbackStatus,
-    TuningJobType,
-    TuningJobStatus
-)
-from src.models.article import Article
 from src.config.logging import get_logger
 from src.config.settings import get_settings
-
+from src.models.article import Article
+from src.models.proofreading import (
+    DecisionType,
+    FeedbackTuningJob,
+    ProofreadingDecision,
+    ProofreadingHistory,
+    TuningJobStatus,
+    TuningJobType,
+)
 
 # ============================================================================
 # 數據模型定義
@@ -39,9 +35,9 @@ class DecisionInput:
     """決策輸入"""
     suggestion_id: str
     decision: DecisionType
-    custom_correction: Optional[str] = None
-    reason: Optional[str] = None
-    tags: Optional[List[str]] = None
+    custom_correction: str | None = None
+    reason: str | None = None
+    tags: list[str] | None = None
 
 
 @dataclass
@@ -57,7 +53,7 @@ class PatternDetail:
     pattern_type: str
     frequency: int
     rate: float
-    examples: List[str]
+    examples: list[str]
     confidence: float
 
 
@@ -69,7 +65,7 @@ class CorrectionPattern:
     correction_pattern: str
     frequency: int
     confidence: float
-    context: Dict[str, Any]
+    context: dict[str, Any]
 
 
 @dataclass
@@ -77,26 +73,26 @@ class TimePattern:
     """時間模式"""
     period: str
     trend: str  # "increasing", "decreasing", "stable"
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
 
 
 @dataclass
 class DecisionPatterns:
     """決策模式"""
-    common_acceptances: List[PatternDetail]
-    common_rejections: List[PatternDetail]
-    custom_corrections: List[CorrectionPattern]
-    time_patterns: List[TimePattern]
-    confidence_scores: Dict[str, float] = field(default_factory=dict)
+    common_acceptances: list[PatternDetail]
+    common_rejections: list[PatternDetail]
+    custom_corrections: list[CorrectionPattern]
+    time_patterns: list[TimePattern]
+    confidence_scores: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
 class UserPreferences:
     """用戶偏好"""
-    style_preferences: Dict[str, Any] = field(default_factory=dict)
-    vocabulary_preferences: List[str] = field(default_factory=list)
-    grammar_rules: List[str] = field(default_factory=list)
-    punctuation_habits: Dict[str, str] = field(default_factory=dict)
+    style_preferences: dict[str, Any] = field(default_factory=dict)
+    vocabulary_preferences: list[str] = field(default_factory=list)
+    grammar_rules: list[str] = field(default_factory=list)
+    punctuation_habits: dict[str, str] = field(default_factory=dict)
     confidence_level: float = 0.0
 
 
@@ -106,10 +102,10 @@ class LearningRule:
     rule_id: str
     rule_type: str  # "replacement", "style", "grammar"
     pattern: str
-    replacement: Optional[str] = None
-    context_conditions: Dict[str, Any] = field(default_factory=dict)
+    replacement: str | None = None
+    context_conditions: dict[str, Any] = field(default_factory=dict)
     confidence: float = 0.0
-    example_applications: List[str] = field(default_factory=list)
+    example_applications: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -118,7 +114,7 @@ class RuleApplication:
     rule_id: str
     original_text: str
     modified_text: str
-    position: Tuple[int, int]
+    position: tuple[int, int]
     confidence: float
 
 
@@ -129,18 +125,18 @@ class FeedbackAggregation:
     acceptance_rate: float
     rejection_rate: float
     modification_rate: float
-    suggestion_type_distribution: Dict[str, int]
-    user_activity: Dict[str, int]
+    suggestion_type_distribution: dict[str, int]
+    user_activity: dict[str, int]
     time_period: str
 
 
 @dataclass
 class TuningDataset:
     """模型調優數據集"""
-    positive_examples: List[Dict[str, str]]
-    negative_examples: List[Dict[str, str]]
-    custom_examples: List[Dict[str, str]]
-    metadata: Dict[str, Any]
+    positive_examples: list[dict[str, str]]
+    negative_examples: list[dict[str, str]]
+    custom_examples: list[dict[str, str]]
+    metadata: dict[str, Any]
 
 
 @dataclass
@@ -150,7 +146,7 @@ class QualityMetrics:
     relevance: float
     usefulness: float
     trend: str  # "improving", "declining", "stable"
-    details: Dict[str, float]
+    details: dict[str, float]
 
 
 @dataclass
@@ -159,7 +155,7 @@ class ImprovementArea:
     area_name: str
     current_performance: float
     target_performance: float
-    suggestions: List[str]
+    suggestions: list[str]
     priority: str  # "high", "medium", "low"
 
 
@@ -208,7 +204,7 @@ class ProofreadingDecisionService:
         self.min_pattern_threshold = 5  # 形成模式的最小決策數
         self.confidence_threshold = 0.8  # 規則置信度閾值
         self.cache_ttl = 3600  # 緩存時間（秒）
-        self._pattern_cache: Dict[str, DecisionPatterns] = {}
+        self._pattern_cache: dict[str, DecisionPatterns] = {}
 
     # ========================================================================
     # 決策記錄方法
@@ -221,9 +217,9 @@ class ProofreadingDecisionService:
         proofreading_history_id: int,
         suggestion_id: str,
         decision: DecisionType,
-        custom_correction: Optional[str] = None,
-        decision_reason: Optional[str] = None,
-        tags: Optional[List[str]] = None
+        custom_correction: str | None = None,
+        decision_reason: str | None = None,
+        tags: list[str] | None = None
     ) -> ProofreadingDecision:
         """記錄單個校對決策
 
@@ -309,8 +305,8 @@ class ProofreadingDecisionService:
         session: AsyncSession,
         article_id: int,
         proofreading_history_id: int,
-        decisions: List[DecisionInput]
-    ) -> List[ProofreadingDecision]:
+        decisions: list[DecisionInput]
+    ) -> list[ProofreadingDecision]:
         """批量記錄多個決策
 
         Args:
@@ -358,7 +354,7 @@ class ProofreadingDecisionService:
         session: AsyncSession,
         article_id: int,
         include_history: bool = False
-    ) -> List[ProofreadingDecision]:
+    ) -> list[ProofreadingDecision]:
         """獲取文章的所有決策記錄
 
         Args:
@@ -382,11 +378,11 @@ class ProofreadingDecisionService:
     async def get_user_decision_history(
         self,
         session: AsyncSession,
-        user_id: Optional[int] = None,
+        user_id: int | None = None,
         limit: int = 100,
         offset: int = 0,
-        time_range: Optional[DateRange] = None
-    ) -> List[ProofreadingDecision]:
+        time_range: DateRange | None = None
+    ) -> list[ProofreadingDecision]:
         """獲取用戶的決策歷史
 
         Args:
@@ -426,7 +422,7 @@ class ProofreadingDecisionService:
     async def analyze_decision_patterns(
         self,
         session: AsyncSession,
-        time_range: Optional[DateRange] = None,
+        time_range: DateRange | None = None,
         min_occurrences: int = 5
     ) -> DecisionPatterns:
         """分析決策模式
@@ -514,7 +510,7 @@ class ProofreadingDecisionService:
     async def extract_user_preferences(
         self,
         session: AsyncSession,
-        user_id: Optional[int] = None,
+        user_id: int | None = None,
         min_decisions: int = 20
     ) -> UserPreferences:
         """提取用戶偏好
@@ -568,7 +564,7 @@ class ProofreadingDecisionService:
         session: AsyncSession,
         patterns: DecisionPatterns,
         confidence_threshold: float = 0.8
-    ) -> List[LearningRule]:
+    ) -> list[LearningRule]:
         """從模式生成學習規則
 
         Args:
@@ -620,8 +616,8 @@ class ProofreadingDecisionService:
     async def apply_learning_rules(
         self,
         content: str,
-        rules: List[LearningRule]
-    ) -> Tuple[str, List[RuleApplication]]:
+        rules: list[LearningRule]
+    ) -> tuple[str, list[RuleApplication]]:
         """應用學習規則到新內容
 
         Args:
@@ -669,7 +665,7 @@ class ProofreadingDecisionService:
         self,
         session: AsyncSession,
         aggregation_period: str = "daily",
-        date: Optional[datetime] = None
+        date: datetime | None = None
     ) -> FeedbackAggregation:
         """聚合反饋數據
 
@@ -804,7 +800,7 @@ class ProofreadingDecisionService:
     async def evaluate_suggestion_quality(
         self,
         session: AsyncSession,
-        time_range: Optional[DateRange] = None
+        time_range: DateRange | None = None
     ) -> QualityMetrics:
         """評估校對建議質量
 
@@ -857,7 +853,7 @@ class ProofreadingDecisionService:
         session: AsyncSession,
         quality_metrics: QualityMetrics,
         target_accuracy: float = 0.85
-    ) -> List[ImprovementArea]:
+    ) -> list[ImprovementArea]:
         """識別需要改進的領域
 
         Args:
@@ -942,7 +938,7 @@ class ProofreadingDecisionService:
         session: AsyncSession,
         article_id: int,
         suggestion_id: str
-    ) -> Optional[ProofreadingDecision]:
+    ) -> ProofreadingDecision | None:
         """檢查是否已存在決策"""
         query = select(ProofreadingDecision).where(
             and_(
@@ -958,7 +954,7 @@ class ProofreadingDecisionService:
         session: AsyncSession,
         proofreading_history_id: int,
         suggestion_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """獲取建議詳情"""
         history = await session.get(ProofreadingHistory, proofreading_history_id)
         if not history or not history.suggestions:
@@ -974,7 +970,7 @@ class ProofreadingDecisionService:
         self,
         session: AsyncSession,
         decision: DecisionType,
-        suggestion_detail: Dict[str, Any]
+        suggestion_detail: dict[str, Any]
     ) -> float:
         """計算決策置信度"""
         base_confidence = 0.5
@@ -1033,9 +1029,9 @@ class ProofreadingDecisionService:
     async def _collect_decisions(
         self,
         session: AsyncSession,
-        time_range: Optional[DateRange] = None,
-        limit: Optional[int] = None
-    ) -> List[ProofreadingDecision]:
+        time_range: DateRange | None = None,
+        limit: int | None = None
+    ) -> list[ProofreadingDecision]:
         """收集決策數據"""
         query = select(ProofreadingDecision)
 
@@ -1057,8 +1053,8 @@ class ProofreadingDecisionService:
 
     def _group_by_suggestion_type(
         self,
-        decisions: List[ProofreadingDecision]
-    ) -> Dict[str, List[ProofreadingDecision]]:
+        decisions: list[ProofreadingDecision]
+    ) -> dict[str, list[ProofreadingDecision]]:
         """按建議類型分組"""
         grouped = defaultdict(list)
         for decision in decisions:
@@ -1067,9 +1063,9 @@ class ProofreadingDecisionService:
 
     def _identify_significant_patterns(
         self,
-        statistics: Dict[str, Dict],
+        statistics: dict[str, dict],
         min_occurrences: int = 5
-    ) -> Dict[str, List[PatternDetail]]:
+    ) -> dict[str, list[PatternDetail]]:
         """識別顯著模式"""
         acceptances = []
         rejections = []
@@ -1105,8 +1101,8 @@ class ProofreadingDecisionService:
 
     async def _extract_custom_patterns(
         self,
-        decisions_with_custom: List[ProofreadingDecision]
-    ) -> List[CorrectionPattern]:
+        decisions_with_custom: list[ProofreadingDecision]
+    ) -> list[CorrectionPattern]:
         """提取自定義修正模式"""
         patterns = []
         pattern_counter = Counter()
@@ -1139,8 +1135,8 @@ class ProofreadingDecisionService:
 
     def _analyze_time_patterns(
         self,
-        decisions: List[ProofreadingDecision]
-    ) -> List[TimePattern]:
+        decisions: list[ProofreadingDecision]
+    ) -> list[TimePattern]:
         """分析時間模式"""
         if not decisions:
             return []
@@ -1183,8 +1179,8 @@ class ProofreadingDecisionService:
 
     def _calculate_pattern_confidence(
         self,
-        statistics: Dict[str, Dict]
-    ) -> Dict[str, float]:
+        statistics: dict[str, dict]
+    ) -> dict[str, float]:
         """計算模式置信度"""
         confidence_scores = {}
 
@@ -1208,7 +1204,7 @@ class ProofreadingDecisionService:
 
         return confidence_scores
 
-    def _calculate_confidence_score(self, stats: Dict) -> float:
+    def _calculate_confidence_score(self, stats: dict) -> float:
         """計算單個統計的置信度分數"""
         sample_size = stats.get('total', 0)
 
@@ -1224,8 +1220,8 @@ class ProofreadingDecisionService:
 
     def _analyze_style_preferences(
         self,
-        decisions: List[ProofreadingDecision]
-    ) -> Dict[str, Any]:
+        decisions: list[ProofreadingDecision]
+    ) -> dict[str, Any]:
         """分析寫作風格偏好"""
         preferences = {
             'formal_level': 'neutral',  # formal, neutral, casual
@@ -1239,8 +1235,8 @@ class ProofreadingDecisionService:
 
     def _extract_vocabulary_preferences(
         self,
-        decisions: List[ProofreadingDecision]
-    ) -> List[str]:
+        decisions: list[ProofreadingDecision]
+    ) -> list[str]:
         """提取詞彙使用偏好"""
         preferred_words = []
 
@@ -1255,8 +1251,8 @@ class ProofreadingDecisionService:
 
     def _identify_grammar_preferences(
         self,
-        decisions: List[ProofreadingDecision]
-    ) -> List[str]:
+        decisions: list[ProofreadingDecision]
+    ) -> list[str]:
         """識別語法規則偏好"""
         grammar_rules = []
 
@@ -1272,8 +1268,8 @@ class ProofreadingDecisionService:
 
     def _analyze_punctuation_habits(
         self,
-        decisions: List[ProofreadingDecision]
-    ) -> Dict[str, str]:
+        decisions: list[ProofreadingDecision]
+    ) -> dict[str, str]:
         """分析標點符號習慣"""
         habits = {}
 
@@ -1286,7 +1282,7 @@ class ProofreadingDecisionService:
 
         return habits
 
-    def _create_style_rule(self, pattern: PatternDetail) -> Optional[LearningRule]:
+    def _create_style_rule(self, pattern: PatternDetail) -> LearningRule | None:
         """創建風格規則"""
         if pattern.frequency < self.min_pattern_threshold:
             return None
@@ -1303,7 +1299,7 @@ class ProofreadingDecisionService:
             example_applications=pattern.examples[:3]
         )
 
-    def _create_negative_rule(self, pattern: PatternDetail) -> Optional[LearningRule]:
+    def _create_negative_rule(self, pattern: PatternDetail) -> LearningRule | None:
         """創建否定規則"""
         if pattern.frequency < self.min_pattern_threshold:
             return None
@@ -1321,7 +1317,7 @@ class ProofreadingDecisionService:
             example_applications=pattern.examples[:3]
         )
 
-    def _validate_rule_consistency(self, rules: List[LearningRule]) -> List[LearningRule]:
+    def _validate_rule_consistency(self, rules: list[LearningRule]) -> list[LearningRule]:
         """驗證規則一致性"""
         # 檢查衝突規則
         validated_rules = []
@@ -1345,7 +1341,7 @@ class ProofreadingDecisionService:
     async def _analyze_quality_trend(
         self,
         session: AsyncSession,
-        time_range: Optional[DateRange]
+        time_range: DateRange | None
     ) -> str:
         """分析質量趨勢"""
         # 獲取歷史數據進行比較
@@ -1369,7 +1365,7 @@ class ProofreadingDecisionService:
         else:
             return "stable"
 
-    def _get_cache_key(self, prefix: str, time_range: Optional[DateRange]) -> str:
+    def _get_cache_key(self, prefix: str, time_range: DateRange | None) -> str:
         """生成緩存鍵"""
         if time_range:
             return f"{prefix}_{time_range.start_date.date()}_{time_range.end_date.date()}"

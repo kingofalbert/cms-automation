@@ -2,18 +2,18 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import List, Optional, Dict, Any
+from typing import Optional
 
 from sqlalchemy import (
+    TIMESTAMP,
     Boolean,
+    CheckConstraint,
     Date,
     Enum,
     ForeignKey,
     Integer,
     String,
     Text,
-    TIMESTAMP,
-    CheckConstraint,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -79,12 +79,12 @@ class ProofreadingHistory(Base):
         index=True,
         comment="执行时间",
     )
-    execution_duration_ms: Mapped[Optional[int]] = mapped_column(
+    execution_duration_ms: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
         comment="执行耗时（毫秒）",
     )
-    engine_version: Mapped[Optional[str]] = mapped_column(
+    engine_version: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
         comment="引擎版本号",
@@ -177,14 +177,14 @@ class ProofreadingHistory(Base):
         default=dict,
         comment="校对问题的完整快照",
     )
-    config_snapshot: Mapped[Optional[dict]] = mapped_column(
+    config_snapshot: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         comment="校对配置快照",
     )
 
     # 审计字段
-    executed_by: Mapped[Optional[int]] = mapped_column(
+    executed_by: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
         comment="执行者用户ID",
@@ -201,7 +201,7 @@ class ProofreadingHistory(Base):
         "Article",
         back_populates="proofreading_histories"
     )
-    decisions: Mapped[List["ProofreadingDecision"]] = relationship(
+    decisions: Mapped[list["ProofreadingDecision"]] = relationship(
         "ProofreadingDecision",
         back_populates="history",
         cascade="all, delete-orphan",
@@ -265,7 +265,7 @@ class ProofreadingDecision(Base, TimestampMixin):
         nullable=False,
         comment="建议的唯一标识符",
     )
-    proofreading_history_id: Mapped[Optional[int]] = mapped_column(
+    proofreading_history_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("proofreading_history.id", ondelete="SET NULL"),
         nullable=True,
@@ -279,12 +279,12 @@ class ProofreadingDecision(Base, TimestampMixin):
         index=True,
         comment="决策类型",
     )
-    decision_rationale: Mapped[Optional[str]] = mapped_column(
+    decision_rationale: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="决策理由",
     )
-    modified_content: Mapped[Optional[str]] = mapped_column(
+    modified_content: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="修改后的内容",
@@ -307,12 +307,12 @@ class ProofreadingDecision(Base, TimestampMixin):
         index=True,
         comment="触发的规则ID",
     )
-    rule_category: Mapped[Optional[str]] = mapped_column(
+    rule_category: Mapped[str | None] = mapped_column(
         String(10),
         nullable=True,
         comment="规则类别",
     )
-    issue_position: Mapped[Optional[dict]] = mapped_column(
+    issue_position: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         comment="问题位置信息",
@@ -325,12 +325,12 @@ class ProofreadingDecision(Base, TimestampMixin):
         default=False,
         comment="是否提供了反馈",
     )
-    feedback_category: Mapped[Optional[str]] = mapped_column(
+    feedback_category: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         comment="反馈类别",
     )
-    feedback_notes: Mapped[Optional[str]] = mapped_column(
+    feedback_notes: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="反馈备注",
@@ -427,24 +427,24 @@ class FeedbackTuningJob(Base):
         nullable=False,
         comment="任务类型",
     )
-    job_name: Mapped[Optional[str]] = mapped_column(
+    job_name: Mapped[str | None] = mapped_column(
         String(200),
         nullable=True,
         comment="任务名称",
     )
-    job_description: Mapped[Optional[str]] = mapped_column(
+    job_description: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="任务描述",
     )
 
     # 处理范围
-    target_rule_ids: Mapped[Optional[List[str]]] = mapped_column(
+    target_rule_ids: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text),
         nullable=True,
         comment="目标规则ID列表",
     )
-    target_categories: Mapped[Optional[List[str]]] = mapped_column(
+    target_categories: Mapped[list[str] | None] = mapped_column(
         ARRAY(Text),
         nullable=True,
         comment="目标规则类别列表",
@@ -490,29 +490,29 @@ class FeedbackTuningJob(Base):
     )
 
     # 执行结果
-    results: Mapped[Optional[dict]] = mapped_column(
+    results: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         comment="分析结果",
     )
-    recommendations: Mapped[Optional[dict]] = mapped_column(
+    recommendations: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         comment="优化建议",
     )
-    error_message: Mapped[Optional[str]] = mapped_column(
+    error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="错误消息",
     )
-    error_details: Mapped[Optional[dict]] = mapped_column(
+    error_details: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         comment="错误详情",
     )
 
     # 时间戳
-    created_by: Mapped[Optional[int]] = mapped_column(
+    created_by: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
         comment="创建者用户ID",
@@ -524,12 +524,12 @@ class FeedbackTuningJob(Base):
         index=True,
         comment="创建时间",
     )
-    started_at: Mapped[Optional[datetime]] = mapped_column(
+    started_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP,
         nullable=True,
         comment="开始时间",
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(
+    completed_at: Mapped[datetime | None] = mapped_column(
         TIMESTAMP,
         nullable=True,
         comment="完成时间",
@@ -566,7 +566,7 @@ class FeedbackTuningJob(Base):
         return self.status == TuningJobStatus.FAILED
 
     @property
-    def duration_seconds(self) -> Optional[int]:
+    def duration_seconds(self) -> int | None:
         """计算执行时长（秒）."""
         if self.started_at and self.completed_at:
             return int((self.completed_at - self.started_at).total_seconds())
@@ -594,7 +594,7 @@ class FeedbackTuningJob(Base):
         self.results = results
         self.recommendations = recommendations
 
-    def mark_failed(self, error_message: str, error_details: Optional[dict] = None) -> None:
+    def mark_failed(self, error_message: str, error_details: dict | None = None) -> None:
         """标记任务失败."""
         self.status = TuningJobStatus.FAILED
         self.completed_at = datetime.utcnow()

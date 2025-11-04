@@ -1,7 +1,8 @@
 """Tests for CSV importer."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from src.models import ArticleStatus
 from src.services.article_importer.csv_importer import CSVImporter

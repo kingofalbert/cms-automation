@@ -36,7 +36,7 @@ beforeAll(() => {
   });
 
   // Mock IntersectionObserver
-  (global as any).IntersectionObserver = class IntersectionObserver {
+  (globalThis as any).IntersectionObserver = class IntersectionObserver {
     constructor() {}
     disconnect() {}
     observe() {}
@@ -47,7 +47,7 @@ beforeAll(() => {
   };
 
   // Mock ResizeObserver
-  (global as any).ResizeObserver = class ResizeObserver {
+  (globalThis as any).ResizeObserver = class ResizeObserver {
     constructor() {}
     disconnect() {}
     observe() {}
@@ -74,6 +74,7 @@ afterAll(() => {
   console.error = originalError;
 });
 
-// Set test environment variables
-import.meta.env.VITE_API_URL = 'http://localhost:8000';
-import.meta.env.VITE_WS_URL = 'ws://localhost:8000/ws';
+beforeAll(() => {
+  vi.stubEnv('VITE_API_URL', 'http://localhost:8000');
+  vi.stubEnv('VITE_WS_URL', 'ws://localhost:8000/ws');
+});

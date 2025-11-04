@@ -36,7 +36,7 @@ export default function WorklistPage() {
       if (filters.search) params.search = filters.search;
       if (filters.author) params.author = filters.author;
 
-      const response = await axios.get<WorklistItem[]>('/api/v1/worklist', {
+      const response = await axios.get<WorklistItem[]>('v1/worklist', {
         params,
       });
       return response.data;
@@ -48,7 +48,7 @@ export default function WorklistPage() {
   const { data: statistics } = useQuery({
     queryKey: ['worklist-statistics'],
     queryFn: async () => {
-      const response = await axios.get<Stats>('/api/v1/worklist/statistics');
+      const response = await axios.get<Stats>('v1/worklist/statistics');
       return response.data;
     },
     refetchInterval: 60000, // Refresh every minute
@@ -59,7 +59,7 @@ export default function WorklistPage() {
     queryKey: ['drive-sync-status'],
     queryFn: async () => {
       const response = await axios.get<DriveSyncStatus>(
-        '/api/v1/worklist/sync-status'
+        'v1/worklist/sync-status'
       );
       return response.data;
     },
@@ -69,7 +69,7 @@ export default function WorklistPage() {
   // Sync with Google Drive
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await axios.post('/api/v1/worklist/sync');
+      const response = await axios.post('v1/worklist/sync');
       return response.data;
     },
     onSuccess: () => {

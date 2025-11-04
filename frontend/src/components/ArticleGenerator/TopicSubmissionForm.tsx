@@ -2,9 +2,8 @@
  * Topic submission form component for article generation.
  */
 
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Button, Card, CardContent, CardHeader, Input } from '../ui';
+import { Button, Card, CardContent, CardHeader } from '../ui';
 
 interface TopicFormData {
   topic_description: string;

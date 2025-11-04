@@ -3,16 +3,13 @@
 測試從規則創建、Claude 編譯、發布到下載和應用的完整流程
 """
 
-import pytest
 import json
-import os
-from datetime import datetime
-from unittest.mock import MagicMock, AsyncMock, patch
+
+import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 
 from src.api.routes import register_routes
-from src.schemas.proofreading_decision import ReviewStatus
 
 
 # Mock Claude 編譯器以避免實際 API 調用
@@ -183,7 +180,7 @@ async def test_proofreading_complete_workflow(app_client):
     detail_data = detail_response.json()
     assert detail_data["success"] is True
     assert len(detail_data["data"]["rules"]) == 3
-    print(f"✅ 草稿詳情獲取成功")
+    print("✅ 草稿詳情獲取成功")
     print(f"   狀態: {detail_data['data']['status']}")
 
     # ========== 步驟 3: 批量審查規則 ==========
@@ -205,7 +202,7 @@ async def test_proofreading_complete_workflow(app_client):
     assert review_response.status_code == 200
     review_data = review_response.json()
     assert review_data["success"] is True
-    print(f"✅ 規則審查完成")
+    print("✅ 規則審查完成")
     print(f"   已批准: {review_data['data']['approved_count']}")
 
     # ========== 步驟 4: 使用 Claude 編譯單個規則 ==========
@@ -224,7 +221,7 @@ async def test_proofreading_complete_workflow(app_client):
     assert compile_data["success"] is True
     assert compile_data["compiler"] == "claude-3.5-sonnet"
     assert "pattern" in compile_data["data"]
-    print(f"✅ 單規則編譯成功")
+    print("✅ 單規則編譯成功")
     print(f"   編譯器: {compile_data['compiler']}")
     print(f"   置信度: {compile_data['data']['confidence']}")
 
@@ -241,7 +238,7 @@ async def test_proofreading_complete_workflow(app_client):
     assert batch_data["success"] is True
     assert batch_data["data"]["total"] == 3
     assert len(batch_data["data"]["compiled_rules"]) == 3
-    print(f"✅ 批量編譯成功")
+    print("✅ 批量編譯成功")
     print(f"   編譯數量: {batch_data['data']['total']}")
 
     # ========== 步驟 6: 發布規則集（使用 Claude 編譯） ==========
@@ -260,7 +257,7 @@ async def test_proofreading_complete_workflow(app_client):
     publish_data = publish_response.json()
     assert publish_data["success"] is True
     ruleset_id = publish_data["data"]["ruleset_id"]
-    print(f"✅ 規則集發布成功")
+    print("✅ 規則集發布成功")
     print(f"   規則集 ID: {ruleset_id}")
     print(f"   規則數量: {publish_data['data']['total_rules']}")
     print(f"   編譯統計: {json.dumps(publish_data['data']['compilation_stats'], ensure_ascii=False)}")
@@ -275,7 +272,7 @@ async def test_proofreading_complete_workflow(app_client):
     assert published_response.status_code == 200
     published_data = published_response.json()
     assert published_data["success"] is True
-    print(f"✅ 規則集列表獲取成功")
+    print("✅ 規則集列表獲取成功")
     print(f"   規則集數量: {len(published_data['data']['rulesets'])}")
 
     # ========== 步驟 8: 測試規則 ==========
@@ -308,7 +305,7 @@ async def test_proofreading_complete_workflow(app_client):
     assert test_response.status_code == 200
     test_data = test_response.json()
     assert test_data["success"] is True
-    print(f"✅ 規則測試完成")
+    print("✅ 規則測試完成")
     print(f"   原始文本: {test_content}")
     print(f"   修改建議數: {test_data['data']['total_suggestions']}")
 
@@ -322,22 +319,22 @@ async def test_proofreading_complete_workflow(app_client):
     assert compare_response.status_code == 200
     compare_data = compare_response.json()
     assert compare_data["success"] is True
-    print(f"✅ 編譯方法比較完成")
+    print("✅ 編譯方法比較完成")
     print(f"   比較方法數: {len(compare_data['comparison'])}")
 
     # ========== 測試完成統計 ==========
     print("\n" + "="*80)
     print("📈 測試完成統計")
     print("="*80)
-    print(f"✅ 草稿創建: 成功")
-    print(f"✅ 草稿獲取: 成功")
-    print(f"✅ 規則審查: 成功")
+    print("✅ 草稿創建: 成功")
+    print("✅ 草稿獲取: 成功")
+    print("✅ 規則審查: 成功")
     print(f"✅ Claude 單規則編譯: 成功 (調用 {mock_compiler.compile_count} 次)")
-    print(f"✅ Claude 批量編譯: 成功")
-    print(f"✅ 規則集發布: 成功")
-    print(f"✅ 規則集列表: 成功")
-    print(f"✅ 規則測試: 成功")
-    print(f"✅ 編譯方法比較: 成功")
+    print("✅ Claude 批量編譯: 成功")
+    print("✅ 規則集發布: 成功")
+    print("✅ 規則集列表: 成功")
+    print("✅ 規則測試: 成功")
+    print("✅ 編譯方法比較: 成功")
     print("\n🎉 所有測試通過！")
 
 
@@ -403,7 +400,7 @@ async def test_rule_modification(app_client):
     assert modify_response.status_code == 200
     modify_data = modify_response.json()
     assert modify_data["success"] is True
-    print(f"✅ 規則修改成功")
+    print("✅ 規則修改成功")
 
 
 @pytest.mark.asyncio
@@ -445,7 +442,7 @@ async def test_draft_lifecycle(app_client):
         f"/api/v1/proofreading/decisions/rules/drafts/{draft_id}"
     )
     assert detail_response.status_code == 200
-    print(f"✅ 草稿詳情獲取成功")
+    print("✅ 草稿詳情獲取成功")
 
     # 4. 審查規則
     rules = detail_response.json()["data"]["rules"]
@@ -460,7 +457,7 @@ async def test_draft_lifecycle(app_client):
         }
     )
     assert review_response.status_code == 200
-    print(f"✅ 規則審查完成")
+    print("✅ 規則審查完成")
 
     print("\n🎉 草稿生命週期測試完成！")
 

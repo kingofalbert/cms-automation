@@ -5,10 +5,10 @@
  * Provides visual feedback of refresh status and interval configuration.
  */
 
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { Switch, Select, Space, Typography, Badge } from 'antd';
 import { ReloadOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import { useQueryPolling, UsePollingReturn } from '../hooks/usePolling';
+import { useQueryPolling } from '../hooks/usePolling';
 
 const { Text } = Typography;
 
@@ -16,7 +16,7 @@ interface AutoRefreshControlProps {
   /**
    * Refetch function from React Query
    */
-  onRefresh: () => Promise<any>;
+  onRefresh: () => Promise<unknown>;
 
   /**
    * Polling interval in milliseconds
@@ -93,7 +93,7 @@ export function AutoRefreshControl({
   intervalOptions = [3000, 5000, 10000, 30000, 60000],
   onPollingChange,
 }: AutoRefreshControlProps) {
-  const [interval, setInterval] = React.useState(initialInterval);
+  const [interval, setInterval] = useState(initialInterval);
 
   const { isPolling, toggle, errorCount, resetErrors } = useQueryPolling(onRefresh, {
     interval,
@@ -105,7 +105,7 @@ export function AutoRefreshControl({
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     onPollingChange?.(isPolling);
   }, [isPolling, onPollingChange]);
 

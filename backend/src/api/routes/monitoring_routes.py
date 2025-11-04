@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.api.routes.publish_routes import _serialize_publish_task
 from src.api.schemas import (
     ExecutionLogEntry,
     PaginatedResponse,
@@ -12,7 +13,6 @@ from src.api.schemas import (
     TaskFilters,
     TaskStatistics,
 )
-from src.api.routes.publish_routes import _serialize_publish_task
 from src.config.database import get_session
 from src.config.logging import get_logger
 from src.services.monitoring import TaskMonitoringService

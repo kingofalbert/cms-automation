@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Dict, Optional
+from typing import Any
 
 from src.config import get_logger
 from src.services.publishing import PublishingOrchestrator
@@ -16,8 +16,8 @@ def _run_publish_workflow(
     publish_task_id: int,
     article_id: int,
     provider: str,
-    options: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    options: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Helper to execute orchestrator in a synchronous Celery task."""
     orchestrator = PublishingOrchestrator()
     return asyncio.run(
@@ -40,8 +40,8 @@ def publish_article_task(
     publish_task_id: int,
     article_id: int,
     provider: str,
-    options: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    options: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Celery entrypoint for new publishing tasks."""
     logger.info(
         "publishing_task_started",
@@ -89,8 +89,8 @@ def retry_publish_article_task(
     publish_task_id: int,
     article_id: int,
     provider: str,
-    options: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    options: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Celery entrypoint for retrying existing publishing tasks."""
     logger.info(
         "publishing_task_retry_started",

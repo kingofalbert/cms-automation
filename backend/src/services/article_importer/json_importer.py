@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from src.config import get_logger
 from src.models import ArticleStatus
@@ -76,7 +76,7 @@ class JSONImporter(ArticleImporter):
             raise FileNotFoundError(f"JSON file not found: {file_path}")
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON format: {e}")
@@ -210,7 +210,7 @@ class JSONImporter(ArticleImporter):
 
         return status_map.get(status_str, ArticleStatus.IMPORTED)
 
-    def _parse_seo_metadata(self, seo_data: Any) -> Optional[dict[str, Any]]:
+    def _parse_seo_metadata(self, seo_data: Any) -> dict[str, Any] | None:
         """Parse SEO metadata from JSON object.
 
         Args:
@@ -257,7 +257,7 @@ class JSONImporter(ArticleImporter):
 
         return seo_metadata if seo_metadata else None
 
-    async def validate_article(self, article: ImportedArticle) -> tuple[bool, Optional[str]]:
+    async def validate_article(self, article: ImportedArticle) -> tuple[bool, str | None]:
         """Validate a single article.
 
         Args:
@@ -288,7 +288,7 @@ class JSONImporter(ArticleImporter):
 
         return True, None
 
-    def _validate_seo_metadata(self, seo_metadata: dict[str, Any]) -> tuple[bool, Optional[str]]:
+    def _validate_seo_metadata(self, seo_metadata: dict[str, Any]) -> tuple[bool, str | None]:
         """Validate SEO metadata fields.
 
         Args:

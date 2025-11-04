@@ -3,7 +3,6 @@
 import os
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
@@ -23,7 +22,7 @@ logger = get_logger(__name__)
 @router.post("/import", response_model=ImportInitiateResponse, status_code=status.HTTP_202_ACCEPTED)
 async def import_articles(
     file: UploadFile = File(..., description="Import file (CSV, JSON, or WordPress XML)"),
-    file_format: Optional[str] = Form(
+    file_format: str | None = Form(
         None,
         description="File format (csv, json, wordpress). Auto-detected if not provided.",
     ),

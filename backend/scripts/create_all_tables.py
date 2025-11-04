@@ -3,8 +3,8 @@
 Create all CMS Automation tables directly in Supabase
 """
 
+
 import psycopg2
-from datetime import datetime
 
 # Supabase connection string
 db_url = 'postgresql://postgres.twsbhjmlmspjwfystpti:Xieping890$@aws-1-us-east-1.pooler.supabase.com:5432/postgres'

@@ -6,22 +6,22 @@
 
 import { api, apiClient } from './api-client';
 import type {
-  DraftRule,
-  RuleDraft,
   SaveDraftRequest,
-  ReviewItem,
-  BatchReviewRequest,
-  PublishRulesRequest,
   PublishedRuleset,
-  TestRulesRequest,
-  TestResult,
   ProofreadingStats,
   APIResponse,
   PaginatedResponse,
 } from '../types/api';
+import type {
+  DraftRule,
+  RuleDraft,
+  ReviewItem,
+  PublishRulesRequest,
+  TestResult,
+} from '../types/proofreading';
 
 class RuleManagementAPI {
-  private baseURL: string = '/api/v1/proofreading/decisions';
+  private baseURL: string = '/v1/proofreading/decisions';
 
   constructor() {
     // No need for constructor body - baseURL is initialized above

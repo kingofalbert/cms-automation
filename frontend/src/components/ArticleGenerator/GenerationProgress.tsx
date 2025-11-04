@@ -37,13 +37,11 @@ export function GenerationProgress({
   // Poll for status updates every 2 seconds when processing
   const { data: topicRequest, isLoading } = useQuery<TopicRequest>({
     queryKey: ['topic-request', topicRequestId],
-    queryFn: async () => {
-      const response = await api.get<TopicRequest>(`/v1/topics/${topicRequestId}`);
-      return response.data;
-    },
-    refetchInterval: (data) => {
+    queryFn: async () => api.get<TopicRequest>(`/v1/topics/${topicRequestId}`),
+    refetchInterval: (query) => {
+      const currentStatus = query.state.data?.status;
       // Stop polling if completed, failed, or cancelled
-      if (!data || ['completed', 'failed', 'cancelled'].includes(data.status)) {
+      if (!currentStatus || ['completed', 'failed', 'cancelled'].includes(currentStatus)) {
         return false;
       }
       // Poll every 2 seconds while pending or processing

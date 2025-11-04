@@ -1,7 +1,8 @@
 """Tests for JSON importer."""
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from src.models import ArticleStatus
 from src.services.article_importer.json_importer import JSONImporter

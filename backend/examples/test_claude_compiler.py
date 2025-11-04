@@ -4,10 +4,8 @@
 展示實際使用場景
 """
 
-import os
 import json
-import asyncio
-from typing import List, Dict, Any
+import os
 
 
 def test_claude_compiler_demo():
@@ -77,7 +75,6 @@ def test_claude_compiler_demo():
         results = simulate_claude_compilation(test_cases)
     else:
         # 真實 API 調用
-        from src.services.claude_rule_compiler import create_claude_compiler
         results = compile_with_real_claude(test_cases)
 
     # 顯示結果
@@ -87,7 +84,7 @@ def test_claude_compiler_demo():
     test_compiled_rules(results)
 
 
-def simulate_claude_compilation(test_cases: List[Dict]) -> List[Dict]:
+def simulate_claude_compilation(test_cases: list[dict]) -> list[dict]:
     """模擬 Claude 編譯結果"""
 
     simulated_results = {
@@ -150,7 +147,7 @@ def simulate_claude_compilation(test_cases: List[Dict]) -> List[Dict]:
     return results
 
 
-def compile_with_real_claude(test_cases: List[Dict]) -> List[Dict]:
+def compile_with_real_claude(test_cases: list[dict]) -> list[dict]:
     """使用真實的 Claude API 編譯"""
 
     from src.services.claude_rule_compiler import create_claude_compiler
@@ -181,7 +178,7 @@ def compile_with_real_claude(test_cases: List[Dict]) -> List[Dict]:
         return simulate_claude_compilation(test_cases)
 
 
-def display_results(results: List[Dict]):
+def display_results(results: list[dict]):
     """顯示編譯結果"""
 
     print("\n" + "=" * 80)
@@ -195,7 +192,7 @@ def display_results(results: List[Dict]):
         print(f"\n案例 {test_case['id']}: {test_case['description'][:40]}...")
         print("-" * 60)
 
-        print(f"✅ 編譯成功")
+        print("✅ 編譯成功")
         print(f"   規則類型: {compiled.get('rule_type', 'unknown')}")
         print(f"   置信度: {compiled.get('confidence', 0):.2f}")
         print(f"   優先級: {compiled.get('priority', 0)}")
@@ -210,7 +207,7 @@ def display_results(results: List[Dict]):
             print(f"   解釋: {compiled['explanation']}")
 
 
-def test_compiled_rules(results: List[Dict]):
+def test_compiled_rules(results: list[dict]):
     """測試編譯後的規則"""
 
     print("\n" + "=" * 80)

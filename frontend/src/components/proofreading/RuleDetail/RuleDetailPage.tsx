@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, type FC } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -11,7 +11,6 @@ import {
   Tag,
   Divider,
   Modal,
-  Tooltip
 } from 'antd';
 import {
   ArrowLeftOutlined,
@@ -19,25 +18,22 @@ import {
   CloseOutlined,
   EditOutlined,
   ExperimentOutlined,
-  SaveOutlined,
   RocketOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
-import { RuleDraft, DraftRule, ReviewStatus, ReviewAction } from '../../../types/proofreading';
+import { RuleDraft, ReviewAction } from '../../../types/proofreading';
 import ruleManagementAPI from '../../../services/ruleManagementAPI';
 import RuleCard from './RuleCard';
 import BatchReviewPanel from './BatchReviewPanel';
 import './RuleDetailPage.css';
 
-const RuleDetailPage: React.FC = () => {
+const RuleDetailPage: FC = () => {
   const { draftId } = useParams<{ draftId: string }>();
   const navigate = useNavigate();
   const [draft, setDraft] = useState<RuleDraft | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedRules, setSelectedRules] = useState<string[]>([]);
   const [showBatchReview, setShowBatchReview] = useState(false);
-  const [editingRule, setEditingRule] = useState<string | null>(null);
-  const [testingRule, setTestingRule] = useState<string | null>(null);
 
   // 載入草稿詳情
   const loadDraftDetail = async () => {
@@ -141,7 +137,9 @@ const RuleDetailPage: React.FC = () => {
 
   // 計算進度統計
   const getProgressStats = () => {
-    if (!draft) return { percent: 0, approved: 0, modified: 0, rejected: 0, pending: 0 };
+    if (!draft || !draft.review_progress) {
+      return { percent: 0, approved: 0, modified: 0, rejected: 0, pending: 0 };
+    }
 
     const stats = draft.review_progress;
     const percent = stats.total > 0 ? Math.round((stats.reviewed / stats.total) * 100) : 0;
@@ -275,8 +273,6 @@ const RuleDetailPage: React.FC = () => {
               }
             }}
             onReview={handleRuleReview}
-            onEdit={() => setEditingRule(rule.rule_id)}
-            onTest={() => setTestingRule(rule.rule_id)}
           />
         ))}
       </div>

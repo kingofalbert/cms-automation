@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +26,7 @@ class SettingsService:
         """Load settings record, creating defaults if missing."""
         return await self._ensure_settings()
 
-    async def update_settings(self, updates: Dict[str, Dict[str, Any]]) -> AppSettings:
+    async def update_settings(self, updates: dict[str, dict[str, Any]]) -> AppSettings:
         """Apply partial settings update."""
         settings = await self._ensure_settings()
         changed = False
@@ -63,7 +63,7 @@ class SettingsService:
 
         return settings
 
-    async def test_connection(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def test_connection(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Test CMS connectivity using stored or supplied credentials."""
         settings = await self._ensure_settings()
         cms_config = dict(settings.cms_config or {})
@@ -83,7 +83,7 @@ class SettingsService:
                 "details": {"cms_type": cms_type},
             }
 
-        credentials: Dict[str, Any]
+        credentials: dict[str, Any]
         if cms_type == "wordpress":
             if not username or not application_password:
                 return {
@@ -149,7 +149,7 @@ class SettingsService:
         await self.session.refresh(settings)
         return settings
 
-    def _default_payload(self) -> Dict[str, Any]:
+    def _default_payload(self) -> dict[str, Any]:
         """Construct default settings record."""
         env_settings = get_settings()
 
@@ -191,9 +191,9 @@ class SettingsService:
         }
 
     def _merge_dict(
-        self, existing: Dict[str, Any] | None, updates: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, existing: dict[str, Any] | None, updates: dict[str, Any]
+    ) -> dict[str, Any]:
         """Merge update dictionary into existing configuration."""
-        merged: Dict[str, Any] = dict(existing or {})
+        merged: dict[str, Any] = dict(existing or {})
         merged.update(updates)
         return merged

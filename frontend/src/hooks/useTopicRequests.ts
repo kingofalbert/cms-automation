@@ -34,7 +34,7 @@ export function useTopicRequests(skip = 0, limit = 20) {
       const response = await api.get<TopicRequest[]>('/v1/topics', {
         params: { skip, limit },
       });
-      return response.data;
+      return response;
     },
   });
 }
@@ -44,7 +44,7 @@ export function useTopicRequest(topicId: number) {
     queryKey: ['topic-request', topicId],
     queryFn: async () => {
       const response = await api.get<TopicRequest>(`/v1/topics/${topicId}`);
-      return response.data;
+      return response;
     },
     enabled: !!topicId,
   });
@@ -56,7 +56,7 @@ export function useCreateTopicRequest() {
   return useMutation({
     mutationFn: async (data: TopicRequestCreate) => {
       const response = await api.post<TopicRequest>('/v1/topics', data);
-      return response.data;
+      return response;
     },
     onSuccess: () => {
       // Invalidate and refetch topic requests list

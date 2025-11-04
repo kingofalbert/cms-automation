@@ -1,20 +1,21 @@
 """Celery tasks for Computer Use CMS operations."""
 
 import asyncio
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy import select
 
 from src.api.schemas.seo import SEOMetadata
-from src.config import get_logger
+from src.config import get_logger, get_settings
 from src.config.database import get_async_session
 from src.models import Article, ArticleStatus
-from src.services.computer_use_cms import ComputerUseCMSService
 from src.services.drive_image_retriever import create_drive_image_retriever
 from src.services.hybrid_publisher import create_hybrid_publisher
 from src.workers.celery_app import celery_app
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 
 @celery_app.task(
@@ -83,7 +84,7 @@ def publish_article_with_computer_use_task(
         )
 
         # Retry on failure
-        raise self.retry(exc=e)
+        raise self.retry(exc=e) from e
 
 
 async def _publish_article_async(
@@ -182,6 +183,8 @@ async def _publish_article_async(
                 playwright_config_path=playwright_config_path,
             )
 
+            publish_mode = "draft" if settings.ENVIRONMENT != "production" else "publish"
+
             # Publish article using hybrid strategy
             publish_result = await hybrid_publisher.publish_article(
                 cms_url=cms_url,
@@ -192,6 +195,7 @@ async def _publish_article_async(
                 seo_data=seo_data,
                 article_images=article_images,
                 article_metadata=article.article_metadata or {},
+                publish_mode=publish_mode,
             )
 
         finally:
@@ -202,7 +206,19 @@ async def _publish_article_async(
         # Update article if publishing succeeded
         if publish_result.get("success"):
             article.cms_article_id = publish_result.get("cms_article_id")
-            article.status = ArticleStatus.PUBLISHED
+
+            result_status = (publish_result.get("status") or "").lower()
+            editor_url = publish_result.get("editor_url")
+            public_url = publish_result.get("url")
+
+            if result_status == "draft":
+                article.status = ArticleStatus.DRAFT
+                article.published_url = editor_url or public_url or article.published_url
+                article.published_at = None
+            else:
+                article.status = ArticleStatus.PUBLISHED
+                article.published_url = public_url or editor_url or article.published_url
+                article.published_at = article.published_at or datetime.utcnow()
 
             # Update article metadata with Computer Use info
             article.article_metadata["computer_use"] = publish_result.get("metadata", {})
@@ -213,7 +229,9 @@ async def _publish_article_async(
                 "article_published_via_computer_use",
                 article_id=article_id,
                 cms_article_id=article.cms_article_id,
-                url=publish_result.get("url"),
+                url=public_url,
+                editor_url=editor_url,
+                status=result_status or "unknown",
             )
 
         return publish_result

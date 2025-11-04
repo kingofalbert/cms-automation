@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FC } from 'react';
 import { Radio, Button, Space, Input, Table, Tag } from 'antd';
 import { DraftRule, ReviewAction } from '../../../types/proofreading';
 import './BatchReviewPanel.css';
@@ -19,7 +19,7 @@ interface BatchReviewPanelProps {
   onCancel: () => void;
 }
 
-const BatchReviewPanel: React.FC<BatchReviewPanelProps> = ({
+const BatchReviewPanel: FC<BatchReviewPanelProps> = ({
   selectedRules,
   rules,
   onReview,
@@ -81,7 +81,7 @@ const BatchReviewPanel: React.FC<BatchReviewPanelProps> = ({
       title: '操作',
       key: 'action',
       width: 150,
-      render: (_, rule: DraftRule) => (
+      render: (_: unknown, rule: DraftRule) => (
         <Radio.Group
           value={individualReviews[rule.rule_id]?.action || ReviewAction.APPROVE}
           onChange={(e) => updateIndividualReview(
@@ -107,7 +107,7 @@ const BatchReviewPanel: React.FC<BatchReviewPanelProps> = ({
       title: '備註',
       key: 'comment',
       width: 200,
-      render: (_, rule: DraftRule) => (
+      render: (_: unknown, rule: DraftRule) => (
         <Input
           placeholder="選填"
           value={individualReviews[rule.rule_id]?.comment || ''}

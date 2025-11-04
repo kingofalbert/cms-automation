@@ -11,8 +11,9 @@ import { Input, Textarea, Button, Spinner } from '@/components/ui';
 import { RichTextEditor } from './RichTextEditor';
 import { ImageUploadWidget, UploadedImage } from './ImageUploadWidget';
 import { useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-import { ArticleImportRequest } from '@/types/article';
+import axios, { type AxiosError } from 'axios';
+import type { Article } from '@/types/api';
+import type { ArticleImportRequest } from '@/types/article';
 
 const articleSchema = z.object({
   title: z.string().min(1, '标题不能为空').max(200, '标题最多 200 字符'),
@@ -39,7 +40,7 @@ export const ManualArticleForm: React.FC = () => {
 
   const excerptValue = watch('excerpt');
 
-  const importMutation = useMutation({
+  const importMutation = useMutation<Article, AxiosError<{ message?: string }>, ArticleImportRequest>({
     mutationFn: async (data: ArticleImportRequest) => {
       const formData = new FormData();
       formData.append('title', data.title);
@@ -70,7 +71,7 @@ export const ManualArticleForm: React.FC = () => {
         });
       }
 
-      const response = await axios.post('/api/v1/articles/import', formData, {
+      const response = await axios.post<Article>('v1/articles/import', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
@@ -80,8 +81,9 @@ export const ManualArticleForm: React.FC = () => {
       alert(`文章创建成功！ID: ${data.id}`);
       handleReset();
     },
-    onError: (error: any) => {
-      alert(`创建失败: ${error.response?.data?.message || error.message}`);
+    onError: (error) => {
+      const message = error.response?.data?.message ?? error.message;
+      alert(`创建失败: ${message}`);
     },
   });
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """本地环境测试脚本 - 直接测试引擎加载"""
 
-import sys
 import importlib.util
 
 # 直接加载模块文件，绕过 __init__.py
@@ -36,7 +35,7 @@ try:
     print("=" * 70)
 
     engine = DeterministicRuleEngine()
-    print(f"\n✅ 引擎加载成功")
+    print("\n✅ 引擎加载成功")
     print(f"📊 总规则数: {len(engine.rules)}")
 
     # Count by category
@@ -45,13 +44,13 @@ try:
         cat = rule.category
         categories[cat] = categories.get(cat, 0) + 1
 
-    print(f"\n📋 规则分类:")
+    print("\n📋 规则分类:")
     for cat in sorted(categories.keys()):
         emoji = '✅' if cat in ['A', 'B', 'C', 'D', 'E', 'F'] else ''
         print(f"  {emoji} {cat} 类: {categories[cat]:3d} 条")
 
     if len(engine.rules) == 384:
-        print(f"\n🎊 成功！100% 覆盖率 (384/384 规则)")
+        print("\n🎊 成功！100% 覆盖率 (384/384 规则)")
         print("=" * 70)
         exit(0)
     else:

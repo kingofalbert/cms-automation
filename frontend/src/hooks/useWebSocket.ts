@@ -8,6 +8,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { WebSocketMessage } from '../types/api';
 
+type TimeoutHandle = ReturnType<typeof setTimeout>;
+type IntervalHandle = ReturnType<typeof setInterval>;
+
 export interface UseWebSocketOptions {
   /**
    * WebSocket URL
@@ -149,8 +152,8 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<TimeoutHandle | null>(null);
+  const heartbeatIntervalRef = useRef<IntervalHandle | null>(null);
   const optionsRef = useRef(options);
 
   // Keep options ref in sync

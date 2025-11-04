@@ -43,7 +43,7 @@ export const OptimizationRecommendations: React.FC<
         <p className="text-sm mt-1">运行 SEO 分析后将显示建议</p>
       </div>
     );
-  };
+  }
 
   const getTypeIcon = (type: Recommendation['type']) => {
     switch (type) {

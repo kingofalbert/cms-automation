@@ -4,88 +4,73 @@
 """
 
 from datetime import datetime
-from typing import List, Optional, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException, Query, Path, Body, status
-from fastapi.responses import JSONResponse
+from typing import Any
+
+from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.database import get_session
 from src.config.logging import get_logger
-from src.services.proofreading_decision import (
-    ProofreadingDecisionService,
-    get_decision_service,
-    DecisionInput,
-    DateRange,
-    DecisionPatterns,
-    UserPreferences,
-    LearningRule as ServiceLearningRule,
-    FeedbackAggregation,
-    QualityMetrics,
-    ImprovementArea as ServiceImprovementArea,
-    DecisionServiceError,
-    InvalidDecisionError,
-    DuplicateDecisionError
-)
+from src.models.proofreading import DecisionType
 from src.schemas.proofreading_decision import (
-    DecisionRequest,
-    BatchDecisionRequest,
-    BatchDecisionItem,
-    DecisionUpdateRequest,
-    DecisionResponse,
-    DecisionListResponse,
-    BatchDecisionResponse,
-    PatternAnalysisRequest,
-    PatternAnalysisResponse,
-    PatternDetail,
-    CorrectionPattern,
-    TimePattern,
-    UserPreferencesResponse,
-    StylePreferences,
-    GenerateRulesRequest,
-    GenerateRulesResponse,
-    LearningRule,
     ApplyRulesRequest,
     ApplyRulesResponse,
-    RuleApplication,
-    FeedbackStatsRequest,
-    FeedbackStatsResponse,
-    PrepareDatasetRequest,
-    PrepareDatasetResponse,
-    QualityEvaluationRequest,
-    QualityEvaluationResponse,
-    ImprovementAreasRequest,
-    ImprovementAreasResponse,
-    ImprovementArea,
     BaseResponse,
-    ErrorResponse,
-    ErrorDetail,
+    BatchDecisionRequest,
+    BatchDecisionResponse,
+    BatchReviewRequest,
+    BatchReviewResponse,
+    CorrectionPattern,
+    DecisionListResponse,
+    DecisionRequest,
+    DecisionResponse,
     DecisionTypeEnum,
-    TrendType,
-    PriorityLevel,
+    DecisionUpdateRequest,
+    DraftDetailResponse,
+    DraftListResponse,
+    DraftRule,
     # 新增規則審查相關模型
     DraftStatus,
-    ReviewStatus,
-    ReviewAction,
-    RuleSetStatus,
+    ErrorResponse,
     Example,
+    FeedbackStatsResponse,
+    GenerateRulesRequest,
+    GenerateRulesResponse,
+    ImprovementArea,
+    ImprovementAreasResponse,
+    LearningRule,
+    ModifyRuleRequest,
+    ModifyRuleResponse,
+    PatternAnalysisResponse,
+    PatternDetail,
+    PrepareDatasetRequest,
+    PrepareDatasetResponse,
+    PriorityLevel,
+    PublishRulesRequest,
+    PublishRulesResponse,
+    QualityEvaluationResponse,
+    ReviewAction,
     ReviewProgress,
-    DraftRule,
+    ReviewStatus,
+    RuleApplication,
     RuleDraft,
     SaveDraftRequest,
     SaveDraftResponse,
-    DraftListResponse,
-    DraftDetailResponse,
-    ModifyRuleRequest,
-    ModifyRuleResponse,
-    ReviewItem,
-    BatchReviewRequest,
-    BatchReviewResponse,
-    PublishRulesRequest,
-    PublishRulesResponse,
+    StylePreferences,
     TestRulesRequest,
-    TestRulesResponse
+    TestRulesResponse,
+    TimePattern,
+    TrendType,
+    UserPreferencesResponse,
 )
-from src.models.proofreading import DecisionType
+from src.services.proofreading_decision import (
+    DateRange,
+    DecisionInput,
+    DuplicateDecisionError,
+    InvalidDecisionError,
+    ProofreadingDecisionService,
+    get_decision_service,
+)
 
 logger = get_logger(__name__)
 
@@ -377,6 +362,7 @@ async def get_decision_detail(
     try:
         # 查詢決策
         from sqlalchemy import select
+
         from src.models.proofreading import ProofreadingDecision
 
         result = await session.execute(
@@ -421,11 +407,11 @@ async def get_decision_detail(
     description="查詢決策歷史記錄，支持多種過濾條件"
 )
 async def query_decision_history(
-    user_id: Optional[int] = Query(None, description="用戶ID"),
-    start_date: Optional[datetime] = Query(None, description="開始日期"),
-    end_date: Optional[datetime] = Query(None, description="結束日期"),
-    decision_type: Optional[DecisionTypeEnum] = Query(None, description="決策類型"),
-    suggestion_type: Optional[str] = Query(None, description="建議類型"),
+    user_id: int | None = Query(None, description="用戶ID"),
+    start_date: datetime | None = Query(None, description="開始日期"),
+    end_date: datetime | None = Query(None, description="結束日期"),
+    decision_type: DecisionTypeEnum | None = Query(None, description="決策類型"),
+    suggestion_type: str | None = Query(None, description="建議類型"),
     page: int = Query(1, ge=1, description="頁碼"),
     limit: int = Query(20, ge=1, le=100, description="每頁數量"),
     session: AsyncSession = Depends(get_session),
@@ -513,8 +499,8 @@ async def query_decision_history(
     description="分析歷史決策數據，識別用戶偏好和模式"
 )
 async def analyze_patterns(
-    start_date: Optional[datetime] = Query(None, description="開始日期"),
-    end_date: Optional[datetime] = Query(None, description="結束日期"),
+    start_date: datetime | None = Query(None, description="開始日期"),
+    end_date: datetime | None = Query(None, description="結束日期"),
     min_occurrences: int = Query(5, ge=1, description="最小出現次數"),
     session: AsyncSession = Depends(get_session),
     service: ProofreadingDecisionService = Depends(get_service)
@@ -788,7 +774,7 @@ async def apply_rules(
 )
 async def get_feedback_stats(
     aggregation_period: str = Query("daily", description="聚合週期"),
-    date: Optional[datetime] = Query(None, description="指定日期"),
+    date: datetime | None = Query(None, description="指定日期"),
     session: AsyncSession = Depends(get_session),
     service: ProofreadingDecisionService = Depends(get_service)
 ):
@@ -887,8 +873,8 @@ async def prepare_dataset(
     description="評估校對建議的質量指標"
 )
 async def evaluate_quality(
-    start_date: Optional[datetime] = Query(None, description="開始日期"),
-    end_date: Optional[datetime] = Query(None, description="結束日期"),
+    start_date: datetime | None = Query(None, description="開始日期"),
+    end_date: datetime | None = Query(None, description="結束日期"),
     session: AsyncSession = Depends(get_session),
     service: ProofreadingDecisionService = Depends(get_service)
 ):
@@ -1021,6 +1007,7 @@ async def update_decision(
     try:
         # 查詢決策
         from sqlalchemy import select
+
         from src.models.proofreading import ProofreadingDecision
 
         result = await session.execute(
@@ -1098,7 +1085,8 @@ async def delete_decision(
     """
     try:
         # 查詢並刪除決策
-        from sqlalchemy import select, delete
+        from sqlalchemy import delete, select
+
         from src.models.proofreading import ProofreadingDecision
 
         result = await session.execute(
@@ -1262,7 +1250,7 @@ async def save_rule_draft(
 
 @router.get("/rules/drafts", response_model=DraftListResponse)
 async def list_rule_drafts(
-    status: Optional[DraftStatus] = Query(default=None),
+    status: DraftStatus | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_session)
@@ -1632,9 +1620,9 @@ def update_review_progress(draft: RuleDraft) -> None:
 
 def natural_language_to_code(
     natural_language: str,
-    examples: Optional[List[Example]] = None,
-    conditions: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    examples: list[Example] | None = None,
+    conditions: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """將自然語言轉換為規則代碼
 
     這是一個簡化的實現，實際應使用 NLP 或 LLM 來解析自然語言

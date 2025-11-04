@@ -4,13 +4,11 @@
 最新版本支持更強大的編程和推理能力
 """
 
-import re
+import asyncio
 import json
 import os
-from typing import List, Dict, Any, Optional, Tuple
-from dataclasses import dataclass
-from datetime import datetime
-import asyncio
+import re
+from typing import Any
 
 # Anthropic Python SDK
 try:
@@ -18,13 +16,13 @@ try:
 except ImportError:
     print("請安裝 anthropic: pip install anthropic")
 
-from ..schemas.proofreading_decision import DraftRule, ReviewStatus
+from ..schemas.proofreading_decision import DraftRule
 
 
 class ClaudeRuleCompiler:
     """使用 Claude Sonnet 4.5 進行規則編譯的智能編譯器 - 世界最強編程模型"""
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """
         初始化 Claude 編譯器
 
@@ -41,7 +39,7 @@ class ClaudeRuleCompiler:
         self.async_client = AsyncAnthropic(api_key=self.api_key)
 
         # 使用 Claude Sonnet 4.5 (2025年9月29日發布的最新模型)
-        self.model = "claude-sonnet-4-5"  # 最強的編程模型
+        self.model = "claude-sonnet-4-5-20250929"  # 最強的編程模型
 
         # 編譯緩存
         self.compilation_cache = {}
@@ -49,9 +47,9 @@ class ClaudeRuleCompiler:
     def compile_natural_language_to_rule(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None,
+        context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         使用 Claude Sonnet 4.5 將自然語言描述轉換為規則代碼
 
@@ -106,9 +104,9 @@ class ClaudeRuleCompiler:
     async def compile_natural_language_to_rule_async(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None,
-        context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None,
+        context: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """異步版本的規則編譯"""
 
         prompt = self._build_prompt(natural_language, examples, context)
@@ -190,8 +188,8 @@ class ClaudeRuleCompiler:
     def _build_prompt(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None,
-        context: Optional[Dict[str, Any]] = None
+        examples: list[dict[str, str]] | None = None,
+        context: dict[str, Any] | None = None
     ) -> str:
         """構建優化的提示詞"""
 
@@ -208,7 +206,7 @@ class ClaudeRuleCompiler:
                 prompt += f"   修改後：「{ex.get('after', '')}」\n"
 
         if context:
-            prompt += f"\n## 上下文信息\n"
+            prompt += "\n## 上下文信息\n"
             for key, value in context.items():
                 prompt += f"- {key}: {value}\n"
 
@@ -224,7 +222,7 @@ class ClaudeRuleCompiler:
 
         return prompt
 
-    def _parse_claude_response(self, response_text: str) -> Dict[str, Any]:
+    def _parse_claude_response(self, response_text: str) -> dict[str, Any]:
         """解析 Claude 的響應"""
 
         # 嘗試提取 JSON
@@ -252,7 +250,7 @@ class ClaudeRuleCompiler:
             "error": "無法解析 Claude 響應"
         }
 
-    def _validate_and_fix_rule(self, rule: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_and_fix_rule(self, rule: dict[str, Any]) -> dict[str, Any]:
         """驗證並修復規則"""
 
         # 驗證正則表達式
@@ -282,7 +280,7 @@ class ClaudeRuleCompiler:
 
         return rule
 
-    def _calculate_priority(self, rule: Dict[str, Any]) -> int:
+    def _calculate_priority(self, rule: dict[str, Any]) -> int:
         """計算規則優先級"""
 
         type_weights = {
@@ -326,8 +324,8 @@ class ClaudeRuleCompiler:
     def _enhanced_fallback_compile(
         self,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None
+    ) -> dict[str, Any]:
         """增強的回退編譯方法"""
 
         # 使用更智能的模式匹配
@@ -372,8 +370,8 @@ class ClaudeRuleCompiler:
         rule_type: str,
         confidence: float,
         natural_language: str,
-        examples: Optional[List[Dict[str, str]]] = None
-    ) -> Dict[str, Any]:
+        examples: list[dict[str, str]] | None = None
+    ) -> dict[str, Any]:
         """根據匹配結果生成規則"""
 
         if rule_type == 'simple_replace':
@@ -403,7 +401,7 @@ class ClaudeRuleCompiler:
         # 其他情況的處理...
         return self._enhanced_fallback_compile(natural_language, examples)
 
-    def _learn_from_examples(self, examples: List[Dict[str, str]]) -> Dict[str, Any]:
+    def _learn_from_examples(self, examples: list[dict[str, str]]) -> dict[str, Any]:
         """從示例中學習規則"""
 
         if not examples:
@@ -417,7 +415,7 @@ class ClaudeRuleCompiler:
         # 簡單的差異分析
         if before and after:
             # 查找不同的部分
-            for i, (b, a) in enumerate(zip(before, after)):
+            for i, (b, a) in enumerate(zip(before, after, strict=False)):
                 if b != a:
                     # 找到差異
                     pattern = before[max(0, i-2):min(len(before), i+3)]
@@ -430,16 +428,16 @@ class ClaudeRuleCompiler:
                         "confidence": 0.7,
                         "priority": 90,
                         "conditions": {},
-                        "explanation": f"基於示例學習的規則"
+                        "explanation": "基於示例學習的規則"
                     }
 
         return self._enhanced_fallback_compile("", None)
 
     async def batch_compile_rules_async(
         self,
-        rules: List[DraftRule],
+        rules: list[DraftRule],
         max_concurrent: int = 5
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """批量異步編譯規則"""
 
         semaphore = asyncio.Semaphore(max_concurrent)
@@ -489,7 +487,7 @@ class ClaudeRuleCompiler:
 
 
 # 工廠函數
-def create_claude_compiler(api_key: Optional[str] = None) -> ClaudeRuleCompiler:
+def create_claude_compiler(api_key: str | None = None) -> ClaudeRuleCompiler:
     """創建 Claude 編譯器實例
 
     Args:
@@ -504,10 +502,10 @@ def create_claude_compiler(api_key: Optional[str] = None) -> ClaudeRuleCompiler:
 # 便捷的同步編譯函數
 def compile_with_claude(
     natural_language: str,
-    examples: Optional[List[Dict[str, str]]] = None,
-    context: Optional[Dict[str, Any]] = None,
-    api_key: Optional[str] = None
-) -> Dict[str, Any]:
+    examples: list[dict[str, str]] | None = None,
+    context: dict[str, Any] | None = None,
+    api_key: str | None = None
+) -> dict[str, Any]:
     """使用 Claude 編譯單個規則
 
     Args:

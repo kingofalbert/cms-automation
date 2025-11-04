@@ -3,14 +3,12 @@
 將審查通過的規則轉換為可執行的Python代碼
 """
 
-import ast
 import json
 import re
-from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-import hashlib
+from typing import Any
 
 from ..schemas.proofreading_decision import DraftRule, ReviewStatus
 
@@ -20,13 +18,13 @@ class CompiledRule:
     """編譯後的規則"""
     rule_id: str
     rule_type: str
-    pattern: Optional[re.Pattern] = None
-    replacement: Optional[str] = None
-    conditions: Dict[str, Any] = None
+    pattern: re.Pattern | None = None
+    replacement: str | None = None
+    conditions: dict[str, Any] = None
     confidence: float = 0.0
     priority: int = 0
 
-    def apply(self, text: str, context: Optional[Dict[str, Any]] = None) -> Tuple[str, List[Dict]]:
+    def apply(self, text: str, context: dict[str, Any] | None = None) -> tuple[str, list[dict]]:
         """應用規則到文本
 
         Args:
@@ -77,7 +75,7 @@ class CompiledRule:
 
         return result_text, changes
 
-    def _check_conditions(self, context: Dict[str, Any]) -> bool:
+    def _check_conditions(self, context: dict[str, Any]) -> bool:
         """檢查條件是否滿足"""
         if not self.conditions:
             return True
@@ -105,7 +103,7 @@ class RuleCompiler:
     def __init__(self):
         self.compiled_rules_cache = {}
 
-    def compile_rules(self, rules: List[DraftRule]) -> List[CompiledRule]:
+    def compile_rules(self, rules: list[DraftRule]) -> list[CompiledRule]:
         """編譯規則列表
 
         Args:
@@ -130,7 +128,7 @@ class RuleCompiler:
 
         return compiled_rules
 
-    def _compile_single_rule(self, rule: DraftRule) -> Optional[CompiledRule]:
+    def _compile_single_rule(self, rule: DraftRule) -> CompiledRule | None:
         """編譯單個規則
 
         Args:
@@ -197,10 +195,10 @@ class RuleCompiler:
 
     def generate_python_module(
         self,
-        rules: List[DraftRule],
+        rules: list[DraftRule],
         module_name: str,
         output_dir: Path,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> Path:
         """生成可執行的Python模組
 
@@ -257,9 +255,9 @@ class RuleCompiler:
 
     def _generate_module_code(
         self,
-        compiled_rules: List[CompiledRule],
+        compiled_rules: list[CompiledRule],
         module_name: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> str:
         """生成Python模組代碼
 
@@ -430,7 +428,7 @@ __total_rules__ = {len(compiled_rules)}
 
     def generate_javascript_module(
         self,
-        rules: List[DraftRule],
+        rules: list[DraftRule],
         module_name: str,
         output_dir: Path
     ) -> Path:
@@ -462,7 +460,7 @@ __total_rules__ = {len(compiled_rules)}
 
     def _generate_typescript_code(
         self,
-        compiled_rules: List[CompiledRule],
+        compiled_rules: list[CompiledRule],
         module_name: str
     ) -> str:
         """生成TypeScript模組代碼"""

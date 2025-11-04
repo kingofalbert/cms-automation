@@ -1,7 +1,6 @@
 """SEO metadata model for article optimization."""
 
 from datetime import datetime
-from typing import Dict, List, Optional
 
 from sqlalchemy import (
     ARRAY,
@@ -66,20 +65,20 @@ class SEOMetadata(Base, TimestampMixin):
     )
 
     # Keyword arrays
-    primary_keywords: Mapped[Optional[List[str]]] = mapped_column(
+    primary_keywords: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(100)),
         nullable=True,
         comment="3-5 primary keywords",
     )
 
-    secondary_keywords: Mapped[Optional[List[str]]] = mapped_column(
+    secondary_keywords: Mapped[list[str] | None] = mapped_column(
         ARRAY(String(100)),
         nullable=True,
         comment="5-10 secondary keywords",
     )
 
     # Keyword density analysis (JSONB: {keyword: {count: int, density: float}})
-    keyword_density: Mapped[Optional[Dict]] = mapped_column(
+    keyword_density: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         default=dict,
@@ -87,13 +86,13 @@ class SEOMetadata(Base, TimestampMixin):
     )
 
     # Scoring
-    readability_score: Mapped[Optional[float]] = mapped_column(
+    readability_score: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         comment="Flesch Reading Ease score (0-100)",
     )
 
-    seo_score: Mapped[Optional[float]] = mapped_column(
+    seo_score: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         index=True,
@@ -101,7 +100,7 @@ class SEOMetadata(Base, TimestampMixin):
     )
 
     # Recommendations (JSONB array of strings)
-    optimization_recommendations: Mapped[Optional[List]] = mapped_column(
+    optimization_recommendations: Mapped[list | None] = mapped_column(
         JSONB,
         nullable=True,
         default=list,
@@ -109,7 +108,7 @@ class SEOMetadata(Base, TimestampMixin):
     )
 
     # Manual overrides tracking
-    manual_overrides: Mapped[Optional[Dict]] = mapped_column(
+    manual_overrides: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         default=dict,
@@ -117,26 +116,26 @@ class SEOMetadata(Base, TimestampMixin):
     )
 
     # Generation metadata
-    generated_by: Mapped[Optional[str]] = mapped_column(
+    generated_by: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
         default="claude-3-5-haiku-20241022",
         comment="AI model used for generation",
     )
 
-    generation_cost: Mapped[Optional[float]] = mapped_column(
+    generation_cost: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
         comment="Cost in USD for SEO analysis",
     )
 
-    generation_tokens: Mapped[Optional[int]] = mapped_column(
+    generation_tokens: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
         comment="Total tokens used (input + output)",
     )
 
-    error_message: Mapped[Optional[str]] = mapped_column(
+    error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Error message if analysis failed",
@@ -209,7 +208,7 @@ class SEOMetadata(Base, TimestampMixin):
             self.seo_score is not None,
         ])
 
-    def get_keyword_density(self, keyword: str) -> Optional[Dict[str, float]]:
+    def get_keyword_density(self, keyword: str) -> dict[str, float] | None:
         """Get density data for a specific keyword.
 
         Args:

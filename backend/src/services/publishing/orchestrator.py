@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -67,7 +67,7 @@ class PublishingOrchestrator:
         publish_task_id: int,
         article_id: int,
         provider: Provider | str,
-        options: Optional[dict[str, Any]] = None,
+        options: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Execute publishing workflow for the given task."""
         provider_enum = provider if isinstance(provider, Provider) else Provider(provider)
@@ -189,6 +189,7 @@ class PublishingOrchestrator:
     ) -> dict[str, Any]:
         """Invoke provider-specific publishing implementation."""
         provider = context.provider
+        publish_mode = self._determine_publish_mode(options)
 
         if provider is Provider.PLAYWRIGHT:
             publisher = await create_playwright_publisher(
@@ -203,6 +204,7 @@ class PublishingOrchestrator:
                 seo_data=context.seo_metadata,
                 article_images=options.get("article_images") or [],
                 headless=options.get("headless", False),
+                publish_mode=publish_mode,
             )
         elif provider is Provider.COMPUTER_USE:
             computer_use = await create_computer_use_cms_service()
@@ -217,6 +219,7 @@ class PublishingOrchestrator:
                 tags=context.tags,
                 categories=context.categories,
                 article_images=options.get("article_images") or [],
+                publish_mode=publish_mode,
             )
         elif provider is Provider.HYBRID:
             hybrid = await create_hybrid_publisher(
@@ -232,6 +235,7 @@ class PublishingOrchestrator:
                 seo_data=context.seo_metadata,
                 article_images=options.get("article_images") or [],
                 article_metadata=context.article_metadata,
+                publish_mode=publish_mode,
             )
         else:  # pragma: no cover - enum already exhaustive
             raise ValueError(f"Unsupported provider: {provider}")
@@ -282,9 +286,19 @@ class PublishingOrchestrator:
 
             if article:
                 article.cms_article_id = result.get("cms_article_id") or article.cms_article_id
-                article.published_url = result.get("url") or article.published_url
-                article.status = ArticleStatus.PUBLISHED
-                article.published_at = article.published_at or datetime.utcnow()
+                result_status = (result.get("status") or "").lower()
+                editor_url = result.get("editor_url")
+                public_url = result.get("url")
+
+                if result_status == "draft":
+                    article.status = ArticleStatus.DRAFT
+                    article.published_url = editor_url or public_url or article.published_url
+                    article.published_at = None
+                else:
+                    article.status = ArticleStatus.PUBLISHED
+                    article.published_url = public_url or editor_url or article.published_url
+                    article.published_at = article.published_at or datetime.utcnow()
+
                 session.add(article)
 
             session.add(task)
@@ -353,7 +367,7 @@ class PublishingOrchestrator:
 
     def _build_seo_metadata(self, article: Article) -> SEOMetadata:
         """Construct SEO metadata, falling back to sensible defaults on validation errors."""
-        metadata: Dict[str, Any] = dict(article.article_metadata or {})
+        metadata: dict[str, Any] = dict(article.article_metadata or {})
         seo_raw = metadata.get("seo") or {}
 
         try:
@@ -393,9 +407,9 @@ class PublishingOrchestrator:
 
         return SEOMetadata(**fallback)
 
-    def _collect_screenshots(self, result: dict[str, Any]) -> List[str]:
+    def _collect_screenshots(self, result: dict[str, Any]) -> list[str]:
         """Extract screenshot URLs from provider result."""
-        screenshots: List[str] = []
+        screenshots: list[str] = []
 
         primary = result.get("screenshots")
         if isinstance(primary, list):
@@ -413,25 +427,25 @@ class PublishingOrchestrator:
 
         # Deduplicate while preserving order
         seen: set[str] = set()
-        unique: List[str] = []
+        unique: list[str] = []
         for item in screenshots:
             if item not in seen:
                 seen.add(item)
                 unique.append(item)
         return unique
 
-    def _extract_cost(self, result: dict[str, Any]) -> Optional[float]:
+    def _extract_cost(self, result: dict[str, Any]) -> float | None:
         """Extract cost (if provided) from provider result."""
-        if "cost_usd" in result and isinstance(result["cost_usd"], (int, float)):
+        if "cost_usd" in result and isinstance(result["cost_usd"], int | float):
             return float(result["cost_usd"])
         metadata = result.get("metadata")
-        cost_value = None
+        cost_value: float | None = None
         if isinstance(metadata, dict):
             cost_value = metadata.get("cost_usd")
             if cost_value is None:
                 usage = metadata.get("usage") or {}
                 cost_value = usage.get("total_cost_usd")
-        if isinstance(cost_value, (int, float)):
+        if isinstance(cost_value, int | float):
             return float(cost_value)
         return None
 
@@ -444,3 +458,17 @@ class PublishingOrchestrator:
         normalized = dict(result)
         normalized["provider"] = provider.value
         return normalized
+
+    def _determine_publish_mode(self, options: dict[str, Any]) -> str:
+        """Decide whether to publish immediately or save as draft."""
+        if self.settings.ENVIRONMENT != "production":
+            return "draft"
+
+        explicit_mode = (options.get("publish_mode") or "").lower()
+        if explicit_mode in {"draft", "publish"}:
+            return explicit_mode
+
+        if options.get("publish_immediately") is False:
+            return "draft"
+
+        return "publish"

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,10 +23,10 @@ class WorklistService:
 
     async def list_items(
         self,
-        status: Optional[str] = None,
+        status: str | None = None,
         limit: int = 50,
         offset: int = 0,
-    ) -> tuple[List[WorklistItem], int]:
+    ) -> tuple[list[WorklistItem], int]:
         """List worklist items filtered by status with pagination."""
         query = select(WorklistItem).order_by(WorklistItem.updated_at.desc())
         count_query = select(func.count()).select_from(WorklistItem)
@@ -48,7 +48,7 @@ class WorklistService:
 
         return items, total_count
 
-    async def get_statistics(self) -> Dict[str, int]:
+    async def get_statistics(self) -> dict[str, int]:
         """Return counts per status for worklist dashboard."""
         stmt = (
             select(
@@ -64,7 +64,7 @@ class WorklistService:
         stats["total"] = sum(stats.values())
         return stats
 
-    async def get_sync_status(self) -> Dict[str, Any]:
+    async def get_sync_status(self) -> dict[str, Any]:
         """Provide basic sync status information."""
         latest_stmt = (
             select(WorklistItem.synced_at)
@@ -86,7 +86,7 @@ class WorklistService:
         self,
         item_id: int,
         status: str,
-        note: Optional[Dict[str, Any]] = None,
+        note: dict[str, Any] | None = None,
     ) -> WorklistItem:
         """Update worklist item status and optionally append note."""
         item = await self.session.get(WorklistItem, item_id)
@@ -124,7 +124,7 @@ class WorklistService:
         await self.session.refresh(item)
         return item
 
-    async def trigger_sync(self) -> Dict[str, Any]:
+    async def trigger_sync(self) -> dict[str, Any]:
         """Synchronously trigger Google Drive sync."""
         sync_service = GoogleDriveSyncService(self.session)
         try:

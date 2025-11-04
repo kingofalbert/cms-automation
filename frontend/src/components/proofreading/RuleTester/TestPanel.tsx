@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FC } from 'react';
 import {
   Card,
   Button,
@@ -17,7 +17,6 @@ import {
   PlayCircleOutlined,
   ClearOutlined,
   DownloadOutlined,
-  UploadOutlined,
   SettingOutlined
 } from '@ant-design/icons';
 import { DraftRule, TestResult } from '../../../types/proofreading';
@@ -35,7 +34,7 @@ interface TestPanelProps {
   draftId: string;
 }
 
-const TestPanel: React.FC<TestPanelProps> = ({ rules, draftId }) => {
+const TestPanel: FC<TestPanelProps> = ({ rules, draftId }) => {
   const [testContent, setTestContent] = useState('');
   const [testResults, setTestResults] = useState<TestResult | null>(null);
   const [loading, setLoading] = useState(false);

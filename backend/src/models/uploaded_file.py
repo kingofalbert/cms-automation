@@ -37,7 +37,7 @@ class UploadedFile(Base, TimestampMixin):
         comment="Google Drive file ID",
     )
 
-    drive_folder_id: Mapped[Optional[str]] = mapped_column(
+    drive_folder_id: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
         comment="Google Drive folder ID",
@@ -51,27 +51,27 @@ class UploadedFile(Base, TimestampMixin):
         comment="MIME type of file",
     )
 
-    file_size: Mapped[Optional[int]] = mapped_column(
+    file_size: Mapped[int | None] = mapped_column(
         BigInteger,
         nullable=True,
         comment="File size in bytes",
     )
 
     # Access URLs
-    web_view_link: Mapped[Optional[str]] = mapped_column(
+    web_view_link: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Google Drive web view link",
     )
 
-    web_content_link: Mapped[Optional[str]] = mapped_column(
+    web_content_link: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
         comment="Google Drive direct download link",
     )
 
     # Association with article (optional)
-    article_id: Mapped[Optional[int]] = mapped_column(
+    article_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("articles.id", ondelete="CASCADE"),
         nullable=True,
@@ -89,14 +89,14 @@ class UploadedFile(Base, TimestampMixin):
     )
 
     # Upload context
-    uploaded_by: Mapped[Optional[int]] = mapped_column(
+    uploaded_by: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
         comment="User ID who uploaded the file",
     )
 
     # Additional metadata (JSONB for flexibility)
-    file_metadata: Mapped[Optional[dict]] = mapped_column(
+    file_metadata: Mapped[dict | None] = mapped_column(
         JSONB,
         nullable=True,
         default=dict,
@@ -104,7 +104,7 @@ class UploadedFile(Base, TimestampMixin):
     )
 
     # Soft delete support
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
         comment="Soft delete timestamp",
     )
@@ -126,7 +126,7 @@ class UploadedFile(Base, TimestampMixin):
         return self.file_type == "image" or self.mime_type.startswith("image/")
 
     @property
-    def public_url(self) -> Optional[str]:
+    def public_url(self) -> str | None:
         """Get public URL for file access."""
         return self.web_content_link or self.web_view_link
 

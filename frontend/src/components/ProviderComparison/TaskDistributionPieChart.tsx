@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Tooltip,
   Legend,
+  type PieLabelRenderProps,
 } from 'recharts';
 import { TaskDistribution } from '@/types/analytics';
 import { ProviderType } from '@/types/publishing';
@@ -83,46 +84,54 @@ export const TaskDistributionPieChart: React.FC<TaskDistributionPieChartProps> =
     return labels[provider] || provider;
   };
 
-  const renderCustomLabel = ({
-    cx,
-    cy,
-    midAngle,
-    innerRadius,
-    outerRadius,
-    percent,
-  }: any) => {
+  const renderCustomLabel = (props: PieLabelRenderProps) => {
+    const {
+      cx = 0,
+      cy = 0,
+      midAngle = 0,
+      innerRadius = 0,
+      outerRadius = 0,
+      percent = 0,
+    } = props;
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const radius = Number(innerRadius) + (Number(outerRadius) - Number(innerRadius)) * 0.5;
+    const x = Number(cx) + radius * Math.cos(-Number(midAngle) * RADIAN);
+    const y = Number(cy) + radius * Math.sin(-Number(midAngle) * RADIAN);
 
-    if (percent < 0.05) return null; // Don't show label for < 5%
+    if (Number(percent) < 0.05) return null; // Don't show label for < 5%
 
     return (
       <text
         x={x}
         y={y}
         fill="white"
-        textAnchor={x > cx ? 'start' : 'end'}
+        textAnchor={x > Number(cx) ? 'start' : 'end'}
         dominantBaseline="central"
         style={{ fontSize: '12px', fontWeight: 'bold' }}
       >
-        {`${(percent * 100).toFixed(0)}%`}
+        {`${(Number(percent) * 100).toFixed(0)}%`}
       </text>
     );
   };
 
   const renderTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
+      const [firstPayload] = payload;
+      const value =
+        typeof firstPayload?.value === 'number'
+          ? firstPayload.value
+          : Number(firstPayload?.value ?? 0);
+      const dataPoint = firstPayload?.payload as (typeof chartData)[number] | undefined;
+
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-sm">
-          <p className="text-sm font-medium text-gray-900">{payload[0].name}</p>
-          <p className="text-sm text-gray-600">
-            任务数: {payload[0].value}
-          </p>
-          <p className="text-sm text-gray-600">
-            占比: {payload[0].payload.percentage.toFixed(1)}%
-          </p>
+          <p className="text-sm font-medium text-gray-900">{firstPayload?.name}</p>
+          <p className="text-sm text-gray-600">任务数: {value}</p>
+          {dataPoint && (
+            <p className="text-sm text-gray-600">
+              占比: {dataPoint.percentage.toFixed(1)}%
+            </p>
+          )}
         </div>
       );
     }

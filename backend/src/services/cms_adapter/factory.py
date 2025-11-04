@@ -1,6 +1,5 @@
 """CMS adapter factory for creating platform-specific adapters."""
 
-from typing import Any
 
 from src.config.logging import get_logger
 from src.config.settings import get_settings

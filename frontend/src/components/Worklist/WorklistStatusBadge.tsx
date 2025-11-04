@@ -5,6 +5,7 @@
 
 import { WorklistStatus } from '@/types/worklist';
 import { Badge } from '@/components/ui';
+import type { BadgeProps } from '@/components/ui';
 
 export interface WorklistStatusBadgeProps {
   status: WorklistStatus;
@@ -16,9 +17,10 @@ export const WorklistStatusBadge: React.FC<WorklistStatusBadgeProps> = ({
   size = 'sm',
 }) => {
   const getStatusConfig = (status: WorklistStatus) => {
+    type BadgeVariant = NonNullable<BadgeProps['variant']>;
     const configs: Record<
       WorklistStatus,
-      { variant: any; label: string; dot?: boolean }
+      { variant: BadgeVariant; label: string; dot?: boolean }
     > = {
       to_evaluate: {
         variant: 'secondary',

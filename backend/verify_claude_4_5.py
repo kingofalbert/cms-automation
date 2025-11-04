@@ -99,7 +99,7 @@ def verify_api_client():
         # 检查服务配置
         try:
             service = ProofreadingAnalysisService()
-            print(f"✅ 服务初始化成功")
+            print("✅ 服务初始化成功")
             print(f"   模型: {service.model}")
 
             if service.model == "claude-sonnet-4-5-20250929":

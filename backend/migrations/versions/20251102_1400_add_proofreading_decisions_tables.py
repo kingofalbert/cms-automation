@@ -6,8 +6,8 @@ Create Date: 2025-11-02 14:00:00.000000
 
 Task: T7.1 [US2][P0] Proofreading 决策与反馈调优批次迁移
 """
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.

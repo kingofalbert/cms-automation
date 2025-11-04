@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, Iterable, List, Tuple
+from collections.abc import Iterable
 
 from src.services.proofreading.models import (
     ProofreadingIssue,
@@ -25,10 +25,10 @@ class ProofreadingResultMerger:
         if ai_result.statistics is None:
             ai_result.statistics = ProofreadingStatistics()
 
-        merged: Dict[str, ProofreadingIssue] = {}
-        ai_keys: set[Tuple[str, str | None]] = set()
-        script_only: List[ProofreadingIssue] = []
-        script_keys: set[Tuple[str, str | None]] = set()
+        merged: dict[str, ProofreadingIssue] = {}
+        ai_keys: set[tuple[str, str | None]] = set()
+        script_only: list[ProofreadingIssue] = []
+        script_keys: set[tuple[str, str | None]] = set()
 
         # Index AI issues by rule id + evidence hash to avoid collisions
         for issue in ai_result.issues:
@@ -59,7 +59,7 @@ class ProofreadingResultMerger:
         return ai_result
 
     @staticmethod
-    def _issue_key(issue: ProofreadingIssue) -> Tuple[str, str | None]:
+    def _issue_key(issue: ProofreadingIssue) -> tuple[str, str | None]:
         """Create a deterministic key for deduplication."""
         evidence_hash = (issue.evidence or "")[:64]
         return issue.rule_id, evidence_hash
@@ -82,7 +82,7 @@ class ProofreadingResultMerger:
 
     @staticmethod
     def _recalculate_statistics(
-        issues: List[ProofreadingIssue],
+        issues: list[ProofreadingIssue],
         ai_only_count: int,
         script_only_count: int,
     ) -> ProofreadingStatistics:
@@ -98,8 +98,8 @@ class ProofreadingResultMerger:
             1 for issue in issues if issue.blocks_publish
         )
 
-        category_counter: Dict[str, int] = defaultdict(int)
-        source_counter: Dict[str, int] = defaultdict(int)
+        category_counter: dict[str, int] = defaultdict(int)
+        source_counter: dict[str, int] = defaultdict(int)
         for issue in issues:
             category_counter[issue.category] += 1
             source_counter[issue.source.value] += 1

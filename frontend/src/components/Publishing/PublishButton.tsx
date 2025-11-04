@@ -5,13 +5,13 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
 import { Button } from '@/components/ui';
 import { ProviderSelectionDropdown } from './ProviderSelectionDropdown';
 import { PublishConfirmationDialog } from './PublishConfirmationDialog';
 import { PublishProgressModal } from './PublishProgressModal';
 import { ProviderType, PublishTask, PublishRequest, PublishResult } from '@/types/publishing';
-import { Article } from '@/types/article';
+import type { Article } from '@/types/article';
 
 export interface PublishButtonProps {
   article: Article;
@@ -35,7 +35,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
 
   // Submit publish request
-  const publishMutation = useMutation({
+  const publishMutation = useMutation<PublishResult, AxiosError<{ message?: string }>, PublishRequest>({
     mutationFn: async (request: PublishRequest) => {
       const response = await axios.post<PublishResult>(
         `/api/v1/publish/submit/${request.article_id}`,
@@ -52,14 +52,15 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
       setShowProgressModal(true);
       onSuccess?.(data);
     },
-    onError: (error: any) => {
-      alert(`发布失败: ${error.response?.data?.message || error.message}`);
+    onError: (error) => {
+      const message = error.response?.data?.message ?? error.message;
+      alert(`发布失败: ${message}`);
       onError?.(error);
     },
   });
 
   // Poll task status
-  const { data: task } = useQuery({
+  const { data: task } = useQuery<PublishTask | null>({
     queryKey: ['publish-task', currentTaskId],
     queryFn: async () => {
       if (!currentTaskId) return null;
@@ -69,12 +70,13 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
       return response.data;
     },
     enabled: !!currentTaskId && showProgressModal,
-    refetchInterval: () => {
+    refetchInterval: ({ state }) => {
+      const current = state.data;
       // Poll every 2 seconds if task is still running
       if (
-        task &&
-        task.status !== 'completed' &&
-        task.status !== 'failed'
+        current &&
+        current.status !== 'completed' &&
+        current.status !== 'failed'
       ) {
         return 2000;
       }
@@ -95,7 +97,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
       }, 3000);
       return () => clearTimeout(timer);
     }
-  }, [task?.status]);
+  }, [task]);
 
   const handlePublishClick = () => {
     setShowProviderDialog(true);

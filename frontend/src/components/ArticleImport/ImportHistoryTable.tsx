@@ -6,6 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Badge, Spinner } from '@/components/ui';
+import type { BadgeProps } from '@/components/ui';
 import { ImportHistoryItem } from '@/types/article';
 import { clsx } from 'clsx';
 import { format } from 'date-fns';
@@ -15,7 +16,7 @@ export const ImportHistoryTable: React.FC = () => {
     queryKey: ['import-history'],
     queryFn: async () => {
       const response = await axios.get<ImportHistoryItem[]>(
-        '/api/v1/articles/import/history',
+        '/v1/articles/import/history',
         { params: { limit: 10 } }
       );
       return response.data;
@@ -71,7 +72,13 @@ export const ImportHistoryTable: React.FC = () => {
   }
 
   const getStatusBadge = (status: ImportHistoryItem['status']) => {
-    const variants: Record<ImportHistoryItem['status'], any> = {
+    type BadgeConfig = {
+      variant: NonNullable<BadgeProps['variant']>;
+      label: string;
+      dot?: boolean;
+    };
+
+    const variants: Record<ImportHistoryItem['status'], BadgeConfig> = {
       pending: { variant: 'secondary', label: '等待中' },
       processing: { variant: 'info', label: '处理中', dot: true },
       completed: { variant: 'success', label: '已完成' },

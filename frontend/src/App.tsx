@@ -2,12 +2,13 @@
  * Main App component with routing and providers.
  */
 
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { AppRoutes } from './routes';
 import { queryClient } from './services/query-client';
 import ErrorBoundary from './components/ErrorBoundary';
+import Navigation from './components/layout/Navigation';
 
 function App() {
   return (
@@ -21,11 +22,12 @@ function App() {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
+        <HashRouter>
           <div className="min-h-screen bg-gray-50">
+            <Navigation />
             <AppRoutes />
           </div>
-        </BrowserRouter>
+        </HashRouter>
         {/* Show React Query DevTools in development */}
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>

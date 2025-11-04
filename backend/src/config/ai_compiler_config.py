@@ -4,7 +4,6 @@ AI 編譯器配置
 
 import os
 from enum import Enum
-from typing import Optional
 
 
 class AIProvider(Enum):
@@ -121,7 +120,7 @@ Priority = Confidence × 100 + TypeWeight
 """
 
     @classmethod
-    def get_api_key(cls, provider: AIProvider) -> Optional[str]:
+    def get_api_key(cls, provider: AIProvider) -> str | None:
         """獲取 API 密鑰"""
         config = cls.MODELS.get(provider, {})
         api_key_env = config.get("api_key_env")
@@ -138,8 +137,8 @@ Priority = Confidence × 100 + TypeWeight
     def format_user_prompt(
         cls,
         description: str,
-        examples: Optional[list] = None,
-        context: Optional[dict] = None
+        examples: list | None = None,
+        context: dict | None = None
     ) -> str:
         """格式化用戶提示詞"""
         examples_text = ""

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Button, Select, Input, Space, Tag, Progress, message, Spin, Empty } from 'antd';
+import { useState, useEffect, type FC } from 'react';
+import { Card, Button, Select, Input, Space, message, Spin, Empty } from 'antd';
 import { SearchOutlined, FileTextOutlined, ReloadOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import ruleManagementAPI from '../../../services/ruleManagementAPI';
@@ -10,23 +10,20 @@ import './RuleDraftList.css';
 const { Option } = Select;
 const { Search } = Input;
 
-const RuleDraftList: React.FC = () => {
+const RuleDraftList: FC = () => {
   const navigate = useNavigate();
   const [drafts, setDrafts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [searchText, setSearchText] = useState('');
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
 
   // 載入草稿列表
   const loadDrafts = async () => {
     setLoading(true);
     try {
-      const response = await ruleManagementAPI.fetchDrafts(statusFilter, page);
+      const response = await ruleManagementAPI.fetchDrafts(statusFilter || undefined, 1);
       if (response.success) {
-        setDrafts(response.data.drafts);
-        setTotal(response.data.total);
+        setDrafts(response.data.items || []);
       }
     } catch (error) {
       message.error('載入草稿列表失敗');
@@ -38,7 +35,7 @@ const RuleDraftList: React.FC = () => {
 
   useEffect(() => {
     loadDrafts();
-  }, [statusFilter, page]);
+  }, [statusFilter]);
 
   // 生成新規則
   const handleGenerateRules = async () => {
@@ -47,17 +44,7 @@ const RuleDraftList: React.FC = () => {
       const response = await ruleManagementAPI.generateRules(0.8);
       if (response.success) {
         message.success('規則生成成功');
-
-        // 將生成的規則保存為草稿
-        const saveResponse = await ruleManagementAPI.saveDraft(
-          response.data.rules,
-          '自動生成的規則集',
-          { source: 'auto_generation' }
-        );
-
-        if (saveResponse.success) {
-          loadDrafts(); // 重新載入列表
-        }
+        await loadDrafts(); // 重新載入列表
       }
     } catch (error) {
       message.error('生成規則失敗');
@@ -114,7 +101,7 @@ const RuleDraftList: React.FC = () => {
               style={{ width: 150 }}
               placeholder="篩選狀態"
               allowClear
-              onChange={setStatusFilter}
+              onChange={(value) => setStatusFilter(value || '')}
             >
               <Option value="">全部</Option>
               <Option value={DraftStatus.PENDING_REVIEW}>待審查</Option>

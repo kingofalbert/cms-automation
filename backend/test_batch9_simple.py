@@ -12,8 +12,8 @@ def main():
 
     try:
         engine = DeterministicRuleEngine()
-        print(f"\n✅ 引擎初始化成功")
-        print(f"\n📊 规则统计:")
+        print("\n✅ 引擎初始化成功")
+        print("\n📊 规则统计:")
         print(f"   总规则数: {len(engine.rules)}")
 
         # 按类别统计
@@ -22,7 +22,7 @@ def main():
             cat = rule.category
             categories[cat] = categories.get(cat, 0) + 1
 
-        print(f"\n📋 分类详情:")
+        print("\n📋 分类详情:")
         for cat in sorted(categories.keys()):
             emoji = "⭐" if cat in ["D", "E"] else "  "
             print(f"   {emoji} {cat} 类: {categories[cat]:3d} 条")
@@ -31,21 +31,21 @@ def main():
         d_count = categories.get("D", 0)
         e_count = categories.get("E", 0)
 
-        print(f"\n🎯 Batch 9 验证:")
+        print("\n🎯 Batch 9 验证:")
         print(f"   D 类规则: {d_count} 条 {'✅' if d_count >= 40 else '❌'}")
         print(f"   E 类规则: {e_count} 条 {'✅' if e_count >= 40 else '❌'}")
 
         # 展示几个 D 类规则示例
         d_rules = [r for r in engine.rules if r.category == "D"][:5]
         if d_rules:
-            print(f"\n📝 D 类规则示例（前5条）:")
+            print("\n📝 D 类规则示例（前5条）:")
             for rule in d_rules:
                 print(f"   - {rule.rule_id}: {rule.category}/{rule.subcategory}")
 
         # 展示几个 E 类规则示例
         e_rules = [r for r in engine.rules if r.category == "E"][:5]
         if e_rules:
-            print(f"\n📝 E 类规则示例（前5条）:")
+            print("\n📝 E 类规则示例（前5条）:")
             for rule in e_rules:
                 print(f"   - {rule.rule_id}: {rule.category}/{rule.subcategory}")
 

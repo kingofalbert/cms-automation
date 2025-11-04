@@ -14,7 +14,7 @@ export const authAPI = {
    */
   login: async (credentials: LoginRequest) => {
     const response = await api.post<APIResponse<LoginResponse>>(
-      '/api/v1/auth/login',
+      'v1/auth/login',
       credentials
     );
 
@@ -30,13 +30,13 @@ export const authAPI = {
    */
   logout: () => {
     clearAuthToken();
-    return api.post<APIResponse<void>>('/api/v1/auth/logout');
+    return api.post<APIResponse<void>>('v1/auth/logout');
   },
 
   /**
    * Get current authenticated user information.
    */
-  getCurrentUser: () => api.get<APIResponse<User>>('/api/v1/auth/me'),
+  getCurrentUser: () => api.get<APIResponse<User>>('v1/auth/me'),
 
   /**
    * Refresh authentication token.
@@ -48,7 +48,7 @@ export const authAPI = {
         token_type: string;
         expires_in: number;
       }>
-    >('/api/v1/auth/refresh');
+    >('v1/auth/refresh');
 
     if (response.success && response.data.access_token) {
       setAuthToken(response.data.access_token);
@@ -61,7 +61,7 @@ export const authAPI = {
    * Change user password.
    */
   changePassword: (currentPassword: string, newPassword: string) =>
-    api.post<APIResponse<void>>('/api/v1/auth/change-password', {
+    api.post<APIResponse<void>>('v1/auth/change-password', {
       current_password: currentPassword,
       new_password: newPassword,
     }),
@@ -70,13 +70,13 @@ export const authAPI = {
    * Request password reset email.
    */
   requestPasswordReset: (email: string) =>
-    api.post<APIResponse<void>>('/api/v1/auth/request-password-reset', { email }),
+    api.post<APIResponse<void>>('v1/auth/request-password-reset', { email }),
 
   /**
    * Reset password with token.
    */
   resetPassword: (token: string, newPassword: string) =>
-    api.post<APIResponse<void>>('/api/v1/auth/reset-password', {
+    api.post<APIResponse<void>>('v1/auth/reset-password', {
       token,
       new_password: newPassword,
     }),
@@ -84,5 +84,5 @@ export const authAPI = {
   /**
    * Verify if current authentication token is valid.
    */
-  verifyToken: () => api.get<APIResponse<{ valid: boolean }>>('/api/v1/auth/verify'),
+  verifyToken: () => api.get<APIResponse<{ valid: boolean }>>('v1/auth/verify'),
 };

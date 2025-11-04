@@ -1,7 +1,6 @@
 """CMS authentication handling."""
 
 import base64
-from typing import Any
 
 import httpx
 

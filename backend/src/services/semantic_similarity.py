@@ -4,19 +4,16 @@
 """
 
 import hashlib
+
 import numpy as np
-from typing import List, Optional, Tuple, Dict
-from functools import lru_cache
-
 from openai import AsyncOpenAI
+from sqlalchemy import and_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text, and_
-from sqlalchemy.orm import selectinload
 
+from src.config.logging import get_logger
 from src.config.settings import get_settings
 from src.models.article import Article
 from src.models.topic_embedding import TopicEmbedding
-from src.config.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -38,13 +35,13 @@ class SemanticSimilarityService:
         self.client = AsyncOpenAI(api_key=settings.ANTHROPIC_API_KEY)
         self.embedding_model = "text-embedding-3-small"  # 1536 維度
         self.similarity_threshold = float(settings.SIMILARITY_THRESHOLD)  # 默認 0.85
-        self._embedding_cache: Dict[str, List[float]] = {}
+        self._embedding_cache: dict[str, list[float]] = {}
 
     def _get_text_hash(self, text: str) -> str:
         """生成文本的哈希值用於緩存"""
         return hashlib.md5(text.encode()).hexdigest()
 
-    async def generate_embedding(self, text: str, use_cache: bool = True) -> List[float]:
+    async def generate_embedding(self, text: str, use_cache: bool = True) -> list[float]:
         """生成文本的向量嵌入
 
         Args:
@@ -87,9 +84,9 @@ class SemanticSimilarityService:
 
     async def batch_generate_embeddings(
         self,
-        texts: List[str],
+        texts: list[str],
         batch_size: int = 100
-    ) -> List[List[float]]:
+    ) -> list[list[float]]:
         """批量生成嵌入（優化 API 調用）
 
         Args:
@@ -127,7 +124,7 @@ class SemanticSimilarityService:
         self,
         session: AsyncSession,
         article_id: int,
-        topic_text: Optional[str] = None
+        topic_text: str | None = None
     ) -> TopicEmbedding:
         """存儲文章的向量嵌入
 
@@ -181,9 +178,9 @@ class SemanticSimilarityService:
         session: AsyncSession,
         query_text: str,
         limit: int = 10,
-        threshold: Optional[float] = None,
-        exclude_ids: Optional[List[int]] = None
-    ) -> List[Tuple[Article, float]]:
+        threshold: float | None = None,
+        exclude_ids: list[int] | None = None
+    ) -> list[tuple[Article, float]]:
         """查找相似文章
 
         Args:
@@ -261,7 +258,7 @@ class SemanticSimilarityService:
         session: AsyncSession,
         content: str,
         threshold: float = 0.95
-    ) -> Optional[Article]:
+    ) -> Article | None:
         """檢查是否有重複內容
 
         Args:
@@ -289,10 +286,10 @@ class SemanticSimilarityService:
     async def find_articles_by_vector(
         self,
         session: AsyncSession,
-        embedding_vector: List[float],
+        embedding_vector: list[float],
         limit: int = 10,
         threshold: float = 0.85
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         """直接使用向量查找相似文章
 
         Args:
@@ -371,7 +368,7 @@ class SemanticSimilarityService:
             embeddings = await self.batch_generate_embeddings(texts)
 
             # 存儲嵌入
-            for article, text, embedding in zip(batch, texts, embeddings):
+            for article, text, embedding in zip(batch, texts, embeddings, strict=False):
                 if embedding:  # 跳過失敗的嵌入
                     try:
                         await self.store_article_embedding(
@@ -393,7 +390,7 @@ class SemanticSimilarityService:
         session: AsyncSession,
         min_cluster_size: int = 2,
         similarity_threshold: float = 0.80
-    ) -> Dict[int, List[int]]:
+    ) -> dict[int, list[int]]:
         """對文章進行主題聚類
 
         Args:
@@ -431,7 +428,7 @@ class SemanticSimilarityService:
 
             # 組織聚類結果
             clusters = {}
-            for article_id, label in zip(article_ids, labels):
+            for article_id, label in zip(article_ids, labels, strict=False):
                 if label >= 0:  # -1 表示噪聲點
                     if label not in clusters:
                         clusters[label] = []

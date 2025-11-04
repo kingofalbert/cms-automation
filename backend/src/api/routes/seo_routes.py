@@ -1,6 +1,5 @@
 """SEO analysis API routes."""
 
-from typing import Optional
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, HTTPException, status
@@ -65,7 +64,7 @@ async def analyze_article_seo(article_id: int) -> SEOAnalysisSingleResponse:
 
 
 @router.post("/seo/analyze-batch", response_model=SEOAnalysisBatchResponse, status_code=status.HTTP_202_ACCEPTED)
-async def analyze_batch_seo(limit: Optional[int] = None) -> SEOAnalysisBatchResponse:
+async def analyze_batch_seo(limit: int | None = None) -> SEOAnalysisBatchResponse:
     """Analyze SEO for all imported articles without SEO metadata.
 
     Queues an asynchronous task to batch analyze articles.

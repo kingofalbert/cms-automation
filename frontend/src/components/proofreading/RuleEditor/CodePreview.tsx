@@ -3,14 +3,26 @@ import { Card, Alert, Tag, Empty } from 'antd';
 import { CodeOutlined } from '@ant-design/icons';
 import './CodePreview.css';
 
+export interface GeneratedRulePreviewCondition {
+  type: string;
+  value: unknown;
+}
+
+export interface GeneratedRulePreview {
+  pattern?: string;
+  replacement?: string;
+  confidence?: number;
+  conditions?: GeneratedRulePreviewCondition[];
+}
+
 interface CodePreviewProps {
-  code: any;
+  code: GeneratedRulePreview | null;
   naturalLanguage: string;
 }
 
 const CodePreview: React.FC<CodePreviewProps> = ({ code, naturalLanguage }) => {
   // 格式化代碼顯示
-  const formatCode = (obj: any): string => {
+  const formatCode = (obj: GeneratedRulePreview | null): string => {
     if (!obj) return '{}';
     return JSON.stringify(obj, null, 2);
   };
@@ -89,7 +101,7 @@ const CodePreview: React.FC<CodePreviewProps> = ({ code, naturalLanguage }) => {
                 <li>
                   <strong>應用條件 (conditions):</strong>
                   <ul>
-                    {code.conditions.map((cond: any, index: number) => (
+                    {code.conditions.map((cond: GeneratedRulePreviewCondition, index: number) => (
                       <li key={index}>
                         {cond.type}: {JSON.stringify(cond.value)}
                       </li>

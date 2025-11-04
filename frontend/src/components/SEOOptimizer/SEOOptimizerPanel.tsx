@@ -2,16 +2,25 @@
  * SEO Optimizer Panel - Main component integrating all SEO optimization features.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import axios, { type AxiosError } from 'axios';
 import { Button, Card, Spinner } from '@/components/ui';
 import { MetaTitleEditor } from './MetaTitleEditor';
 import { MetaDescriptionEditor } from './MetaDescriptionEditor';
 import { KeywordEditor } from './KeywordEditor';
 import { SEOAnalysisProgress, AnalysisStatus } from './SEOAnalysisProgress';
 import { OptimizationRecommendations, Recommendation } from './OptimizationRecommendations';
-import { SEOMetadata } from '@/types/article';
+import type { SEOMetadata } from '@/types/article';
+
+interface AnalyzeResponse {
+  task_id: string;
+}
+
+interface AnalyzeStatusResponse {
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+  error?: string;
+}
 
 export interface SEOOptimizerPanelProps {
   articleId: string;
@@ -57,24 +66,24 @@ export const SEOOptimizerPanel: React.FC<SEOOptimizerPanelProps> = ({
   );
 
   // Update local state when metadata loads
-  useState(() => {
+  useEffect(() => {
     if (metadata) {
       setMetaTitle(metadata.meta_title || '');
       setMetaDescription(metadata.meta_description || '');
       setFocusKeyword(metadata.focus_keyword || '');
       setAdditionalKeywords(metadata.additional_keywords || []);
     }
-  });
+  }, [metadata]);
 
   // SEO Analysis mutation
-  const analyzeMutation = useMutation({
+  const analyzeMutation = useMutation<AnalyzeStatusResponse, Error>({
     mutationFn: async () => {
       setAnalysisStatus('analyzing');
       setProgress(0);
 
       // Start analysis
       setCurrentStep('开始分析...');
-      const analyzeResponse = await axios.post(
+      const analyzeResponse = await axios.post<AnalyzeResponse>(
         `/api/v1/seo/analyze/${articleId}`,
         {
           content: articleContent,
@@ -94,7 +103,7 @@ export const SEOOptimizerPanel: React.FC<SEOOptimizerPanelProps> = ({
         await new Promise((resolve) => setTimeout(resolve, 2000));
 
         setCurrentStep('分析中...');
-        const statusResponse = await axios.get(
+        const statusResponse = await axios.get<AnalyzeStatusResponse>(
           `/api/v1/seo/analyze/${articleId}/status`,
           { params: { task_id: taskId } }
         );
@@ -119,16 +128,16 @@ export const SEOOptimizerPanel: React.FC<SEOOptimizerPanelProps> = ({
 
       throw new Error('分析超时');
     },
-    onError: (error: any) => {
+    onError: (error) => {
       setAnalysisStatus('failed');
       console.error('SEO analysis failed:', error);
     },
   });
 
   // Save metadata mutation
-  const saveMutation = useMutation({
+  const saveMutation = useMutation<SEOMetadata, AxiosError<{ message?: string }>, SEOMetadata>({
     mutationFn: async (data: SEOMetadata) => {
-      const response = await axios.put(
+      const response = await axios.put<SEOMetadata>(
         `/api/v1/seo/metadata/${articleId}`,
         data
       );
@@ -139,8 +148,9 @@ export const SEOOptimizerPanel: React.FC<SEOOptimizerPanelProps> = ({
       onMetadataUpdate?.(data);
       refetch();
     },
-    onError: (error: any) => {
-      alert(`保存失败: ${error.response?.data?.message || error.message}`);
+    onError: (error) => {
+      const message = error.response?.data?.message ?? error.message;
+      alert(`保存失败: ${message}`);
     },
   });
 

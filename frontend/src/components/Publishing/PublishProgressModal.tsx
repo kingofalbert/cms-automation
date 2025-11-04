@@ -25,13 +25,15 @@ export const PublishProgressModal: React.FC<PublishProgressModalProps> = ({
 }) => {
   // Auto-scroll to bottom when new screenshots arrive
   useEffect(() => {
-    if (task && task.screenshots.length > 0) {
-      const galleryElement = document.getElementById('screenshot-gallery');
-      if (galleryElement) {
-        galleryElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
-      }
+    if (!task || task.screenshots.length === 0) {
+      return;
     }
-  }, [task?.screenshots.length]);
+
+    const galleryElement = document.getElementById('screenshot-gallery');
+    if (galleryElement) {
+      galleryElement.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  }, [task]);
 
   if (!task) {
     return null;

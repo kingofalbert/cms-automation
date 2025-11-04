@@ -1,7 +1,7 @@
 """Tests for SettingsService."""
 
-import sqlalchemy as sa
 import pytest
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from src.models import AppSettings, Base

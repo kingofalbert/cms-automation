@@ -1,6 +1,5 @@
 """TopicRequest model for article generation requests."""
 
-from datetime import datetime
 from enum import Enum as PyEnum
 
 from sqlalchemy import Enum, ForeignKey, Integer, String, Text

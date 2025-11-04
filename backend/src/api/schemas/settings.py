@@ -1,7 +1,7 @@
 """Settings management schemas."""
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any
 
 from pydantic import Field
 
@@ -11,16 +11,16 @@ from src.api.schemas.base import BaseSchema
 class SettingsResponse(BaseSchema):
     """Application settings payload."""
 
-    provider_config: Dict[str, Any] = Field(
+    provider_config: dict[str, Any] = Field(
         default_factory=dict, description="Publishing provider configuration"
     )
-    cms_config: Dict[str, Any] = Field(
+    cms_config: dict[str, Any] = Field(
         default_factory=dict, description="CMS integration configuration"
     )
-    cost_limits: Dict[str, Any] = Field(
+    cost_limits: dict[str, Any] = Field(
         default_factory=dict, description="Cost control limits and alerts"
     )
-    screenshot_retention: Dict[str, Any] = Field(
+    screenshot_retention: dict[str, Any] = Field(
         default_factory=dict, description="Screenshot retention policy"
     )
     updated_at: datetime = Field(..., description="Last updated timestamp")
@@ -29,16 +29,16 @@ class SettingsResponse(BaseSchema):
 class SettingsUpdateRequest(BaseSchema):
     """Payload for updating application settings."""
 
-    provider_config: Dict[str, Any] | None = Field(
+    provider_config: dict[str, Any] | None = Field(
         default=None, description="Updated provider configuration"
     )
-    cms_config: Dict[str, Any] | None = Field(
+    cms_config: dict[str, Any] | None = Field(
         default=None, description="Updated CMS configuration"
     )
-    cost_limits: Dict[str, Any] | None = Field(
+    cost_limits: dict[str, Any] | None = Field(
         default=None, description="Updated cost limits"
     )
-    screenshot_retention: Dict[str, Any] | None = Field(
+    screenshot_retention: dict[str, Any] | None = Field(
         default=None, description="Updated screenshot retention policy"
     )
 
@@ -71,6 +71,6 @@ class ConnectionTestResponse(BaseSchema):
 
     success: bool = Field(..., description="Indicates if connection test succeeded")
     message: str = Field(..., description="Human readable summary")
-    details: Dict[str, Any] | None = Field(
+    details: dict[str, Any] | None = Field(
         default=None, description="Additional diagnostic information"
     )
