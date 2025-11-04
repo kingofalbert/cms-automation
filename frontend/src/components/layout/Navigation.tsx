@@ -4,6 +4,7 @@
 
 import { Link, useLocation } from 'react-router-dom';
 import { routes } from '../../config/routes';
+import MobileMenu from './MobileMenu';
 
 export default function Navigation() {
   const location = useLocation();
@@ -23,8 +24,8 @@ export default function Navigation() {
             CMS Automation
           </Link>
 
-          {/* Navigation Links */}
-          <div className="flex flex-nowrap space-x-1 overflow-x-auto">
+          {/* Desktop Navigation Links - Hidden on mobile */}
+          <div className="hidden md:flex flex-nowrap space-x-1 overflow-x-auto">
             {navRoutes.map((route) => {
               const isActive = location.pathname === route.path;
               return (
@@ -45,6 +46,9 @@ export default function Navigation() {
               );
             })}
           </div>
+
+          {/* Mobile Menu - Only visible on mobile */}
+          <MobileMenu />
         </div>
       </div>
     </nav>
