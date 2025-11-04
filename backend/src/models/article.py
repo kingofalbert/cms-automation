@@ -2,13 +2,20 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import Enum, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from src.models.proofreading import ProofreadingDecision, ProofreadingHistory
+    from src.models.publish import PublishTask
+    from src.models.seo import SEOMetadata
+    from src.models.topic_request import TopicRequest
+    from src.models.uploaded_file import UploadedFile
 
 
 class ArticleStatus(str, PyEnum):

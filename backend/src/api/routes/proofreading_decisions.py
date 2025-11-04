@@ -170,12 +170,12 @@ async def record_decision(
         )
 
     except InvalidDecisionError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except DuplicateDecisionError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=409, detail=str(e)) from e
     except Exception as e:
         logger.error(f"記錄決策失敗: {e}")
-        raise HTTPException(status_code=500, detail="記錄決策失敗")
+        raise HTTPException(status_code=500, detail="記錄決策失敗") from e
 
 
 @router.post(
@@ -253,7 +253,7 @@ async def record_batch_decisions(
 
     except Exception as e:
         logger.error(f"批量記錄決策失敗: {e}")
-        raise HTTPException(status_code=500, detail="批量記錄失敗")
+        raise HTTPException(status_code=500, detail="批量記錄失敗") from e
 
 
 # ============================================================================
@@ -332,7 +332,7 @@ async def get_article_decisions(
 
     except Exception as e:
         logger.error(f"獲取文章決策失敗: {e}")
-        raise HTTPException(status_code=500, detail="獲取決策失敗")
+        raise HTTPException(status_code=500, detail="獲取決策失敗") from e
 
 
 @router.get(
@@ -397,7 +397,7 @@ async def get_decision_detail(
         raise
     except Exception as e:
         logger.error(f"獲取決策詳情失敗: {e}")
-        raise HTTPException(status_code=500, detail="獲取決策詳情失敗")
+        raise HTTPException(status_code=500, detail="獲取決策詳情失敗") from e
 
 
 @router.get(
@@ -485,7 +485,7 @@ async def query_decision_history(
 
     except Exception as e:
         logger.error(f"查詢決策歷史失敗: {e}")
-        raise HTTPException(status_code=500, detail="查詢失敗")
+        raise HTTPException(status_code=500, detail="查詢失敗") from e
 
 
 # ============================================================================
@@ -580,7 +580,7 @@ async def analyze_patterns(
 
     except Exception as e:
         logger.error(f"分析模式失敗: {e}")
-        raise HTTPException(status_code=500, detail="模式分析失敗")
+        raise HTTPException(status_code=500, detail="模式分析失敗") from e
 
 
 @router.get(
@@ -630,7 +630,7 @@ async def extract_preferences(
 
     except Exception as e:
         logger.error(f"提取用戶偏好失敗: {e}")
-        raise HTTPException(status_code=500, detail="提取偏好失敗")
+        raise HTTPException(status_code=500, detail="提取偏好失敗") from e
 
 
 # ============================================================================
@@ -695,7 +695,7 @@ async def generate_rules(
 
     except Exception as e:
         logger.error(f"生成規則失敗: {e}")
-        raise HTTPException(status_code=500, detail="生成規則失敗")
+        raise HTTPException(status_code=500, detail="生成規則失敗") from e
 
 
 @router.post(
@@ -759,7 +759,7 @@ async def apply_rules(
 
     except Exception as e:
         logger.error(f"應用規則失敗: {e}")
-        raise HTTPException(status_code=500, detail="應用規則失敗")
+        raise HTTPException(status_code=500, detail="應用規則失敗") from e
 
 
 # ============================================================================
@@ -811,7 +811,7 @@ async def get_feedback_stats(
 
     except Exception as e:
         logger.error(f"獲取反饋統計失敗: {e}")
-        raise HTTPException(status_code=500, detail="獲取統計失敗")
+        raise HTTPException(status_code=500, detail="獲取統計失敗") from e
 
 
 @router.post(
@@ -859,7 +859,7 @@ async def prepare_dataset(
 
     except Exception as e:
         logger.error(f"準備數據集失敗: {e}")
-        raise HTTPException(status_code=500, detail="準備數據集失敗")
+        raise HTTPException(status_code=500, detail="準備數據集失敗") from e
 
 
 # ============================================================================
@@ -916,7 +916,7 @@ async def evaluate_quality(
 
     except Exception as e:
         logger.error(f"評估質量失敗: {e}")
-        raise HTTPException(status_code=500, detail="評估失敗")
+        raise HTTPException(status_code=500, detail="評估失敗") from e
 
 
 @router.get(
@@ -971,7 +971,7 @@ async def identify_improvements(
 
     except Exception as e:
         logger.error(f"識別改進領域失敗: {e}")
-        raise HTTPException(status_code=500, detail="識別失敗")
+        raise HTTPException(status_code=500, detail="識別失敗") from e
 
 
 # ============================================================================
@@ -1056,7 +1056,7 @@ async def update_decision(
         raise
     except Exception as e:
         logger.error(f"更新決策失敗: {e}")
-        raise HTTPException(status_code=500, detail="更新失敗")
+        raise HTTPException(status_code=500, detail="更新失敗") from e
 
 
 @router.delete(
@@ -1111,7 +1111,7 @@ async def delete_decision(
         raise
     except Exception as e:
         logger.error(f"刪除決策失敗: {e}")
-        raise HTTPException(status_code=500, detail="刪除失敗")
+        raise HTTPException(status_code=500, detail="刪除失敗") from e
 
 
 @router.post(
@@ -1142,7 +1142,7 @@ async def clear_cache(
 
     except Exception as e:
         logger.error(f"清除緩存失敗: {e}")
-        raise HTTPException(status_code=500, detail="清除緩存失敗")
+        raise HTTPException(status_code=500, detail="清除緩存失敗") from e
 
 
 # ============================================================================
@@ -1246,7 +1246,7 @@ async def save_rule_draft(
 
     except Exception as e:
         logger.error(f"保存規則草稿失敗: {e}")
-        raise HTTPException(status_code=500, detail="保存規則草稿失敗")
+        raise HTTPException(status_code=500, detail="保存規則草稿失敗") from e
 
 @router.get("/rules/drafts", response_model=DraftListResponse)
 async def list_rule_drafts(
@@ -1303,7 +1303,7 @@ async def list_rule_drafts(
 
     except Exception as e:
         logger.error(f"獲取規則草稿列表失敗: {e}")
-        raise HTTPException(status_code=500, detail="獲取規則草稿列表失敗")
+        raise HTTPException(status_code=500, detail="獲取規則草稿列表失敗") from e
 
 @router.get("/rules/drafts/{draft_id}", response_model=DraftDetailResponse)
 async def get_draft_detail(
@@ -1337,7 +1337,7 @@ async def get_draft_detail(
         raise
     except Exception as e:
         logger.error(f"獲取草稿詳情失敗: {e}")
-        raise HTTPException(status_code=500, detail="獲取草稿詳情失敗")
+        raise HTTPException(status_code=500, detail="獲取草稿詳情失敗") from e
 
 @router.put("/rules/drafts/{draft_id}/rules/{rule_id}", response_model=ModifyRuleResponse)
 async def modify_rule_natural_language(
@@ -1408,7 +1408,7 @@ async def modify_rule_natural_language(
         raise
     except Exception as e:
         logger.error(f"修改規則失敗: {e}")
-        raise HTTPException(status_code=500, detail="修改規則失敗")
+        raise HTTPException(status_code=500, detail="修改規則失敗") from e
 
 @router.post("/rules/drafts/{draft_id}/review", response_model=BatchReviewResponse)
 async def batch_review_rules(
@@ -1479,7 +1479,7 @@ async def batch_review_rules(
         raise
     except Exception as e:
         logger.error(f"批量審查失敗: {e}")
-        raise HTTPException(status_code=500, detail="批量審查失敗")
+        raise HTTPException(status_code=500, detail="批量審查失敗") from e
 
 @router.post("/rules/drafts/{draft_id}/publish", response_model=PublishRulesResponse)
 async def publish_rules(
@@ -1540,7 +1540,7 @@ async def publish_rules(
         raise
     except Exception as e:
         logger.error(f"發布規則失敗: {e}")
-        raise HTTPException(status_code=500, detail="發布規則失敗")
+        raise HTTPException(status_code=500, detail="發布規則失敗") from e
 
 @router.post("/rules/test", response_model=TestRulesResponse)
 async def test_rules(
@@ -1590,7 +1590,7 @@ async def test_rules(
 
     except Exception as e:
         logger.error(f"測試規則失敗: {e}")
-        raise HTTPException(status_code=500, detail="測試規則失敗")
+        raise HTTPException(status_code=500, detail="測試規則失敗") from e
 
 # ============================================================================
 # 輔助函數

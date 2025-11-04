@@ -12,14 +12,18 @@ from pathlib import Path
 # 添加項目根目錄到路徑
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
 
-from src.config.database import get_db_config
-from src.config.logging import get_logger
-from src.models.article import Article
-from src.models.proofreading import DecisionType, ProofreadingDecision, ProofreadingHistory
-from src.services.proofreading_decision import (
+from src.config.database import get_db_config  # noqa: E402
+from src.config.logging import get_logger  # noqa: E402
+from src.models.article import Article  # noqa: E402
+from src.models.proofreading import (  # noqa: E402
+    DecisionType,
+    ProofreadingDecision,
+    ProofreadingHistory,
+)
+from src.services.proofreading_decision import (  # noqa: E402
     DateRange,
     DecisionInput,
     DecisionPatterns,

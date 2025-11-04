@@ -111,7 +111,7 @@ async def import_articles(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save uploaded file: {str(e)}",
-        )
+        ) from e
 
     # Queue import task
     try:
@@ -151,7 +151,7 @@ async def import_articles(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to queue import task: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/import/status/{task_id}", response_model=ImportTaskStatusSchema)
@@ -215,7 +215,7 @@ async def get_import_status(task_id: str) -> ImportTaskStatusSchema:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to check task status: {str(e)}",
-        )
+        ) from e
 
 
 @router.delete("/import/{task_id}")
@@ -262,4 +262,4 @@ async def cancel_import_task(task_id: str) -> dict[str, str]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to cancel task: {str(e)}",
-        )
+        ) from e

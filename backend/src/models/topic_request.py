@@ -1,11 +1,15 @@
 """TopicRequest model for article generation requests."""
 
 from enum import Enum as PyEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from src.models.article import Article
 
 
 class TopicRequestStatus(str, PyEnum):

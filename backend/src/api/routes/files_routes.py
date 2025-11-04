@@ -138,7 +138,7 @@ async def upload_file(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File upload failed: {str(e)}",
-        )
+        ) from e
 
 
 @router.post(
@@ -442,4 +442,4 @@ async def delete_file(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File deletion failed: {str(e)}",
-        )
+        ) from e

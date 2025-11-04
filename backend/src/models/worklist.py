@@ -2,11 +2,15 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import JSON, Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from src.models.article import Article
 
 try:
     from sqlalchemy.dialects.postgresql import ARRAY, JSONB  # type: ignore

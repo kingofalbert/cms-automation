@@ -175,7 +175,7 @@ async def publish_rules_enhanced(
         raise HTTPException(
             status_code=500,
             detail=f"發布規則失敗: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/rules/download/{ruleset_id}/{format}")
@@ -236,7 +236,7 @@ async def download_compiled_rules(
         raise HTTPException(
             status_code=500,
             detail=f"下載失敗: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/rules/published")
@@ -329,7 +329,7 @@ async def apply_published_rules(
         raise HTTPException(
             status_code=500,
             detail=f"應用規則失敗: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/rules/published/{ruleset_id}")
@@ -384,4 +384,4 @@ async def get_published_ruleset_detail(
         raise HTTPException(
             status_code=500,
             detail=f"獲取規則集詳情失敗: {str(e)}"
-        )
+        ) from e

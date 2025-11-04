@@ -60,7 +60,7 @@ async def analyze_article_seo(article_id: int) -> SEOAnalysisSingleResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to queue SEO analysis task: {str(e)}",
-        )
+        ) from e
 
 
 @router.post("/seo/analyze-batch", response_model=SEOAnalysisBatchResponse, status_code=status.HTTP_202_ACCEPTED)
@@ -107,7 +107,7 @@ async def analyze_batch_seo(limit: int | None = None) -> SEOAnalysisBatchRespons
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to queue batch SEO analysis task: {str(e)}",
-        )
+        ) from e
 
 
 @router.get("/seo/status/{task_id}", response_model=SEOTaskStatusResponse)
@@ -171,7 +171,7 @@ async def get_seo_task_status(task_id: str) -> SEOTaskStatusResponse:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to check task status: {str(e)}",
-        )
+        ) from e
 
 
 @router.delete("/seo/task/{task_id}")
@@ -218,4 +218,4 @@ async def cancel_seo_task(task_id: str) -> dict[str, str]:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to cancel task: {str(e)}",
-        )
+        ) from e

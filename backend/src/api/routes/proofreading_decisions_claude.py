@@ -56,12 +56,12 @@ async def compile_rule_with_claude(
         raise HTTPException(
             status_code=400,
             detail=f"配置錯誤: {str(e)}. 請確保已設置 ANTHROPIC_API_KEY"
-        )
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=f"編譯失敗: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/compile-batch")
@@ -122,7 +122,7 @@ async def compile_batch_rules_with_claude(
         raise HTTPException(
             status_code=500,
             detail=f"批量編譯失敗: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/test-compilation")
@@ -196,7 +196,7 @@ async def test_claude_compilation():
         raise HTTPException(
             status_code=500,
             detail=f"測試失敗: {str(e)}"
-        )
+        ) from e
 
 
 @router.post("/publish-with-claude/{draft_id}")
@@ -308,14 +308,14 @@ async def publish_rules_with_claude_compilation(
         raise HTTPException(
             status_code=400,
             detail=f"API 密鑰錯誤: {str(e)}"
-        )
+        ) from e
     except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(
             status_code=500,
             detail=f"發布失敗: {str(e)}"
-        )
+        ) from e
 
 
 @router.get("/compare-compilers")

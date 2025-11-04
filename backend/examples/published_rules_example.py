@@ -121,6 +121,7 @@ class ProofreadingEngine:
 '''
 
     print("  ✓ Python 模組: rules_20241103_120000.py")
+    print(python_code)
 
     # TypeScript 模組範例
     typescript_code = '''
@@ -163,6 +164,7 @@ export class ProofreadingEngine {
 '''
 
     print("  ✓ TypeScript 模組: rules_20241103_120000.ts")
+    print(typescript_code)
     print("  ✓ JSON 配置: rules_20241103_120000.json")
 
     # 5. 使用發布的規則

@@ -17,11 +17,11 @@ from pathlib import Path
 # 添加項目根目錄到路徑
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from sqlalchemy import select
+from sqlalchemy import select  # noqa: E402
 
-from src.config.database import get_db_config
-from src.models.article import Article
-from src.services.semantic_similarity import get_semantic_service
+from src.config.database import get_db_config  # noqa: E402
+from src.models.article import Article  # noqa: E402
+from src.services.semantic_similarity import get_semantic_service  # noqa: E402
 
 
 async def test_basic_embedding():

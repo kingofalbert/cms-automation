@@ -61,8 +61,8 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="playwright-enabled"
-                checked={safeConfig.playwright.enabled || false}
-                onChange={(e) => updatePlaywright({ enabled: e.target.checked })}
+                checked={config.playwright.enabled}
+                onChange={(event) => updatePlaywright({ enabled: event.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
               <label htmlFor="playwright-enabled" className="ml-2 text-sm text-gray-700">
@@ -74,8 +74,8 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="playwright-headless"
-                checked={safeConfig.playwright.headless || false}
-                onChange={(e) => updatePlaywright({ headless: e.target.checked })}
+                checked={config.playwright.headless}
+                onChange={(event) => updatePlaywright({ headless: event.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
               <label htmlFor="playwright-headless" className="ml-2 text-sm text-gray-700">
@@ -87,9 +87,9 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="playwright-screenshot"
-                checked={safeConfig.playwright.screenshot_on_error || false}
-                onChange={(e) =>
-                  updatePlaywright({ screenshot_on_error: e.target.checked })
+                checked={config.playwright.screenshot_on_error}
+                onChange={(event) =>
+                  updatePlaywright({ screenshot_on_error: event.target.checked })
                 }
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
@@ -100,9 +100,9 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
 
             <Select
               label="浏览器"
-              value={safeConfig.playwright.browser || 'chromium'}
-              onChange={(e) =>
-                updatePlaywright({ browser: e.target.value as any })
+              value={config.playwright.browser}
+              onChange={(event) =>
+                updatePlaywright({ browser: event.target.value as PlaywrightConfig['browser'] })
               }
               options={[
                 { value: 'chromium', label: 'Chromium' },
@@ -114,18 +114,18 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="超时时间 (毫秒)"
-              value={safeConfig.playwright.timeout || 30000}
-              onChange={(e) =>
-                updatePlaywright({ timeout: parseInt(e.target.value) })
+              value={config.playwright.timeout}
+              onChange={(event) =>
+                updatePlaywright({ timeout: Number.parseInt(event.target.value, 10) })
               }
             />
 
             <Input
               type="number"
               label="重试次数"
-              value={safeConfig.playwright.retry_count || 0}
-              onChange={(e) =>
-                updatePlaywright({ retry_count: parseInt(e.target.value) })
+              value={config.playwright.retry_count}
+              onChange={(event) =>
+                updatePlaywright({ retry_count: Number.parseInt(event.target.value, 10) })
               }
               min={0}
               max={5}
@@ -140,8 +140,8 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="computer-use-enabled"
-                checked={safeConfig.computer_use.enabled || false}
-                onChange={(e) => updateComputerUse({ enabled: e.target.checked })}
+                checked={config.computer_use.enabled}
+                onChange={(event) => updateComputerUse({ enabled: event.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
               <label htmlFor="computer-use-enabled" className="ml-2 text-sm text-gray-700">
@@ -152,8 +152,8 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="text"
               label="模型"
-              value={safeConfig.computer_use.model || 'claude-3-5-sonnet-20241022'}
-              onChange={(e) => updateComputerUse({ model: e.target.value })}
+              value={config.computer_use.model}
+              onChange={(event) => updateComputerUse({ model: event.target.value })}
               disabled
               helperText="Computer Use API 目前仅支持 claude-3-5-sonnet-20241022 (由 Anthropic API 限制)"
             />
@@ -161,27 +161,29 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="最大 Tokens"
-              value={safeConfig.computer_use.max_tokens || 4096}
-              onChange={(e) =>
-                updateComputerUse({ max_tokens: parseInt(e.target.value) })
+              value={config.computer_use.max_tokens}
+              onChange={(event) =>
+                updateComputerUse({ max_tokens: Number.parseInt(event.target.value, 10) })
               }
             />
 
             <Input
               type="number"
               label="超时时间 (毫秒)"
-              value={safeConfig.computer_use.timeout || 300000}
-              onChange={(e) =>
-                updateComputerUse({ timeout: parseInt(e.target.value) })
+              value={config.computer_use.timeout}
+              onChange={(event) =>
+                updateComputerUse({ timeout: Number.parseInt(event.target.value, 10) })
               }
             />
 
             <Input
               type="number"
               label="截图间隔 (毫秒)"
-              value={safeConfig.computer_use.screenshot_interval || 5000}
-              onChange={(e) =>
-                updateComputerUse({ screenshot_interval: parseInt(e.target.value) })
+              value={config.computer_use.screenshot_interval}
+              onChange={(event) =>
+                updateComputerUse({
+                  screenshot_interval: Number.parseInt(event.target.value, 10),
+                })
               }
               helperText="Computer Use 执行时的截图间隔"
             />
@@ -189,9 +191,9 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="重试次数"
-              value={safeConfig.computer_use.retry_count || 0}
-              onChange={(e) =>
-                updateComputerUse({ retry_count: parseInt(e.target.value) })
+              value={config.computer_use.retry_count}
+              onChange={(event) =>
+                updateComputerUse({ retry_count: Number.parseInt(event.target.value, 10) })
               }
               min={0}
               max={5}
@@ -206,8 +208,8 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="hybrid-enabled"
-                checked={safeConfig.hybrid.enabled || false}
-                onChange={(e) => updateHybrid({ enabled: e.target.checked })}
+                checked={config.hybrid.enabled}
+                onChange={(event) => updateHybrid({ enabled: event.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
               <label htmlFor="hybrid-enabled" className="ml-2 text-sm text-gray-700">
@@ -217,9 +219,11 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
 
             <Select
               label="首选 Provider"
-              value={safeConfig.hybrid.primary_provider || 'playwright'}
-              onChange={(e) =>
-                updateHybrid({ primary_provider: e.target.value as any })
+              value={config.hybrid.primary_provider}
+              onChange={(event) =>
+                updateHybrid({
+                  primary_provider: event.target.value as HybridConfig['primary_provider'],
+                })
               }
               options={[
                 { value: 'playwright', label: 'Playwright' },
@@ -231,8 +235,8 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="hybrid-fallback"
-                checked={safeConfig.hybrid.fallback_enabled || false}
-                onChange={(e) => updateHybrid({ fallback_enabled: e.target.checked })}
+                checked={config.hybrid.fallback_enabled}
+                onChange={(event) => updateHybrid({ fallback_enabled: event.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
               <label htmlFor="hybrid-fallback" className="ml-2 text-sm text-gray-700">
@@ -244,8 +248,8 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
               <input
                 type="checkbox"
                 id="hybrid-error-fallback"
-                checked={safeConfig.hybrid.fallback_on_error || false}
-                onChange={(e) => updateHybrid({ fallback_on_error: e.target.checked })}
+                checked={config.hybrid.fallback_on_error}
+                onChange={(event) => updateHybrid({ fallback_on_error: event.target.checked })}
                 className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
               />
               <label htmlFor="hybrid-error-fallback" className="ml-2 text-sm text-gray-700">
@@ -256,9 +260,9 @@ export const ProviderConfigSection: React.FC<ProviderConfigSectionProps> = ({
             <Input
               type="number"
               label="自动切换阈值 (%)"
-              value={safeConfig.hybrid.auto_switch_threshold || 80}
-              onChange={(e) =>
-                updateHybrid({ auto_switch_threshold: parseInt(e.target.value) })
+              value={config.hybrid.auto_switch_threshold}
+              onChange={(event) =>
+                updateHybrid({ auto_switch_threshold: Number.parseInt(event.target.value, 10) })
               }
               min={0}
               max={100}

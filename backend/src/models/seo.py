@@ -1,6 +1,7 @@
 """SEO metadata model for article optimization."""
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     ARRAY,
@@ -15,6 +16,9 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from src.models.article import Article
 
 
 class SEOMetadata(Base, TimestampMixin):

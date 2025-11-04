@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum as PyEnum
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from sqlalchemy import (
     TIMESTAMP,
@@ -19,6 +19,9 @@ from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from src.models.article import Article
 
 
 class DecisionType(str, PyEnum):

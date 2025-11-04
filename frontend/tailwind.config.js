@@ -81,6 +81,23 @@ export default {
       animation: {
         'spin-slow': 'spin 3s linear infinite',
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'in': 'in 200ms ease-out',
+        'slide-in-from-top-5': 'slide-in-from-top-5 200ms ease-out',
+        'fade-in': 'fade-in 200ms ease-out',
+      },
+      keyframes: {
+        in: {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'slide-in-from-top-5': {
+          '0%': { transform: 'translateY(-1.25rem)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
       },
     },
   },

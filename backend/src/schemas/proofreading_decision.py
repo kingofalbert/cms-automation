@@ -77,7 +77,7 @@ class DateRangeParams(BaseModel):
     end_date: datetime | None = Field(default=None, description="結束日期")
 
     @validator("end_date")
-    def validate_date_range(cls, v, values):
+    def validate_date_range(cls, v, values):  # noqa: N805
         if v and "start_date" in values and values["start_date"]:
             if v < values["start_date"]:
                 raise ValueError("結束日期必須晚於開始日期")

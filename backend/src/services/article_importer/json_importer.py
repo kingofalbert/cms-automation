@@ -79,7 +79,7 @@ class JSONImporter(ArticleImporter):
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON format: {e}")
+            raise ValueError(f"Invalid JSON format: {e}") from e
 
         # Validate root structure
         if not isinstance(data, dict):

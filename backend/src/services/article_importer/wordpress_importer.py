@@ -65,7 +65,7 @@ class WordPressImporter(ArticleImporter):
             tree = ET.parse(path)
             root = tree.getroot()
         except ET.ParseError as e:
-            raise ValueError(f"Invalid XML format: {e}")
+            raise ValueError(f"Invalid XML format: {e}") from e
 
         # Validate it's a WordPress export
         channel = root.find("channel")

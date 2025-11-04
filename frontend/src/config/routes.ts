@@ -45,7 +45,7 @@ const ArticleListPage = createLazyRoute(() => import('../pages/ArticleListPage')
 const ArticleReviewPage = createLazyRoute(() => import('../pages/ArticleReviewPage'));
 const PublishTasksPage = createLazyRoute(() => import('../pages/PublishTasksPage'));
 const ProviderComparisonPage = createLazyRoute(() => import('../pages/ProviderComparisonPage'));
-const SettingsPage = createLazyRoute(() => import('../pages/SettingsPage'));
+const SettingsPage = createLazyRoute(() => import('../pages/SettingsPageModern'));
 const WorklistPage = createLazyRoute(() => import('../pages/WorklistPage'));
 const ScheduleManagerPage = createLazyRoute(() => import('../pages/ScheduleManagerPage'));
 const TagsPage = createLazyRoute(() => import('../pages/TagsPage'));

@@ -89,7 +89,7 @@ class CSVImporter(ArticleImporter):
                         continue
 
         except csv.Error as e:
-            raise ValueError(f"Invalid CSV format: {e}")
+            raise ValueError(f"Invalid CSV format: {e}") from e
 
         logger.info("csv_parse_completed", total_articles=len(articles))
         return articles
