@@ -49,3 +49,10 @@ export type { AccordionProps, AccordionItemProps } from './Accordion';
 
 export { Toast, ToastContainer } from './Toast';
 export type { ToastProps, ToastContainerProps, ToastType } from './Toast';
+
+export { Skeleton, SkeletonCard, SkeletonSettingsSection } from './Skeleton';
+export type {
+  SkeletonProps,
+  SkeletonCardProps,
+  SkeletonSettingsSectionProps,
+} from './Skeleton';

@@ -3,9 +3,12 @@
  * Provides smooth animations and accessible keyboard navigation.
  */
 
-import { useState, ReactNode, HTMLAttributes } from 'react';
+import { useEffect, useMemo, useRef, useState, ReactNode, HTMLAttributes } from 'react';
 import { clsx } from 'clsx';
 import { ChevronDown } from 'lucide-react';
+
+const TRANSITION_DURATION_MS = 300;
+const TRANSITION_TIMING = 'cubic-bezier(0.25, 0.1, 0.25, 1)';
 
 export interface AccordionItemProps extends HTMLAttributes<HTMLDivElement> {
   title: string;
@@ -25,54 +28,112 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   ...props
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const isInitialMount = useRef(true);
+
+  const transitionStyle = useMemo(
+    () =>
+      `height ${TRANSITION_DURATION_MS}ms ${TRANSITION_TIMING}, opacity ${TRANSITION_DURATION_MS}ms ${TRANSITION_TIMING}`,
+    []
+  );
+
+  useEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      contentEl.style.height = isOpen ? 'auto' : '0px';
+      contentEl.style.opacity = isOpen ? '1' : '0';
+      contentEl.style.transition = transitionStyle;
+      return;
+    }
+
+    const startAnimation = () => {
+      const scrollHeight = contentEl.scrollHeight;
+
+      if (isOpen) {
+        contentEl.style.transition = transitionStyle;
+        contentEl.style.height = '0px';
+        contentEl.style.opacity = '0';
+
+        requestAnimationFrame(() => {
+          contentEl.style.height = `${scrollHeight}px`;
+          contentEl.style.opacity = '1';
+        });
+
+        const handleOpenEnd = (event: TransitionEvent) => {
+          if (event.propertyName === 'height') {
+            contentEl.style.height = 'auto';
+            contentEl.removeEventListener('transitionend', handleOpenEnd);
+          }
+        };
+
+        contentEl.addEventListener('transitionend', handleOpenEnd);
+      } else {
+        contentEl.style.transition = transitionStyle;
+        contentEl.style.height = `${scrollHeight}px`;
+        contentEl.style.opacity = '1';
+
+        requestAnimationFrame(() => {
+          contentEl.style.height = '0px';
+          contentEl.style.opacity = '0';
+        });
+      }
+    };
+
+    startAnimation();
+  }, [isOpen, transitionStyle]);
 
   return (
     <div
       className={clsx(
-        'border border-gray-200 rounded-xl overflow-hidden bg-white',
-        'hover:border-primary-300 transition-all duration-200',
-        'shadow-sm hover:shadow-md',
+        'rounded-2xl border border-gray-200 bg-white shadow-sm transition-shadow duration-300',
+        isOpen ? 'shadow-md' : 'hover:shadow-md',
         className
       )}
       {...props}
     >
-      {/* Header */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition-colors duration-150"
+        type="button"
+        onClick={() => setIsOpen((previous) => !previous)}
+        className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left transition-colors duration-200 hover:bg-gray-50"
         aria-expanded={isOpen}
       >
-        <div className="flex items-center gap-4 flex-1">
+        <div className="flex flex-1 items-center gap-4">
           {icon && (
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center">
+            <div
+              className={clsx(
+                'flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary-50 text-primary-600 transition-transform duration-300',
+                isOpen ? 'scale-105' : 'scale-100'
+              )}
+            >
               {icon}
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-            {subtitle && (
-              <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
-            )}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            {subtitle && <p className="mt-1 text-sm text-gray-500">{subtitle}</p>}
           </div>
         </div>
         <ChevronDown
           className={clsx(
-            'w-5 h-5 text-gray-400 transition-transform duration-200 flex-shrink-0',
-            isOpen && 'transform rotate-180'
+            'h-5 w-5 flex-shrink-0 text-gray-400 transition-transform duration-300',
+            isOpen ? 'rotate-180 text-primary-600' : 'rotate-0'
           )}
         />
       </button>
 
-      {/* Content */}
       <div
-        className={clsx(
-          'transition-all duration-300 ease-in-out overflow-hidden',
-          isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-        )}
+        ref={contentRef}
+        className="overflow-hidden px-6"
+        style={{
+          height: defaultOpen ? 'auto' : '0px',
+          opacity: defaultOpen ? 1 : 0,
+          transition: transitionStyle,
+        }}
       >
-        <div className="px-6 py-5 border-t border-gray-100 bg-gray-50/50">
-          {children}
-        </div>
+        <div className="border-t border-gray-100 bg-gray-50/40 py-5">{children}</div>
       </div>
     </div>
   );

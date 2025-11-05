@@ -3,32 +3,27 @@
  * Configure screenshot storage and retention policies.
  */
 
-import { ScreenshotRetention } from '@/types/settings';
 import { Card, Input } from '@/components/ui';
 import { Camera, HardDrive } from 'lucide-react';
+import { Controller, useFormContext } from 'react-hook-form';
+import type { SettingsFormValues } from '@/schemas/settings-schema';
 
 export interface ScreenshotRetentionSectionProps {
-  retention: ScreenshotRetention;
-  onChange: (retention: ScreenshotRetention) => void;
-  estimatedStorageUsage?: number; // MB
+  estimatedStorageUsage?: number;
 }
 
-export const ScreenshotRetentionSection: React.FC<
-  ScreenshotRetentionSectionProps
-> = ({ retention, onChange, estimatedStorageUsage = 0 }) => {
-  // Provide safe defaults for when backend returns empty objects
-  const safeRetention = {
-    retention_days: retention.retention_days ?? 30,
-    max_screenshots_per_task: retention.max_screenshots_per_task ?? 10,
-    compress_screenshots: retention.compress_screenshots ?? true,
-    compression_quality: retention.compression_quality ?? 80,
-    delete_on_success: retention.delete_on_success ?? false,
-    delete_on_failure: retention.delete_on_failure ?? false,
-  };
+export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProps> = ({
+  estimatedStorageUsage = 0,
+}) => {
+  const {
+    register,
+    control,
+    watch,
+    formState: { errors },
+  } = useFormContext<SettingsFormValues>();
 
-  const updateRetention = (updates: Partial<ScreenshotRetention>) => {
-    onChange({ ...safeRetention, ...updates });
-  };
+  const retention = watch('screenshot_retention');
+  const retentionErrors = errors.screenshot_retention;
 
   const formatStorage = (mb: number) => {
     if (mb >= 1024) {
@@ -45,7 +40,6 @@ export const ScreenshotRetentionSection: React.FC<
       </h2>
 
       <div className="space-y-6">
-        {/* Storage Usage */}
         <div className="bg-gray-50 rounded-lg p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
@@ -63,113 +57,111 @@ export const ScreenshotRetentionSection: React.FC<
           </div>
         </div>
 
-        {/* Retention Settings */}
         <div className="space-y-4">
           <Input
             type="number"
             label="保留天数"
-            value={safeRetention.retention_days}
-            onChange={(e) =>
-              updateRetention({ retention_days: parseInt(e.target.value) })
-            }
             min={1}
             max={365}
             helperText="超过此天数的截图将被自动删除"
+            error={retentionErrors?.retention_days?.message as string | undefined}
+            {...register('screenshot_retention.retention_days', { valueAsNumber: true })}
           />
 
           <Input
             type="number"
             label="每任务最大截图数"
-            value={safeRetention.max_screenshots_per_task}
-            onChange={(e) =>
-              updateRetention({
-                max_screenshots_per_task: parseInt(e.target.value),
-              })
-            }
             min={1}
             max={100}
             helperText="单个任务保留的最大截图数量"
+            error={
+              retentionErrors?.max_screenshots_per_task?.message as string | undefined
+            }
+            {...register('screenshot_retention.max_screenshots_per_task', {
+              valueAsNumber: true,
+            })}
           />
 
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="compress-screenshots"
-              checked={safeRetention.compress_screenshots}
-              onChange={(e) =>
-                updateRetention({ compress_screenshots: e.target.checked })
-              }
-              className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-            />
-            <label
-              htmlFor="compress-screenshots"
-              className="ml-2 text-sm text-gray-700"
-            >
-              压缩截图 (节省存储空间)
-            </label>
-          </div>
+          <Controller
+            name="screenshot_retention.compress_screenshots"
+            control={control}
+            render={({ field }) => (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="compress-screenshots"
+                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                  checked={field.value}
+                  onChange={(event) => field.onChange(event.target.checked)}
+                />
+                <label htmlFor="compress-screenshots" className="ml-2 text-sm text-gray-700">
+                  压缩截图 (节省存储空间)
+                </label>
+              </div>
+            )}
+          />
 
-          {safeRetention.compress_screenshots && (
+          {retention.compress_screenshots && (
             <Input
               type="number"
               label="压缩质量 (%)"
-              value={safeRetention.compression_quality}
-              onChange={(e) =>
-                updateRetention({ compression_quality: parseInt(e.target.value) })
-              }
               min={10}
               max={100}
               step={10}
               helperText="质量越高，文件越大。推荐 70-80"
+              error={
+                retentionErrors?.compression_quality?.message as string | undefined
+              }
+              {...register('screenshot_retention.compression_quality', {
+                valueAsNumber: true,
+              })}
             />
           )}
 
-          <div className="pt-4 border-t border-gray-200">
-            <p className="text-sm font-medium text-gray-700 mb-3">
-              自动删除策略
+          <div className="border-t border-gray-200 pt-4">
+            <p className="text-sm font-medium text-gray-700 mb-3">自动删除策略</p>
+
+            <Controller
+              name="screenshot_retention.delete_on_success"
+              control={control}
+              render={({ field }) => (
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="delete-on-success"
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    checked={field.value}
+                    onChange={(event) => field.onChange(event.target.checked)}
+                  />
+                  <label htmlFor="delete-on-success" className="text-sm text-gray-700">
+                    任务成功后删除截图
+                  </label>
+                </div>
+              )}
+            />
+
+            <Controller
+              name="screenshot_retention.delete_on_failure"
+              control={control}
+              render={({ field }) => (
+                <div className="mt-2 flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="delete-on-failure"
+                    className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
+                    checked={field.value}
+                    onChange={(event) => field.onChange(event.target.checked)}
+                  />
+                  <label htmlFor="delete-on-failure" className="text-sm text-gray-700">
+                    任务失败后删除截图
+                  </label>
+                </div>
+              )}
+            />
+
+            <p className="mt-2 ml-6 text-xs text-gray-500">
+              注意：保留失败任务的截图有助于问题排查
             </p>
-
-            <div className="space-y-2">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="delete-on-success"
-                  checked={safeRetention.delete_on_success}
-                  onChange={(e) =>
-                    updateRetention({ delete_on_success: e.target.checked })
-                  }
-                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                />
-                <label
-                  htmlFor="delete-on-success"
-                  className="ml-2 text-sm text-gray-700"
-                >
-                  任务成功后删除截图
-                </label>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="delete-on-failure"
-                  checked={safeRetention.delete_on_failure}
-                  onChange={(e) =>
-                    updateRetention({ delete_on_failure: e.target.checked })
-                  }
-                  className="w-4 h-4 text-primary-600 rounded focus:ring-primary-500"
-                />
-                <label
-                  htmlFor="delete-on-failure"
-                  className="ml-2 text-sm text-gray-700"
-                >
-                  任务失败后删除截图
-                </label>
-              </div>
-
-              <p className="text-xs text-gray-500 mt-2 ml-6">
-                注意：保留失败任务的截图有助于问题排查
-              </p>
-            </div>
           </div>
         </div>
       </div>

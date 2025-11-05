@@ -5,6 +5,7 @@
 import { HashRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Toaster } from 'sonner';
 import { AppRoutes } from './routes';
 import { queryClient } from './services/query-client';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -30,6 +31,7 @@ function App() {
         </HashRouter>
         {/* Show React Query DevTools in development */}
         {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        <Toaster position="top-right" toastOptions={{ duration: 5000 }} />
       </QueryClientProvider>
     </ErrorBoundary>
   );
