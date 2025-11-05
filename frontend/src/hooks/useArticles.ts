@@ -33,8 +33,10 @@ interface ArticleListItem {
   published_at?: string;
 }
 
+export type { Article, ArticleListItem };
+
 export function useArticles(skip = 0, limit = 20) {
-  return useQuery({
+  return useQuery<ArticleListItem[]>({
     queryKey: ['articles', skip, limit],
     queryFn: async () => {
       const response = await api.get<ArticleListItem[]>('/v1/articles', {
@@ -46,7 +48,7 @@ export function useArticles(skip = 0, limit = 20) {
 }
 
 export function useArticle(articleId: number) {
-  return useQuery({
+  return useQuery<Article>({
     queryKey: ['article', articleId],
     queryFn: async () => {
       const response = await api.get<Article>(`/v1/articles/${articleId}`);
