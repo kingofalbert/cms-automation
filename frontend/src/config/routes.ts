@@ -37,40 +37,63 @@ function createLazyRoute(importFunc: () => Promise<{ default: ComponentType<any>
   };
 }
 
-// Main application pages
-const HomePage = createLazyRoute(() => import('../pages/HomePage'));
-const ArticleGeneratorPage = createLazyRoute(() => import('../pages/ArticleGeneratorPage'));
-const ArticleImportPage = createLazyRoute(() => import('../pages/ArticleImportPage'));
-const ArticleListPage = createLazyRoute(() => import('../pages/ArticleListPage'));
-const ArticleReviewPage = createLazyRoute(() => import('../pages/ArticleReviewPage'));
-const PublishTasksPage = createLazyRoute(() => import('../pages/PublishTasksPage'));
-const ProviderComparisonPage = createLazyRoute(() => import('../pages/ProviderComparisonPage'));
+// Phase 1: Active pages
 const SettingsPage = createLazyRoute(() => import('../pages/SettingsPageModern'));
 const WorklistPage = createLazyRoute(() => import('../pages/WorklistPage'));
-const ScheduleManagerPage = createLazyRoute(() => import('../pages/ScheduleManagerPage'));
-const TagsPage = createLazyRoute(() => import('../pages/TagsPage'));
 
-// Proofreading pages
-const RuleDraftList = createLazyRoute(() => import('../components/proofreading/RuleManagement/RuleDraftList'));
-const RuleDetailPage = createLazyRoute(() => import('../components/proofreading/RuleDetail/RuleDetailPage'));
-const RuleTestPage = createLazyRoute(() => import('../pages/RuleTestPage'));
-const PublishedRulesPage = createLazyRoute(() => import('../pages/PublishedRulesPage'));
-const ProofreadingStatsPage = createLazyRoute(() => import('../pages/ProofreadingStatsPage'));
+// Phase 2+: Commented out for future use
+// const HomePage = createLazyRoute(() => import('../pages/HomePage'));
+// const ArticleGeneratorPage = createLazyRoute(() => import('../pages/ArticleGeneratorPage'));
+// const ArticleImportPage = createLazyRoute(() => import('../pages/ArticleImportPage'));
+// const ArticleListPage = createLazyRoute(() => import('../pages/ArticleListPage'));
+// const ArticleReviewPage = createLazyRoute(() => import('../pages/ArticleReviewPage'));
+// const PublishTasksPage = createLazyRoute(() => import('../pages/PublishTasksPage'));
+// const ProviderComparisonPage = createLazyRoute(() => import('../pages/ProviderComparisonPage'));
+// const ScheduleManagerPage = createLazyRoute(() => import('../pages/ScheduleManagerPage'));
+// const TagsPage = createLazyRoute(() => import('../pages/TagsPage'));
+// const RuleDraftList = createLazyRoute(() => import('../components/proofreading/RuleManagement/RuleDraftList'));
+// const RuleDetailPage = createLazyRoute(() => import('../components/proofreading/RuleDetail/RuleDetailPage'));
+// const RuleTestPage = createLazyRoute(() => import('../pages/RuleTestPage'));
+// const PublishedRulesPage = createLazyRoute(() => import('../pages/PublishedRulesPage'));
+// const ProofreadingStatsPage = createLazyRoute(() => import('../pages/ProofreadingStatsPage'));
 
 /**
  * Route configurations
+ *
+ * Phase 1: Simplified routes focusing on core worklist functionality
+ * Only /worklist and /settings are active. All other routes are hidden for future phases.
  */
 export const routes: RouteConfig[] = [
+  // Phase 1: Redirect root to worklist
   {
     path: '/',
-    ...HomePage,
-    title: 'CMS Automation - 首頁',
-    description: 'AI驅動的CMS自動化平台',
-    showInNav: true,
-    navLabel: '首頁',
-    icon: 'home',
-    loadingType: 'dashboard',
+    ...WorklistPage,
+    title: 'CMS自动化系统 - 工作清单',
+    description: '管理您的文章校对工作流',
+    loadingType: 'list',
   },
+  // Phase 1: Worklist - Main page
+  {
+    path: '/worklist',
+    ...WorklistPage,
+    title: 'CMS自动化系统 - 工作清单',
+    description: '管理您的文章校对工作流',
+    showInNav: false, // No navigation menu in Phase 1
+    loadingType: 'list',
+  },
+  // Phase 1: Settings page
+  {
+    path: '/settings',
+    ...SettingsPage,
+    title: 'CMS自动化系统 - 设置',
+    description: '配置系统设置和语言偏好',
+    showInNav: false, // No navigation menu in Phase 1
+    loadingType: 'detail',
+  },
+
+  // PHASE 2+ ROUTES (Hidden in Phase 1)
+  // Uncomment these routes in future phases:
+  /*
   {
     path: '/generate',
     ...ArticleGeneratorPage,
@@ -129,26 +152,6 @@ export const routes: RouteConfig[] = [
     loadingType: 'dashboard',
   },
   {
-    path: '/settings',
-    ...SettingsPage,
-    title: '設置',
-    description: '配置系統設置',
-    showInNav: true,
-    navLabel: '設置',
-    icon: 'settings',
-    loadingType: 'detail',
-  },
-  {
-    path: '/worklist',
-    ...WorklistPage,
-    title: '工作清單',
-    description: '管理待處理的工作項目',
-    showInNav: true,
-    navLabel: '工作清單',
-    icon: 'clipboard',
-    loadingType: 'list',
-  },
-  {
     path: '/schedule',
     ...ScheduleManagerPage,
     title: '排程管理',
@@ -168,7 +171,6 @@ export const routes: RouteConfig[] = [
     icon: 'tag',
     loadingType: 'list',
   },
-  // Proofreading routes
   {
     path: '/proofreading/rules',
     ...RuleDraftList,
@@ -213,6 +215,7 @@ export const routes: RouteConfig[] = [
     icon: 'pie-chart',
     loadingType: 'dashboard',
   },
+  */
 ];
 
 /**

@@ -1,0 +1,126 @@
+{
+  "common": {
+    "appName": "CMS Automation System",
+    "language": "Language",
+    "settings": "Settings",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "worklist": {
+    "title": "Worklist",
+    "subtitle": "Manage articles from Google Drive and track the 7-stage review process",
+    "sync": "Sync Google Drive",
+    "syncing": "Syncing...",
+    "lastSync": "Last synced",
+    "neverSynced": "Never synced",
+    "filters": {
+      "title": "Filters",
+      "search": "Search title or content...",
+      "author": "Filter by author...",
+      "reset": "Reset Filters"
+    },
+    "statistics": {
+      "total": "Total Articles",
+      "pending": "Pending",
+      "inReview": "In Review",
+      "approved": "Approved"
+    },
+    "status": {
+      "all": "All Status",
+      "to_evaluate": "To Evaluate",
+      "to_confirm": "To Confirm",
+      "to_review": "To Review",
+      "to_revise": "To Revise",
+      "to_rereview": "To Re-review",
+      "ready_to_publish": "Ready to Publish",
+      "published": "Published"
+    },
+    "actions": {
+      "view": "View Details",
+      "edit": "Edit",
+      "approve": "Approve",
+      "reject": "Reject",
+      "publish": "Publish"
+    },
+    "messages": {
+      "syncStarted": "Google Drive sync started",
+      "syncFailed": "Sync failed",
+      "statusChanged": "Status changed successfully",
+      "statusChangeFailed": "Status change failed",
+      "publishSubmitted": "Publish task submitted",
+      "publishFailed": "Publish failed"
+    },
+    "errors": {
+      "title": "Sync Errors",
+      "moreErrors": "...and {{count}} more errors"
+    },
+    "empty": {
+      "title": "No Articles Yet",
+      "description": "Sync articles from Google Drive to get started",
+      "action": "Sync Now"
+    },
+    "details": {
+      "title": "Article Details",
+      "content": "Content",
+      "metadata": "Metadata",
+      "history": "History",
+      "author": "Author",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "wordCount": "Word Count"
+    }
+  },
+  "settings": {
+    "title": "System Settings",
+    "subtitle": "Configure your CMS Automation System",
+    "sections": {
+      "general": "General Settings",
+      "language": "Language Settings",
+      "appearance": "Appearance Settings",
+      "advanced": "Advanced Features",
+      "proofreading": "Proofreading Rules",
+      "tags": "Tag Management"
+    },
+    "language": {
+      "title": "Interface Language",
+      "description": "Choose the display language for the system interface",
+      "options": {
+        "zh-CN": "简体中文",
+        "en-US": "English"
+      }
+    },
+    "appearance": {
+      "title": "Appearance Theme",
+      "description": "Customize the system interface appearance",
+      "theme": {
+        "label": "Theme",
+        "light": "Light",
+        "dark": "Dark",
+        "auto": "Auto"
+      }
+    },
+    "comingSoon": {
+      "title": "Coming Soon",
+      "description": "This feature is under development. Stay tuned for the next release."
+    },
+    "saved": "Settings saved successfully",
+    "saveFailed": "Failed to save settings"
+  },
+  "navigation": {
+    "home": "Home",
+    "worklist": "Worklist",
+    "settings": "Settings"
+  },
+  "errors": {
+    "generic": "An error occurred, please try again",
+    "network": "Network connection failed",
+    "unauthorized": "Unauthorized access",
+    "notFound": "Resource not found",
+    "serverError": "Server error"
+  }
+}

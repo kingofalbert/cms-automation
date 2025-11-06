@@ -9,7 +9,9 @@ import { Toaster } from 'sonner';
 import { AppRoutes } from './routes';
 import { queryClient } from './services/query-client';
 import ErrorBoundary from './components/ErrorBoundary';
-import Navigation from './components/layout/Navigation';
+import { Phase1Header } from './components/layout/Phase1Header';
+// Initialize i18n
+import './i18n/config';
 
 function App() {
   return (
@@ -24,8 +26,9 @@ function App() {
     >
       <QueryClientProvider client={queryClient}>
         <HashRouter>
+          {/* Phase 1: Unified header with language switcher and settings */}
+          <Phase1Header />
           <div className="min-h-screen bg-gray-50">
-            <Navigation />
             <AppRoutes />
           </div>
         </HashRouter>

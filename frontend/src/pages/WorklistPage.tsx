@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { Card, Select, Input, Button } from '@/components/ui';
 import { WorklistTable } from '@/components/Worklist/WorklistTable';
@@ -16,10 +17,12 @@ import {
   WorklistStatus,
   WorklistFilters,
   DriveSyncStatus,
+  WorklistListResponse,
 } from '@/types/worklist';
 import { Search, Filter, RefreshCw } from 'lucide-react';
 
 export default function WorklistPage() {
+  const { t } = useTranslation();
   const [filters, setFilters] = useState<WorklistFilters>({
     status: 'all',
     search: '',
@@ -28,15 +31,19 @@ export default function WorklistPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Fetch worklist items
-  const { data: items = [], isLoading, refetch } = useQuery({
+  const {
+    data: worklistData,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['worklist', filters],
     queryFn: async () => {
-      const params: any = {};
+      const params: Record<string, string> = {};
       if (filters.status && filters.status !== 'all') params.status = filters.status;
       if (filters.search) params.search = filters.search;
       if (filters.author) params.author = filters.author;
 
-      return await api.get<WorklistItem[]>('/v1/worklist', {
+      return await api.get<WorklistListResponse>('/v1/worklist', {
         params,
       });
     },
@@ -67,11 +74,11 @@ export default function WorklistPage() {
       return await api.post('/v1/worklist/sync');
     },
     onSuccess: () => {
-      alert('Google Drive 同步已开始');
+      alert(t('worklist.messages.syncStarted'));
       refetch();
     },
     onError: (error: any) => {
-      alert(`同步失败: ${error.response?.data?.message || error.message}`);
+      alert(`${t('worklist.messages.syncFailed')}: ${error.response?.data?.message || error.message}`);
     },
   });
 
@@ -82,39 +89,44 @@ export default function WorklistPage() {
       newStatus,
       note,
     }: {
-      itemId: string;
+      itemId: number;
       newStatus: WorklistStatus;
       note?: string;
     }) => {
-      return await api.post(
-        `/v1/worklist/${itemId}/status`,
-        { status: newStatus, note }
-      );
+      return await api.post(`/v1/worklist/${itemId}/status`, {
+        status: newStatus,
+        note: note ? { message: note } : undefined,
+      });
     },
     onSuccess: () => {
-      alert('状态变更成功');
+      alert(t('worklist.messages.statusChanged'));
       refetch();
       setDrawerOpen(false);
     },
     onError: (error: any) => {
-      alert(`状态变更失败: ${error.response?.data?.message || error.message}`);
+      alert(`${t('worklist.messages.statusChangeFailed')}: ${error.response?.data?.message || error.message}`);
     },
   });
 
   // Publish to WordPress
   const publishMutation = useMutation({
-    mutationFn: async (itemId: string) => {
+    mutationFn: async (itemId: number) => {
       return await api.post(`/v1/worklist/${itemId}/publish`);
     },
     onSuccess: () => {
-      alert('发布任务已提交');
+      alert(t('worklist.messages.publishSubmitted'));
       refetch();
       setDrawerOpen(false);
     },
     onError: (error: any) => {
-      alert(`发布失败: ${error.response?.data?.message || error.message}`);
+      alert(`${t('worklist.messages.publishFailed')}: ${error.response?.data?.message || error.message}`);
     },
   });
+
+  const items = worklistData?.items ?? [];
+  const syncErrors = Array.isArray(syncStatus?.errors)
+    ? (syncStatus?.errors as string[])
+    : [];
 
   const handleItemClick = (item: WorklistItem) => {
     setSelectedItem(item);
@@ -122,14 +134,14 @@ export default function WorklistPage() {
   };
 
   const handleStatusChange = (
-    itemId: string,
+    itemId: number,
     newStatus: WorklistStatus,
     note?: string
   ) => {
     statusChangeMutation.mutate({ itemId, newStatus, note });
   };
 
-  const handlePublish = (itemId: string) => {
+  const handlePublish = (itemId: number) => {
     publishMutation.mutate(itemId);
   };
 
@@ -143,9 +155,9 @@ export default function WorklistPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">工作清单</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('worklist.title')}</h1>
             <p className="mt-2 text-gray-600">
-              管理来自 Google Drive 的文章，跟踪 7 阶段审稿流程
+              {t('worklist.subtitle')}
             </p>
           </div>
 
@@ -155,12 +167,14 @@ export default function WorklistPage() {
               {syncStatus.is_syncing ? (
                 <div className="flex items-center text-blue-600">
                   <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  同步中... ({syncStatus.synced_files}/{syncStatus.total_files})
+                  {t('worklist.syncing')}
                 </div>
               ) : (
                 <div>
-                  最后同步:{' '}
-                  {new Date(syncStatus.last_sync_at).toLocaleString('zh-CN')}
+                  {t('worklist.lastSync')}:{' '}
+                  {syncStatus.last_synced_at
+                    ? new Date(syncStatus.last_synced_at).toLocaleString()
+                    : t('worklist.neverSynced')}
                 </div>
               )}
             </div>
@@ -179,7 +193,7 @@ export default function WorklistPage() {
       <Card className="mb-6 p-6">
         <div className="flex items-center mb-4">
           <Filter className="w-5 h-5 text-gray-500 mr-2" />
-          <h2 className="text-lg font-semibold text-gray-900">筛选条件</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('worklist.filters.title')}</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -188,7 +202,7 @@ export default function WorklistPage() {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <Input
               type="text"
-              placeholder="搜索标题或内容..."
+              placeholder={t('worklist.filters.search')}
               value={filters.search || ''}
               onChange={(e) =>
                 setFilters({ ...filters, search: e.target.value })
@@ -207,21 +221,21 @@ export default function WorklistPage() {
               })
             }
             options={[
-              { value: 'all', label: '全部状态' },
-              { value: 'to_evaluate', label: '待评估' },
-              { value: 'to_confirm', label: '待确认' },
-              { value: 'to_review', label: '待审稿' },
-              { value: 'to_revise', label: '待修改' },
-              { value: 'to_rereview', label: '待复审' },
-              { value: 'ready_to_publish', label: '待发布' },
-              { value: 'published', label: '已发布' },
+              { value: 'all', label: t('worklist.status.all') },
+              { value: 'to_evaluate', label: t('worklist.status.to_evaluate') },
+              { value: 'to_confirm', label: t('worklist.status.to_confirm') },
+              { value: 'to_review', label: t('worklist.status.to_review') },
+              { value: 'to_revise', label: t('worklist.status.to_revise') },
+              { value: 'to_rereview', label: t('worklist.status.to_rereview') },
+              { value: 'ready_to_publish', label: t('worklist.status.ready_to_publish') },
+              { value: 'published', label: t('worklist.status.published') },
             ]}
           />
 
           {/* Author Filter */}
           <Input
             type="text"
-            placeholder="按作者筛选..."
+            placeholder={t('worklist.filters.author')}
             value={filters.author || ''}
             onChange={(e) =>
               setFilters({ ...filters, author: e.target.value })
@@ -239,7 +253,7 @@ export default function WorklistPage() {
                 setFilters({ status: 'all', search: '', author: '' })
               }
             >
-              重置筛选
+              {t('worklist.filters.reset')}
             </Button>
           </div>
         )}
@@ -266,15 +280,15 @@ export default function WorklistPage() {
       />
 
       {/* Sync Errors */}
-      {syncStatus && syncStatus.errors.length > 0 && (
+      {syncErrors.length > 0 && (
         <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-          <h3 className="text-sm font-medium text-red-800 mb-2">同步错误</h3>
+          <h3 className="text-sm font-medium text-red-800 mb-2">{t('worklist.errors.title')}</h3>
           <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
-            {syncStatus.errors.slice(0, 5).map((error, index) => (
+            {syncErrors.slice(0, 5).map((error, index) => (
               <li key={index}>{error}</li>
             ))}
-            {syncStatus.errors.length > 5 && (
-              <li>...还有 {syncStatus.errors.length - 5} 个错误</li>
+            {syncErrors.length > 5 && (
+              <li>{t('worklist.errors.moreErrors', { count: syncErrors.length - 5 })}</li>
             )}
           </ul>
         </div>

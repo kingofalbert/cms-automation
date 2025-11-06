@@ -7,6 +7,7 @@ import { useEffect, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useTranslation } from 'react-i18next';
 import { api } from '@/services/api-client';
 import {
   Accordion,
@@ -203,6 +204,7 @@ const buildDefaultSettings = (settings?: AppSettings | null): SettingsFormValues
 };
 
 export default function SettingsPageModern() {
+  const { t } = useTranslation();
   const defaultValues = useMemo(() => buildDefaultSettings(null), []);
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsFormSchema),
@@ -255,9 +257,15 @@ export default function SettingsPageModern() {
     const cmsConfig = overrideConfig ?? form.getValues('cms_config');
 
     try {
-      const response = await api.post<{ success: boolean }>('/v1/settings/test-connection', {
-        cms_config: cmsConfig,
-      });
+      const response = await api.post<{ success: boolean }>(
+        '/v1/settings/test-connection',
+        {
+          cms_type: 'wordpress',
+          base_url: cmsConfig.wordpress_url,
+          username: cmsConfig.username,
+          application_password: cmsConfig.password,
+        }
+      );
       return response.success;
     } catch {
       return false;
@@ -462,8 +470,8 @@ export default function SettingsPageModern() {
                 <Sparkles className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">系统设置</h1>
-                <p className="mt-1 text-sm text-gray-500">配置您的 CMS 自动化系统</p>
+                <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
+                <p className="mt-1 text-sm text-gray-500">{t('settings.subtitle')}</p>
               </div>
             </div>
 
