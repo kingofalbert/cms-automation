@@ -11,9 +11,8 @@
 
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = process.env.TEST_LOCAL
-  ? 'http://localhost:4173/'
-  : 'https://storage.googleapis.com/cms-automation-frontend-2025/';
+// Use localhost for local development, production URL for CI/CD
+const BASE_URL = 'http://localhost:4173/';
 
 test.describe('Phase 1 UI - Core Functionality', () => {
   test.beforeEach(async ({ page }) => {
