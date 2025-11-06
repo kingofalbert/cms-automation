@@ -54,25 +54,33 @@ echo ""
 
 # Safety check
 if [[ "$PROJECT_ID" != *"prod"* ]]; then
-    log_error "⚠️  Project ID does not contain 'prod': $PROJECT_ID"
-    log_error "This may not be a production project!"
-    read -p "Continue anyway? (yes/no): " FORCE_CONTINUE
-    if [ "$FORCE_CONTINUE" != "yes" ]; then
-        log_error "Deployment cancelled"
-        exit 1
+    log_warning "⚠️  Project ID does not contain 'prod': $PROJECT_ID"
+    log_warning "This may not be a production project!"
+    if [ -z "$FORCE_DEPLOY" ]; then
+        read -p "Continue anyway? (yes/no): " FORCE_CONTINUE
+        if [ "$FORCE_CONTINUE" != "yes" ]; then
+            log_error "Deployment cancelled"
+            exit 1
+        fi
+    else
+        log_info "FORCE_DEPLOY is set, continuing..."
     fi
 fi
 
 # Confirm deployment
-echo ""
-log_warning "⚠️  This will deploy to PRODUCTION environment!"
-log_warning "⚠️  Users will be affected by this deployment!"
-echo ""
-read -p "Are you sure you want to continue? (yes/no): " CONFIRM
+if [ -z "$FORCE_DEPLOY" ]; then
+    echo ""
+    log_warning "⚠️  This will deploy to PRODUCTION environment!"
+    log_warning "⚠️  Users will be affected by this deployment!"
+    echo ""
+    read -p "Are you sure you want to continue? (yes/no): " CONFIRM
 
-if [ "$CONFIRM" != "yes" ]; then
-    log_error "Deployment cancelled by user"
-    exit 1
+    if [ "$CONFIRM" != "yes" ]; then
+        log_error "Deployment cancelled by user"
+        exit 1
+    fi
+else
+    log_info "FORCE_DEPLOY is set, skipping confirmation prompt"
 fi
 
 # Set GCP project
@@ -101,7 +109,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --timeout 600 \
     --concurrency 100 \
     --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=${PROJECT_ID},LOG_LEVEL=INFO" \
-    --set-secrets="ANTHROPIC_API_KEY=cms-automation-prod-ANTHROPIC_API_KEY:latest,DATABASE_URL=cms-automation-prod-DATABASE_URL:latest,REDIS_URL=cms-automation-prod-REDIS_URL:latest,CMS_BASE_URL=cms-automation-prod-CMS_BASE_URL:latest,CMS_USERNAME=cms-automation-prod-CMS_USERNAME:latest,CMS_APPLICATION_PASSWORD=cms-automation-prod-CMS_APPLICATION_PASSWORD:latest,CMS_HTTP_AUTH_USERNAME=cms-automation-prod-CMS_HTTP_AUTH_USERNAME:latest,CMS_HTTP_AUTH_PASSWORD=cms-automation-prod-CMS_HTTP_AUTH_PASSWORD:latest" \
+    --set-secrets="SECRET_KEY=cms-automation-prod-SECRET_KEY:latest,ANTHROPIC_API_KEY=cms-automation-prod-ANTHROPIC_API_KEY:latest,DATABASE_URL=cms-automation-prod-DATABASE_URL:latest,REDIS_URL=cms-automation-prod-REDIS_URL:latest,CMS_BASE_URL=cms-automation-prod-CMS_BASE_URL:latest,CMS_USERNAME=cms-automation-prod-CMS_USERNAME:latest,CMS_APPLICATION_PASSWORD=cms-automation-prod-CMS_APPLICATION_PASSWORD:latest,CMS_HTTP_AUTH_USERNAME=cms-automation-prod-CMS_HTTP_AUTH_USERNAME:latest,CMS_HTTP_AUTH_PASSWORD=cms-automation-prod-CMS_HTTP_AUTH_PASSWORD:latest" \
     --allow-unauthenticated
 
 # Get service URL

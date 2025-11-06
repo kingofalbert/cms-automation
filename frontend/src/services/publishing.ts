@@ -20,7 +20,7 @@ export const publishingAPI = {
    * Get paginated list of publish tasks with optional filters.
    */
   list: (params?: PublishTaskListParams) =>
-    api.get<APIResponse<PaginatedResponse<PublishTask>>>('v1/publishing/tasks', {
+    api.get<APIResponse<PaginatedResponse<PublishTask>>>('/v1/publishing/tasks', {
       params,
     }),
 
@@ -28,38 +28,38 @@ export const publishingAPI = {
    * Get a single publish task by ID.
    */
   get: (taskId: number) =>
-    api.get<APIResponse<PublishTask>>(`api/v1/publishing/tasks/${taskId}`),
+    api.get<APIResponse<PublishTask>>(`/v1/publishing/tasks/${taskId}`),
 
   /**
    * Create a new publish task for an article.
    */
   create: (data: PublishTaskCreateRequest) =>
-    api.post<APIResponse<PublishTask>>('v1/publishing/tasks', data),
+    api.post<APIResponse<PublishTask>>('/v1/publishing/tasks', data),
 
   /**
    * Retry a failed publish task.
    */
   retry: (taskId: number) =>
-    api.post<APIResponse<PublishTask>>(`api/v1/publishing/tasks/${taskId}/retry`),
+    api.post<APIResponse<PublishTask>>(`/v1/publishing/tasks/${taskId}/retry`),
 
   /**
    * Cancel a running publish task.
    */
   cancel: (taskId: number) =>
-    api.post<APIResponse<PublishTask>>(`api/v1/publishing/tasks/${taskId}/cancel`),
+    api.post<APIResponse<PublishTask>>(`/v1/publishing/tasks/${taskId}/cancel`),
 
   /**
    * Delete a publish task and its associated data.
    */
   delete: (taskId: number) =>
-    api.delete<APIResponse<void>>(`api/v1/publishing/tasks/${taskId}`),
+    api.delete<APIResponse<void>>(`/v1/publishing/tasks/${taskId}`),
 
   /**
    * Get execution logs for a publish task.
    */
   getLogs: (taskId: number, level?: string) =>
     api.get<APIResponse<{ logs: ExecutionLog[]; total: number }>>(
-      `api/v1/publishing/tasks/${taskId}/logs`,
+      `/v1/publishing/tasks/${taskId}/logs`,
       {
         params: { level },
       }
@@ -70,7 +70,7 @@ export const publishingAPI = {
    */
   downloadScreenshot: async (taskId: number, screenshotName: string) => {
     const response = await api.get(
-      `api/v1/publishing/tasks/${taskId}/screenshots/${screenshotName}`,
+      `/v1/publishing/tasks/${taskId}/screenshots/${screenshotName}`,
       {
         responseType: 'blob',
       }
@@ -83,7 +83,7 @@ export const publishingAPI = {
    */
   getProviderMetrics: (days: number = 30) =>
     api.get<APIResponse<{ providers: ProviderMetrics[] }>>(
-      'v1/publishing/provider-metrics',
+      '/v1/publishing/provider-metrics',
       {
         params: { days },
       }
@@ -102,7 +102,7 @@ export const publishingAPI = {
         tasks_by_status: Record<string, number>;
         tasks_by_provider: Record<string, number>;
       }>
-    >('v1/publishing/statistics'),
+    >('/v1/publishing/statistics'),
 
   /**
    * Bulk publish multiple articles.
@@ -115,7 +115,7 @@ export const publishingAPI = {
         failed: number;
         tasks: PublishTask[];
       }>
-    >('v1/publishing/bulk-publish', {
+    >('/v1/publishing/bulk-publish', {
       article_ids: articleIds,
       provider,
       cms_type: cmsType,

@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import axios from 'axios';
+import { api } from '@/lib/api';
 import { Card, Select, Input, Button } from '@/components/ui';
 import { WorklistTable } from '@/components/Worklist/WorklistTable';
 import { WorklistDetailDrawer } from '@/components/Worklist/WorklistDetailDrawer';
@@ -36,10 +36,9 @@ export default function WorklistPage() {
       if (filters.search) params.search = filters.search;
       if (filters.author) params.author = filters.author;
 
-      const response = await axios.get<WorklistItem[]>('v1/worklist', {
+      return await api.get<WorklistItem[]>('/v1/worklist', {
         params,
       });
-      return response.data;
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
@@ -48,8 +47,7 @@ export default function WorklistPage() {
   const { data: statistics } = useQuery({
     queryKey: ['worklist-statistics'],
     queryFn: async () => {
-      const response = await axios.get<Stats>('v1/worklist/statistics');
-      return response.data;
+      return await api.get<Stats>('/v1/worklist/statistics');
     },
     refetchInterval: 60000, // Refresh every minute
   });
@@ -58,10 +56,7 @@ export default function WorklistPage() {
   const { data: syncStatus } = useQuery({
     queryKey: ['drive-sync-status'],
     queryFn: async () => {
-      const response = await axios.get<DriveSyncStatus>(
-        'v1/worklist/sync-status'
-      );
-      return response.data;
+      return await api.get<DriveSyncStatus>('/v1/worklist/sync-status');
     },
     refetchInterval: 5000, // Check every 5 seconds
   });
@@ -69,8 +64,7 @@ export default function WorklistPage() {
   // Sync with Google Drive
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const response = await axios.post('v1/worklist/sync');
-      return response.data;
+      return await api.post('/v1/worklist/sync');
     },
     onSuccess: () => {
       alert('Google Drive 同步已开始');
@@ -92,11 +86,10 @@ export default function WorklistPage() {
       newStatus: WorklistStatus;
       note?: string;
     }) => {
-      const response = await axios.post(
-        `/api/v1/worklist/${itemId}/status`,
+      return await api.post(
+        `/v1/worklist/${itemId}/status`,
         { status: newStatus, note }
       );
-      return response.data;
     },
     onSuccess: () => {
       alert('状态变更成功');
@@ -111,8 +104,7 @@ export default function WorklistPage() {
   // Publish to WordPress
   const publishMutation = useMutation({
     mutationFn: async (itemId: string) => {
-      const response = await axios.post(`/api/v1/worklist/${itemId}/publish`);
-      return response.data;
+      return await api.post(`/v1/worklist/${itemId}/publish`);
     },
     onSuccess: () => {
       alert('发布任务已提交');

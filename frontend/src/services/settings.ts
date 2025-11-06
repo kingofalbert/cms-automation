@@ -18,24 +18,24 @@ export const settingsAPI = {
   /**
    * Get all application settings.
    */
-  getAll: () => api.get<APIResponse<Settings>>('v1/settings'),
+  getAll: () => api.get<APIResponse<Settings>>('/v1/settings'),
 
   /**
    * Update all settings at once.
    */
   updateAll: (settings: Partial<Settings>) =>
-    api.put<APIResponse<Settings>>('v1/settings', settings),
+    api.put<APIResponse<Settings>>('/v1/settings', settings),
 
   /**
    * Get CMS configuration.
    */
-  getCMSConfig: () => api.get<APIResponse<CMSConfig>>('v1/settings/cms'),
+  getCMSConfig: () => api.get<APIResponse<CMSConfig>>('/v1/settings/cms'),
 
   /**
    * Update CMS configuration.
    */
   updateCMSConfig: (config: Partial<CMSConfig>) =>
-    api.put<APIResponse<CMSConfig>>('v1/settings/cms', config),
+    api.put<APIResponse<CMSConfig>>('/v1/settings/cms', config),
 
   /**
    * Test CMS connection with current settings.
@@ -47,19 +47,19 @@ export const settingsAPI = {
         message: string;
         cms_version?: string;
       }>
-    >('v1/settings/cms/test'),
+    >('/v1/settings/cms/test'),
 
   /**
    * Get provider configuration.
    */
   getProviderConfig: () =>
-    api.get<APIResponse<ProviderConfig>>('v1/settings/providers'),
+    api.get<APIResponse<ProviderConfig>>('/v1/settings/providers'),
 
   /**
    * Update provider configuration.
    */
   updateProviderConfig: (config: Partial<ProviderConfig>) =>
-    api.put<APIResponse<ProviderConfig>>('v1/settings/providers', config),
+    api.put<APIResponse<ProviderConfig>>('/v1/settings/providers', config),
 
   /**
    * Test provider API keys.
@@ -71,30 +71,30 @@ export const settingsAPI = {
         valid: boolean;
         message: string;
       }>
-    >(`api/v1/settings/providers/${provider}/test`),
+    >(`/v1/settings/providers/${provider}/test`),
 
   /**
    * Get cost limits configuration.
    */
-  getCostLimits: () => api.get<APIResponse<CostLimits>>('v1/settings/cost-limits'),
+  getCostLimits: () => api.get<APIResponse<CostLimits>>('/v1/settings/cost-limits'),
 
   /**
    * Update cost limits configuration.
    */
   updateCostLimits: (limits: Partial<CostLimits>) =>
-    api.put<APIResponse<CostLimits>>('v1/settings/cost-limits', limits),
+    api.put<APIResponse<CostLimits>>('/v1/settings/cost-limits', limits),
 
   /**
    * Get screenshot retention configuration.
    */
   getScreenshotRetention: () =>
-    api.get<APIResponse<ScreenshotRetention>>('v1/settings/screenshots'),
+    api.get<APIResponse<ScreenshotRetention>>('/v1/settings/screenshots'),
 
   /**
    * Update screenshot retention configuration.
    */
   updateScreenshotRetention: (config: Partial<ScreenshotRetention>) =>
-    api.put<APIResponse<ScreenshotRetention>>('v1/settings/screenshots', config),
+    api.put<APIResponse<ScreenshotRetention>>('/v1/settings/screenshots', config),
 
   /**
    * Clean up old screenshots based on retention policy.
@@ -105,7 +105,7 @@ export const settingsAPI = {
         deleted: number;
         space_freed_mb: number;
       }>
-    >('v1/settings/screenshots/cleanup'),
+    >('/v1/settings/screenshots/cleanup'),
 
   /**
    * Get current usage and cost statistics.
@@ -120,20 +120,20 @@ export const settingsAPI = {
         remaining_budget_usd?: number;
         budget_usage_percentage?: number;
       }>
-    >('v1/settings/usage-stats', {
+    >('/v1/settings/usage-stats', {
       params: { days },
     }),
 
   /**
    * Reset settings to default values.
    */
-  resetToDefaults: () => api.post<APIResponse<Settings>>('v1/settings/reset'),
+  resetToDefaults: () => api.post<APIResponse<Settings>>('/v1/settings/reset'),
 
   /**
    * Export settings as JSON file.
    */
   exportSettings: async () => {
-    const response = await api.get('v1/settings/export', {
+    const response = await api.get('/v1/settings/export', {
       responseType: 'blob',
     });
     return response;
@@ -146,7 +146,7 @@ export const settingsAPI = {
     const formData = new FormData();
     formData.append('file', file);
 
-    return api.post<APIResponse<Settings>>('v1/settings/import', formData, {
+    return api.post<APIResponse<Settings>>('/v1/settings/import', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

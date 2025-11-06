@@ -221,7 +221,7 @@ export default function SettingsPageModern() {
     queryKey: ['app-settings'],
     queryFn: async () => {
       const response = await api.get<AppSettings | { error: boolean; message?: string }>(
-        'v1/settings'
+        '/v1/settings'
       );
 
       if ('error' in response && response.error) {
@@ -242,7 +242,7 @@ export default function SettingsPageModern() {
 
   const updateMutation = useMutation({
     mutationFn: async (updates: SettingsUpdateRequest) => {
-      const response = await api.put<AppSettings>('v1/settings', updates);
+      const response = await api.put<AppSettings>('/v1/settings', updates);
       return response;
     },
     onSuccess: (data) => {
@@ -255,7 +255,7 @@ export default function SettingsPageModern() {
     const cmsConfig = overrideConfig ?? form.getValues('cms_config');
 
     try {
-      const response = await api.post<{ success: boolean }>('v1/settings/test-connection', {
+      const response = await api.post<{ success: boolean }>('/v1/settings/test-connection', {
         cms_config: cmsConfig,
       });
       return response.success;
@@ -271,7 +271,7 @@ export default function SettingsPageModern() {
       const response = await api.get<{
         daily_spend: number;
         monthly_spend: number;
-      }>('v1/analytics/cost-usage');
+      }>('/v1/analytics/cost-usage');
       return response;
     },
     enabled: false,
@@ -283,7 +283,7 @@ export default function SettingsPageModern() {
     queryKey: ['storage-usage'],
     queryFn: async () => {
       const response = await api.get<{ total_mb: number }>(
-        'v1/analytics/storage-usage'
+        '/v1/analytics/storage-usage'
       );
       return response;
     },
