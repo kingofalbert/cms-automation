@@ -45,6 +45,9 @@ def upgrade() -> None:
                 END IF;
 
                 DROP TYPE IF EXISTS provider_enum_old;
+            ELSE
+                -- Create provider_enum for fresh database
+                CREATE TYPE provider_enum AS ENUM ('playwright', 'computer_use', 'hybrid');
             END IF;
         END
         $$;
@@ -85,6 +88,20 @@ def upgrade() -> None:
                 END IF;
 
                 DROP TYPE IF EXISTS task_status_enum_old;
+            ELSE
+                -- Create task_status_enum for fresh database
+                CREATE TYPE task_status_enum AS ENUM (
+                    'idle',
+                    'pending',
+                    'initializing',
+                    'logging_in',
+                    'creating_post',
+                    'uploading_images',
+                    'configuring_seo',
+                    'publishing',
+                    'completed',
+                    'failed'
+                );
             END IF;
         END
         $$;
@@ -223,7 +240,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), primary_key=True),
         sa.Column(
             "provider",
-            sa.Enum(name="provider_enum"),
+            postgresql.ENUM('playwright', 'computer_use', 'hybrid', name="provider_enum", create_type=False),
             nullable=False,
         ),
         sa.Column(

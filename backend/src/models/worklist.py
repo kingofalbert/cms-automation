@@ -98,6 +98,7 @@ class WorklistItem(Base, TimestampMixin):
     )
 
     drive_metadata: Mapped[dict] = mapped_column(
+        "metadata",  # Database column name differs from Python attribute name
         JSONType,
         nullable=False,
         default=dict,
