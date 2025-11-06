@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useBlocker } from 'react-router-dom';
 
 export interface UseUnsavedChangesOptions {
   when: boolean;
@@ -10,13 +9,16 @@ const DEFAULT_MESSAGE = '您有未保存的更改，确认要离开当前页面�
 
 /**
  * Warn users when navigating away with unsaved changes.
- * Blocks in-app navigation via React Router's blocker and native browser refresh/close.
+ * Handles native browser refresh/close events.
+ *
+ * Note: useBlocker from react-router-dom requires a data router and is not used
+ * to maintain compatibility with HashRouter. In-app navigation warnings are handled
+ * by the browser's beforeunload event.
  */
 export const useUnsavedChanges = ({
   when,
   message = DEFAULT_MESSAGE,
 }: UseUnsavedChangesOptions) => {
-  const blocker = useBlocker(when);
   const confirmMessageRef = useRef(message);
 
   useEffect(() => {
@@ -37,17 +39,4 @@ export const useUnsavedChanges = ({
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [when]);
-
-  useEffect(() => {
-    if (!when || blocker.state !== 'blocked') {
-      return;
-    }
-
-    const shouldLeave = window.confirm(confirmMessageRef.current);
-    if (shouldLeave) {
-      blocker.proceed?.();
-    } else {
-      blocker.reset?.();
-    }
-  }, [blocker, when]);
 };
