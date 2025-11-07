@@ -18,6 +18,7 @@ from src.models import (
     WorklistStatus,
 )
 from src.services.google_drive import GoogleDriveSyncService
+from src.services.worklist.pipeline import WorklistPipelineService
 
 logger = get_logger(__name__)
 
@@ -170,6 +171,48 @@ class WorklistService:
                 "status": "error",
                 "message": "Worklist synchronization failed.",
                 "queued_at": datetime.utcnow().isoformat(),
+                "error": str(exc),
+            }
+
+    async def trigger_proofreading(self, item_id: int) -> dict[str, Any]:
+        """Manually trigger proofreading for a worklist item."""
+        item = await self.session.get(WorklistItem, item_id)
+        if not item:
+            raise ValueError(f"Worklist item {item_id} not found.")
+
+        pipeline = WorklistPipelineService(self.session)
+
+        try:
+            await pipeline.process_new_item(item)
+            await self.session.commit()
+            await self.session.refresh(item)
+
+            logger.info(
+                "worklist_manual_proofreading_triggered",
+                item_id=item_id,
+                new_status=item.status.value if hasattr(item.status, "value") else item.status,
+                article_id=item.article_id,
+            )
+
+            return {
+                "status": "completed",
+                "message": "Proofreading completed successfully.",
+                "item_id": item_id,
+                "article_id": item.article_id,
+                "new_status": item.status.value if hasattr(item.status, "value") else item.status,
+            }
+        except Exception as exc:
+            await self.session.rollback()
+            logger.error(
+                "worklist_manual_proofreading_failed",
+                item_id=item_id,
+                error=str(exc),
+                exc_info=True,
+            )
+            return {
+                "status": "error",
+                "message": f"Proofreading failed: {str(exc)}",
+                "item_id": item_id,
                 "error": str(exc),
             }
 
