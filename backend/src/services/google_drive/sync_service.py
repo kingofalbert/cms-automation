@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import re
 from datetime import datetime
+from html.parser import HTMLParser
 from typing import Any
 
 try:
@@ -24,7 +25,132 @@ from src.models import WorklistItem, WorklistStatus
 from src.services.storage import create_google_drive_storage
 from src.services.worklist.pipeline import WorklistPipelineService
 
+try:
+    from src.services.google_drive.metrics import (
+        DocumentMetrics,
+        ExportStatus,
+        ParsingStatus,
+        get_metrics_collector,
+    )
+except ImportError:  # pragma: no cover - Metrics module optional for testing
+    DocumentMetrics = None  # type: ignore[assignment,misc]
+    ExportStatus = None  # type: ignore[assignment,misc]
+    ParsingStatus = None  # type: ignore[assignment,misc]
+    get_metrics_collector = lambda: None  # type: ignore[assignment]
+
 logger = get_logger(__name__)
+
+
+class GoogleDocsHTMLParser(HTMLParser):
+    """Clean HTML parser for Google Docs exported content.
+
+    Converts Google Docs HTML export to clean markdown-like text
+    while preserving structure and basic formatting.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.content_parts = []
+        self.current_list_level = 0
+        self.in_paragraph = False
+        self.current_text = []
+        self.in_bold = False
+        self.in_italic = False
+        self.in_link = False
+        self.link_url = None
+
+    def handle_starttag(self, tag, attrs):
+        """Handle opening HTML tags."""
+        attrs_dict = dict(attrs)
+
+        if tag in ('p', 'div'):
+            self.in_paragraph = True
+            self.current_text = []
+        elif tag == 'br':
+            self.current_text.append('\n')
+        elif tag in ('b', 'strong'):
+            self.in_bold = True
+            # Add space before bold if needed
+            if self.current_text and not self.current_text[-1].endswith((' ', '\n')):
+                self.current_text.append(' ')
+            self.current_text.append('**')
+        elif tag in ('i', 'em'):
+            self.in_italic = True
+            # Add space before italic if needed
+            if self.current_text and not self.current_text[-1].endswith((' ', '\n')):
+                self.current_text.append(' ')
+            self.current_text.append('_')
+        elif tag == 'a':
+            self.in_link = True
+            self.link_url = attrs_dict.get('href', '')
+            # Add space before link if needed
+            if self.current_text and not self.current_text[-1].endswith((' ', '\n')):
+                self.current_text.append(' ')
+            self.current_text.append('[')
+        elif tag in ('ul', 'ol'):
+            self.current_list_level += 1
+        elif tag == 'li':
+            indent = '  ' * (self.current_list_level - 1)
+            self.current_text.append(f'\n{indent}- ')
+        elif tag in ('h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+            level = int(tag[1])
+            self.current_text.append('\n' + '#' * level + ' ')
+            self.in_paragraph = True
+
+    def handle_endtag(self, tag):
+        """Handle closing HTML tags."""
+        if tag in ('p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'):
+            if self.current_text:
+                text = ''.join(self.current_text).strip()
+                if text:
+                    self.content_parts.append(text)
+                self.current_text = []
+            self.in_paragraph = False
+        elif tag in ('b', 'strong'):
+            self.current_text.append('**')
+            # Add space after bold marker
+            self.current_text.append(' ')
+            self.in_bold = False
+        elif tag in ('i', 'em'):
+            self.current_text.append('_')
+            # Add space after italic marker
+            self.current_text.append(' ')
+            self.in_italic = False
+        elif tag == 'a':
+            if self.link_url:
+                self.current_text.append(f']({self.link_url})')
+            else:
+                self.current_text.append(']')
+            # Add space after link
+            self.current_text.append(' ')
+            self.in_link = False
+            self.link_url = None
+        elif tag in ('ul', 'ol'):
+            self.current_list_level = max(0, self.current_list_level - 1)
+
+    def handle_data(self, data):
+        """Handle text content."""
+        # Skip empty data
+        if not data.strip():
+            return
+
+        self.current_text.append(data.strip())
+
+    def get_clean_text(self) -> str:
+        """Get the cleaned text content."""
+        # Flush any remaining text
+        if self.current_text:
+            text = ''.join(self.current_text).strip()
+            if text:
+                self.content_parts.append(text)
+
+        # Join parts with proper spacing
+        result = '\n\n'.join(self.content_parts)
+
+        # Clean up multiple newlines
+        result = re.sub(r'\n{3,}', '\n\n', result)
+
+        return result.strip()
 
 
 class GoogleDriveSyncService:
@@ -36,6 +162,7 @@ class GoogleDriveSyncService:
         self.folder_id = folder_id or self.settings.GOOGLE_DRIVE_FOLDER_ID
         self._storage = None
         self.pipeline = WorklistPipelineService(session)
+        self.metrics_collector = get_metrics_collector()
 
     async def sync_worklist(self, max_results: int = 100) -> dict[str, Any]:
         """Synchronize documents from Google Drive into worklist items."""
@@ -100,6 +227,11 @@ class GoogleDriveSyncService:
                     }
                 )
 
+        # Log metrics summary if available
+        if self.metrics_collector:
+            metrics_summary = self.metrics_collector.get_summary()
+            logger.info("google_drive_sync_metrics", **metrics_summary)
+
         return summary
 
     async def _get_storage(self):
@@ -117,11 +249,56 @@ class GoogleDriveSyncService:
 
         try:
             if mime_type == "application/vnd.google-apps.document":
-                content = await self._export_google_doc(storage, file_id, "text/plain")
+                # Export as HTML to preserve formatting and structure
+                import time
+                start_time = time.time()
+
+                html_content = await self._export_google_doc(storage, file_id, "text/html")
+
+                # Record export success
+                if self.metrics_collector and DocumentMetrics:
+                    metrics = self.metrics_collector.record_export_success(
+                        file_id=file_id,
+                        file_name=file_metadata.get("name", "unknown"),
+                        mime_type=mime_type,
+                        original_size=len(html_content),
+                    )
+
+                # Parse and clean the HTML
+                content, parsing_status = self._parse_html_content(html_content)
+
+                parsing_time = (time.time() - start_time) * 1000  # Convert to ms
+
+                # Update metrics with parsing results
+                if self.metrics_collector and metrics:
+                    metrics.parsing_status = parsing_status
+                    metrics.cleaned_size_bytes = len(content)
+                    metrics.parsing_time_ms = parsing_time
+                    # Check for YAML front matter
+                    metrics.has_yaml_front_matter = content.strip().startswith("---")
+                    self.metrics_collector.record_document(metrics)
+
+                logger.debug(
+                    "google_doc_exported_and_parsed",
+                    file_id=file_id,
+                    original_size=len(html_content),
+                    cleaned_size=len(content),
+                    parsing_time_ms=parsing_time,
+                    parsing_status=parsing_status.value if parsing_status else None,
+                )
             elif mime_type and mime_type.startswith("text/"):
                 raw = await storage.download_file(file_id)
                 content = raw.decode("utf-8", errors="ignore")
             else:
+                # Record skipped file
+                if self.metrics_collector and ExportStatus:
+                    self.metrics_collector.record_export_skipped(
+                        file_id=file_id,
+                        file_name=file_metadata.get("name", "unknown"),
+                        mime_type=mime_type,
+                        reason="Unsupported MIME type",
+                    )
+
                 logger.info(
                     "google_drive_sync_skipped_file",
                     file_id=file_id,
@@ -129,6 +306,15 @@ class GoogleDriveSyncService:
                 )
                 return None
         except Exception as exc:
+            # Record export failure
+            if self.metrics_collector and ExportStatus:
+                self.metrics_collector.record_export_failure(
+                    file_id=file_id,
+                    file_name=file_metadata.get("name", "unknown"),
+                    mime_type=mime_type,
+                    error=str(exc),
+                )
+
             logger.error(
                 "google_drive_fetch_failed",
                 file_id=file_id,
@@ -161,6 +347,34 @@ class GoogleDriveSyncService:
                 await asyncio.sleep(2)
                 return await self._export_google_doc(storage, file_id, mime_type)
             raise
+
+    def _parse_html_content(self, html_content: str) -> tuple[str, Any]:
+        """Parse and clean HTML content from Google Docs export.
+
+        Args:
+            html_content: Raw HTML from Google Docs export
+
+        Returns:
+            Tuple of (cleaned text content, parsing status)
+        """
+        parser = GoogleDocsHTMLParser()
+        try:
+            parser.feed(html_content)
+            cleaned_text = parser.get_clean_text()
+            status = ParsingStatus.SUCCESS if ParsingStatus else None
+            return cleaned_text, status
+        except Exception as exc:
+            # Fallback to plain HTML stripping if parsing fails
+            logger.warning(
+                "html_parsing_failed_using_fallback",
+                error=str(exc),
+            )
+            # Simple HTML tag removal as fallback
+            import html
+            text = re.sub(r'<[^>]+>', '', html_content)
+            text = html.unescape(text)
+            status = ParsingStatus.FALLBACK if ParsingStatus else None
+            return text.strip(), status
 
     def _parse_document_content(self, content: str) -> dict[str, Any]:
         """Parse raw document content into structured data.
