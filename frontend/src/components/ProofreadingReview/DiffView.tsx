@@ -1,8 +1,13 @@
 /**
  * DiffView Component
  * Displays original vs suggested content side-by-side with diff highlighting.
+ *
+ * Performance optimizations:
+ * - Wrapped with React.memo to prevent unnecessary re-renders
+ * - Static diffStyles defined outside component to avoid recreation
  */
 
+import { memo } from 'react';
 import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
 import { cn } from '@/lib/cn';
 
@@ -15,6 +20,7 @@ interface DiffViewProps {
 
 /**
  * Custom diff viewer styles to match our design system
+ * Defined outside component to avoid recreation on every render
  */
 const diffStyles = {
   variables: {
@@ -69,7 +75,7 @@ const diffStyles = {
   },
 };
 
-export function DiffView({ original, suggested, title, className }: DiffViewProps) {
+const DiffViewComponent = ({ original, suggested, title, className }: DiffViewProps) => {
   return (
     <div className={cn('mx-auto max-w-full', className)}>
       <h1 className="mb-4 text-2xl font-bold text-gray-900">{title}</h1>
@@ -98,4 +104,8 @@ export function DiffView({ original, suggested, title, className }: DiffViewProp
       </div>
     </div>
   );
-}
+};
+
+// Memoize component to prevent unnecessary re-renders
+// Component only re-renders when props actually change
+export const DiffView = memo(DiffViewComponent);

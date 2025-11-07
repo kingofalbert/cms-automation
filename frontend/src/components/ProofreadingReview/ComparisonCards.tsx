@@ -1,9 +1,13 @@
 /**
  * Comparison Cards
  * Display Meta, SEO, and FAQ comparison data for proofreading review.
+ *
+ * Performance optimizations:
+ * - Individual cards memoized to prevent unnecessary re-renders
+ * - ScoreBadge memoized for efficient badge rendering
  */
 
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { ChevronDown, ChevronUp, Sparkles, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type {
@@ -31,8 +35,9 @@ export function ComparisonCards({ meta, seo, faqProposals }: ComparisonCardsProp
 
 /**
  * Meta Description Comparison Card
+ * Memoized to prevent re-renders when meta data doesn't change
  */
-function MetaDescriptionCard({ meta }: { meta: MetaComparison }) {
+const MetaDescriptionCard = memo(({ meta }: { meta: MetaComparison }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = meta.suggested || meta.original;
@@ -99,12 +104,15 @@ function MetaDescriptionCard({ meta }: { meta: MetaComparison }) {
       )}
     </div>
   );
-}
+});
+
+MetaDescriptionCard.displayName = 'MetaDescriptionCard';
 
 /**
  * SEO Keywords Comparison Card
+ * Memoized to prevent re-renders when seo data doesn't change
  */
-function SEOKeywordsCard({ seo }: { seo: SEOComparison }) {
+const SEOKeywordsCard = memo(({ seo }: { seo: SEOComparison }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = seo.suggested_keywords || seo.original_keywords.length > 0;
@@ -184,12 +192,15 @@ function SEOKeywordsCard({ seo }: { seo: SEOComparison }) {
       )}
     </div>
   );
-}
+});
+
+SEOKeywordsCard.displayName = 'SEOKeywordsCard';
 
 /**
  * FAQ Schema Proposals Card
+ * Memoized to prevent re-renders when proposals don't change
  */
-function FAQProposalsCard({ proposals }: { proposals: FAQProposal[] }) {
+const FAQProposalsCard = memo(({ proposals }: { proposals: FAQProposal[] }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState(0);
 
@@ -268,12 +279,15 @@ function FAQProposalsCard({ proposals }: { proposals: FAQProposal[] }) {
       )}
     </div>
   );
-}
+});
+
+FAQProposalsCard.displayName = 'FAQProposalsCard';
 
 /**
  * Score Badge Component
+ * Memoized to prevent re-renders when score doesn't change
  */
-function ScoreBadge({ score }: { score: number }) {
+const ScoreBadge = memo(({ score }: { score: number }) => {
   const percentage = Math.round(score * 100);
   const color =
     percentage >= 80
@@ -287,4 +301,6 @@ function ScoreBadge({ score }: { score: number }) {
       {percentage}%
     </span>
   );
-}
+});
+
+ScoreBadge.displayName = 'ScoreBadge';

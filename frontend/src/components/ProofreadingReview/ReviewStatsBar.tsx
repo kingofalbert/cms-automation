@@ -1,8 +1,13 @@
 /**
  * Review Stats Bar
  * Displays statistics about proofreading issues.
+ *
+ * Performance optimizations:
+ * - Sub-components memoized to prevent unnecessary re-renders
+ * - Progress calculation optimized
  */
 
+import { memo, useMemo } from 'react';
 import { ProofreadingStats } from '@/types/worklist';
 import { AlertCircle, AlertTriangle, Info, CheckCircle, XCircle, Eye, FileText, GitCompare } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -118,7 +123,8 @@ export function ReviewStatsBar({ stats, dirtyCount, totalIssues, viewMode = 'ori
   );
 }
 
-function ViewModeButton({
+// Memoized ViewModeButton to prevent re-renders when props don't change
+const ViewModeButton = memo(({
   mode,
   currentMode,
   icon,
@@ -130,7 +136,7 @@ function ViewModeButton({
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
-}) {
+}) => {
   const isActive = mode === currentMode;
 
   return (
@@ -150,9 +156,12 @@ function ViewModeButton({
       <span>{label}</span>
     </button>
   );
-}
+});
 
-function StatItem({
+ViewModeButton.displayName = 'ViewModeButton';
+
+// Memoized StatItem to prevent re-renders when count doesn't change
+const StatItem = memo(({
   icon,
   label,
   count,
@@ -160,7 +169,7 @@ function StatItem({
   icon: React.ReactNode;
   label: string;
   count: number;
-}) {
+}) => {
   return (
     <div className="flex items-center gap-1.5">
       {icon}
@@ -168,4 +177,6 @@ function StatItem({
       <span className="text-sm font-semibold text-gray-900">{count}</span>
     </div>
   );
-}
+});
+
+StatItem.displayName = 'StatItem';

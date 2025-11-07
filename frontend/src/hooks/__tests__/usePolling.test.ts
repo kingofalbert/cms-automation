@@ -27,11 +27,12 @@ describe('usePolling', () => {
       })
     );
 
-    // Initial poll should happen immediately
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(1);
+    // Wait for useEffect and initial poll to complete (only microtasks)
+    await act(async () => {
+      await Promise.resolve();
     });
 
+    expect(callback).toHaveBeenCalledTimes(1);
     expect(result.current.isPolling).toBe(true);
   });
 
@@ -42,32 +43,29 @@ describe('usePolling', () => {
       usePolling(callback, {
         interval: 1000,
         enabled: true,
+        pollOnMount: true,
       })
     );
 
-    // Wait for initial poll
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(1);
+    // Wait for initial poll (microtasks only)
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(callback).toHaveBeenCalledTimes(1);
 
     // Advance time by 1 second
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1000);
+      await Promise.resolve(); // Wait for promise from interval callback
     });
-
-    // Should have polled again
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(2);
-    });
+    expect(callback).toHaveBeenCalledTimes(2);
 
     // Advance time by another second
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1000);
+      await Promise.resolve(); // Wait for promise from interval callback
     });
-
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(3);
-    });
+    expect(callback).toHaveBeenCalledTimes(3);
   });
 
   it('should not start polling if enabled is false', async () => {
@@ -93,30 +91,30 @@ describe('usePolling', () => {
       usePolling(callback, {
         interval: 1000,
         enabled: true,
+        pollOnMount: true,
       })
     );
 
-    // Wait for initial poll
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(1);
+    // Wait for initial poll (microtasks only)
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(callback).toHaveBeenCalledTimes(1);
 
     // Stop polling
     act(() => {
       result.current.stop();
     });
-
     expect(result.current.isPolling).toBe(false);
 
     // Advance time
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(2000);
+      await vi.runOnlyPendingTimersAsync();
     });
 
     // Should not have polled again
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(1);
-    });
+    expect(callback).toHaveBeenCalledTimes(1);
   });
 
   it('should restart polling when start() is called', async () => {
@@ -133,16 +131,13 @@ describe('usePolling', () => {
     expect(callback).not.toHaveBeenCalled();
 
     // Start polling
-    act(() => {
+    await act(async () => {
       result.current.start();
+      await vi.runOnlyPendingTimersAsync();
     });
 
     expect(result.current.isPolling).toBe(true);
-
-    // Wait for poll
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalled();
-    });
+    expect(callback).toHaveBeenCalled();
   });
 
   it('should toggle polling state', async () => {
@@ -184,18 +179,17 @@ describe('usePolling', () => {
     );
 
     // Wait for first failed poll
-    await waitFor(() => {
-      expect(result.current.errorCount).toBe(1);
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
     });
+    expect(result.current.errorCount).toBe(1);
 
     // Continue polling and failing
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1000);
+      await vi.runOnlyPendingTimersAsync();
     });
-
-    await waitFor(() => {
-      expect(result.current.errorCount).toBe(2);
-    });
+    expect(result.current.errorCount).toBe(2);
   });
 
   it('should stop polling after max errors reached', async () => {
@@ -211,12 +205,20 @@ describe('usePolling', () => {
       })
     );
 
-    // Wait for max errors
-    await waitFor(() => {
-      expect(result.current.errorCount).toBe(2);
-      expect(result.current.isPolling).toBe(false);
-      expect(onMaxErrors).toHaveBeenCalledWith(2);
+    // First error
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
     });
+    expect(result.current.errorCount).toBe(1);
+
+    // Second error - should stop polling
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+      await vi.runOnlyPendingTimersAsync();
+    });
+    expect(result.current.errorCount).toBe(2);
+    expect(result.current.isPolling).toBe(false);
+    expect(onMaxErrors).toHaveBeenCalledWith(2);
   });
 
   it('should reset error count on successful poll', async () => {
@@ -237,21 +239,21 @@ describe('usePolling', () => {
     );
 
     // Wait for first failed poll
-    await waitFor(() => {
-      expect(result.current.errorCount).toBe(1);
+    await act(async () => {
+      await vi.runOnlyPendingTimersAsync();
     });
+    expect(result.current.errorCount).toBe(1);
 
     // Make next poll succeed
     shouldFail = false;
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1000);
+      await vi.runOnlyPendingTimersAsync();
     });
 
     // Error count should be reset
-    await waitFor(() => {
-      expect(result.current.errorCount).toBe(0);
-    });
+    expect(result.current.errorCount).toBe(0);
   });
 
   it('should manually trigger poll', async () => {
@@ -282,13 +284,15 @@ describe('usePolling', () => {
         interval: 1000,
         enabled: true,
         pollWhenHidden: false,
+        pollOnMount: true,
       })
     );
 
-    // Wait for initial poll
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(1);
+    // Wait for initial poll (microtasks only)
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(callback).toHaveBeenCalledTimes(1);
 
     // Simulate tab becoming hidden
     Object.defineProperty(document, 'hidden', {
@@ -298,11 +302,14 @@ describe('usePolling', () => {
     });
 
     const visibilityChangeEvent = new Event('visibilitychange');
-    document.dispatchEvent(visibilityChangeEvent);
+    act(() => {
+      document.dispatchEvent(visibilityChangeEvent);
+    });
 
     // Advance time - should not poll
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(2000);
+      await vi.runOnlyPendingTimersAsync();
     });
 
     // Should still be only 1 call (initial)
@@ -313,12 +320,13 @@ describe('usePolling', () => {
       value: false,
     });
 
-    document.dispatchEvent(visibilityChangeEvent);
+    await act(async () => {
+      document.dispatchEvent(visibilityChangeEvent);
+      await Promise.resolve(); // Poll happens immediately, wait for microtasks
+    });
 
     // Should poll immediately when visible
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(2);
-    });
+    expect(callback).toHaveBeenCalledTimes(2);
   });
 
   it('should continue polling when tab is hidden if pollWhenHidden is true', async () => {
@@ -329,13 +337,15 @@ describe('usePolling', () => {
         interval: 1000,
         enabled: true,
         pollWhenHidden: true,
+        pollOnMount: true,
       })
     );
 
-    // Wait for initial poll
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(1);
+    // Wait for initial poll (microtasks only)
+    await act(async () => {
+      await Promise.resolve();
     });
+    expect(callback).toHaveBeenCalledTimes(1);
 
     // Simulate tab becoming hidden
     Object.defineProperty(document, 'hidden', {
@@ -345,12 +355,10 @@ describe('usePolling', () => {
     });
 
     // Advance time - should continue polling
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1000);
+      await Promise.resolve(); // Wait for promise from interval callback
     });
-
-    await waitFor(() => {
-      expect(callback).toHaveBeenCalledTimes(2);
-    });
+    expect(callback).toHaveBeenCalledTimes(2);
   });
 });
