@@ -3,7 +3,7 @@
  * Human review interface for AI-generated proofreading suggestions.
  */
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +22,7 @@ import { ProofreadingArticleContent } from '@/components/ProofreadingReview/Proo
 import { ProofreadingIssueDetailPanel } from '@/components/ProofreadingReview/ProofreadingIssueDetailPanel';
 import { ReviewStatsBar } from '@/components/ProofreadingReview/ReviewStatsBar';
 import { ProofreadingReviewHeader } from '@/components/ProofreadingReview/ProofreadingReviewHeader';
+import { ComparisonCards } from '@/components/ProofreadingReview/ComparisonCards';
 import { Button } from '@/components/ui';
 import { ArrowLeft, Save, CheckCircle } from 'lucide-react';
 
@@ -156,7 +157,7 @@ export default function ProofreadingReviewPage() {
   const allIssuesDecided = issues.length > 0 && issues.length === dirtyCount;
 
   // Handle keyboard shortcuts
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!selectedIssue) return;
 
     switch (e.key) {
@@ -183,13 +184,13 @@ export default function ProofreadingReviewPage() {
         }
         break;
     }
-  };
+  }, [selectedIssue, issues, addDecision]);
 
   // Set up keyboard shortcuts
-  useState(() => {
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown as any);
     return () => window.removeEventListener('keydown', handleKeyDown as any);
-  });
+  }, [handleKeyDown]);
 
   if (isLoading) {
     return (
@@ -308,54 +309,86 @@ export default function ProofreadingReviewPage() {
           />
         </div>
 
-        {/* Right: Issue Detail Panel (30%) */}
-        <div className="w-[30%] overflow-y-auto border-l border-gray-200 bg-white">
-          <ProofreadingIssueDetailPanel
-            issue={selectedIssue}
-            decision={selectedIssue ? decisions[selectedIssue.id] : undefined}
-            onDecision={addDecision}
-            onClearDecision={clearDecision}
-          />
+        {/* Right: Issue Detail Panel + Comparison Cards (30%) */}
+        <div className="w-[30%] overflow-y-auto border-l border-gray-200 bg-gray-50">
+          {/* Issue Detail Panel */}
+          <div className="bg-white">
+            <ProofreadingIssueDetailPanel
+              issue={selectedIssue}
+              decision={selectedIssue ? decisions[selectedIssue.id] : undefined}
+              onDecision={addDecision}
+              onClearDecision={clearDecision}
+            />
+          </div>
+
+          {/* Comparison Cards */}
+          {articleReview && (
+            <div className="border-t border-gray-200">
+              <ComparisonCards
+                meta={articleReview.meta}
+                seo={articleReview.seo}
+                faqProposals={articleReview.faq_proposals}
+              />
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer Actions */}
-      <div className="flex items-center justify-between border-t border-gray-200 bg-white px-6 py-4">
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">
-            {dirtyCount} / {issues.length} {t('proofreading.labels.issuesDecided')}
-          </span>
-          {dirtyCount > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setDecisions({});
-                toast.info(t('proofreading.messages.decisionsCleared'));
-              }}
-            >
-              {t('common.clearAll')}
-            </Button>
-          )}
+      <div className="border-t border-gray-200 bg-white">
+        {/* Review Notes Textarea */}
+        <div className="border-b border-gray-100 px-6 py-3">
+          <label htmlFor="review-notes" className="mb-1 block text-xs font-medium text-gray-700">
+            审核备注 (Review Notes)
+          </label>
+          <textarea
+            id="review-notes"
+            value={reviewNotes}
+            onChange={(e) => setReviewNotes(e.target.value)}
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            rows={2}
+            placeholder="输入审核备注、建议或说明..."
+          />
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            disabled={dirtyCount === 0 || saveDecisionsMutation.isPending}
-            onClick={() => saveDecisionsMutation.mutate(undefined)}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {t('proofreading.actions.saveDraft')}
-          </Button>
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between px-6 py-4">
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600">
+              {dirtyCount} / {issues.length} {t('proofreading.labels.issuesDecided')}
+            </span>
+            {dirtyCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setDecisions({});
+                  toast.info(t('proofreading.messages.decisionsCleared'));
+                }}
+              >
+                {t('common.clearAll')}
+              </Button>
+            )}
+          </div>
 
-          <Button
-            disabled={!allIssuesDecided || saveDecisionsMutation.isPending}
-            onClick={() => saveDecisionsMutation.mutate('ready_to_publish')}
-          >
-            <CheckCircle className="mr-2 h-4 w-4" />
-            {t('proofreading.actions.completeReview')}
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              disabled={dirtyCount === 0 || saveDecisionsMutation.isPending}
+              onClick={() => saveDecisionsMutation.mutate(undefined)}
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {t('proofreading.actions.saveDraft')}
+            </Button>
+
+            <Button
+              disabled={!allIssuesDecided || saveDecisionsMutation.isPending}
+              onClick={() => saveDecisionsMutation.mutate('ready_to_publish')}
+            >
+              <CheckCircle className="mr-2 h-4 w-4" />
+              {t('proofreading.actions.completeReview')}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
