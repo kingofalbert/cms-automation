@@ -198,7 +198,7 @@ class WorklistService:
             new_status=target_status.value,
             changed_by="system",
             change_reason=note_payload.get("message") or "worklist_status_update",
-            metadata=note_payload,
+            change_metadata=note_payload,
         )
         article.status = target_status
         self.session.add_all([article, history])
