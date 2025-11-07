@@ -1,41 +1,45 @@
 import { test } from '@playwright/test';
 
-/**
- * Read error logs from localStorage
- */
-
-const PROD_URL = 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323';
-
-test('Read error logs from localStorage', async ({ page }) => {
-  console.log('Navigating to Settings page...');
-  await page.goto(`${PROD_URL}/index.html#/settings`, {
+test('read error logs from localStorage', async ({ page }) => {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html#/worklist', {
     waitUntil: 'networkidle',
   });
 
-  await page.waitForTimeout(3000);
+  await page.evaluate(() => {
+    localStorage.clear();
+    sessionStorage.clear();
+  });
+  await page.reload({ waitUntil: 'networkidle' });
 
-  // Read the error logs from localStorage
+  console.log('Navigating to worklist...');
+  await page.waitForTimeout(2000);
+
+  const reviewButton = page.getByRole('button', { name: /审核|review/i }).first();
+  await reviewButton.click();
+
+  console.log('Clicked review button, waiting for errors...');
+  await page.waitForTimeout(5000);
+
   const errorLogs = await page.evaluate(() => {
-    try {
-      const logs = localStorage.getItem('cms_automation_error_logs');
-      const sessionId = localStorage.getItem('cms_automation_session_id');
-
-      return {
-        errorLogs: logs ? JSON.parse(logs) : null,
-        sessionId,
-        allKeys: Object.keys(localStorage),
-      };
-    } catch (e: any) {
-      return {
-        error: `Failed to parse: ${e.message}`,
-        rawLogs: localStorage.getItem('cms_automation_error_logs'),
-      };
-    }
+    const stored = localStorage.getItem('cms_automation_error_logs');
+    return stored ? JSON.parse(stored) : [];
   });
 
-  console.log('\n========================================');
-  console.log('ERROR LOGS FROM LOCALSTORAGE');
-  console.log('========================================\n');
-  console.log(JSON.stringify(errorLogs, null, 2));
-  console.log('\n========================================\n');
+  console.log('\n=== ERROR LOGS ===');
+  if (errorLogs.length === 0) {
+    console.log('No error logs found');
+  } else {
+    console.log('Found ' + errorLogs.length + ' error logs\n');
+
+    errorLogs.slice(0, 3).forEach((log: any, i: number) => {
+      console.log('\n[LOG ' + (i + 1) + ']');
+      console.log('Message: ' + log.message);
+      if (log.stack) {
+        console.log('\nStack:\n' + log.stack);
+      }
+      if (log.componentStack) {
+        console.log('\nComponent Stack:\n' + log.componentStack);
+      }
+    });
+  }
 });

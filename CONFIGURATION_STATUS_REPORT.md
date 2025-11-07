@@ -159,8 +159,12 @@ poetry run python scripts/verify_google_drive.py
 
 ### Supabase 配置
 - **SUPABASE_URL**: https://twsbhjmlmspjwfystpti.supabase.co
-- **SUPABASE_ANON_KEY**: ✅ 已配置
-- **SUPABASE_SERVICE_KEY**: ✅ 已配置
+- **SUPABASE_ANON_KEY**: ✅ 已配置（前端透過 `VITE_SUPABASE_ANON_KEY` 繫結）
+- **SUPABASE_SERVICE_KEY**: ✅ 已配置（僅後端）
+- **SUPABASE_JWT_AUDIENCE**: `authenticated`
+- **SUPABASE_JWT_ISSUER**: https://twsbhjmlmspjwfystpti.supabase.co/auth/v1
+- **VITE_SUPABASE_URL**: ✅ 指向同一專案
+- **VITE_SUPABASE_ANON_KEY**: ✅ 與後端 anon key 同步
 
 ### 监控配置
 - **ENABLE_METRICS**: true

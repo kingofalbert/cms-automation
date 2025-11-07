@@ -55,7 +55,10 @@ Intelligent article proofreading, review, and publishing system using Claude AI.
    CMS_BASE_URL=https://your-wordpress-site.com
    CMS_USERNAME=admin
    CMS_APPLICATION_PASSWORD=your-app-password
-   SECRET_KEY=$(openssl rand -hex 32)
+    SUPABASE_URL=https://twsbhjmlmspjwfystpti.supabase.co
+    SUPABASE_ANON_KEY=<copy-from-supabase-dashboard>
+    SUPABASE_SERVICE_KEY=<service-role-key-backend-only>
+    SECRET_KEY=$(openssl rand -hex 32)
    ```
 
 3. **Start Services**
@@ -114,6 +117,10 @@ cd frontend
 
 # Install dependencies
 npm install
+
+# Copy env template and configure Supabase client
+cp .env.example .env
+# Set VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY plus API endpoints
 
 # Start development server
 npm run dev

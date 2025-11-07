@@ -9,20 +9,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { worklistAPI } from '@/services/worklist';
-import { articlesAPI } from '@/services/articles';
 import {
   ProofreadingIssue,
   DecisionPayload,
   DecisionType,
   WorklistItemDetail,
 } from '@/types/worklist';
-import { ArticleReviewResponse } from '@/types/api';
 import { ProofreadingIssueList } from '@/components/ProofreadingReview/ProofreadingIssueList';
 import { ProofreadingArticleContent } from '@/components/ProofreadingReview/ProofreadingArticleContent';
 import { ProofreadingIssueDetailPanel } from '@/components/ProofreadingReview/ProofreadingIssueDetailPanel';
 import { ReviewStatsBar } from '@/components/ProofreadingReview/ReviewStatsBar';
 import { ProofreadingReviewHeader } from '@/components/ProofreadingReview/ProofreadingReviewHeader';
-import { ComparisonCards } from '@/components/ProofreadingReview/ComparisonCards';
 import { Button } from '@/components/ui';
 import { ArrowLeft, Save, CheckCircle } from 'lucide-react';
 
@@ -41,30 +38,16 @@ export default function ProofreadingReviewPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('original');
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(new Set());
 
-  // Fetch worklist item (for context and article_id)
+  // Fetch worklist item (contains all proofreading data)
   const {
     data: worklistItem,
-    isLoading: isLoadingWorklist,
-    error: worklistError,
+    isLoading,
+    error,
   } = useQuery<WorklistItemDetail>({
     queryKey: ['worklist-detail', id],
     queryFn: () => worklistAPI.get(Number(id)),
     enabled: Boolean(id),
   });
-
-  // Fetch article review data (for proofreading content)
-  const {
-    data: articleReview,
-    isLoading: isLoadingArticle,
-    error: articleError,
-  } = useQuery<ArticleReviewResponse>({
-    queryKey: ['article-review', worklistItem?.article_id],
-    queryFn: () => articlesAPI.getReviewData(worklistItem!.article_id!),
-    enabled: Boolean(worklistItem?.article_id),
-  });
-
-  const isLoading = isLoadingWorklist || isLoadingArticle;
-  const error = worklistError || articleError;
 
   // Save decisions mutation
   const saveDecisionsMutation = useMutation({
@@ -88,7 +71,6 @@ export default function ProofreadingReviewPage() {
       );
       queryClient.invalidateQueries({ queryKey: ['worklist-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['worklist'] });
-      queryClient.invalidateQueries({ queryKey: ['article-review', worklistItem?.article_id] });
 
       // Clear local decisions
       setDecisions({});
@@ -107,8 +89,8 @@ export default function ProofreadingReviewPage() {
     },
   });
 
-  // Get issues and stats from article review data
-  const issues = (articleReview?.proofreading_issues || []) as unknown as ProofreadingIssue[];
+  // Get issues and stats from worklist item
+  const issues = (worklistItem?.proofreading_issues || []) as unknown as ProofreadingIssue[];
   const stats = worklistItem?.proofreading_stats;
 
   // Add decision
@@ -319,18 +301,18 @@ export default function ProofreadingReviewPage() {
         {/* Center: Article Content (50%) */}
         <div className="flex-1 overflow-y-auto bg-white p-8">
           <ProofreadingArticleContent
-            content={articleReview?.content.original || worklistItem.content}
-            title={articleReview?.title || worklistItem.title}
+            content={worklistItem.content}
+            title={worklistItem.title}
             issues={issues}
             decisions={decisions}
             selectedIssue={selectedIssue}
             viewMode={viewMode}
             onIssueClick={setSelectedIssue}
-            suggestedContent={articleReview?.content.suggested}
+            suggestedContent={undefined}
           />
         </div>
 
-        {/* Right: Issue Detail Panel + Comparison Cards (30%) */}
+        {/* Right: Issue Detail Panel (30%) */}
         <div className="w-[30%] overflow-y-auto border-l border-gray-200 bg-gray-50">
           {/* Issue Detail Panel */}
           <div className="bg-white">
@@ -339,20 +321,9 @@ export default function ProofreadingReviewPage() {
               decision={selectedIssue ? decisions[selectedIssue.id] : undefined}
               onDecision={addDecision}
               onClearDecision={clearDecision}
-              existingDecisions={articleReview?.existing_decisions}
+              existingDecisions={[]}
             />
           </div>
-
-          {/* Comparison Cards */}
-          {articleReview && (
-            <div className="border-t border-gray-200">
-              <ComparisonCards
-                meta={articleReview.meta}
-                seo={articleReview.seo}
-                faqProposals={articleReview.faq_proposals}
-              />
-            </div>
-          )}
         </div>
       </div>
 
