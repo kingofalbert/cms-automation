@@ -582,3 +582,89 @@ export interface WorklistUpdateMessage {
   status: WorklistStatus;
   title: string;
 }
+
+// ============================================================================
+// Article Review (Proofreading) 相關類型
+// ============================================================================
+
+export interface ContentComparison {
+  original: string;
+  suggested: string | null;
+  changes: Record<string, unknown> | null;
+}
+
+export interface MetaComparison {
+  original: string | null;
+  suggested: string | null;
+  reasoning: string | null;
+  score: number | null;
+  length_original: number;
+  length_suggested: number;
+}
+
+export interface SEOComparison {
+  original_keywords: string[];
+  suggested_keywords: Record<string, unknown> | null;
+  reasoning: string | null;
+  score: number | null;
+}
+
+export interface FAQProposal {
+  questions: Record<string, unknown>[];
+  schema_type: string;
+  score: number | null;
+}
+
+export interface ParagraphSuggestion {
+  paragraph_index: number;
+  original_text: string;
+  suggested_text: string;
+  reasoning: string;
+  improvement_type: 'split' | 'merge' | 'rewrite' | 'reorder';
+}
+
+export interface ProofreadingDecisionDetail {
+  issue_id: string;
+  decision_type: 'accepted' | 'rejected' | 'modified';
+  rationale: string | null;
+  modified_content: string | null;
+  reviewer: string;
+  decided_at: string;
+}
+
+export interface ArticleReviewResponse {
+  // Basic info
+  id: number;
+  title: string;
+  status: ArticleStatus;
+
+  // Content comparison
+  content: ContentComparison;
+
+  // Meta comparison
+  meta: MetaComparison;
+
+  // SEO comparison
+  seo: SEOComparison;
+
+  // FAQ proposals
+  faq_proposals: FAQProposal[];
+
+  // Paragraph suggestions
+  paragraph_suggestions: ParagraphSuggestion[];
+
+  // Proofreading issues
+  proofreading_issues: Record<string, unknown>[];
+
+  // Existing decisions (hydrated from database)
+  existing_decisions: ProofreadingDecisionDetail[];
+
+  // AI metadata
+  ai_model_used: string | null;
+  suggested_generated_at: string | null;
+  generation_cost: number | null;
+
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+}

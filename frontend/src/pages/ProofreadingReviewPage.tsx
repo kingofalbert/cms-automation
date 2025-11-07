@@ -9,12 +9,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { worklistAPI } from '@/services/worklist';
+import { articlesAPI } from '@/services/articles';
 import {
   ProofreadingIssue,
   DecisionPayload,
   DecisionType,
   WorklistItemDetail,
 } from '@/types/worklist';
+import { ArticleReviewResponse } from '@/types/api';
 import { ProofreadingIssueList } from '@/components/ProofreadingReview/ProofreadingIssueList';
 import { ProofreadingArticleContent } from '@/components/ProofreadingReview/ProofreadingArticleContent';
 import { ProofreadingIssueDetailPanel } from '@/components/ProofreadingReview/ProofreadingIssueDetailPanel';
@@ -35,19 +37,33 @@ export default function ProofreadingReviewPage() {
   const [selectedIssue, setSelectedIssue] = useState<ProofreadingIssue | null>(null);
   const [decisions, setDecisions] = useState<Record<string, DecisionPayload>>({});
   const [reviewNotes, setReviewNotes] = useState('');
-  const [viewMode] = useState<ViewMode>('original');
+  const [viewMode, setViewMode] = useState<ViewMode>('original');
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(new Set());
 
-  // Fetch worklist item with proofreading issues
+  // Fetch worklist item (for context and article_id)
   const {
     data: worklistItem,
-    isLoading,
-    error,
+    isLoading: isLoadingWorklist,
+    error: worklistError,
   } = useQuery<WorklistItemDetail>({
     queryKey: ['worklist-detail', id],
     queryFn: () => worklistAPI.get(Number(id)),
     enabled: Boolean(id),
   });
+
+  // Fetch article review data (for proofreading content)
+  const {
+    data: articleReview,
+    isLoading: isLoadingArticle,
+    error: articleError,
+  } = useQuery<ArticleReviewResponse>({
+    queryKey: ['article-review', worklistItem?.article_id],
+    queryFn: () => articlesAPI.getReviewData(worklistItem!.article_id!),
+    enabled: Boolean(worklistItem?.article_id),
+  });
+
+  const isLoading = isLoadingWorklist || isLoadingArticle;
+  const error = worklistError || articleError;
 
   // Save decisions mutation
   const saveDecisionsMutation = useMutation({
@@ -71,6 +87,7 @@ export default function ProofreadingReviewPage() {
       );
       queryClient.invalidateQueries({ queryKey: ['worklist-detail', id] });
       queryClient.invalidateQueries({ queryKey: ['worklist'] });
+      queryClient.invalidateQueries({ queryKey: ['article-review', worklistItem?.article_id] });
 
       // Clear local decisions
       setDecisions({});
@@ -89,8 +106,8 @@ export default function ProofreadingReviewPage() {
     },
   });
 
-  // Get issues
-  const issues = worklistItem?.proofreading_issues || [];
+  // Get issues and stats from article review data
+  const issues = (articleReview?.proofreading_issues || []) as unknown as ProofreadingIssue[];
   const stats = worklistItem?.proofreading_stats;
 
   // Add decision
@@ -196,6 +213,23 @@ export default function ProofreadingReviewPage() {
     );
   }
 
+  // Check if worklist item has article_id
+  if (!worklistItem.article_id) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <p className="text-lg text-red-500">
+            {t('proofreading.messages.noArticleLinked') || 'No article linked to this worklist item'}
+          </p>
+          <Button className="mt-4" onClick={() => navigate('/worklist')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            {t('common.backToList')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (issues.length === 0) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -226,6 +260,8 @@ export default function ProofreadingReviewPage() {
         stats={stats}
         dirtyCount={dirtyCount}
         totalIssues={issues.length}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
       {/* Main Content - 3 Column Layout */}
@@ -261,13 +297,14 @@ export default function ProofreadingReviewPage() {
         {/* Center: Article Content (50%) */}
         <div className="flex-1 overflow-y-auto bg-white p-8">
           <ProofreadingArticleContent
-            content={worklistItem.content}
-            title={worklistItem.title}
+            content={articleReview?.content.original || worklistItem.content}
+            title={articleReview?.title || worklistItem.title}
             issues={issues}
             decisions={decisions}
             selectedIssue={selectedIssue}
             viewMode={viewMode}
             onIssueClick={setSelectedIssue}
+            suggestedContent={articleReview?.content.suggested}
           />
         </div>
 

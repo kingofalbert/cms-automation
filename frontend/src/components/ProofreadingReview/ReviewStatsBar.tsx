@@ -4,15 +4,20 @@
  */
 
 import { ProofreadingStats } from '@/types/worklist';
-import { AlertCircle, AlertTriangle, Info, CheckCircle, XCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, CheckCircle, XCircle, Eye, FileText, GitCompare } from 'lucide-react';
+import { cn } from '@/lib/cn';
+
+type ViewMode = 'original' | 'preview' | 'diff';
 
 interface ReviewStatsBarProps {
   stats?: ProofreadingStats | null;
   dirtyCount: number;
   totalIssues: number;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
-export function ReviewStatsBar({ stats, dirtyCount, totalIssues }: ReviewStatsBarProps) {
+export function ReviewStatsBar({ stats, dirtyCount, totalIssues, viewMode = 'original', onViewModeChange }: ReviewStatsBarProps) {
   if (!stats) return null;
 
   const progressPercent = totalIssues > 0 ? Math.round((dirtyCount / totalIssues) * 100) : 0;
@@ -62,24 +67,88 @@ export function ReviewStatsBar({ stats, dirtyCount, totalIssues }: ReviewStatsBa
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-sm font-medium text-gray-900">
-              {dirtyCount} / {totalIssues}
+        {/* Right Side: Progress & View Mode */}
+        <div className="flex items-center gap-6">
+          {/* Progress */}
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <div className="text-sm font-medium text-gray-900">
+                {dirtyCount} / {totalIssues}
+              </div>
+              <div className="text-xs text-gray-500">Issues Decided</div>
             </div>
-            <div className="text-xs text-gray-500">Issues Decided</div>
+            <div className="h-10 w-32 overflow-hidden rounded-full bg-gray-200">
+              <div
+                className="h-full bg-blue-500 transition-all duration-300"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+            <div className="text-sm font-medium text-gray-700">{progressPercent}%</div>
           </div>
-          <div className="h-10 w-32 overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full bg-blue-500 transition-all duration-300"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
-          <div className="text-sm font-medium text-gray-700">{progressPercent}%</div>
+
+          {/* View Mode Switcher */}
+          {onViewModeChange && (
+            <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
+              <ViewModeButton
+                mode="original"
+                currentMode={viewMode}
+                icon={<FileText className="h-4 w-4" />}
+                label="Original"
+                onClick={() => onViewModeChange('original')}
+              />
+              <ViewModeButton
+                mode="diff"
+                currentMode={viewMode}
+                icon={<GitCompare className="h-4 w-4" />}
+                label="Diff"
+                onClick={() => onViewModeChange('diff')}
+              />
+              <ViewModeButton
+                mode="preview"
+                currentMode={viewMode}
+                icon={<Eye className="h-4 w-4" />}
+                label="Preview"
+                onClick={() => onViewModeChange('preview')}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function ViewModeButton({
+  mode,
+  currentMode,
+  icon,
+  label,
+  onClick,
+}: {
+  mode: ViewMode;
+  currentMode: ViewMode;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  const isActive = mode === currentMode;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-medium transition-colors',
+        isActive
+          ? 'bg-white text-blue-600 shadow-sm'
+          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      )}
+      aria-label={`View ${label} mode`}
+      aria-pressed={isActive}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 

@@ -13,6 +13,7 @@ import type {
   PaginatedResponse,
   APIResponse,
   ImportResult,
+  ArticleReviewResponse,
 } from '../types/api';
 
 export const articlesAPI = {
@@ -106,4 +107,11 @@ export const articlesAPI = {
     api.delete<APIResponse<void>>(`/v1/articles/${articleId}/images`, {
       data: { image_path: imagePath },
     }),
+
+  /**
+   * Get complete article review data for proofreading.
+   * Returns content comparison, meta/SEO suggestions, FAQ proposals, and existing decisions.
+   */
+  getReviewData: (articleId: number) =>
+    api.get<ArticleReviewResponse>(`/v1/articles/${articleId}/review-data`),
 };

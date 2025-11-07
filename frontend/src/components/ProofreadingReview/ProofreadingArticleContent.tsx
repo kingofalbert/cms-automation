@@ -6,6 +6,7 @@
 import { useMemo } from 'react';
 import { ProofreadingIssue, DecisionPayload } from '@/types/worklist';
 import { cn } from '@/lib/cn';
+import { DiffView } from './DiffView';
 
 type ViewMode = 'original' | 'preview' | 'diff';
 
@@ -17,6 +18,7 @@ interface ProofreadingArticleContentProps {
   selectedIssue: ProofreadingIssue | null;
   viewMode: ViewMode;
   onIssueClick: (issue: ProofreadingIssue) => void;
+  suggestedContent?: string | null;
 }
 
 export function ProofreadingArticleContent({
@@ -27,7 +29,12 @@ export function ProofreadingArticleContent({
   selectedIssue,
   viewMode,
   onIssueClick,
+  suggestedContent,
 }: ProofreadingArticleContentProps) {
+  // If in diff mode and we have suggested content, show diff view
+  if (viewMode === 'diff' && suggestedContent) {
+    return <DiffView original={content} suggested={suggestedContent} title={title} />;
+  }
   // Render content with issue highlights
   const renderedContent = useMemo(() => {
     if (!content || issues.length === 0) {
