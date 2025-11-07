@@ -3,7 +3,7 @@
  * Human review interface for AI-generated proofreading suggestions.
  */
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -35,7 +35,7 @@ export default function ProofreadingReviewPage() {
   const [selectedIssue, setSelectedIssue] = useState<ProofreadingIssue | null>(null);
   const [decisions, setDecisions] = useState<Record<string, DecisionPayload>>({});
   const [reviewNotes, setReviewNotes] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('original');
+  const [viewMode] = useState<ViewMode>('original');
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(new Set());
 
   // Fetch worklist item with proofreading issues
@@ -63,7 +63,7 @@ export default function ProofreadingReviewPage() {
         transition_to: transitionTo,
       });
     },
-    onSuccess: (data, transitionTo) => {
+    onSuccess: (_data, transitionTo) => {
       toast.success(
         transitionTo
           ? t('proofreading.messages.reviewCompletedAndTransitioned')
@@ -306,7 +306,7 @@ export default function ProofreadingReviewPage() {
           <Button
             variant="outline"
             disabled={dirtyCount === 0 || saveDecisionsMutation.isPending}
-            onClick={() => saveDecisionsMutation.mutate()}
+            onClick={() => saveDecisionsMutation.mutate(undefined)}
           >
             <Save className="mr-2 h-4 w-4" />
             {t('proofreading.actions.saveDraft')}

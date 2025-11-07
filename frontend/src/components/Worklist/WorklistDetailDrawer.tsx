@@ -158,16 +158,11 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
     (typeof metadata?.description === 'string' && metadata.description) ||
     (typeof metadata?.summary === 'string' && metadata.summary) ||
     undefined;
-  const contentPreview = (detail?.content || data.content || '').slice(0, 800);
+  const contentPreview = (detail?.content || '').slice(0, 800);
   const lastSyncedAt =
     (typeof metadata?.last_synced_at === 'string' && metadata.last_synced_at) ||
     data.synced_at;
   const isFailed = resolvedStatus === 'failed';
-  const latestErrorNote = [...(data.notes || [])]
-    .reverse()
-    .find((noteEntry) =>
-      (noteEntry.level || noteEntry.status || '').toString().toLowerCase().includes('error')
-    );
 
   return (
     <Drawer

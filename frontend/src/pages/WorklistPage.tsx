@@ -13,12 +13,12 @@ import { WorklistDetailDrawer } from '@/components/Worklist/WorklistDetailDrawer
 import { WorklistStatistics } from '@/components/Worklist/WorklistStatistics';
 import {
   WorklistItem,
-  WorklistItemDetail,
   WorklistStatistics as Stats,
   WorklistStatus,
   WorklistFilters,
   DriveSyncStatus,
   WorklistListResponse,
+  WorklistItemDetail,
 } from '@/types/worklist';
 import { Search, Filter, RefreshCw } from 'lucide-react';
 
@@ -77,9 +77,9 @@ export default function WorklistPage() {
   const {
     data: selectedDetail,
     isFetching: isDetailLoading,
-  } = useQuery({
+  } = useQuery<WorklistItemDetail>({
     queryKey: ['worklist-detail', selectedItemId],
-    queryFn: () => worklistAPI.get(selectedItemId!),
+    queryFn: async () => await api.get(`/v1/worklist/${selectedItemId}`),
     enabled: drawerOpen && Boolean(selectedItemId),
   });
 
