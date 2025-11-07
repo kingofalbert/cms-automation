@@ -11,10 +11,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas import ProofreadingResponse
-from src.api.schemas.article import ArticleListResponse, ArticleResponse
+from src.api.schemas.article import (
+    ArticleListResponse,
+    ArticleResponse,
+    ArticleReviewResponse,
+    ContentComparison,
+    MetaComparison,
+    SEOComparison,
+    FAQProposal,
+    ParagraphSuggestion,
+    ProofreadingDecisionDetail,
+)
 from src.config.database import get_session
 from src.config.logging import get_logger
 from src.models import Article
+from src.models.proofreading import ProofreadingDecision
 from src.services.proofreading import (
     ArticlePayload,
     ArticleSection,
@@ -286,3 +297,121 @@ def _coerce_int(value: Any) -> int | None:
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+@router.get("/{article_id}/review-data", response_model=ArticleReviewResponse)
+async def get_article_review_data(
+    article_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> ArticleReviewResponse:
+    """
+    Get complete article review data for ProofreadingReviewPage.
+
+    Returns:
+        - Original vs suggested content comparison
+        - Meta description comparison
+        - SEO keywords comparison
+        - FAQ proposals
+        - Paragraph suggestions
+        - Proofreading issues
+        - Existing proofreading decisions (hydrated from database)
+    """
+    # Fetch article
+    article = await _fetch_article(session, article_id)
+
+    # Fetch existing proofreading decisions
+    decisions_result = await session.execute(
+        select(ProofreadingDecision)
+        .where(ProofreadingDecision.article_id == article_id)
+        .order_by(ProofreadingDecision.created_at.desc())
+    )
+    decisions = decisions_result.scalars().all()
+
+    # Build content comparison
+    content = ContentComparison(
+        original=article.body or "",
+        suggested=article.suggested_content,
+        changes=article.suggested_content_changes,
+    )
+
+    # Build meta comparison
+    original_meta = article.article_metadata.get("meta_description") if article.article_metadata else None
+    meta = MetaComparison(
+        original=original_meta,
+        suggested=article.suggested_meta_description,
+        reasoning=article.suggested_meta_reasoning,
+        score=article.suggested_meta_score,
+        length_original=len(original_meta) if original_meta else 0,
+        length_suggested=len(article.suggested_meta_description) if article.suggested_meta_description else 0,
+    )
+
+    # Build SEO comparison
+    original_keywords = []
+    if article.article_metadata:
+        seo_data = article.article_metadata.get("seo", {})
+        if isinstance(seo_data, dict):
+            original_keywords = seo_data.get("keywords", [])
+
+    seo = SEOComparison(
+        original_keywords=original_keywords if isinstance(original_keywords, list) else [],
+        suggested_keywords=article.suggested_seo_keywords,
+        reasoning=article.suggested_keywords_reasoning,
+        score=article.suggested_keywords_score,
+    )
+
+    # Parse FAQ proposals
+    faq_proposals = []
+    if article.faq_schema_proposals:
+        if isinstance(article.faq_schema_proposals, list):
+            for proposal_data in article.faq_schema_proposals:
+                if isinstance(proposal_data, dict):
+                    faq_proposals.append(FAQProposal(
+                        questions=proposal_data.get("questions", []),
+                        schema_type=proposal_data.get("schema_type", "FAQPage"),
+                        score=proposal_data.get("score"),
+                    ))
+
+    # Parse paragraph suggestions
+    paragraph_suggestions = []
+    if article.paragraph_suggestions:
+        if isinstance(article.paragraph_suggestions, list):
+            for idx, suggestion_data in enumerate(article.paragraph_suggestions):
+                if isinstance(suggestion_data, dict):
+                    paragraph_suggestions.append(ParagraphSuggestion(
+                        paragraph_index=suggestion_data.get("paragraph_index", idx),
+                        original_text=suggestion_data.get("original_text", ""),
+                        suggested_text=suggestion_data.get("suggested_text", ""),
+                        reasoning=suggestion_data.get("reasoning", ""),
+                        improvement_type=suggestion_data.get("improvement_type", "rewrite"),
+                    ))
+
+    # Build existing decisions list
+    existing_decisions = [
+        ProofreadingDecisionDetail(
+            issue_id=d.issue_id,
+            decision_type=d.decision_type,
+            rationale=d.rationale,
+            modified_content=d.modified_content,
+            reviewer=d.reviewer or "unknown",
+            decided_at=d.created_at,
+        )
+        for d in decisions
+    ]
+
+    return ArticleReviewResponse(
+        id=article.id,
+        title=article.title,
+        status=article.status,
+        content=content,
+        meta=meta,
+        seo=seo,
+        faq_proposals=faq_proposals,
+        paragraph_suggestions=paragraph_suggestions,
+        proofreading_issues=article.proofreading_issues or [],
+        existing_decisions=existing_decisions,
+        ai_model_used=article.ai_model_used,
+        suggested_generated_at=article.suggested_generated_at,
+        generation_cost=float(article.generation_cost) if article.generation_cost else None,
+        created_at=article.created_at,
+        updated_at=article.updated_at,
+    )

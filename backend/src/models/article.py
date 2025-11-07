@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Enum, Float, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -117,6 +117,88 @@ class Article(Base, TimestampMixin):
         nullable=False,
         default=0,
         comment="Count of blocking (F-class) issues",
+    )
+
+    # AI优化建议字段 (Proofreading Review Workflow)
+    # Content optimization
+    suggested_content: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="AI-optimized article content",
+    )
+    suggested_content_changes: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Diff data structure for content changes",
+    )
+
+    # Meta description suggestions
+    suggested_meta_description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="AI-suggested meta description",
+    )
+    suggested_meta_reasoning: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="AI reasoning for meta description suggestion",
+    )
+    suggested_meta_score: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+        comment="Meta description quality score (0-1)",
+    )
+
+    # SEO keywords suggestions
+    suggested_seo_keywords: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="AI-suggested SEO keywords array",
+    )
+    suggested_keywords_reasoning: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="AI reasoning for SEO keywords",
+    )
+    suggested_keywords_score: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+        comment="SEO keywords quality score (0-1)",
+    )
+
+    # Paragraph and structure suggestions
+    paragraph_suggestions: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Paragraph optimization suggestions",
+    )
+    paragraph_split_suggestions: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Paragraph splitting recommendations",
+    )
+
+    # FAQ schema proposals
+    faq_schema_proposals: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Multiple FAQ schema variants for review",
+    )
+
+    # AI generation metadata
+    suggested_generated_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+        comment="Timestamp when AI suggestions were generated",
+    )
+    ai_model_used: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="AI model identifier used for suggestions",
+    )
+    generation_cost: Mapped[float | None] = mapped_column(
+        Numeric(10, 4),
+        nullable=True,
+        comment="API cost for generating suggestions (USD)",
     )
 
     # CMS integration

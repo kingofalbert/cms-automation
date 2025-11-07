@@ -45,3 +45,101 @@ class ArticlePreview(BaseSchema):
     excerpt: str = Field(..., description="First 200 characters of body")
     status: ArticleStatus
     created_at: datetime
+
+
+# Proofreading Review Workflow Schemas
+
+class ContentComparison(BaseSchema):
+    """Content comparison for review."""
+
+    original: str
+    suggested: str | None = None
+    changes: dict | None = Field(None, description="Diff data structure")
+
+
+class MetaComparison(BaseSchema):
+    """Meta description comparison."""
+
+    original: str | None = None
+    suggested: str | None = None
+    reasoning: str | None = None
+    score: float | None = Field(None, ge=0, le=1, description="Quality score 0-1")
+    length_original: int = 0
+    length_suggested: int = 0
+
+
+class SEOComparison(BaseSchema):
+    """SEO keywords comparison."""
+
+    original_keywords: list[str] = Field(default_factory=list)
+    suggested_keywords: dict | None = None
+    reasoning: str | None = None
+    score: float | None = Field(None, ge=0, le=1, description="Quality score 0-1")
+
+
+class FAQProposal(BaseSchema):
+    """FAQ schema proposal variant."""
+
+    questions: list[dict] = Field(default_factory=list, description="FAQ question-answer pairs")
+    schema_type: str = Field(..., description="FAQ schema type (e.g., 'FAQPage')")
+    score: float | None = None
+
+
+class ParagraphSuggestion(BaseSchema):
+    """Paragraph optimization suggestion."""
+
+    paragraph_index: int
+    original_text: str
+    suggested_text: str
+    reasoning: str
+    improvement_type: str = Field(..., description="split/merge/rewrite/reorder")
+
+
+class ProofreadingDecisionDetail(BaseSchema):
+    """Detailed proofreading decision record."""
+
+    issue_id: str
+    decision_type: str = Field(..., description="accepted/rejected/modified")
+    rationale: str | None = None
+    modified_content: str | None = None
+    reviewer: str
+    decided_at: datetime
+
+
+class ArticleReviewResponse(BaseSchema):
+    """Complete article review data for ProofreadingReviewPage."""
+
+    # Basic info
+    id: int
+    title: str
+    status: ArticleStatus
+
+    # Content comparison
+    content: ContentComparison
+
+    # Meta comparison
+    meta: MetaComparison
+
+    # SEO comparison
+    seo: SEOComparison
+
+    # FAQ proposals
+    faq_proposals: list[FAQProposal] = Field(default_factory=list)
+
+    # Paragraph suggestions
+    paragraph_suggestions: list[ParagraphSuggestion] = Field(default_factory=list)
+
+    # Proofreading issues
+    proofreading_issues: list[dict] = Field(default_factory=list)
+
+    # Existing decisions (hydrate from database)
+    existing_decisions: list[ProofreadingDecisionDetail] = Field(default_factory=list)
+
+    # AI metadata
+    ai_model_used: str | None = None
+    suggested_generated_at: datetime | None = None
+    generation_cost: float | None = None
+
+    # Timestamps
+    created_at: datetime
+    updated_at: datetime
