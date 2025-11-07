@@ -21,7 +21,9 @@ import type {
 } from '../types/proofreading';
 
 class RuleManagementAPI {
-  private baseURL: string = '/v1/proofreading/decisions';
+  // FIXED: Backend uses /api/v1 prefix, not /v1
+  // Backend route: APIRouter(prefix="/api/v1/proofreading/decisions")
+  private baseURL: string = '/api/v1/proofreading/decisions';
 
   constructor() {
     // No need for constructor body - baseURL is initialized above

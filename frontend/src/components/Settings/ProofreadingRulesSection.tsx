@@ -25,21 +25,31 @@ export const ProofreadingRulesSection: React.FC = () => {
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Fetch published rulesets
+  // TEMPORARILY DISABLED: Backend API not yet implemented
+  // TODO: Re-enable when /v1/proofreading/decisions/rules/published is implemented
   const { data: rulesetsData, isLoading: rulesetsLoading } = useQuery({
     queryKey: ['published-rulesets'],
     queryFn: async () => {
       const response = await ruleManagementAPI.getPublishedRulesets();
       return response.data;
     },
+    enabled: false,              // Disable until backend API is implemented
+    retry: false,                // Don't retry on failure
+    staleTime: 5 * 60 * 1000,   // Cache for 5 minutes when re-enabled
   });
 
   // Fetch statistics
+  // TEMPORARILY DISABLED: Backend API not yet implemented
+  // TODO: Re-enable when /v1/proofreading/decisions/rules/statistics is implemented
   const { data: statsData, isLoading: statsLoading } = useQuery({
     queryKey: ['proofreading-stats'],
     queryFn: async () => {
       const response = await ruleManagementAPI.getStatistics();
       return response.data as ProofreadingStats;
     },
+    enabled: false,              // Disable until backend API is implemented
+    retry: false,                // Don't retry on failure
+    staleTime: 5 * 60 * 1000,   // Cache for 5 minutes when re-enabled
   });
 
   const handleGenerateRules = async () => {
