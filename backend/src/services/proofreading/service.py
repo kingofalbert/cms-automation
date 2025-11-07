@@ -96,12 +96,13 @@ class ProofreadingAnalysisService:
         """Invoke Anthropic Messages API with the combined prompt."""
         response = await self.ai_client.messages.create(
             model=self.model,
-            max_tokens=4096,
+            max_tokens=8192,  # Increased to ensure complete JSON responses
             temperature=0.2,
             system=prompt["system"],  # System prompt as top-level parameter
             messages=[
                 {"role": "user", "content": prompt["user"]},
             ],
+            stop_sequences=["```"],  # Prevent markdown code block wrappers
         )
 
         # Anthropic returns content list; we take first text block
@@ -121,6 +122,14 @@ class ProofreadingAnalysisService:
     def _parse_ai_result(self, ai_payload: dict[str, Any]) -> ProofreadingResult:
         """Parse AI JSON payload into ProofreadingResult."""
         text = ai_payload["text"]
+
+        # Log the raw AI response for debugging
+        logger.info(
+            "proofreading_ai_raw_response",
+            text_length=len(text),
+            text_preview=text[:2000] if len(text) > 2000 else text,
+        )
+
         parsed = self._extract_json(text)
 
         issues_data = parsed.get("issues", [])
@@ -166,13 +175,92 @@ class ProofreadingAnalysisService:
 
     @staticmethod
     def _extract_json(text: str) -> dict[str, Any]:
-        """Extract JSON object from Claude response."""
+        """Extract JSON object from Claude response with robust parsing."""
+        # Strip markdown code fences if present
+        import re
+        text = re.sub(r'^```(?:json)?\s*\n?', '', text, flags=re.MULTILINE)
+        text = re.sub(r'\n?```\s*$', '', text, flags=re.MULTILINE)
+        text = text.strip()
+
         start = text.find("{")
         end = text.rfind("}") + 1
         if start == -1 or end == 0:
+            logger.error(
+                "proofreading_json_extraction_failed",
+                reason="no_json_found",
+                text_preview=text[:200] if len(text) > 200 else text,
+            )
             raise ValueError("AI response does not contain a JSON object")
         json_blob = text[start:end]
-        return json.loads(json_blob)
+
+        # Try standard JSON parsing first
+        try:
+            return json.loads(json_blob)
+        except json.JSONDecodeError as exc:
+            logger.warning(
+                "proofreading_json_parse_failed_trying_repair",
+                error=str(exc),
+                json_blob_length=len(json_blob),
+                json_blob_preview=json_blob[:1000] if len(json_blob) > 1000 else json_blob,
+            )
+
+            # Attempt aggressive JSON repair
+            try:
+                import re
+                repaired = json_blob
+
+                # Remove all types of comments
+                repaired = re.sub(r"//.*?$", "", repaired, flags=re.MULTILINE)
+                repaired = re.sub(r"/\*.*?\*/", "", repaired, flags=re.DOTALL)
+
+                # Fix trailing commas before closing brackets/braces (multiple passes)
+                for _ in range(3):  # Multiple passes to handle nested structures
+                    repaired = re.sub(r",(\s*[}\]])", r"\1", repaired)
+
+                # Remove trailing commas at end of lines
+                repaired = re.sub(r",(\s*\n)", r"\1", repaired)
+
+                # Fix multiple consecutive commas
+                repaired = re.sub(r",\s*,+", ",", repaired)
+
+                # Try parsing the repaired JSON
+                return json.loads(repaired)
+            except json.JSONDecodeError as repair_exc:
+                # If still failing, try one more aggressive approach: truncate at the error position
+                try:
+                    error_msg = str(repair_exc)
+                    if "char" in error_msg:
+                        # Extract character position from error message
+                        import re
+                        match = re.search(r"char (\d+)", error_msg)
+                        if match:
+                            error_pos = int(match.group(1))
+                            # Try to find the last valid closing brace before the error
+                            truncated = repaired[:error_pos]
+                            last_brace = truncated.rfind("}")
+                            if last_brace > 0:
+                                # Count opening and closing braces
+                                opening = truncated[:last_brace].count("{")
+                                closing = truncated[:last_brace].count("}")
+                                # Add missing closing braces
+                                truncated = truncated[:last_brace+1] + "}" * (opening - closing - 1)
+                                logger.info(
+                                    "proofreading_json_truncation_attempt",
+                                    original_length=len(repaired),
+                                    truncated_length=len(truncated),
+                                )
+                                return json.loads(truncated)
+                except:
+                    pass  # Fall through to error logging
+
+                logger.error(
+                    "proofreading_json_repair_failed",
+                    original_error=str(exc),
+                    repair_error=str(repair_exc),
+                    json_blob_length=len(json_blob),
+                    json_blob_preview=json_blob[:2000] if len(json_blob) > 2000 else json_blob,
+                )
+                raise exc  # Raise the original exception
 
     @staticmethod
     def _hash_prompt(prompt: dict[str, str]) -> str:

@@ -157,6 +157,10 @@ class WorklistPipelineService:
             sections=sections,
             metadata=metadata,
             keywords=item.seo_keywords or [],
+            meta_description=item.meta_description,
+            seo_keywords=item.seo_keywords or [],
+            tags=item.tags or [],
+            categories=item.categories or [],
             target_locale=metadata.get("target_locale") or "zh-TW",
         )
 

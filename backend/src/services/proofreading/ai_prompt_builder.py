@@ -115,8 +115,9 @@ class ProofreadingPromptBuilder:
 {manifest_table}
 
 输出要求：
-- 只返回 JSON，不要额外文字。
-- JSON 必须符合下列 schema：
+- **只返回纯 JSON 对象，不要任何额外文字、解释或 markdown 代码块。**
+- **不要在 JSON 中使用注释或尾随逗号。**
+- JSON 必须严格符合下列 schema：
 ```
 {{
   "issues": [

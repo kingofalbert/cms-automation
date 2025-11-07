@@ -81,6 +81,18 @@ class ArticlePayload(BaseModel):
     keywords: list[str] = Field(
         default_factory=list, description="Keywords used for SEO context"
     )
+    meta_description: str | None = Field(
+        default=None, description="SEO meta description for deterministic rule checks"
+    )
+    seo_keywords: list[str] = Field(
+        default_factory=list, description="SEO keywords for deterministic checks"
+    )
+    tags: list[str] = Field(
+        default_factory=list, description="WordPress post tags"
+    )
+    categories: list[str] = Field(
+        default_factory=list, description="WordPress post categories"
+    )
     target_locale: str = Field(
         default="zh-TW", description="Locale variant controlling wording choices"
     )
