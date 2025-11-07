@@ -367,6 +367,7 @@ class ArticleStatusHistory(Base):
         comment="Optional description of why the transition occurred",
     )
     change_metadata: Mapped[dict] = mapped_column(
+        "metadata",  # Map to database column 'metadata'
         JSONB,
         nullable=False,
         default=dict,
