@@ -98,8 +98,8 @@ class ProofreadingAnalysisService:
             model=self.model,
             max_tokens=4096,
             temperature=0.2,
+            system=prompt["system"],  # System prompt as top-level parameter
             messages=[
-                {"role": "system", "content": prompt["system"]},
                 {"role": "user", "content": prompt["user"]},
             ],
         )
