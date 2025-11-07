@@ -155,6 +155,19 @@ export default function ProofreadingReviewPage() {
   // Computed values
   const dirtyCount = Object.keys(decisions).length;
   const allIssuesDecided = issues.length > 0 && issues.length === dirtyCount;
+  const hasUnsavedChanges = dirtyCount > 0 || reviewNotes.length > 0;
+
+  // Handle cancel with confirmation if there are unsaved changes
+  const handleCancel = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm(
+        t('proofreading.messages.cancelConfirm') ||
+        'You have unsaved changes. Are you sure you want to cancel and return to the worklist?'
+      );
+      if (!confirmed) return;
+    }
+    navigate('/worklist');
+  }, [hasUnsavedChanges, navigate, t]);
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -191,6 +204,13 @@ export default function ProofreadingReviewPage() {
     window.addEventListener('keydown', handleKeyDown as any);
     return () => window.removeEventListener('keydown', handleKeyDown as any);
   }, [handleKeyDown]);
+
+  // Auto-select first issue when issues are loaded
+  useEffect(() => {
+    if (issues.length > 0 && !selectedIssue) {
+      setSelectedIssue(issues[0]);
+    }
+  }, [issues, selectedIssue]);
 
   if (isLoading) {
     return (
@@ -254,6 +274,7 @@ export default function ProofreadingReviewPage() {
       <ProofreadingReviewHeader
         worklistItem={worklistItem}
         onBack={() => navigate('/worklist')}
+        onCancel={handleCancel}
       />
 
       {/* Stats Bar */}
@@ -318,6 +339,7 @@ export default function ProofreadingReviewPage() {
               decision={selectedIssue ? decisions[selectedIssue.id] : undefined}
               onDecision={addDecision}
               onClearDecision={clearDecision}
+              existingDecisions={articleReview?.existing_decisions}
             />
           </div>
 

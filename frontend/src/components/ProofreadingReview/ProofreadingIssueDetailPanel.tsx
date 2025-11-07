@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ProofreadingIssue, DecisionPayload, FeedbackCategory } from '@/types/worklist';
+import { ProofreadingDecisionDetail } from '@/types/api';
 import { Button, Input } from '@/components/ui';
 import {
   CheckCircle,
@@ -16,6 +17,8 @@ import {
   Info,
   Sparkles,
   Code,
+  History,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -24,6 +27,7 @@ interface ProofreadingIssueDetailPanelProps {
   decision?: DecisionPayload;
   onDecision: (issueId: string, decision: Partial<DecisionPayload>) => void;
   onClearDecision: (issueId: string) => void;
+  existingDecisions?: ProofreadingDecisionDetail[];
 }
 
 export function ProofreadingIssueDetailPanel({
@@ -31,6 +35,7 @@ export function ProofreadingIssueDetailPanel({
   decision,
   onDecision,
   onClearDecision,
+  existingDecisions = [],
 }: ProofreadingIssueDetailPanelProps) {
   const { t } = useTranslation();
   const [modifiedContent, setModifiedContent] = useState('');
@@ -38,6 +43,12 @@ export function ProofreadingIssueDetailPanel({
   const [feedbackNotes, setFeedbackNotes] = useState('');
   const [feedbackCategory, setFeedbackCategory] = useState<FeedbackCategory | ''>('');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
+  // Filter existing decisions for the current issue
+  const issueHistory = issue
+    ? existingDecisions.filter((d) => d.issue_id === issue.id)
+    : [];
 
   if (!issue) {
     return (
@@ -169,6 +180,73 @@ export function ProofreadingIssueDetailPanel({
           <p className="mt-2 text-xs text-gray-500">{issue.explanation_detail}</p>
         )}
       </div>
+
+      {/* Historical Decisions */}
+      {issueHistory.length > 0 && (
+        <div className="border-b border-gray-200 p-6">
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="mb-3 flex w-full items-center justify-between text-left text-xs font-medium text-gray-700 hover:text-gray-900"
+          >
+            <div className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              <span>Decision History ({issueHistory.length})</span>
+            </div>
+            <span className="text-gray-400">{showHistory ? '−' : '+'}</span>
+          </button>
+
+          {showHistory && (
+            <div className="space-y-3">
+              {issueHistory.map((hist, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    'rounded-lg border p-3',
+                    hist.decision_type === 'accepted'
+                      ? 'border-green-200 bg-green-50'
+                      : hist.decision_type === 'rejected'
+                      ? 'border-gray-200 bg-gray-50'
+                      : 'border-purple-200 bg-purple-50'
+                  )}
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <span
+                      className={cn(
+                        'text-xs font-medium',
+                        hist.decision_type === 'accepted'
+                          ? 'text-green-700'
+                          : hist.decision_type === 'rejected'
+                          ? 'text-gray-700'
+                          : 'text-purple-700'
+                      )}
+                    >
+                      {hist.decision_type.toUpperCase()}
+                    </span>
+                    <div className="flex items-center gap-1 text-xs text-gray-500">
+                      <Clock className="h-3 w-3" />
+                      {new Date(hist.decided_at).toLocaleDateString()}
+                    </div>
+                  </div>
+
+                  {hist.rationale && (
+                    <p className="mb-2 text-xs text-gray-600">{hist.rationale}</p>
+                  )}
+
+                  {hist.modified_content && (
+                    <div className="mb-2 rounded bg-white p-2 text-xs text-gray-800">
+                      Modified: "{hist.modified_content}"
+                    </div>
+                  )}
+
+                  <div className="text-xs text-gray-500">
+                    Reviewer: {hist.reviewer}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Decision Actions */}
       <div className="flex-1 p-6">

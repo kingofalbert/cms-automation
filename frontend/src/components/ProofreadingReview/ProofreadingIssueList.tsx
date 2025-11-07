@@ -10,6 +10,7 @@ import {
   DecisionPayload,
   IssueSeverity,
   DecisionStatus,
+  IssueEngine,
 } from '@/types/worklist';
 import { Button, Input } from '@/components/ui';
 import {
@@ -19,6 +20,8 @@ import {
   CheckCircle,
   XCircle,
   Search,
+  Sparkles,
+  Code,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -47,6 +50,14 @@ export function ProofreadingIssueList({
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<IssueSeverity | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DecisionStatus | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [engineFilter, setEngineFilter] = useState<IssueEngine | 'all'>('all');
+
+  // Get unique categories from issues
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set(issues.map((issue) => issue.rule_category));
+    return Array.from(uniqueCategories).sort();
+  }, [issues]);
 
   // Filter issues
   const filteredIssues = useMemo(() => {
@@ -74,9 +85,19 @@ export function ProofreadingIssueList({
         return false;
       }
 
+      // Category filter
+      if (categoryFilter !== 'all' && issue.rule_category !== categoryFilter) {
+        return false;
+      }
+
+      // Engine filter
+      if (engineFilter !== 'all' && issue.engine !== engineFilter) {
+        return false;
+      }
+
       return true;
     });
-  }, [issues, searchQuery, severityFilter, statusFilter, decisions]);
+  }, [issues, searchQuery, severityFilter, statusFilter, categoryFilter, engineFilter, decisions]);
 
   return (
     <div className="flex h-full flex-col">
@@ -93,29 +114,56 @@ export function ProofreadingIssueList({
           />
         </div>
 
-        <div className="flex gap-2">
-          <select
-            value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value as any)}
-            className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
-          >
-            <option value="all">All Severity</option>
-            <option value="critical">Critical</option>
-            <option value="warning">Warning</option>
-            <option value="info">Info</option>
-          </select>
+        <div className="space-y-2">
+          <div className="flex gap-2">
+            <select
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value as any)}
+              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
+            >
+              <option value="all">All Severity</option>
+              <option value="critical">Critical</option>
+              <option value="warning">Warning</option>
+              <option value="info">Info</option>
+            </select>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
-            className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
-          >
-            <option value="all">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="accepted">Accepted</option>
-            <option value="rejected">Rejected</option>
-            <option value="modified">Modified</option>
-          </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
+            >
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+              <option value="modified">Modified</option>
+            </select>
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={engineFilter}
+              onChange={(e) => setEngineFilter(e.target.value as any)}
+              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
+            >
+              <option value="all">All Engines</option>
+              <option value="ai">AI</option>
+              <option value="deterministic">Deterministic</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -221,8 +269,31 @@ function IssueListItem({
 
         {/* Issue Content */}
         <div className="min-w-0 flex-1">
-          <div className="mb-1 text-xs font-medium text-gray-500">
-            #{index} · {issue.rule_category}
+          <div className="mb-1 flex items-center gap-2 text-xs font-medium text-gray-500">
+            <span>#{index} · {issue.rule_category}</span>
+            {/* Engine Badge */}
+            {issue.engine === 'ai' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
+                <Sparkles className="h-3 w-3" />
+                AI
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                <Code className="h-3 w-3" />
+                Rule
+              </span>
+            )}
+            {/* Confidence Badge (AI only) */}
+            {issue.engine === 'ai' && issue.confidence !== undefined && (
+              <span className={cn(
+                'rounded-full px-2 py-0.5 text-xs font-medium',
+                issue.confidence >= 0.8 ? 'bg-green-100 text-green-700' :
+                issue.confidence >= 0.6 ? 'bg-yellow-100 text-yellow-700' :
+                'bg-red-100 text-red-700'
+              )}>
+                {Math.round(issue.confidence * 100)}%
+              </span>
+            )}
           </div>
           <p className="truncate text-sm font-medium text-gray-900">
             {issue.original_text}
