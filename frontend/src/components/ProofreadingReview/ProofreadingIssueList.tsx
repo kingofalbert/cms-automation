@@ -55,7 +55,11 @@ export function ProofreadingIssueList({
 
   // Get unique categories from issues
   const categories = useMemo(() => {
-    const uniqueCategories = new Set(issues.map((issue) => issue.rule_category));
+    const uniqueCategories = new Set(
+      issues
+        .map((issue) => issue.rule_category)
+        .filter((category): category is string => Boolean(category))
+    );
     return Array.from(uniqueCategories).sort();
   }, [issues]);
 
@@ -65,11 +69,10 @@ export function ProofreadingIssueList({
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        if (
-          !issue.original_text.toLowerCase().includes(query) &&
-          !issue.suggested_text.toLowerCase().includes(query) &&
-          !issue.explanation.toLowerCase().includes(query)
-        ) {
+        const haystacks = [issue.original_text, issue.suggested_text, issue.explanation]
+          .filter((value): value is string => Boolean(value))
+          .map((value) => value.toLowerCase());
+        if (!haystacks.some((text) => text.includes(query))) {
           return false;
         }
       }
@@ -86,8 +89,11 @@ export function ProofreadingIssueList({
       }
 
       // Category filter
-      if (categoryFilter !== 'all' && issue.rule_category !== categoryFilter) {
-        return false;
+      if (categoryFilter !== 'all') {
+        const issueCategory = issue.rule_category || '';
+        if (issueCategory !== categoryFilter) {
+          return false;
+        }
       }
 
       // Engine filter
@@ -233,6 +239,9 @@ function IssueListItem({
   onCheckChange,
 }: IssueListItemProps) {
   const decisionStatus = decision?.decision_type || issue.decision_status;
+  const categoryLabel = issue.rule_category || 'Uncategorized';
+  const originalText = issue.original_text || '（無可顯示的原文）';
+  const suggestedText = issue.suggested_text || originalText;
 
   return (
     <div
@@ -270,7 +279,9 @@ function IssueListItem({
         {/* Issue Content */}
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2 text-xs font-medium text-gray-500">
-            <span>#{index} · {issue.rule_category}</span>
+            <span>
+              #{index} · {categoryLabel}
+            </span>
             {/* Engine Badge */}
             {issue.engine === 'ai' ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
@@ -296,10 +307,10 @@ function IssueListItem({
             )}
           </div>
           <p className="truncate text-sm font-medium text-gray-900">
-            {issue.original_text}
+            {originalText}
           </p>
           <p className="truncate text-xs text-gray-600">
-            → {issue.suggested_text}
+            → {suggestedText}
           </p>
 
           {/* Decision Badge */}

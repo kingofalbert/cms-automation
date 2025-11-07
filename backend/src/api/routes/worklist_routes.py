@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -232,7 +236,10 @@ async def save_review_decisions(
 
     # 3. Validate issue IDs
     article_issues = article.proofreading_issues or []
-    issue_id_map = {issue.get("id"): issue for issue in article_issues}
+    issue_id_map: dict[str, tuple[int, dict[str, Any]]] = {}
+    for idx, issue in enumerate(article_issues):
+        issue_id = _compute_issue_id(issue, idx)
+        issue_id_map[issue_id] = (idx, issue)
 
     errors = []
     for decision in payload.decisions:
@@ -247,8 +254,14 @@ async def save_review_decisions(
 
     # 4. Create ProofreadingDecision records
     saved_count = 0
+    article_content = item.content or ""
     for decision_payload in payload.decisions:
-        issue = issue_id_map[decision_payload.issue_id]
+        issue_index, issue = issue_id_map[decision_payload.issue_id]
+        issue_context = _build_issue_context(
+            issue,
+            article_content=article_content,
+            index=issue_index,
+        )
 
         # Check if decision already exists
         existing = await session.execute(
@@ -276,11 +289,11 @@ async def save_review_decisions(
                 decision_type=DecisionType(decision_payload.decision_type),
                 decision_rationale=decision_payload.decision_rationale,
                 modified_content=decision_payload.modified_content,
-                original_text=issue.get("original_text", ""),
-                suggested_text=issue.get("suggested_text", ""),
-                rule_id=issue.get("rule_id", ""),
-                rule_category=issue.get("rule_category"),
-                issue_position=issue.get("position"),
+                original_text=issue_context["original_text"],
+                suggested_text=issue_context["suggested_text"],
+                rule_id=issue_context["rule_id"],
+                rule_category=issue_context["rule_category"],
+                issue_position=issue_context["position"],
                 feedback_provided=decision_payload.feedback_provided,
                 feedback_category=decision_payload.feedback_category,
                 feedback_notes=decision_payload.feedback_notes,
@@ -419,18 +432,20 @@ async def _serialize_item_detail(
         decisions = {d.suggestion_id: d for d in result.scalars().all()}
 
         # Enrich issues with decision status
-        for issue in raw_issues:
-            issue_id = issue.get("id")
+        article_content = item.content or ""
+        for idx, issue in enumerate(raw_issues):
+            issue_id = _compute_issue_id(issue, idx)
             decision = decisions.get(issue_id)
-
-            enriched_issue = {
-                **issue,
-                "decision_status": (
+            normalized_issue = _normalize_issue_for_review(
+                issue,
+                article_content=article_content,
+                index=idx,
+                decision_status=(
                     decision.decision_type.value if decision else "pending"
                 ),
-                "decision_id": decision.id if decision else None,
-            }
-            proofreading_issues.append(enriched_issue)
+                decision_id=decision.id if decision else None,
+            )
+            proofreading_issues.append(normalized_issue)
 
         # Calculate statistics
         if raw_issues:
@@ -497,3 +512,166 @@ def _calculate_proofreading_stats(issues: list[dict]) -> dict[str, int]:
             stats["deterministic_issues_count"] += 1
 
     return stats
+
+
+def _normalize_issue_for_review(
+    issue: dict[str, Any],
+    *,
+    article_content: str,
+    index: int,
+    decision_status: str,
+    decision_id: int | None,
+) -> dict[str, Any]:
+    """Normalize stored issue payload into UI-friendly format."""
+    context = _build_issue_context(
+        issue,
+        article_content=article_content,
+        index=index,
+    )
+    context["decision_status"] = decision_status or "pending"
+    context["decision_id"] = decision_id
+    return context
+
+
+def _build_issue_context(
+    issue: dict[str, Any],
+    *,
+    article_content: str,
+    index: int,
+) -> dict[str, Any]:
+    """Derive consistent identifiers and text snippets for a proofreading issue."""
+    position, start, end = _compute_position(issue)
+
+    original_text = issue.get("original_text")
+    if (not original_text) and article_content and end > start:
+        original_text = _safe_slice(article_content, start, end)
+    if not original_text:
+        original_text = issue.get("evidence") or issue.get("message") or ""
+
+    suggested_text = (
+        issue.get("suggested_text")
+        or issue.get("suggestion")
+        or original_text
+        or ""
+    )
+
+    explanation = issue.get("explanation") or issue.get("message") or ""
+    explanation_detail = issue.get("explanation_detail") or issue.get("evidence")
+
+    context = {
+        "id": _compute_issue_id(issue, index),
+        "rule_id": issue.get("rule_id") or f"rule_{index}",
+        "rule_category": (
+            issue.get("rule_category")
+            or issue.get("category")
+            or issue.get("subcategory")
+            or (issue.get("rule_id", "U")[:1] or "U")
+        ),
+        "severity": _normalize_severity(issue.get("severity")),
+        "engine": _derive_engine(issue),
+        "position": position,
+        "original_text": original_text or "",
+        "suggested_text": suggested_text or "",
+        "explanation": explanation,
+        "explanation_detail": explanation_detail,
+        "confidence": issue.get("confidence"),
+        "tags": issue.get("tags") or [],
+    }
+    return context
+
+
+def _compute_issue_id(issue: dict[str, Any], index: int) -> str:
+    """Return an existing issue id or derive a stable hash-based identifier."""
+    existing_id = issue.get("id")
+    if existing_id:
+        return str(existing_id)
+
+    fingerprint = json.dumps(
+        {
+            "rule_id": issue.get("rule_id"),
+            "message": issue.get("message"),
+            "suggestion": issue.get("suggestion"),
+            "location": issue.get("location"),
+            "subcategory": issue.get("subcategory"),
+        },
+        sort_keys=True,
+        default=str,
+    )
+    digest = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()
+    return f"sug_{digest[:12]}_{index}"
+
+
+def _compute_position(issue: dict[str, Any]) -> tuple[dict[str, Any], int, int]:
+    """Determine safe start/end offsets for an issue."""
+    raw_position = issue.get("position") or {}
+    location = issue.get("location") or {}
+
+    start = _coerce_int(raw_position.get("start"))
+    end = _coerce_int(raw_position.get("end"))
+
+    if start is None:
+        start = _coerce_int(location.get("start")) or _coerce_int(location.get("offset"))
+    if end is None:
+        end = _coerce_int(location.get("end"))
+    if start is not None and (end is None or end < start):
+        length = _coerce_int(raw_position.get("length")) or _coerce_int(
+            location.get("length")
+        )
+        if length is not None:
+            end = start + length
+
+    if start is None:
+        start = 0
+    if end is None or end < start:
+        end = start
+
+    position = {
+        "start": start,
+        "end": end,
+        "section": raw_position.get("section")
+        or location.get("section")
+        or location.get("tag"),
+        "line": raw_position.get("line") or location.get("line"),
+        "column": raw_position.get("column") or location.get("column"),
+    }
+    return position, start, end
+
+
+def _safe_slice(content: str, start: int, end: int) -> str:
+    """Return substring within bounds."""
+    if not content:
+        return ""
+    length = len(content)
+    start_idx = max(0, min(length, start))
+    end_idx = max(start_idx, min(length, end))
+    return content[start_idx:end_idx]
+
+
+def _coerce_int(value: Any) -> int | None:
+    try:
+        if value is None:
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_severity(value: str | None) -> str:
+    if not value:
+        return "info"
+    value = value.lower()
+    if value in {"critical", "error", "blocker"}:
+        return "critical"
+    if value in {"warning", "warn"}:
+        return "warning"
+    return "info"
+
+
+def _derive_engine(issue: dict[str, Any]) -> str:
+    engine = issue.get("engine")
+    if engine:
+        return str(engine).lower()
+    source = str(issue.get("source") or "").lower()
+    if source in {"ai", "merged"}:
+        return "ai"
+    return "deterministic"

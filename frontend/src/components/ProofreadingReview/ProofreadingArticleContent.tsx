@@ -41,19 +41,31 @@ export function ProofreadingArticleContent({
       return <p className="whitespace-pre-wrap text-gray-700">{content}</p>;
     }
 
-    // Sort issues by position
-    const sortedIssues = [...issues].sort((a, b) => a.position.start - b.position.start);
+    // Sort issues defensively to avoid undefined position errors
+    const sortedIssues = [...issues].sort((a, b) => {
+      const startA =
+        typeof a?.position?.start === 'number' ? a.position.start : Number.MAX_SAFE_INTEGER;
+      const startB =
+        typeof b?.position?.start === 'number' ? b.position.start : Number.MAX_SAFE_INTEGER;
+      return startA - startB;
+    });
 
-    // Build highlighted content
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
 
     sortedIssues.forEach((issue, idx) => {
-      const { start, end } = issue.position;
+      const rawStart = typeof issue.position?.start === 'number' ? issue.position.start : 0;
+      const rawEnd =
+        typeof issue.position?.end === 'number' && issue.position.end >= rawStart
+          ? issue.position.end
+          : rawStart;
+
+      const start = Math.max(0, Math.min(content.length, rawStart));
+      const end = Math.max(start, Math.min(content.length, rawEnd));
+
       const decision = decisions[issue.id];
       const decisionStatus = decision?.decision_type || issue.decision_status;
 
-      // Add text before issue
       if (start > lastIndex) {
         parts.push(
           <span key={`text-${idx}`} className="whitespace-pre-wrap">
@@ -62,8 +74,8 @@ export function ProofreadingArticleContent({
         );
       }
 
-      // Add highlighted issue
-      const issueText = content.slice(start, end);
+      const issueText =
+        end > start ? content.slice(start, end) : issue.original_text || issue.suggested_text || '';
       const isSelected = selectedIssue?.id === issue.id;
 
       parts.push(
@@ -73,11 +85,9 @@ export function ProofreadingArticleContent({
           className={cn(
             'cursor-pointer rounded px-1 transition-all',
             isSelected && 'ring-2 ring-blue-500 ring-offset-2',
-            // Severity colors
             issue.severity === 'critical' && 'bg-red-100 hover:bg-red-200',
             issue.severity === 'warning' && 'bg-yellow-100 hover:bg-yellow-200',
             issue.severity === 'info' && 'bg-blue-100 hover:bg-blue-200',
-            // Decision overlay
             decisionStatus === 'accepted' && 'bg-green-100',
             decisionStatus === 'rejected' && 'bg-gray-200 opacity-50 line-through',
             decisionStatus === 'modified' && 'bg-purple-100'
@@ -86,7 +96,7 @@ export function ProofreadingArticleContent({
           title={issue.explanation}
         >
           {viewMode === 'preview' && decisionStatus === 'accepted'
-            ? issue.suggested_text
+            ? issue.suggested_text || issueText
             : viewMode === 'preview' && decision?.modified_content
             ? decision.modified_content
             : issueText}
@@ -96,7 +106,6 @@ export function ProofreadingArticleContent({
       lastIndex = end;
     });
 
-    // Add remaining text
     if (lastIndex < content.length) {
       parts.push(
         <span key="text-end" className="whitespace-pre-wrap">
