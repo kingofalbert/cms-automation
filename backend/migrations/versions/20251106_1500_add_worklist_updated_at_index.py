@@ -19,13 +19,15 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     """Create index to accelerate sorting by updated_at."""
-    op.create_index(
-        "ix_worklist_items_updated_at",
-        "worklist_items",
-        ["updated_at"],
+    # Use execute with IF NOT EXISTS to avoid duplicate index error
+    op.execute(
+        """
+        CREATE INDEX IF NOT EXISTS ix_worklist_items_updated_at
+        ON worklist_items (updated_at)
+        """
     )
 
 
 def downgrade() -> None:
     """Drop updated_at index."""
-    op.drop_index("ix_worklist_items_updated_at", table_name="worklist_items")
+    op.execute("DROP INDEX IF EXISTS ix_worklist_items_updated_at")

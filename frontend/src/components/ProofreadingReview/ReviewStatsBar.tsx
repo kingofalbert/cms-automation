@@ -7,7 +7,7 @@
  * - Progress calculation optimized
  */
 
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 import { ProofreadingStats } from '@/types/worklist';
 import { AlertCircle, AlertTriangle, Info, CheckCircle, XCircle, Eye, FileText, GitCompare } from 'lucide-react';
 import { cn } from '@/lib/cn';

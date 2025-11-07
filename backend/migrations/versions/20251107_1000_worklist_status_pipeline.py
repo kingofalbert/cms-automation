@@ -62,10 +62,12 @@ def upgrade() -> None:
     bind = op.get_bind()
 
     # Temporarily cast status to text and drop the old enum type
+    # First remove the default constraint
+    op.execute("ALTER TABLE worklist_items ALTER COLUMN status DROP DEFAULT")
     op.execute(
         "ALTER TABLE worklist_items ALTER COLUMN status TYPE TEXT USING status::text"
     )
-    op.execute("DROP TYPE IF EXISTS workliststatus")
+    op.execute("DROP TYPE IF EXISTS workliststatus CASCADE")
 
     # Apply value mapping to align with new enum members
     for old_value, new_value in STATUS_MAPPING.items():
