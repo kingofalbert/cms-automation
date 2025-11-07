@@ -6,55 +6,68 @@
  * Worklist status - 7-state workflow.
  */
 export type WorklistStatus =
-  | 'to_evaluate' // 待评估
-  | 'to_confirm' // 待确认
-  | 'to_review' // 待审稿
-  | 'to_revise' // 待修改
-  | 'to_rereview' // 待复审
+  | 'pending' // 待处理
+  | 'proofreading' // 校对中
+  | 'under_review' // 审核中
   | 'ready_to_publish' // 待发布
-  | 'published'; // 已发布
+  | 'publishing' // 发布中
+  | 'published' // 已发布
+  | 'failed'; // 失败/需重试
 
 /**
  * Worklist item from Google Drive.
  */
+export interface WorklistMetadata extends Record<string, unknown> {
+  word_count?: number;
+  estimated_reading_time?: number;
+  last_synced_at?: string;
+  quality_score?: number;
+  seo_score?: number;
+}
+
+export interface WorklistNote extends Record<string, unknown> {
+  id?: string | number;
+  author?: string | null;
+  message?: string;
+  content?: string;
+  created_at?: string;
+  resolved?: boolean;
+}
+
 export interface WorklistItem {
-  id: string;
+  id: number;
   drive_file_id: string;
   title: string;
-  status: WorklistStatus;
-  content: string;
-  excerpt?: string;
-  author: string;
+  status: WorklistStatus | string;
+  author?: string | null;
+  article_id?: number | null;
+  metadata: WorklistMetadata;
+  notes: WorklistNote[];
+  synced_at: string;
   created_at: string;
   updated_at: string;
-  status_changed_at: string;
   tags?: string[];
   categories?: string[];
-  notes?: WorklistNote[];
-  metadata: WorklistMetadata;
+  article_status?: string | null;
 }
 
-/**
- * Worklist item metadata.
- */
-export interface WorklistMetadata {
-  word_count: number;
-  estimated_reading_time: number; // minutes
-  drive_folder: string;
-  last_synced_at: string;
-  quality_score?: number; // 0-100
-  seo_score?: number; // 0-100
-}
-
-/**
- * Worklist note/comment.
- */
-export interface WorklistNote {
-  id: string;
-  author: string;
-  content: string;
+export interface WorklistStatusHistoryEntry {
+  old_status: string | null;
+  new_status: string;
+  changed_by?: string | null;
+  change_reason?: string | null;
+  metadata?: Record<string, unknown>;
   created_at: string;
-  resolved: boolean;
+}
+
+export interface WorklistItemDetail extends WorklistItem {
+  content: string;
+  meta_description?: string | null;
+  seo_keywords: string[];
+  article_status_history: WorklistStatusHistoryEntry[];
+  drive_metadata: Record<string, unknown>;
+  proofreading_issues?: ProofreadingIssue[];
+  proofreading_stats?: ProofreadingStats;
 }
 
 /**
@@ -62,14 +75,18 @@ export interface WorklistNote {
  */
 export interface WorklistStatistics {
   total: number;
-  by_status: {
-    [K in WorklistStatus]: number;
-  };
-  avg_time_per_status: {
-    [K in WorklistStatus]: number; // hours
-  };
-  total_word_count: number;
-  avg_quality_score: number;
+  breakdown: Record<string, number>;
+  total_word_count?: number;
+  avg_quality_score?: number;
+  avg_time_per_status?: Record<string, number>;
+}
+
+export interface WorklistListResponse {
+  items: WorklistItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
 }
 
 /**
@@ -99,12 +116,12 @@ export interface StatusTransitionRequest {
  * Google Drive sync status.
  */
 export interface DriveSyncStatus {
-  last_sync_at: string;
-  is_syncing: boolean;
-  total_files: number;
-  synced_files: number;
-  failed_files: number;
-  errors: string[];
+  last_synced_at: string | null;
+  total_items: number;
+  is_syncing?: boolean;
+  synced_items?: number;
+  failed_items?: number;
+  errors?: string[];
 }
 
 /**
@@ -117,4 +134,111 @@ export interface WorklistItemUpdate {
   tags?: string[];
   categories?: string[];
   status?: WorklistStatus;
+}
+
+/**
+ * Proofreading Review UI Types (Feature 003)
+ */
+
+export type IssueSeverity = 'critical' | 'warning' | 'info';
+export type IssueEngine = 'ai' | 'deterministic';
+export type DecisionStatus = 'pending' | 'accepted' | 'rejected' | 'modified';
+export type DecisionType = 'accepted' | 'rejected' | 'modified';
+export type FeedbackCategory =
+  | 'suggestion_correct'
+  | 'suggestion_partially_correct'
+  | 'suggestion_incorrect'
+  | 'rule_needs_adjustment';
+
+export interface ProofreadingPosition {
+  start: number;
+  end: number;
+  line?: number;
+  column?: number;
+  section?: string;
+}
+
+export interface ProofreadingIssue {
+  id: string;
+  rule_id: string;
+  rule_category: string;
+  severity: IssueSeverity;
+  engine: IssueEngine;
+  position: ProofreadingPosition;
+  original_text: string;
+  suggested_text: string;
+  explanation: string;
+  explanation_detail?: string;
+  confidence?: number; // AI only (0-1)
+  decision_status: DecisionStatus;
+  decision_id?: number;
+  tags?: string[];
+}
+
+export interface ProofreadingStats {
+  total_issues: number;
+  critical_count: number;
+  warning_count: number;
+  info_count: number;
+  pending_count: number;
+  accepted_count: number;
+  rejected_count: number;
+  modified_count: number;
+  ai_issues_count: number;
+  deterministic_issues_count: number;
+}
+
+export interface DecisionPayload {
+  issue_id: string;
+  decision_type: DecisionType;
+  decision_rationale?: string;
+  modified_content?: string;
+  feedback_provided: boolean;
+  feedback_category?: FeedbackCategory;
+  feedback_notes?: string;
+}
+
+export interface ReviewDecisionsRequest {
+  decisions: DecisionPayload[];
+  review_notes?: string;
+  transition_to?: 'ready_to_publish' | 'proofreading' | 'failed';
+}
+
+export interface WorklistItemSummary {
+  id: number;
+  status: string;
+  updated_at: string;
+}
+
+export interface ArticleSummary {
+  id: number;
+  status: string;
+  updated_at: string;
+}
+
+export interface ReviewDecisionsResponse {
+  success: boolean;
+  saved_decisions_count: number;
+  worklist_item: WorklistItemSummary;
+  article: ArticleSummary;
+  errors: string[];
+}
+
+export interface BatchDecisionsRequest {
+  issue_ids: string[];
+  decision_type: 'accepted' | 'rejected';
+  rationale?: string;
+}
+
+export interface SavedDecisionSummary {
+  issue_id: string;
+  decision_id: number;
+  decision_type: string;
+}
+
+export interface BatchDecisionsResponse {
+  success: boolean;
+  processed_count: number;
+  failed: string[];
+  saved_decisions: SavedDecisionSummary[];
 }

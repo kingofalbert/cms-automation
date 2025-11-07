@@ -5,71 +5,49 @@
  */
 
 import { api } from './api-client';
+import type { APIResponse } from '../types/api';
 import type {
-  WorklistItem,
-  WorklistUpdateRequest,
-  WorklistListParams,
+  WorklistItemDetail,
   WorklistStatistics,
-  PaginatedResponse,
-  APIResponse,
-} from '../types/api';
+  WorklistFilters,
+  DriveSyncStatus,
+  WorklistListResponse,
+  ReviewDecisionsRequest,
+  ReviewDecisionsResponse,
+  BatchDecisionsRequest,
+  BatchDecisionsResponse,
+} from '../types/worklist';
 
 export const worklistAPI = {
   /**
    * Get paginated list of worklist items with optional filters.
    */
-  list: (params?: WorklistListParams) =>
-    api.get<APIResponse<PaginatedResponse<WorklistItem>>>('/v1/worklist', { params }),
+  list: (params?: Partial<WorklistFilters>) =>
+    api.get<WorklistListResponse>('/v1/worklist', { params }),
 
   /**
    * Get a single worklist item by ID.
    */
   get: (id: number) =>
-    api.get<APIResponse<WorklistItem>>(`/v1/worklist/${id}`),
-
-  /**
-   * Update a worklist item (status or add note).
-   */
-  update: (id: number, data: WorklistUpdateRequest) =>
-    api.put<APIResponse<WorklistItem>>(`/v1/worklist/${id}`, data),
-
-  /**
-   * Delete a worklist item.
-   */
-  delete: (id: number) =>
-    api.delete<APIResponse<void>>(`/v1/worklist/${id}`),
+    api.get<WorklistItemDetail>(`/v1/worklist/${id}`),
 
   /**
    * Sync worklist items from Google Drive.
    * Fetches latest documents from configured Google Drive folder.
    */
   sync: () =>
-    api.post<
-      APIResponse<{
-        synced: number;
-        updated: number;
-        new: number;
-        errors: string[];
-      }>
-    >('/v1/worklist/sync'),
-
-  /**
-   * Convert a worklist item to an article.
-   * Moves the item from worklist to articles table.
-   */
-  convertToArticle: (id: number) =>
-    api.post<
-      APIResponse<{
-        article_id: number;
-        worklist_id: number;
-      }>
-    >(`/v1/worklist/${id}/convert`),
+    api.post('/v1/worklist/sync'),
 
   /**
    * Get worklist statistics.
    */
   getStatistics: () =>
-    api.get<APIResponse<WorklistStatistics>>('/v1/worklist/statistics'),
+    api.get<WorklistStatistics>('/v1/worklist/statistics'),
+
+  /**
+   * Get current sync status metadata.
+   */
+  getSyncStatus: () => api.get<DriveSyncStatus>('/v1/worklist/sync-status'),
 
   /**
    * Bulk update status for multiple worklist items.
@@ -102,4 +80,17 @@ export const worklistAPI = {
     >('/v1/worklist/sync-history', {
       params: { limit },
     }),
+
+  /**
+   * Save proofreading review decisions.
+   * Creates ProofreadingDecision records and optionally transitions status.
+   */
+  saveReviewDecisions: (itemId: number, request: ReviewDecisionsRequest) =>
+    api.post<ReviewDecisionsResponse>(`/v1/worklist/${itemId}/review-decisions`, request),
+
+  /**
+   * Batch accept or reject multiple issues.
+   */
+  batchDecisions: (itemId: number, request: BatchDecisionsRequest) =>
+    api.post<BatchDecisionsResponse>(`/v1/worklist/${itemId}/batch-decisions`, request),
 };

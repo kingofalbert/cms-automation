@@ -30,6 +30,41 @@ class WorklistItemResponse(BaseSchema):
     updated_at: datetime = Field(..., description="Last update timestamp")
 
 
+class WorklistStatusHistoryEntry(BaseSchema):
+    """Serialized status history timeline for linked article."""
+
+    old_status: str | None = Field(default=None, description="Previous article status")
+    new_status: str = Field(..., description="New article status")
+    changed_by: str | None = Field(default=None, description="Actor that triggered the change")
+    change_reason: str | None = Field(default=None, description="Why the status changed")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+    created_at: datetime = Field(..., description="Timestamp of the transition")
+
+
+class WorklistItemDetailResponse(WorklistItemResponse):
+    """Detailed worklist payload for the drawer / review page."""
+
+    content: str = Field(..., description="Full document body")
+    tags: list[str] = Field(default_factory=list)
+    categories: list[str] = Field(default_factory=list)
+    meta_description: str | None = Field(default=None)
+    seo_keywords: list[str] = Field(default_factory=list)
+    article_status: str | None = Field(default=None, description="Current linked article status")
+    article_status_history: list[WorklistStatusHistoryEntry] = Field(
+        default_factory=list,
+        description="Timeline of article status transitions",
+    )
+    drive_metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Raw Google Drive metadata snapshot"
+    )
+    proofreading_issues: list[dict[str, Any]] = Field(
+        default_factory=list, description="Proofreading issues with decision status"
+    )
+    proofreading_stats: dict[str, int] | None = Field(
+        default=None, description="Statistics about proofreading issues"
+    )
+
+
 class WorklistStatisticsResponse(BaseSchema):
     """Aggregated worklist statistics."""
 

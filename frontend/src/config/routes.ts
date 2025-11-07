@@ -40,6 +40,7 @@ function createLazyRoute(importFunc: () => Promise<{ default: ComponentType<any>
 // Phase 1: Active pages
 const SettingsPage = createLazyRoute(() => import('../pages/SettingsPageModern'));
 const WorklistPage = createLazyRoute(() => import('../pages/WorklistPage'));
+const ProofreadingReviewPage = createLazyRoute(() => import('../pages/ProofreadingReviewPage'));
 
 // Phase 2+: Commented out for future use
 // const HomePage = createLazyRoute(() => import('../pages/HomePage'));
@@ -88,6 +89,15 @@ export const routes: RouteConfig[] = [
     title: 'CMS自动化系统 - 设置',
     description: '配置系统设置和语言偏好',
     showInNav: false, // No navigation menu in Phase 1
+    loadingType: 'detail',
+  },
+  // Phase 1: Proofreading Review page
+  {
+    path: '/worklist/:id/review',
+    ...ProofreadingReviewPage,
+    title: 'CMS自动化系统 - 校对审核',
+    description: '审核校对建议并做出决策',
+    showInNav: false,
     loadingType: 'detail',
   },
 

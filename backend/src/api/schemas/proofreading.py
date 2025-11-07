@@ -67,3 +67,132 @@ class ProofreadingResponse(BaseModel):
     processing_metadata: ProcessingMetadataSchema = Field(
         default_factory=ProcessingMetadataSchema
     )
+
+
+# Proofreading Review UI Schemas (Feature 003)
+
+
+class ProofreadingPosition(BaseModel):
+    """Position information for a proofreading issue."""
+
+    start: int = Field(..., description="Start character offset")
+    end: int = Field(..., description="End character offset")
+    line: int | None = Field(default=None, description="Line number")
+    column: int | None = Field(default=None, description="Column number")
+    section: str | None = Field(default=None, description="Section identifier")
+
+
+class ProofreadingIssueDetail(BaseModel):
+    """Detailed proofreading issue for review UI."""
+
+    id: str = Field(..., description="Issue identifier")
+    rule_id: str = Field(..., description="Rule that generated this issue")
+    rule_category: str = Field(..., description="Rule category")
+    severity: str = Field(..., description="Issue severity (critical|warning|info)")
+    engine: str = Field(..., description="Engine type (ai|deterministic)")
+
+    position: dict[str, Any] = Field(..., description="Position in text")
+
+    original_text: str = Field(..., description="Original text")
+    suggested_text: str = Field(..., description="Suggested replacement")
+    explanation: str = Field(..., description="Short explanation")
+    explanation_detail: str | None = Field(default=None, description="Detailed explanation")
+
+    confidence: float | None = Field(default=None, description="AI confidence (0-1)")
+    decision_status: str = Field(..., description="Decision status (pending|accepted|rejected|modified)")
+    decision_id: int | None = Field(default=None, description="Decision record ID")
+    tags: list[str] = Field(default_factory=list, description="Issue tags")
+
+
+class ProofreadingReviewStats(BaseModel):
+    """Statistics about proofreading issues for review UI."""
+
+    total_issues: int = Field(..., ge=0)
+    critical_count: int = Field(..., ge=0)
+    warning_count: int = Field(..., ge=0)
+    info_count: int = Field(..., ge=0)
+    pending_count: int = Field(..., ge=0)
+    accepted_count: int = Field(..., ge=0)
+    rejected_count: int = Field(..., ge=0)
+    modified_count: int = Field(..., ge=0)
+    ai_issues_count: int = Field(..., ge=0)
+    deterministic_issues_count: int = Field(..., ge=0)
+
+
+class DecisionPayload(BaseModel):
+    """Payload for a single proofreading decision."""
+
+    issue_id: str = Field(..., description="Issue identifier")
+    decision_type: str = Field(..., description="Decision type (accepted|rejected|modified)")
+    decision_rationale: str | None = Field(
+        default=None, max_length=1000, description="Rationale for decision"
+    )
+    modified_content: str | None = Field(default=None, description="Modified content")
+    feedback_provided: bool = Field(default=False, description="Whether feedback is provided")
+    feedback_category: str | None = Field(default=None, description="Feedback category")
+    feedback_notes: str | None = Field(
+        default=None, max_length=2000, description="Feedback notes"
+    )
+
+
+class ReviewDecisionsPayload(BaseModel):
+    """Request payload for saving review decisions."""
+
+    decisions: list[DecisionPayload] = Field(..., description="List of decisions")
+    review_notes: str | None = Field(
+        default=None, max_length=5000, description="Overall review notes"
+    )
+    transition_to: str | None = Field(
+        default=None, description="Target status (ready_to_publish|proofreading|failed)"
+    )
+
+
+class WorklistItemSummary(BaseModel):
+    """Summary of worklist item after review."""
+
+    id: int
+    status: str
+    updated_at: str
+
+
+class ArticleSummary(BaseModel):
+    """Summary of article after review."""
+
+    id: int
+    status: str
+    updated_at: str
+
+
+class ReviewDecisionsResponse(BaseModel):
+    """Response after saving review decisions."""
+
+    success: bool
+    saved_decisions_count: int
+    worklist_item: WorklistItemSummary
+    article: ArticleSummary
+    errors: list[str] = Field(default_factory=list)
+
+
+class BatchDecisionsPayload(BaseModel):
+    """Payload for batch decisions."""
+
+    issue_ids: list[str] = Field(..., min_length=1, description="List of issue IDs")
+    decision_type: str = Field(..., description="Decision type (accepted|rejected)")
+    rationale: str | None = Field(default=None, max_length=1000, description="Rationale")
+
+
+class SavedDecisionSummary(BaseModel):
+    """Summary of a saved decision."""
+
+    issue_id: str
+    decision_id: int
+    decision_type: str
+
+
+class BatchDecisionsResponse(BaseModel):
+    """Response for batch decisions."""
+
+    success: bool
+    processed_count: int
+    failed: list[str] = Field(default_factory=list)
+    saved_decisions: list[SavedDecisionSummary] = Field(default_factory=list)

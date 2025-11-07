@@ -9,7 +9,11 @@
     "confirm": "确认",
     "loading": "加载中...",
     "error": "错误",
-    "success": "成功"
+    "success": "成功",
+    "search": "搜索",
+    "noResults": "暂无结果",
+    "backToList": "返回列表",
+    "clearAll": "清除全部"
   },
   "worklist": {
     "title": "工作清单",
@@ -32,13 +36,13 @@
     },
     "status": {
       "all": "全部状态",
-      "to_evaluate": "待评估",
-      "to_confirm": "待确认",
-      "to_review": "待审稿",
-      "to_revise": "待修改",
-      "to_rereview": "待复审",
+      "pending": "待处理",
+      "proofreading": "校对中",
+      "under_review": "审核中",
       "ready_to_publish": "待发布",
-      "published": "已发布"
+      "publishing": "发布中",
+      "published": "已发布",
+      "failed": "需处理"
     },
     "actions": {
       "view": "查看详情",
@@ -108,8 +112,74 @@
       "title": "即将推出",
       "description": "此功能正在开发中，敬请期待下一个版本。"
     },
+    "proofreading": {
+      "title": "校对规则管理",
+      "subtitle": "管理文章校对规则和规则集",
+      "description": "查看和管理校对规则，配置自动校对行为",
+      "totalRules": "总规则数",
+      "publishedRulesets": "已发布规则集",
+      "appliedCount": "应用次数",
+      "recentRulesets": "最近发布的规则集",
+      "rules": "条规则",
+      "active": "启用",
+      "inactive": "停用",
+      "noRulesets": "暂无规则集",
+      "noRulesetsHint": "点击下方按钮生成校对规则",
+      "generateRules": "生成规则",
+      "manageRules": "管理规则",
+      "testRules": "测试规则",
+      "viewStats": "查看统计"
+    },
+    "tags": {
+      "title": "标签管理",
+      "subtitle": "管理文章标签和分类",
+      "description": "查看、添加和管理文章标签",
+      "addTag": "添加标签",
+      "newTagLabel": "标签名称",
+      "newTagPlaceholder": "输入新标签名称...",
+      "totalTags": "标签总数",
+      "unusedTags": "未使用标签",
+      "mostUsed": "最常用标签",
+      "allTags": "所有标签",
+      "usedInArticles": "已用于 {{count}} 篇文章",
+      "noTags": "暂无标签",
+      "noTagsHint": "点击右上角按钮添加新标签",
+      "emptyTagError": "标签名称不能为空",
+      "duplicateTagError": "该标签已存在",
+      "addSuccess": "标签 \"{{name}}\" 添加成功",
+      "deleteSuccess": "标签 \"{{name}}\" 已删除",
+      "deleteError": "无法删除已使用的标签（已用于 {{count}} 篇文章）",
+      "noteTitle": "提示",
+      "noteDescription": "删除标签前，请确保没有文章使用该标签。已使用的标签无法删除。"
+    },
     "saved": "设置已保存",
     "saveFailed": "保存设置失败"
+  },
+  "proofreading": {
+    "title": "校对审核",
+    "subtitle": "审核AI校对建议并做出决策",
+    "labels": {
+      "issuesDecided": "问题已决策",
+      "original": "原文",
+      "suggested": "建议",
+      "modified": "修改"
+    },
+    "messages": {
+      "selectIssue": "选择左侧问题以查看详情",
+      "noIssuesFound": "未发现校对问题",
+      "loadFailed": "加载失败",
+      "decisionsSaved": "决策已保存",
+      "reviewCompletedAndTransitioned": "审核完成并已转换状态",
+      "saveFailed": "保存失败",
+      "decisionsCleared": "决策已清除"
+    },
+    "actions": {
+      "saveDraft": "保存草稿",
+      "completeReview": "完成审核",
+      "accept": "接受",
+      "reject": "拒绝",
+      "modify": "修改"
+    }
   },
   "navigation": {
     "home": "首页",

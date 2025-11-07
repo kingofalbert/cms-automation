@@ -3,19 +3,26 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.schemas import (
     PaginatedResponse,
+    ReviewDecisionsPayload,
+    ReviewDecisionsResponse,
+    WorklistItemDetailResponse,
     WorklistItemResponse,
+    WorklistItemSummary,
+    ArticleSummary,
     WorklistStatisticsResponse,
+    WorklistStatusHistoryEntry,
     WorklistStatusUpdateRequest,
     WorklistSyncStatusResponse,
     WorklistSyncTriggerResponse,
 )
 from src.config.database import get_session
 from src.config.logging import get_logger
-from src.models import WorklistItem
+from src.models import Article, ProofreadingDecision, WorklistItem
 from src.services.worklist import WorklistService
 
 logger = get_logger(__name__)
@@ -94,6 +101,25 @@ async def trigger_worklist_sync(
     return WorklistSyncTriggerResponse(**result)
 
 
+@router.get("/{item_id}", response_model=WorklistItemDetailResponse)
+async def get_worklist_item_detail(
+    item_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> WorklistItemDetailResponse:
+    """Return a single worklist item with full metadata."""
+    service = WorklistService(session)
+    try:
+        item = await service.get_item(item_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    logger.debug("worklist_item_loaded", item_id=item_id)
+    return await _serialize_item_detail(item, session)
+
+
 @router.post("/{item_id}/status", response_model=WorklistItemResponse)
 async def update_worklist_status(
     item_id: int,
@@ -149,6 +175,174 @@ async def publish_worklist_item(
     return _serialize_item(updated)
 
 
+@router.post("/{item_id}/review-decisions", response_model=ReviewDecisionsResponse)
+async def save_review_decisions(
+    item_id: int,
+    payload: ReviewDecisionsPayload,
+    session: AsyncSession = Depends(get_session),
+) -> ReviewDecisionsResponse:
+    """Save proofreading review decisions and optionally transition status."""
+    from datetime import datetime
+    from src.models.proofreading import DecisionType, FeedbackStatus
+    from src.models import ArticleStatusHistory, WorklistStatus, ArticleStatus
+
+    # 1. Get worklist item
+    item = await session.get(WorklistItem, item_id)
+    if not item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Worklist item {item_id} not found",
+        )
+
+    # 2. Get linked article
+    if not item.article_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Worklist item has no linked article",
+        )
+
+    article = await session.get(Article, item.article_id)
+    if not article:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Article {item.article_id} not found",
+        )
+
+    # 3. Validate issue IDs
+    article_issues = article.proofreading_issues or []
+    issue_id_map = {issue.get("id"): issue for issue in article_issues}
+
+    errors = []
+    for decision in payload.decisions:
+        if decision.issue_id not in issue_id_map:
+            errors.append(f"Issue {decision.issue_id} not found in article")
+
+    if errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"errors": errors},
+        )
+
+    # 4. Create ProofreadingDecision records
+    saved_count = 0
+    for decision_payload in payload.decisions:
+        issue = issue_id_map[decision_payload.issue_id]
+
+        # Check if decision already exists
+        existing = await session.execute(
+            select(ProofreadingDecision).where(
+                ProofreadingDecision.article_id == article.id,
+                ProofreadingDecision.suggestion_id == decision_payload.issue_id,
+            )
+        )
+        existing_decision = existing.scalars().first()
+
+        if existing_decision:
+            # Update existing decision
+            existing_decision.decision_type = DecisionType(decision_payload.decision_type)
+            existing_decision.decision_rationale = decision_payload.decision_rationale
+            existing_decision.modified_content = decision_payload.modified_content
+            existing_decision.feedback_provided = decision_payload.feedback_provided
+            existing_decision.feedback_category = decision_payload.feedback_category
+            existing_decision.feedback_notes = decision_payload.feedback_notes
+            existing_decision.decided_at = datetime.utcnow()
+        else:
+            # Create new decision
+            new_decision = ProofreadingDecision(
+                article_id=article.id,
+                suggestion_id=decision_payload.issue_id,
+                decision_type=DecisionType(decision_payload.decision_type),
+                decision_rationale=decision_payload.decision_rationale,
+                modified_content=decision_payload.modified_content,
+                original_text=issue.get("original_text", ""),
+                suggested_text=issue.get("suggested_text", ""),
+                rule_id=issue.get("rule_id", ""),
+                rule_category=issue.get("rule_category"),
+                issue_position=issue.get("position"),
+                feedback_provided=decision_payload.feedback_provided,
+                feedback_category=decision_payload.feedback_category,
+                feedback_notes=decision_payload.feedback_notes,
+                feedback_status=(
+                    FeedbackStatus.PENDING
+                    if decision_payload.feedback_provided
+                    else FeedbackStatus.COMPLETED
+                ),
+                decided_by=1,  # TODO: Get from current_user
+                decided_at=datetime.utcnow(),
+            )
+            session.add(new_decision)
+
+        saved_count += 1
+
+    # 5. Update statuses if transition_to is specified
+    old_worklist_status = item.status.value if hasattr(item.status, "value") else item.status
+    old_article_status = article.status.value if hasattr(article.status, "value") else article.status
+
+    if payload.transition_to:
+        if payload.transition_to == "ready_to_publish":
+            item.mark_status(WorklistStatus.READY_TO_PUBLISH)
+            article.status = ArticleStatus.READY_TO_PUBLISH
+        elif payload.transition_to == "proofreading":
+            item.mark_status(WorklistStatus.PROOFREADING)
+            article.status = ArticleStatus.IN_REVIEW
+        elif payload.transition_to == "failed":
+            item.mark_status(WorklistStatus.FAILED)
+            article.status = ArticleStatus.FAILED
+
+        # Create status history
+        history = ArticleStatusHistory(
+            article_id=article.id,
+            old_status=old_article_status,
+            new_status=article.status.value,
+            changed_by="user:1",  # TODO: Get from current_user
+            change_reason=f"review_completed_transition_to_{payload.transition_to}",
+            metadata={
+                "worklist_id": item.id,
+                "decisions_count": saved_count,
+                "review_notes": payload.review_notes,
+            },
+        )
+        session.add(history)
+
+    # 6. Add review notes
+    if payload.review_notes:
+        item.add_note({
+            "message": payload.review_notes,
+            "level": "info",
+            "author": "user:1",  # TODO: Get from current_user
+            "created_at": datetime.utcnow().isoformat(),
+        })
+
+    # 7. Commit changes
+    await session.commit()
+    await session.refresh(item)
+    await session.refresh(article)
+
+    logger.info(
+        "review_decisions_saved",
+        item_id=item_id,
+        article_id=article.id,
+        decisions_count=saved_count,
+        transition_to=payload.transition_to,
+    )
+
+    return ReviewDecisionsResponse(
+        success=True,
+        saved_decisions_count=saved_count,
+        worklist_item=WorklistItemSummary(
+            id=item.id,
+            status=item.status.value if hasattr(item.status, "value") else item.status,
+            updated_at=item.updated_at.isoformat(),
+        ),
+        article=ArticleSummary(
+            id=article.id,
+            status=article.status.value if hasattr(article.status, "value") else article.status,
+            updated_at=article.updated_at.isoformat(),
+        ),
+        errors=[],
+    )
+
+
 def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
     """Convert ORM worklist item to schema."""
     return WorklistItemResponse(
@@ -164,3 +358,120 @@ def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
         created_at=item.created_at,
         updated_at=item.updated_at,
     )
+
+
+async def _serialize_item_detail(
+    item: WorklistItem,
+    session: AsyncSession,
+) -> WorklistItemDetailResponse:
+    """Convert worklist item with related article data to detail schema."""
+    base = _serialize_item(item)
+    article = getattr(item, "article", None)
+    history_entries: list[WorklistStatusHistoryEntry] = []
+    if article and getattr(article, "status_history", None):
+        for entry in sorted(article.status_history, key=lambda h: h.created_at):
+            history_entries.append(
+                WorklistStatusHistoryEntry(
+                    old_status=entry.old_status,
+                    new_status=entry.new_status,
+                    changed_by=entry.changed_by,
+                    change_reason=entry.change_reason,
+                    metadata=entry.metadata or {},
+                    created_at=entry.created_at,
+                )
+            )
+
+    # Get proofreading issues and stats
+    proofreading_issues = []
+    proofreading_stats = None
+
+    if article:
+        # Get raw issues from article
+        raw_issues = article.proofreading_issues or []
+
+        # Get existing decisions
+        stmt = select(ProofreadingDecision).where(
+            ProofreadingDecision.article_id == article.id
+        )
+        result = await session.execute(stmt)
+        decisions = {d.suggestion_id: d for d in result.scalars().all()}
+
+        # Enrich issues with decision status
+        for issue in raw_issues:
+            issue_id = issue.get("id")
+            decision = decisions.get(issue_id)
+
+            enriched_issue = {
+                **issue,
+                "decision_status": (
+                    decision.decision_type.value if decision else "pending"
+                ),
+                "decision_id": decision.id if decision else None,
+            }
+            proofreading_issues.append(enriched_issue)
+
+        # Calculate statistics
+        if raw_issues:
+            proofreading_stats = _calculate_proofreading_stats(
+                proofreading_issues
+            )
+
+    return WorklistItemDetailResponse(
+        **base.model_dump(),
+        content=item.content,
+        tags=item.tags or [],
+        categories=item.categories or [],
+        meta_description=item.meta_description,
+        seo_keywords=item.seo_keywords or [],
+        article_status=article.status.value if article and article.status else None,
+        article_status_history=history_entries,
+        drive_metadata=item.drive_metadata or {},
+        proofreading_issues=proofreading_issues,
+        proofreading_stats=proofreading_stats,
+    )
+
+
+def _calculate_proofreading_stats(issues: list[dict]) -> dict[str, int]:
+    """Calculate statistics from proofreading issues."""
+    stats = {
+        "total_issues": len(issues),
+        "critical_count": 0,
+        "warning_count": 0,
+        "info_count": 0,
+        "pending_count": 0,
+        "accepted_count": 0,
+        "rejected_count": 0,
+        "modified_count": 0,
+        "ai_issues_count": 0,
+        "deterministic_issues_count": 0,
+    }
+
+    for issue in issues:
+        # Count by severity
+        severity = issue.get("severity", "").lower()
+        if severity == "critical":
+            stats["critical_count"] += 1
+        elif severity == "warning":
+            stats["warning_count"] += 1
+        elif severity == "info":
+            stats["info_count"] += 1
+
+        # Count by decision status
+        decision_status = issue.get("decision_status", "pending")
+        if decision_status == "pending":
+            stats["pending_count"] += 1
+        elif decision_status == "accepted":
+            stats["accepted_count"] += 1
+        elif decision_status == "rejected":
+            stats["rejected_count"] += 1
+        elif decision_status == "modified":
+            stats["modified_count"] += 1
+
+        # Count by engine
+        engine = issue.get("engine", "").lower()
+        if engine == "ai":
+            stats["ai_issues_count"] += 1
+        elif engine == "deterministic":
+            stats["deterministic_issues_count"] += 1
+
+    return stats

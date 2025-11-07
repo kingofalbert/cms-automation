@@ -9,7 +9,11 @@
     "confirm": "Confirm",
     "loading": "Loading...",
     "error": "Error",
-    "success": "Success"
+    "success": "Success",
+    "search": "Search",
+    "noResults": "No results",
+    "backToList": "Back to List",
+    "clearAll": "Clear All"
   },
   "worklist": {
     "title": "Worklist",
@@ -32,13 +36,13 @@
     },
     "status": {
       "all": "All Status",
-      "to_evaluate": "To Evaluate",
-      "to_confirm": "To Confirm",
-      "to_review": "To Review",
-      "to_revise": "To Revise",
-      "to_rereview": "To Re-review",
+      "pending": "Pending",
+      "proofreading": "Proofreading",
+      "under_review": "Under Review",
       "ready_to_publish": "Ready to Publish",
-      "published": "Published"
+      "publishing": "Publishing",
+      "published": "Published",
+      "failed": "Needs Attention"
     },
     "actions": {
       "view": "View Details",
@@ -108,8 +112,74 @@
       "title": "Coming Soon",
       "description": "This feature is under development. Stay tuned for the next release."
     },
+    "proofreading": {
+      "title": "Proofreading Rules Management",
+      "subtitle": "Manage article proofreading rules and rulesets",
+      "description": "View and manage proofreading rules, configure automatic proofreading behavior",
+      "totalRules": "Total Rules",
+      "publishedRulesets": "Published Rulesets",
+      "appliedCount": "Times Applied",
+      "recentRulesets": "Recent Rulesets",
+      "rules": "rules",
+      "active": "Active",
+      "inactive": "Inactive",
+      "noRulesets": "No rulesets available",
+      "noRulesetsHint": "Click the button below to generate proofreading rules",
+      "generateRules": "Generate Rules",
+      "manageRules": "Manage Rules",
+      "testRules": "Test Rules",
+      "viewStats": "View Statistics"
+    },
+    "tags": {
+      "title": "Tag Management",
+      "subtitle": "Manage article tags and categories",
+      "description": "View, add and manage article tags",
+      "addTag": "Add Tag",
+      "newTagLabel": "Tag Name",
+      "newTagPlaceholder": "Enter new tag name...",
+      "totalTags": "Total Tags",
+      "unusedTags": "Unused Tags",
+      "mostUsed": "Most Used",
+      "allTags": "All Tags",
+      "usedInArticles": "Used in {{count}} articles",
+      "noTags": "No tags available",
+      "noTagsHint": "Click the button in the top right to add new tags",
+      "emptyTagError": "Tag name cannot be empty",
+      "duplicateTagError": "This tag already exists",
+      "addSuccess": "Tag \"{{name}}\" added successfully",
+      "deleteSuccess": "Tag \"{{name}}\" deleted",
+      "deleteError": "Cannot delete tag used in {{count}} articles",
+      "noteTitle": "Note",
+      "noteDescription": "Before deleting a tag, ensure no articles are using it. Tags in use cannot be deleted."
+    },
     "saved": "Settings saved successfully",
     "saveFailed": "Failed to save settings"
+  },
+  "proofreading": {
+    "title": "Proofreading Review",
+    "subtitle": "Review AI proofreading suggestions and make decisions",
+    "labels": {
+      "issuesDecided": "issues decided",
+      "original": "Original",
+      "suggested": "Suggested",
+      "modified": "Modified"
+    },
+    "messages": {
+      "selectIssue": "Select an issue from the left to view details",
+      "noIssuesFound": "No proofreading issues found",
+      "loadFailed": "Failed to load",
+      "decisionsSaved": "Decisions saved",
+      "reviewCompletedAndTransitioned": "Review completed and status transitioned",
+      "saveFailed": "Failed to save",
+      "decisionsCleared": "Decisions cleared"
+    },
+    "actions": {
+      "saveDraft": "Save Draft",
+      "completeReview": "Complete Review",
+      "accept": "Accept",
+      "reject": "Reject",
+      "modify": "Modify"
+    }
   },
   "navigation": {
     "home": "Home",
