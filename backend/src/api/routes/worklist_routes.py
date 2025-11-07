@@ -398,7 +398,7 @@ async def _serialize_item_detail(
                     new_status=entry.new_status,
                     changed_by=entry.changed_by,
                     change_reason=entry.change_reason,
-                    metadata=entry.metadata or {},
+                    metadata=entry.change_metadata or {},
                     created_at=entry.created_at,
                 )
             )
