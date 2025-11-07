@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 import { Card, Select, Input, Button } from '@/components/ui';
@@ -13,6 +13,7 @@ import { WorklistDetailDrawer } from '@/components/Worklist/WorklistDetailDrawer
 import { WorklistStatistics } from '@/components/Worklist/WorklistStatistics';
 import {
   WorklistItem,
+  WorklistItemDetail,
   WorklistStatistics as Stats,
   WorklistStatus,
   WorklistFilters,
@@ -29,6 +30,7 @@ export default function WorklistPage() {
   });
   const [selectedItem, setSelectedItem] = useState<WorklistItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   // Fetch worklist items
   const {
@@ -38,7 +40,9 @@ export default function WorklistPage() {
   } = useQuery({
     queryKey: ['worklist', filters],
     queryFn: async () => {
-      const params: Record<string, string> = {};
+      const params: Record<string, string> = {
+        limit: '25',
+      };
       if (filters.status && filters.status !== 'all') params.status = filters.status;
       if (filters.search) params.search = filters.search;
       if (filters.author) params.author = filters.author;
@@ -66,6 +70,17 @@ export default function WorklistPage() {
       return await api.get<DriveSyncStatus>('/v1/worklist/sync-status');
     },
     refetchInterval: 5000, // Check every 5 seconds
+  });
+
+  const selectedItemId = selectedItem?.id;
+
+  const {
+    data: selectedDetail,
+    isFetching: isDetailLoading,
+  } = useQuery({
+    queryKey: ['worklist-detail', selectedItemId],
+    queryFn: () => worklistAPI.get(selectedItemId!),
+    enabled: drawerOpen && Boolean(selectedItemId),
   });
 
   // Sync with Google Drive
@@ -98,10 +113,11 @@ export default function WorklistPage() {
         note: note ? { message: note } : undefined,
       });
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       alert(t('worklist.messages.statusChanged'));
       refetch();
-      setDrawerOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['worklist-detail', variables.itemId] });
+      queryClient.invalidateQueries({ queryKey: ['worklist'] });
     },
     onError: (error: any) => {
       alert(`${t('worklist.messages.statusChangeFailed')}: ${error.response?.data?.message || error.message}`);
@@ -113,10 +129,11 @@ export default function WorklistPage() {
     mutationFn: async (itemId: number) => {
       return await api.post(`/v1/worklist/${itemId}/publish`);
     },
-    onSuccess: () => {
+    onSuccess: (_, itemId) => {
       alert(t('worklist.messages.publishSubmitted'));
       refetch();
-      setDrawerOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['worklist-detail', itemId] });
+      queryClient.invalidateQueries({ queryKey: ['worklist'] });
     },
     onError: (error: any) => {
       alert(`${t('worklist.messages.publishFailed')}: ${error.response?.data?.message || error.message}`);
@@ -222,13 +239,13 @@ export default function WorklistPage() {
             }
             options={[
               { value: 'all', label: t('worklist.status.all') },
-              { value: 'to_evaluate', label: t('worklist.status.to_evaluate') },
-              { value: 'to_confirm', label: t('worklist.status.to_confirm') },
-              { value: 'to_review', label: t('worklist.status.to_review') },
-              { value: 'to_revise', label: t('worklist.status.to_revise') },
-              { value: 'to_rereview', label: t('worklist.status.to_rereview') },
+              { value: 'pending', label: t('worklist.status.pending') },
+              { value: 'proofreading', label: t('worklist.status.proofreading') },
+              { value: 'under_review', label: t('worklist.status.under_review') },
               { value: 'ready_to_publish', label: t('worklist.status.ready_to_publish') },
+              { value: 'publishing', label: t('worklist.status.publishing') },
               { value: 'published', label: t('worklist.status.published') },
+              { value: 'failed', label: t('worklist.status.failed') },
             ]}
           />
 
@@ -275,6 +292,8 @@ export default function WorklistPage() {
         isOpen={drawerOpen}
         onClose={() => setDrawerOpen(false)}
         item={selectedItem}
+        detail={selectedDetail}
+        isLoading={isDetailLoading && drawerOpen}
         onStatusChange={handleStatusChange}
         onPublish={handlePublish}
       />

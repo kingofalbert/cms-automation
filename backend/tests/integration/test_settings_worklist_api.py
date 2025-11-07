@@ -118,7 +118,7 @@ async def test_worklist_endpoints(app_client, monkeypatch):
         item = WorklistItem(
             drive_file_id="file-1",
             title="Draft Doc",
-            status=WorklistStatus.TO_EVALUATE,
+            status=WorklistStatus.PENDING,
             content="Content",
             metadata={},
             notes=[],
@@ -133,11 +133,11 @@ async def test_worklist_endpoints(app_client, monkeypatch):
     assert listed["total"] == 1
     assert listed["items"][0]["title"] == "Draft Doc"
 
-    update_payload = {"status": WorklistStatus.TO_REVIEW.value, "note": {"author": "QA"}}
+    update_payload = {"status": WorklistStatus.UNDER_REVIEW.value, "note": {"author": "QA"}}
     response = await client.post("/v1/worklist/1/status", json=update_payload)
     assert response.status_code == 200
     updated = response.json()
-    assert updated["status"] == WorklistStatus.TO_REVIEW.value
+    assert updated["status"] == WorklistStatus.UNDER_REVIEW.value
     assert updated["notes"][0]["author"] == "QA"
 
     class SyncStub:
@@ -161,4 +161,4 @@ async def test_worklist_endpoints(app_client, monkeypatch):
     response = await client.get("/v1/worklist/statistics")
     assert response.status_code == 200
     stats = response.json()
-    assert stats["breakdown"][WorklistStatus.TO_REVIEW.value] == 1
+    assert stats["breakdown"][WorklistStatus.UNDER_REVIEW.value] == 1

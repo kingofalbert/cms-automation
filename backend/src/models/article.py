@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Enum, Integer, String, Text
+from sqlalchemy import Enum, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -198,6 +198,13 @@ class Article(Base, TimestampMixin):
         cascade="all, delete-orphan",
     )
 
+    status_history: Mapped[list["ArticleStatusHistory"]] = relationship(
+        "ArticleStatusHistory",
+        back_populates="article",
+        cascade="all, delete-orphan",
+        order_by="ArticleStatusHistory.created_at",
+    )
+
     def __repr__(self) -> str:
         """String representation."""
         return f"<Article(id={self.id}, status={self.status}, title='{self.title[:50]}...')>"
@@ -243,3 +250,53 @@ class Article(Base, TimestampMixin):
         if not self.publish_tasks:
             return 0
         return sum(1 for task in self.publish_tasks if task.status == "completed")
+
+
+class ArticleStatusHistory(Base):
+    """Audit log capturing every article status transition."""
+
+    __tablename__ = "article_status_history"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    article_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("articles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    old_status: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="Previous article status value",
+    )
+    new_status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        comment="New article status value",
+    )
+    changed_by: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="User id or 'system' for automated transitions",
+    )
+    change_reason: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Optional description of why the transition occurred",
+    )
+    metadata: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False,
+        default=dict,
+        comment="Structured metadata describing the transition context",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow,
+        index=True,
+        comment="Timestamp when the status change occurred",
+    )
+
+    article: Mapped["Article"] = relationship(
+        "Article",
+        back_populates="status_history",
+    )

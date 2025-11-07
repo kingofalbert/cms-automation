@@ -1,7 +1,7 @@
 """SQLAlchemy data models for CMS automation."""
 
 from src.models.analytics import ProviderMetrics
-from src.models.article import Article, ArticleStatus
+from src.models.article import Article, ArticleStatus, ArticleStatusHistory
 from src.models.base import Base, SoftDeleteMixin, TimestampMixin
 from src.models.proofreading import (
     DecisionType,
@@ -38,6 +38,7 @@ __all__ = [
     # Article
     "Article",
     "ArticleStatus",
+    "ArticleStatusHistory",
     # Topic Request
     "TopicRequest",
     "TopicRequestStatus",

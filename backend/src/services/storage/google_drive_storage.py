@@ -1,6 +1,7 @@
 """Google Drive storage service for file uploads."""
 
 import io
+import json
 import os
 from pathlib import Path
 from typing import BinaryIO
@@ -31,25 +32,41 @@ class GoogleDriveStorage:
         self._initialize_service()
 
     def _initialize_service(self) -> None:
-        """Initialize Google Drive API service with credentials."""
+        """Initialize Google Drive API service with credentials.
+
+        Supports two methods of providing credentials:
+        1. GOOGLE_SERVICE_ACCOUNT_JSON environment variable (JSON string) - for Cloud Run
+        2. GOOGLE_DRIVE_CREDENTIALS_PATH environment variable (file path) - for local dev
+        """
         try:
-            credentials_path = settings.GOOGLE_DRIVE_CREDENTIALS_PATH
-
-            if not credentials_path or not os.path.exists(credentials_path):
-                logger.warning(
-                    "google_drive_credentials_not_found",
-                    path=credentials_path,
+            # Method 1: Try JSON from environment variable (Cloud Run)
+            service_account_json = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+            if service_account_json:
+                logger.info("google_drive_using_json_env_var")
+                credentials_info = json.loads(service_account_json)
+                credentials = service_account.Credentials.from_service_account_info(
+                    credentials_info,
+                    scopes=self.SCOPES,
                 )
-                raise ValueError(
-                    "Google Drive credentials not found. "
-                    "Set GOOGLE_DRIVE_CREDENTIALS_PATH environment variable."
-                )
+            else:
+                # Method 2: Try file path (local development)
+                credentials_path = settings.GOOGLE_DRIVE_CREDENTIALS_PATH
 
-            # Load service account credentials
-            credentials = service_account.Credentials.from_service_account_file(
-                credentials_path,
-                scopes=self.SCOPES,
-            )
+                if not credentials_path or not os.path.exists(credentials_path):
+                    logger.warning(
+                        "google_drive_credentials_not_found",
+                        path=credentials_path,
+                    )
+                    raise ValueError(
+                        "Google Drive credentials not found. "
+                        "Set GOOGLE_SERVICE_ACCOUNT_JSON or GOOGLE_DRIVE_CREDENTIALS_PATH environment variable."
+                    )
+
+                logger.info("google_drive_using_credentials_file", path=credentials_path)
+                credentials = service_account.Credentials.from_service_account_file(
+                    credentials_path,
+                    scopes=self.SCOPES,
+                )
 
             # Build Drive API service
             self.service = build("drive", "v3", credentials=credentials)

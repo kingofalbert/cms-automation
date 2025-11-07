@@ -6,10 +6,17 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.orm import defer, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.logging import get_logger
-from src.models import Article, WorklistItem, WorklistStatus
+from src.models import (
+    Article,
+    ArticleStatus,
+    ArticleStatusHistory,
+    WorklistItem,
+    WorklistStatus,
+)
 from src.services.google_drive import GoogleDriveSyncService
 
 logger = get_logger(__name__)
@@ -28,7 +35,11 @@ class WorklistService:
         offset: int = 0,
     ) -> tuple[list[WorklistItem], int]:
         """List worklist items filtered by status with pagination."""
-        query = select(WorklistItem).order_by(WorklistItem.updated_at.desc())
+        query = (
+            select(WorklistItem)
+            .options(defer(WorklistItem.content))
+            .order_by(WorklistItem.updated_at.desc())
+        )
         count_query = select(func.count()).select_from(WorklistItem)
 
         if status:
@@ -102,9 +113,27 @@ class WorklistService:
         if note:
             item.add_note({**note, "timestamp": datetime.utcnow().isoformat()})
 
+        await self._sync_article_status(item, status_enum, note)
         self.session.add(item)
         await self.session.commit()
         await self.session.refresh(item)
+        return item
+
+    async def get_item(self, item_id: int) -> WorklistItem:
+        """Fetch a single worklist item with related article/status history."""
+        stmt = (
+            select(WorklistItem)
+            .where(WorklistItem.id == item_id)
+            .options(
+                selectinload(WorklistItem.article).selectinload(
+                    Article.status_history
+                )
+            )
+        )
+        result = await self.session.execute(stmt)
+        item = result.scalars().first()
+        if not item:
+            raise ValueError(f"Worklist item {item_id} not found.")
         return item
 
     async def link_article(self, item_id: int, article_id: int) -> WorklistItem:
@@ -143,3 +172,42 @@ class WorklistService:
                 "queued_at": datetime.utcnow().isoformat(),
                 "error": str(exc),
             }
+
+    async def _sync_article_status(
+        self,
+        item: WorklistItem,
+        worklist_status: WorklistStatus,
+        note: dict[str, Any] | None = None,
+    ) -> None:
+        """Update linked article status + history to mirror worklist state."""
+        if not item.article_id:
+            return
+
+        article = await self.session.get(Article, item.article_id)
+        if not article:
+            return
+
+        target_status = WORKLIST_TO_ARTICLE_STATUS.get(worklist_status)
+        if not target_status or article.status == target_status:
+            return
+
+        note_payload = note or {}
+        history = ArticleStatusHistory(
+            article_id=article.id,
+            old_status=article.status.value if article.status else None,
+            new_status=target_status.value,
+            changed_by="system",
+            change_reason=note_payload.get("message") or "worklist_status_update",
+            metadata=note_payload,
+        )
+        article.status = target_status
+        self.session.add_all([article, history])
+WORKLIST_TO_ARTICLE_STATUS: dict[WorklistStatus, ArticleStatus] = {
+    WorklistStatus.PENDING: ArticleStatus.IMPORTED,
+    WorklistStatus.PROOFREADING: ArticleStatus.IN_REVIEW,
+    WorklistStatus.UNDER_REVIEW: ArticleStatus.IN_REVIEW,
+    WorklistStatus.READY_TO_PUBLISH: ArticleStatus.READY_TO_PUBLISH,
+    WorklistStatus.PUBLISHING: ArticleStatus.PUBLISHING,
+    WorklistStatus.PUBLISHED: ArticleStatus.PUBLISHED,
+    WorklistStatus.FAILED: ArticleStatus.FAILED,
+}

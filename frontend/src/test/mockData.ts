@@ -8,11 +8,11 @@ import type {
   Article,
   SEOMetadata,
   PublishTask,
-  WorklistItem,
   RuleDraft,
   PublishedRuleset,
   User,
 } from '../types/api';
+import type { WorklistItem } from '../types/worklist';
 
 // Mock Articles
 export const mockArticle: Article = {
@@ -141,11 +141,12 @@ export const mockWorklistItem: WorklistItem = {
   id: 1,
   drive_file_id: 'drive-123',
   title: 'Worklist Item 1',
-  content: 'Content for worklist item 1',
-  status: 'to_evaluate',
+  status: 'pending',
   metadata: {
-    author: 'Test Author',
+    word_count: 1200,
+    estimated_reading_time: 5,
   },
+  author: 'Test Author',
   notes: [],
   synced_at: '2024-01-01T00:00:00Z',
   created_at: '2024-01-01T00:00:00Z',
@@ -158,11 +159,12 @@ export const mockWorklistItems: WorklistItem[] = [
     ...mockWorklistItem,
     id: 2,
     title: 'Worklist Item 2',
-    status: 'proofreading',
+    status: 'under_review',
     notes: [
       {
+        id: 'note-1',
         author: 'Reviewer',
-        content: 'Needs revision',
+        message: 'Needs revision',
         created_at: '2024-01-01T01:00:00Z',
       },
     ],

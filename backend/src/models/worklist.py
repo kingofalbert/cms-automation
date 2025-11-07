@@ -24,13 +24,13 @@ JSONType = JSONB if JSONB is not None else JSON
 class WorklistStatus(str, PyEnum):
     """Workflow status for synced Drive articles."""
 
-    TO_EVALUATE = "to_evaluate"
-    TO_CONFIRM = "to_confirm"
-    TO_REVIEW = "to_review"
-    TO_REVISE = "to_revise"
-    TO_REREVIEW = "to_rereview"
+    PENDING = "pending"
+    PROOFREADING = "proofreading"
+    UNDER_REVIEW = "under_review"
     READY_TO_PUBLISH = "ready_to_publish"
+    PUBLISHING = "publishing"
     PUBLISHED = "published"
+    FAILED = "failed"
 
 
 class WorklistItem(Base, TimestampMixin):
@@ -54,7 +54,7 @@ class WorklistItem(Base, TimestampMixin):
     status: Mapped[WorklistStatus] = mapped_column(
         Enum(WorklistStatus, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
-        default=WorklistStatus.TO_EVALUATE,
+        default=WorklistStatus.PENDING,
         index=True,
         comment="Worklist processing status",
     )

@@ -22,6 +22,7 @@ from src.config import get_settings
 from src.config.logging import get_logger
 from src.models import WorklistItem, WorklistStatus
 from src.services.storage import create_google_drive_storage
+from src.services.worklist.pipeline import WorklistPipelineService
 
 logger = get_logger(__name__)
 
@@ -34,6 +35,7 @@ class GoogleDriveSyncService:
         self.settings = get_settings()
         self.folder_id = folder_id or self.settings.GOOGLE_DRIVE_FOLDER_ID
         self._storage = None
+        self.pipeline = WorklistPipelineService(session)
 
     async def sync_worklist(self, max_results: int = 100) -> dict[str, Any]:
         """Synchronize documents from Google Drive into worklist items."""
@@ -53,6 +55,8 @@ class GoogleDriveSyncService:
             "created": 0,
             "updated": 0,
             "skipped": 0,
+            "auto_processed": 0,
+            "auto_failed": 0,
             "errors": [],
         }
 
@@ -64,12 +68,25 @@ class GoogleDriveSyncService:
                     summary["skipped"] += 1
                     continue
 
-                created = await self._upsert_worklist_item(parsed)
+                item, created = await self._upsert_worklist_item(parsed)
                 if created:
                     summary["created"] += 1
+                    try:
+                        await self.pipeline.process_new_item(item)
+                        summary["auto_processed"] += 1
+                    except Exception as exc:
+                        summary["auto_failed"] += 1
+                        logger.error(
+                            "worklist_pipeline_failed",
+                            file_id=file_metadata.get("id"),
+                            error=str(exc),
+                            exc_info=True,
+                        )
                 else:
                     summary["updated"] += 1
+                await self.session.commit()
             except Exception as exc:
+                await self.session.rollback()
                 logger.error(
                     "google_drive_sync_item_failed",
                     file_id=file_metadata.get("id"),
@@ -239,8 +256,10 @@ class GoogleDriveSyncService:
             "categories": [],
         }
 
-    async def _upsert_worklist_item(self, payload: dict[str, Any]) -> bool:
-        """Insert or update worklist item and return True if created."""
+    async def _upsert_worklist_item(
+        self, payload: dict[str, Any]
+    ) -> tuple[WorklistItem, bool]:
+        """Insert or update worklist item and return (item, created?)."""
         drive_metadata = payload.get("drive_metadata", {})
         drive_file_id = drive_metadata.get("id")
 
@@ -267,14 +286,13 @@ class GoogleDriveSyncService:
             existing.synced_at = now
             existing.updated_at = now
             self.session.add(existing)
-            await self.session.commit()
-            await self.session.refresh(existing)
-            return False
+            await self.session.flush()
+            return existing, False
 
         item = WorklistItem(
             drive_file_id=drive_file_id,
             title=payload["title"],
-            status=WorklistStatus.TO_EVALUATE,
+            status=WorklistStatus.PENDING,
             content=payload["content"],
             author=payload.get("author"),
             tags=payload.get("tags", []),
@@ -286,5 +304,5 @@ class GoogleDriveSyncService:
             synced_at=now,
         )
         self.session.add(item)
-        await self.session.commit()
-        return True
+        await self.session.flush()
+        return item, True

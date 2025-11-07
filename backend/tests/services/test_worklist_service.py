@@ -43,7 +43,7 @@ async def test_list_items_filters_by_status(db_session: AsyncSession):
         WorklistItem(
             drive_file_id=f"file-{idx}",
             title=f"Doc {idx}",
-            status=WorklistStatus.TO_EVALUATE if idx % 2 == 0 else WorklistStatus.TO_REVIEW,
+            status=WorklistStatus.PENDING if idx % 2 == 0 else WorklistStatus.UNDER_REVIEW,
             content="Body",
             metadata={},
             notes=[],
@@ -56,10 +56,10 @@ async def test_list_items_filters_by_status(db_session: AsyncSession):
 
     service = WorklistService(db_session)
 
-    filtered, total = await service.list_items(status=WorklistStatus.TO_REVIEW.value, limit=10, offset=0)
+    filtered, total = await service.list_items(status=WorklistStatus.UNDER_REVIEW.value, limit=10, offset=0)
 
     assert total == 3
-    assert all(item.status == WorklistStatus.TO_REVIEW for item in filtered)
+    assert all(item.status == WorklistStatus.UNDER_REVIEW for item in filtered)
 
 
 @pytest.mark.asyncio
@@ -68,7 +68,7 @@ async def test_update_status_appends_note(db_session: AsyncSession):
     item = WorklistItem(
         drive_file_id="file-1",
         title="Doc 1",
-        status=WorklistStatus.TO_EVALUATE,
+        status=WorklistStatus.PENDING,
         content="Body",
         metadata={},
         notes=[],
@@ -80,11 +80,11 @@ async def test_update_status_appends_note(db_session: AsyncSession):
     service = WorklistService(db_session)
     updated = await service.update_status(
         item_id=item.id,
-        status=WorklistStatus.TO_CONFIRM.value,
+        status=WorklistStatus.PROOFREADING.value,
         note={"author": "reviewer", "comment": "Looks good"},
     )
 
-    assert updated.status == WorklistStatus.TO_CONFIRM
+    assert updated.status == WorklistStatus.PROOFREADING
     assert len(updated.notes) == 1
     assert updated.notes[0]["author"] == "reviewer"
     assert "timestamp" in updated.notes[0]
@@ -99,7 +99,15 @@ class DummySyncService:
 
     async def sync_worklist(self):
         self.called = True
-        return {"processed": 2, "created": 2, "updated": 0, "skipped": 0, "errors": []}
+        return {
+            "processed": 2,
+            "created": 2,
+            "updated": 0,
+            "skipped": 0,
+            "auto_processed": 2,
+            "auto_failed": 0,
+            "errors": [],
+        }
 
 
 @pytest.mark.asyncio

@@ -20,6 +20,8 @@ import { ProviderConfigSection } from '@/components/Settings/ProviderConfigSecti
 import { CMSConfigSection } from '@/components/Settings/CMSConfigSection';
 import { CostLimitsSection } from '@/components/Settings/CostLimitsSection';
 import { ScreenshotRetentionSection } from '@/components/Settings/ScreenshotRetentionSection';
+import { ProofreadingRulesSection } from '@/components/Settings/ProofreadingRulesSection';
+import { TagManagementSection } from '@/components/Settings/TagManagementSection';
 import { AppSettings, SettingsUpdateRequest } from '@/types/settings';
 import {
   Save,
@@ -30,6 +32,8 @@ import {
   Camera,
   AlertCircle,
   Sparkles,
+  CheckCircle,
+  Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -577,6 +581,22 @@ export default function SettingsPageModern() {
               <ScreenshotRetentionSection
                 estimatedStorageUsage={storageUsage?.total_mb ?? 0}
               />
+            </AccordionItem>
+
+            <AccordionItem
+              title={t('settings.sections.proofreading')}
+              subtitle={t('settings.proofreading.subtitle')}
+              icon={<CheckCircle className="h-5 w-5" />}
+            >
+              <ProofreadingRulesSection />
+            </AccordionItem>
+
+            <AccordionItem
+              title={t('settings.sections.tags')}
+              subtitle={t('settings.tags.subtitle')}
+              icon={<Tag className="h-5 w-5" />}
+            >
+              <TagManagementSection />
             </AccordionItem>
           </Accordion>
 

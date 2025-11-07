@@ -22,29 +22,19 @@ export const WorklistStatusBadge: React.FC<WorklistStatusBadgeProps> = ({
       WorklistStatus,
       { variant: BadgeVariant; label: string; dot?: boolean }
     > = {
-      to_evaluate: {
+      pending: {
         variant: 'secondary',
-        label: '待评估',
+        label: '待处理',
         dot: true,
       },
-      to_confirm: {
+      proofreading: {
         variant: 'warning',
-        label: '待确认',
+        label: '校对中',
         dot: true,
       },
-      to_review: {
+      under_review: {
         variant: 'info',
-        label: '待审稿',
-        dot: true,
-      },
-      to_revise: {
-        variant: 'error',
-        label: '待修改',
-        dot: true,
-      },
-      to_rereview: {
-        variant: 'warning',
-        label: '待复审',
+        label: '审核中',
         dot: true,
       },
       ready_to_publish: {
@@ -52,10 +42,20 @@ export const WorklistStatusBadge: React.FC<WorklistStatusBadgeProps> = ({
         label: '待发布',
         dot: true,
       },
+      publishing: {
+        variant: 'info',
+        label: '发布中',
+        dot: true,
+      },
       published: {
         variant: 'default',
         label: '已发布',
         dot: false,
+      },
+      failed: {
+        variant: 'error',
+        label: '失败',
+        dot: true,
       },
     };
 

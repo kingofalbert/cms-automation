@@ -260,7 +260,6 @@ export interface ImportError {
 // ============================================================================
 
 export type WorklistStatus =
-  | 'to_evaluate'
   | 'pending'
   | 'proofreading'
   | 'under_review'

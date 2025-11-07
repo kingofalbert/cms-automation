@@ -18,7 +18,7 @@ export const settingsAPI = {
   /**
    * Get all application settings.
    */
-  getAll: () => api.get<APIResponse<Settings>>('/v1/settings'),
+  getAll: () => api.get<Settings>('/v1/settings'),
 
   /**
    * Update all settings at once.

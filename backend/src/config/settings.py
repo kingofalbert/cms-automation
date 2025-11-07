@@ -182,6 +182,13 @@ class Settings(BaseSettings):
         description="Retry delay in seconds",
     )
 
+    # Google Drive → Article defaults
+    GOOGLE_DRIVE_DEFAULT_AUTHOR_ID: int = Field(
+        default=1,
+        ge=1,
+        description="Fallback author id used when creating articles from Google Drive imports",
+    )
+
     # Monitoring
     ENABLE_METRICS: bool = Field(default=True)
     METRICS_PORT: int = Field(default=9090, ge=1000, le=65535)
