@@ -4,11 +4,13 @@
  */
 
 import { useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ProofreadingIssue, DecisionPayload } from '@/types/worklist';
 import { cn } from '@/lib/cn';
 import { DiffView } from './DiffView';
 
-type ViewMode = 'original' | 'preview' | 'diff';
+type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
 
 interface ProofreadingArticleContentProps {
   content: string;
@@ -34,6 +36,38 @@ export function ProofreadingArticleContent({
   // If in diff mode and we have suggested content, show diff view
   if (viewMode === 'diff' && suggestedContent) {
     return <DiffView original={content} suggested={suggestedContent} title={title} />;
+  }
+
+  // If in rendered mode, show Markdown-rendered content
+  if (viewMode === 'rendered') {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <h1 className="mb-8 text-3xl font-bold text-gray-900">{title}</h1>
+        <div className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-ul:list-disc prose-ol:list-decimal">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Custom link renderer to open links in new tab
+              a: ({ node, ...props }) => (
+                <a {...props} target="_blank" rel="noopener noreferrer" />
+              ),
+              // Custom heading renderers to ensure proper styling
+              h1: ({ node, ...props }) => (
+                <h1 className="text-3xl font-bold mt-8 mb-4 text-gray-900" {...props} />
+              ),
+              h2: ({ node, ...props }) => (
+                <h2 className="text-2xl font-bold mt-6 mb-3 text-gray-900" {...props} />
+              ),
+              h3: ({ node, ...props }) => (
+                <h3 className="text-xl font-bold mt-4 mb-2 text-gray-900" {...props} />
+              ),
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
+      </div>
+    );
   }
   // Render content with issue highlights
   const renderedContent = useMemo(() => {

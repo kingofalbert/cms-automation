@@ -9,10 +9,10 @@
 
 import { memo } from 'react';
 import { ProofreadingStats } from '@/types/worklist';
-import { AlertCircle, AlertTriangle, Info, CheckCircle, XCircle, Eye, FileText, GitCompare } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, CheckCircle, XCircle, Eye, FileText, GitCompare, FileType } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-type ViewMode = 'original' | 'preview' | 'diff';
+type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
 
 interface ReviewStatsBarProps {
   stats?: ProofreadingStats | null;
@@ -102,11 +102,11 @@ export function ReviewStatsBar({ stats, dirtyCount, totalIssues, viewMode = 'ori
                 onClick={() => onViewModeChange('original')}
               />
               <ViewModeButton
-                mode="diff"
+                mode="rendered"
                 currentMode={viewMode}
-                icon={<GitCompare className="h-4 w-4" />}
-                label="Diff"
-                onClick={() => onViewModeChange('diff')}
+                icon={<FileType className="h-4 w-4" />}
+                label="Rendered"
+                onClick={() => onViewModeChange('rendered')}
               />
               <ViewModeButton
                 mode="preview"
@@ -114,6 +114,13 @@ export function ReviewStatsBar({ stats, dirtyCount, totalIssues, viewMode = 'ori
                 icon={<Eye className="h-4 w-4" />}
                 label="Preview"
                 onClick={() => onViewModeChange('preview')}
+              />
+              <ViewModeButton
+                mode="diff"
+                currentMode={viewMode}
+                icon={<GitCompare className="h-4 w-4" />}
+                label="Diff"
+                onClick={() => onViewModeChange('diff')}
               />
             </div>
           )}

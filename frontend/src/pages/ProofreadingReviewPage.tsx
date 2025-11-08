@@ -23,7 +23,7 @@ import { ProofreadingReviewHeader } from '@/components/ProofreadingReview/Proofr
 import { Button } from '@/components/ui';
 import { ArrowLeft, Save, CheckCircle } from 'lucide-react';
 
-type ViewMode = 'original' | 'preview' | 'diff';
+type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
 
 export default function ProofreadingReviewPage() {
   const { id } = useParams<{ id: string }>();
