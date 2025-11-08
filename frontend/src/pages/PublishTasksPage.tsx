@@ -11,12 +11,14 @@ import { TaskListTable } from '@/components/TaskMonitoring/TaskListTable';
 import { TaskFilters } from '@/components/TaskMonitoring/TaskFilters';
 import { TaskDetailDrawer } from '@/components/TaskMonitoring/TaskDetailDrawer';
 import { PublishTask, PublishStatus, ProviderType } from '@/types/publishing';
+import { useTranslation } from 'react-i18next';
 
 export default function PublishTasksPage() {
   const [statusFilter, setStatusFilter] = useState<PublishStatus | 'all'>('all');
   const [providerFilter, setProviderFilter] = useState<ProviderType | 'all'>('all');
   const [selectedTask, setSelectedTask] = useState<PublishTask | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { t } = useTranslation();
 
   // Fetch tasks
   const { data: tasks = [], isLoading, refetch } = useQuery({
@@ -44,9 +46,13 @@ export default function PublishTasksPage() {
       await axios.post(`/api/v1/publish/tasks/${taskId}/retry`);
       refetch();
       setDrawerOpen(false);
-      alert('重试请求已提交');
+      alert(t('publishTasks.messages.retrySubmitted'));
     } catch (error: any) {
-      alert(`重试失败: ${error.response?.data?.message || error.message}`);
+      alert(
+        t('publishTasks.messages.retryFailed', {
+          message: error.response?.data?.message || error.message,
+        })
+      );
     }
   };
 
@@ -67,10 +73,8 @@ export default function PublishTasksPage() {
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Page Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">发布任务监控</h1>
-        <p className="mt-2 text-gray-600">
-          实时查看所有文章发布任务的执行状态和详情
-        </p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('publishTasks.title')}</h1>
+        <p className="mt-2 text-gray-600">{t('publishTasks.subtitle')}</p>
       </div>
 
       {/* Statistics Cards */}
@@ -78,7 +82,9 @@ export default function PublishTasksPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">总任务数</p>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('publishTasks.stats.total')}
+              </p>
               <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -102,7 +108,9 @@ export default function PublishTasksPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">已完成</p>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('publishTasks.stats.completed')}
+              </p>
               <p className="text-2xl font-bold text-green-600">
                 {stats.completed}
               </p>
@@ -126,7 +134,9 @@ export default function PublishTasksPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">进行中</p>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('publishTasks.stats.inProgress')}
+              </p>
               <p className="text-2xl font-bold text-blue-600">
                 {stats.inProgress}
               </p>
@@ -158,7 +168,9 @@ export default function PublishTasksPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">失败</p>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('publishTasks.stats.failed')}
+              </p>
               <p className="text-2xl font-bold text-red-600">{stats.failed}</p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">

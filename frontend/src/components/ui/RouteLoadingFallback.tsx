@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 export interface RouteLoadingFallbackProps {
   /** Loading text */
@@ -18,10 +19,12 @@ export interface RouteLoadingFallbackProps {
 }
 
 export const RouteLoadingFallback: React.FC<RouteLoadingFallbackProps> = ({
-  text = '載入中...',
+  text,
   skeleton = false,
   className,
 }) => {
+  const { t } = useTranslation();
+  const resolvedText = text ?? t('common.loading');
   if (skeleton) {
     return (
       <div className={clsx('animate-pulse p-6', className)}>
@@ -50,7 +53,7 @@ export const RouteLoadingFallback: React.FC<RouteLoadingFallbackProps> = ({
     >
       <div className="flex flex-col items-center gap-4">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-blue-600" />
-        <p className="text-sm text-gray-600">{text}</p>
+        <p className="text-sm text-gray-600">{resolvedText}</p>
       </div>
     </div>
   );

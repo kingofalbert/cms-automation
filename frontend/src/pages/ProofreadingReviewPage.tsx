@@ -168,6 +168,19 @@ export default function ProofreadingReviewPage() {
           addDecision(selectedIssue.id, { decision_type: 'rejected' });
         }
         break;
+      case ' ':
+        // Toggle checkbox selection for current issue
+        e.preventDefault();
+        setSelectedIssueIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(selectedIssue.id)) {
+            next.delete(selectedIssue.id);
+          } else {
+            next.add(selectedIssue.id);
+          }
+          return next;
+        });
+        break;
       case 'ArrowDown':
       case 'ArrowUp':
         e.preventDefault();
@@ -179,7 +192,7 @@ export default function ProofreadingReviewPage() {
         }
         break;
     }
-  }, [selectedIssue, issues, addDecision]);
+  }, [selectedIssue, issues, addDecision, setSelectedIssueIds]);
 
   // Set up keyboard shortcuts
   useEffect(() => {
@@ -222,7 +235,7 @@ export default function ProofreadingReviewPage() {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
           <p className="text-lg text-red-500">
-            {t('proofreading.messages.noArticleLinked') || 'No article linked to this worklist item'}
+            {t('proofreading.messages.noArticleLinked')}
           </p>
           <Button className="mt-4" onClick={() => navigate('/worklist')}>
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -332,7 +345,7 @@ export default function ProofreadingReviewPage() {
         {/* Review Notes Textarea */}
         <div className="border-b border-gray-100 px-6 py-3">
           <label htmlFor="review-notes" className="mb-1 block text-xs font-medium text-gray-700">
-            审核备注 (Review Notes)
+            {t('proofreading.reviewNotes.label')}
           </label>
           <textarea
             id="review-notes"
@@ -340,7 +353,7 @@ export default function ProofreadingReviewPage() {
             onChange={(e) => setReviewNotes(e.target.value)}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             rows={2}
-            placeholder="输入审核备注、建议或说明..."
+            placeholder={t('proofreading.reviewNotes.placeholder')}
           />
         </div>
 

@@ -7,6 +7,7 @@ import { Recommendation } from '@/types/analytics';
 import { Card, Badge } from '@/components/ui';
 import type { BadgeProps } from '@/components/ui';
 import { Star, CheckCircle, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface RecommendationCardProps {
   recommendation: Recommendation;
@@ -15,14 +16,12 @@ export interface RecommendationCardProps {
 export const RecommendationCard: React.FC<RecommendationCardProps> = ({
   recommendation,
 }) => {
-  const getProviderLabel = (provider: string) => {
-    const labels: Record<string, string> = {
-      playwright: 'Playwright',
-      computer_use: 'Computer Use',
-      hybrid: 'Hybrid',
-    };
-    return labels[provider] || provider;
-  };
+  const { t } = useTranslation();
+
+  const getProviderLabel = (provider: string) =>
+    t(`providerComparison.providers.${provider}`, {
+      defaultValue: provider,
+    });
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600';
@@ -54,7 +53,9 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           <span className={`text-lg font-bold ${getScoreColor(recommendation.score)}`}>
             {recommendation.score}
           </span>
-          <span className="text-sm ml-1">/ 100</span>
+          <span className="text-sm ml-1">
+            {t('providerComparison.recommendations.scoreSuffix')}
+          </span>
         </Badge>
       </div>
 
@@ -66,7 +67,9 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
       {/* Use Cases */}
       {recommendation.use_cases.length > 0 && (
         <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-2">适用场景:</h4>
+          <h4 className="text-sm font-medium text-gray-900 mb-2">
+            {t('providerComparison.recommendations.useCases')}:
+          </h4>
           <ul className="space-y-1">
             {recommendation.use_cases.map((useCase, index) => (
               <li key={index} className="text-sm text-gray-600 flex items-start">
@@ -85,7 +88,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           <div>
             <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
               <CheckCircle className="w-4 h-4 mr-1 text-green-600" />
-              优势
+              {t('providerComparison.recommendations.pros')}
             </h4>
             <ul className="space-y-1">
               {recommendation.pros.map((pro, index) => (
@@ -103,7 +106,7 @@ export const RecommendationCard: React.FC<RecommendationCardProps> = ({
           <div>
             <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
               <XCircle className="w-4 h-4 mr-1 text-red-600" />
-              劣势
+              {t('providerComparison.recommendations.cons')}
             </h4>
             <ul className="space-y-1">
               {recommendation.cons.map((con, index) => (

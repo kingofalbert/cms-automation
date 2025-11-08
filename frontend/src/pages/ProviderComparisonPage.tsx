@@ -3,7 +3,7 @@
  * Displays comprehensive analytics and comparison between different publishing providers.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Card, Tabs, TabsList, TabsTrigger, TabsContent, Select } from '@/components/ui';
@@ -14,8 +14,10 @@ import { TaskDistributionPieChart } from '@/components/ProviderComparison/TaskDi
 import { RecommendationCard } from '@/components/ProviderComparison/RecommendationCard';
 import { ProviderComparison, TimeRange } from '@/types/analytics';
 import { TrendingUp, DollarSign, Clock, Award } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export default function ProviderComparisonPage() {
+  const { t } = useTranslation();
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
   // Fetch comparison data
@@ -31,20 +33,33 @@ export default function ProviderComparisonPage() {
     refetchInterval: 60000, // Refresh every minute
   });
 
+  const timeRangeOptions = useMemo(
+    () => [
+      { value: '7d', label: t('providerComparison.timeRange.options.7d') },
+      { value: '30d', label: t('providerComparison.timeRange.options.30d') },
+      { value: '90d', label: t('providerComparison.timeRange.options.90d') },
+      { value: 'all', label: t('providerComparison.timeRange.options.all') },
+    ],
+    [t]
+  );
+
+  const renderPlaceholder = (message: string) => (
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="text-gray-600">{message}</div>
+    </div>
+  );
+
+  const getProviderLabel = (provider: string) =>
+    t(`providerComparison.providers.${provider}`, {
+      defaultValue: provider,
+    });
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600">加载中...</div>
-      </div>
-    );
+    return renderPlaceholder(t('providerComparison.loading'));
   }
 
   if (!comparison) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-gray-600">暂无数据</div>
-      </div>
-    );
+    return renderPlaceholder(t('providerComparison.noData'));
   }
 
   const { metrics, task_distribution, recommendations, summary } = comparison;
@@ -54,10 +69,10 @@ export default function ProviderComparisonPage() {
       {/* Page Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Provider 性能对比</h1>
-          <p className="mt-2 text-gray-600">
-            分析和比较不同发布 Provider 的性能指标
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {t('providerComparison.title')}
+          </h1>
+          <p className="mt-2 text-gray-600">{t('providerComparison.subtitle')}</p>
         </div>
 
         {/* Time Range Filter */}
@@ -65,12 +80,8 @@ export default function ProviderComparisonPage() {
           <Select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value as TimeRange)}
-            options={[
-              { value: '7d', label: '近 7 天' },
-              { value: '30d', label: '近 30 天' },
-              { value: '90d', label: '近 90 天' },
-              { value: 'all', label: '全部' },
-            ]}
+            label={t('providerComparison.timeRange.label')}
+            options={timeRangeOptions}
           />
         </div>
       </div>
@@ -80,16 +91,14 @@ export default function ProviderComparisonPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">最佳成功率</p>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('providerComparison.summary.bestSuccess')}
+              </p>
               <p className="text-2xl font-bold text-green-600">
                 {summary.best_success_rate.value.toFixed(1)}%
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                {summary.best_success_rate.provider === 'playwright'
-                  ? 'Playwright'
-                  : summary.best_success_rate.provider === 'computer_use'
-                  ? 'Computer Use'
-                  : 'Hybrid'}
+                {getProviderLabel(summary.best_success_rate.provider)}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -101,16 +110,14 @@ export default function ProviderComparisonPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">最佳性价比</p>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('providerComparison.summary.bestCost')}
+              </p>
               <p className="text-2xl font-bold text-blue-600">
                 ${summary.best_cost_efficiency.value.toFixed(3)}
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                {summary.best_cost_efficiency.provider === 'playwright'
-                  ? 'Playwright'
-                  : summary.best_cost_efficiency.provider === 'computer_use'
-                  ? 'Computer Use'
-                  : 'Hybrid'}
+                {getProviderLabel(summary.best_cost_efficiency.provider)}
               </p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
@@ -122,17 +129,17 @@ export default function ProviderComparisonPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">最快速度</p>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('providerComparison.summary.bestSpeed')}
+              </p>
               <p className="text-2xl font-bold text-purple-600">
-                {Math.floor(summary.best_speed.value / 60)}分
-                {summary.best_speed.value % 60}秒
+                {t('providerComparison.table.minutesSeconds', {
+                  minutes: Math.floor(summary.best_speed.value / 60),
+                  seconds: summary.best_speed.value % 60,
+                })}
               </p>
               <p className="text-xs text-gray-600 mt-1">
-                {summary.best_speed.provider === 'playwright'
-                  ? 'Playwright'
-                  : summary.best_speed.provider === 'computer_use'
-                  ? 'Computer Use'
-                  : 'Hybrid'}
+                {getProviderLabel(summary.best_speed.provider)}
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
@@ -144,15 +151,15 @@ export default function ProviderComparisonPage() {
         <Card className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500 mb-1">推荐 Provider</p>
-              <p className="text-xl font-bold text-yellow-600">
-                {summary.recommended_provider === 'playwright'
-                  ? 'Playwright'
-                  : summary.recommended_provider === 'computer_use'
-                  ? 'Computer Use'
-                  : 'Hybrid'}
+              <p className="text-sm text-gray-500 mb-1">
+                {t('providerComparison.summary.recommended')}
               </p>
-              <p className="text-xs text-gray-600 mt-1">综合评分最高</p>
+              <p className="text-xl font-bold text-yellow-600">
+                {getProviderLabel(summary.recommended_provider)}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                {t('providerComparison.summary.recommendedDescription')}
+              </p>
             </div>
             <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
               <Award className="w-6 h-6 text-yellow-600" />
@@ -164,17 +171,21 @@ export default function ProviderComparisonPage() {
       {/* Tabs for Different Views */}
       <Tabs defaultValue="overview" className="mb-8">
         <TabsList>
-          <TabsTrigger value="overview">总览</TabsTrigger>
-          <TabsTrigger value="trends">趋势分析</TabsTrigger>
-          <TabsTrigger value="distribution">任务分布</TabsTrigger>
-          <TabsTrigger value="recommendations">推荐</TabsTrigger>
+          <TabsTrigger value="overview">{t('providerComparison.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="trends">{t('providerComparison.tabs.trends')}</TabsTrigger>
+          <TabsTrigger value="distribution">
+            {t('providerComparison.tabs.distribution')}
+          </TabsTrigger>
+          <TabsTrigger value="recommendations">
+            {t('providerComparison.tabs.recommendations')}
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview">
           <Card className="p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              性能指标对比
+              {t('providerComparison.sections.overview')}
             </h2>
             <MetricsComparisonTable metrics={metrics} highlightBest />
           </Card>
@@ -185,7 +196,7 @@ export default function ProviderComparisonPage() {
           <div className="space-y-6">
             <Card className="p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                成功率趋势
+                {t('providerComparison.sections.successTrend')}
               </h2>
               <SuccessRateLineChart metrics={metrics} height={400} />
             </Card>
@@ -193,7 +204,7 @@ export default function ProviderComparisonPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  平均成本对比
+                  {t('providerComparison.sections.avgCost')}
                 </h2>
                 <CostComparisonBarChart
                   metrics={metrics}
@@ -204,7 +215,7 @@ export default function ProviderComparisonPage() {
 
               <Card className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                  总成本对比
+                  {t('providerComparison.sections.totalCost')}
                 </h2>
                 <CostComparisonBarChart
                   metrics={metrics}
@@ -236,11 +247,10 @@ export default function ProviderComparisonPage() {
           <div className="space-y-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="text-sm font-medium text-blue-900 mb-1">
-                智能推荐系统
+                {t('providerComparison.sections.recommendationIntroTitle')}
               </h3>
               <p className="text-sm text-blue-700">
-                基于历史数据分析，我们为不同场景推荐最适合的 Provider。
-                评分综合考虑了成功率、成本效益和执行速度。
+                {t('providerComparison.sections.recommendationIntroDescription')}
               </p>
             </div>
 

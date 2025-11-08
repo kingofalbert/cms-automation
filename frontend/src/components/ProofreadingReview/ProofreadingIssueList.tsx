@@ -3,7 +3,7 @@
  * Left sidebar showing all proofreading issues with filtering.
  */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ProofreadingIssue,
@@ -52,6 +52,9 @@ export function ProofreadingIssueList({
   const [statusFilter, setStatusFilter] = useState<DecisionStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [engineFilter, setEngineFilter] = useState<IssueEngine | 'all'>('all');
+
+  // Refs to track issue elements for scrolling
+  const issueRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Get unique categories from issues
   const categories = useMemo(() => {
@@ -105,6 +108,25 @@ export function ProofreadingIssueList({
     });
   }, [issues, searchQuery, severityFilter, statusFilter, categoryFilter, engineFilter, decisions]);
 
+  // Auto-scroll to selected issue in left sidebar when it changes (keyboard navigation)
+  useEffect(() => {
+    if (!selectedIssue) return;
+
+    const element = issueRefs.current.get(selectedIssue.id);
+    if (element) {
+      // Small delay to ensure DOM is updated
+      const timer = setTimeout(() => {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest', // Keep it in view without scrolling unnecessarily
+          inline: 'nearest'
+        });
+      }, 50);
+
+      return () => clearTimeout(timer);
+    }
+  }, [selectedIssue]);
+
   return (
     <div className="flex h-full flex-col">
       {/* Search and Filters */}
@@ -127,10 +149,18 @@ export function ProofreadingIssueList({
               onChange={(e) => setSeverityFilter(e.target.value as any)}
               className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
             >
-              <option value="all">All Severity</option>
-              <option value="critical">Critical</option>
-              <option value="warning">Warning</option>
-              <option value="info">Info</option>
+              <option value="all">
+                {t('proofreading.issueList.filters.severity.all')}
+              </option>
+              <option value="critical">
+                {t('proofreading.issueList.filters.severity.critical')}
+              </option>
+              <option value="warning">
+                {t('proofreading.issueList.filters.severity.warning')}
+              </option>
+              <option value="info">
+                {t('proofreading.issueList.filters.severity.info')}
+              </option>
             </select>
 
             <select
@@ -138,11 +168,21 @@ export function ProofreadingIssueList({
               onChange={(e) => setStatusFilter(e.target.value as any)}
               className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
             >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="accepted">Accepted</option>
-              <option value="rejected">Rejected</option>
-              <option value="modified">Modified</option>
+              <option value="all">
+                {t('proofreading.issueList.filters.status.all')}
+              </option>
+              <option value="pending">
+                {t('proofreading.issueList.filters.status.pending')}
+              </option>
+              <option value="accepted">
+                {t('proofreading.issueList.filters.status.accepted')}
+              </option>
+              <option value="rejected">
+                {t('proofreading.issueList.filters.status.rejected')}
+              </option>
+              <option value="modified">
+                {t('proofreading.issueList.filters.status.modified')}
+              </option>
             </select>
           </div>
 
@@ -152,7 +192,9 @@ export function ProofreadingIssueList({
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
             >
-              <option value="all">All Categories</option>
+              <option value="all">
+                {t('proofreading.issueList.filters.category.all')}
+              </option>
               {categories.map((category) => (
                 <option key={category} value={category}>
                   {category}
@@ -165,9 +207,15 @@ export function ProofreadingIssueList({
               onChange={(e) => setEngineFilter(e.target.value as any)}
               className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
             >
-              <option value="all">All Engines</option>
-              <option value="ai">AI</option>
-              <option value="deterministic">Deterministic</option>
+              <option value="all">
+                {t('proofreading.issueList.filters.engine.all')}
+              </option>
+              <option value="ai">
+                {t('proofreading.issueList.filters.engine.ai')}
+              </option>
+              <option value="deterministic">
+                {t('proofreading.issueList.filters.engine.deterministic')}
+              </option>
             </select>
           </div>
         </div>
@@ -204,6 +252,13 @@ export function ProofreadingIssueList({
           filteredIssues.map((issue, index) => (
             <IssueListItem
               key={issue.id}
+              ref={(el) => {
+                if (el) {
+                  issueRefs.current.set(issue.id, el);
+                } else {
+                  issueRefs.current.delete(issue.id);
+                }
+              }}
               issue={issue}
               index={index + 1}
               isSelected={selectedIssue?.id === issue.id}
@@ -229,30 +284,27 @@ interface IssueListItemProps {
   onCheckChange: () => void;
 }
 
-function IssueListItem({
-  issue,
-  index,
-  isSelected,
-  isChecked,
-  decision,
-  onClick,
-  onCheckChange,
-}: IssueListItemProps) {
-  const decisionStatus = decision?.decision_type || issue.decision_status;
-  const categoryLabel = issue.rule_category || 'Uncategorized';
-  const originalText = issue.original_text || '（無可顯示的原文）';
-  const suggestedText = issue.suggested_text || originalText;
+const IssueListItem = forwardRef<HTMLDivElement, IssueListItemProps>(
+  ({ issue, index, isSelected, isChecked, decision, onClick, onCheckChange }, ref) => {
+    const { t } = useTranslation();
+    const decisionStatus = decision?.decision_type || issue.decision_status;
+    const categoryLabel =
+      issue.rule_category || t('proofreading.issueList.uncategorized');
+    const originalText =
+      issue.original_text || t('proofreading.issueList.noOriginalText');
+    const suggestedText = issue.suggested_text || originalText;
 
-  return (
-    <div
-      className={cn(
-        'cursor-pointer border-b border-gray-100 p-4 transition-colors hover:bg-gray-50',
-        isSelected && 'border-l-4 border-l-blue-500 bg-blue-50',
-        decisionStatus === 'accepted' && 'bg-green-50',
-        decisionStatus === 'rejected' && 'bg-gray-50 opacity-60'
-      )}
-      onClick={onClick}
-    >
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          'cursor-pointer border-b border-gray-100 p-4 transition-colors hover:bg-gray-50',
+          isSelected && 'border-l-4 border-l-blue-500 bg-blue-50',
+          decisionStatus === 'accepted' && 'bg-green-50',
+          decisionStatus === 'rejected' && 'bg-gray-50 opacity-60'
+        )}
+        onClick={onClick}
+      >
       <div className="flex items-start gap-3">
         {/* Checkbox */}
         <input
@@ -286,12 +338,12 @@ function IssueListItem({
             {issue.engine === 'ai' ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">
                 <Sparkles className="h-3 w-3" />
-                AI
+                {t('proofreading.issueList.filters.engine.ai')}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
                 <Code className="h-3 w-3" />
-                Rule
+                {t('proofreading.issueList.filters.engine.deterministic')}
               </span>
             )}
             {/* Confidence Badge (AI only) */}
@@ -322,22 +374,26 @@ function IssueListItem({
         </div>
       </div>
     </div>
-  );
-}
+    );
+  }
+);
+
+IssueListItem.displayName = 'IssueListItem';
 
 function DecisionBadge({ status }: { status: DecisionStatus }) {
-  const config = {
-    accepted: { label: '✓ Accepted', className: 'bg-green-100 text-green-700' },
-    rejected: { label: '✗ Rejected', className: 'bg-gray-100 text-gray-700' },
-    modified: { label: '✎ Modified', className: 'bg-purple-100 text-purple-700' },
-    pending: { label: 'Pending', className: 'bg-gray-100 text-gray-500' },
+  const { t } = useTranslation();
+  const classNameMap: Record<DecisionStatus, string> = {
+    accepted: 'bg-green-100 text-green-700',
+    rejected: 'bg-gray-100 text-gray-700',
+    modified: 'bg-purple-100 text-purple-700',
+    pending: 'bg-gray-100 text-gray-500',
   };
 
-  const { label, className } = config[status];
-
   return (
-    <span className={cn('inline-block rounded px-2 py-0.5 text-xs font-medium', className)}>
-      {label}
+    <span
+      className={cn('inline-block rounded px-2 py-0.5 text-xs font-medium', classNameMap[status])}
+    >
+      {t(`proofreading.issueList.badges.${status}` as const)}
     </span>
   );
 }

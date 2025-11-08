@@ -54,43 +54,8 @@ export function ProofreadingArticleContent({
     return () => clearTimeout(timer);
   }, [selectedIssue]);
 
-  // If in diff mode and we have suggested content, show diff view
-  if (viewMode === 'diff' && suggestedContent) {
-    return <DiffView original={content} suggested={suggestedContent} title={title} />;
-  }
-
-  // If in rendered mode, show Markdown-rendered content
-  if (viewMode === 'rendered') {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <h1 className="mb-8 text-3xl font-bold text-gray-900">{title}</h1>
-        <div className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-ul:list-disc prose-ol:list-decimal">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              // Custom link renderer to open links in new tab
-              a: ({ node, ...props }) => (
-                <a {...props} target="_blank" rel="noopener noreferrer" />
-              ),
-              // Custom heading renderers to ensure proper styling
-              h1: ({ node, ...props }) => (
-                <h1 className="text-3xl font-bold mt-8 mb-4 text-gray-900" {...props} />
-              ),
-              h2: ({ node, ...props }) => (
-                <h2 className="text-2xl font-bold mt-6 mb-3 text-gray-900" {...props} />
-              ),
-              h3: ({ node, ...props }) => (
-                <h3 className="text-xl font-bold mt-4 mb-2 text-gray-900" {...props} />
-              ),
-            }}
-          >
-            {content}
-          </ReactMarkdown>
-        </div>
-      </div>
-    );
-  }
-  // Render content with issue highlights
+  // IMPORTANT: Calculate renderedContent BEFORE early returns to maintain hook order
+  // Render content with issue highlights (used in original and preview modes)
   const renderedContent = useMemo(() => {
     if (!content || issues.length === 0) {
       return <p className="whitespace-pre-wrap text-gray-700">{content}</p>;
@@ -172,6 +137,46 @@ export function ProofreadingArticleContent({
     return <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{parts}</div>;
   }, [content, issues, decisions, selectedIssue, viewMode, onIssueClick]);
 
+  // NOW that all hooks are called, we can conditionally render based on viewMode
+
+  // If in diff mode and we have suggested content, show diff view
+  if (viewMode === 'diff' && suggestedContent) {
+    return <DiffView original={content} suggested={suggestedContent} title={title} />;
+  }
+
+  // If in rendered mode, show Markdown-rendered content
+  if (viewMode === 'rendered') {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <h1 className="mb-8 text-3xl font-bold text-gray-900">{title}</h1>
+        <div className="prose prose-lg max-w-none prose-headings:text-gray-900 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl prose-p:text-gray-700 prose-a:text-blue-600 prose-strong:text-gray-900 prose-ul:list-disc prose-ol:list-decimal">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              // Custom link renderer to open links in new tab
+              a: ({ node, ...props }) => (
+                <a {...props} target="_blank" rel="noopener noreferrer" />
+              ),
+              // Custom heading renderers to ensure proper styling
+              h1: ({ node, ...props }) => (
+                <h1 className="text-3xl font-bold mt-8 mb-4 text-gray-900" {...props} />
+              ),
+              h2: ({ node, ...props }) => (
+                <h2 className="text-2xl font-bold mt-6 mb-3 text-gray-900" {...props} />
+              ),
+              h3: ({ node, ...props }) => (
+                <h3 className="text-xl font-bold mt-4 mb-2 text-gray-900" {...props} />
+              ),
+            }}
+          >
+            {content}
+          </ReactMarkdown>
+        </div>
+      </div>
+    );
+  }
+
+  // For original and preview modes, show renderedContent with issue highlights
   return (
     <div className="mx-auto max-w-4xl">
       <h1 className="mb-8 text-3xl font-bold text-gray-900">{title}</h1>

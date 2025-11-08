@@ -14,6 +14,7 @@ import {
 } from 'recharts';
 import { TaskDistribution } from '@/types/analytics';
 import { ProviderType } from '@/types/publishing';
+import { useTranslation } from 'react-i18next';
 
 export interface TaskDistributionPieChartProps {
   distribution: TaskDistribution[];
@@ -26,10 +27,12 @@ export const TaskDistributionPieChart: React.FC<TaskDistributionPieChartProps> =
   provider,
   height = 300,
 }) => {
+  const { t } = useTranslation();
+
   if (distribution.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
-        暂无数据
+        {t('providerComparison.noData')}
       </div>
     );
   }
@@ -59,30 +62,17 @@ export const TaskDistributionPieChart: React.FC<TaskDistributionPieChartProps> =
     return COLORS[status as keyof typeof COLORS] || '#6b7280';
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      completed: '已完成',
-      failed: '失败',
-      pending: '待处理',
-      initializing: '初始化中',
-      logging_in: '登录中',
-      creating_post: '创建文章',
-      uploading_images: '上传图片',
-      configuring_seo: '配置SEO',
-      publishing: '发布中',
-      idle: '空闲',
-    };
-    return labels[status] || status;
-  };
+  const getStatusLabel = (status: string) =>
+    t(`publishTasks.statusLabels.${status}`, {
+      defaultValue: t(`providerComparison.statuses.${status}`, {
+        defaultValue: status,
+      }),
+    });
 
-  const getProviderLabel = (provider: string) => {
-    const labels: Record<string, string> = {
-      playwright: 'Playwright',
-      computer_use: 'Computer Use',
-      hybrid: 'Hybrid',
-    };
-    return labels[provider] || provider;
-  };
+  const getProviderLabel = (value: string) =>
+    t(`providerComparison.providers.${value}`, {
+      defaultValue: value,
+    });
 
   const renderCustomLabel = (props: PieLabelRenderProps) => {
     const {
@@ -126,10 +116,12 @@ export const TaskDistributionPieChart: React.FC<TaskDistributionPieChartProps> =
       return (
         <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-sm">
           <p className="text-sm font-medium text-gray-900">{firstPayload?.name}</p>
-          <p className="text-sm text-gray-600">任务数: {value}</p>
+          <p className="text-sm text-gray-600">
+            {t('providerComparison.charts.tooltip.tasks')}: {value}
+          </p>
           {dataPoint && (
             <p className="text-sm text-gray-600">
-              占比: {dataPoint.percentage.toFixed(1)}%
+              {t('providerComparison.charts.tooltip.share')}: {dataPoint.percentage.toFixed(1)}%
             </p>
           )}
         </div>
@@ -141,7 +133,9 @@ export const TaskDistributionPieChart: React.FC<TaskDistributionPieChartProps> =
   return (
     <div>
       <h3 className="text-center text-sm font-medium text-gray-700 mb-2">
-        {getProviderLabel(provider)} 任务分布
+        {t('providerComparison.charts.distributionTitle', {
+          provider: getProviderLabel(provider),
+        })}
       </h3>
       <ResponsiveContainer width="100%" height={height}>
         <PieChart>

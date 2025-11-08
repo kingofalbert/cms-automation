@@ -9,6 +9,7 @@
 
 import { useState, memo } from 'react';
 import { ChevronDown, ChevronUp, Sparkles, TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import type {
   MetaComparison,
@@ -23,9 +24,13 @@ interface ComparisonCardsProps {
 }
 
 export function ComparisonCards({ meta, seo, faqProposals }: ComparisonCardsProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-4 p-6">
-      <h2 className="text-lg font-semibold text-gray-900">AI 优化建议</h2>
+      <h2 className="text-lg font-semibold text-gray-900">
+        {t('proofreading.comparison.title')}
+      </h2>
       <MetaDescriptionCard meta={meta} />
       <SEOKeywordsCard seo={seo} />
       {faqProposals.length > 0 && <FAQProposalsCard proposals={faqProposals} />}
@@ -38,6 +43,7 @@ export function ComparisonCards({ meta, seo, faqProposals }: ComparisonCardsProp
  * Memoized to prevent re-renders when meta data doesn't change
  */
 const MetaDescriptionCard = memo(({ meta }: { meta: MetaComparison }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = meta.suggested || meta.original;
@@ -55,7 +61,9 @@ const MetaDescriptionCard = memo(({ meta }: { meta: MetaComparison }) => {
       >
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-purple-500" />
-          <span className="font-medium text-gray-900">Meta Description</span>
+          <span className="font-medium text-gray-900">
+            {t('proofreading.comparison.meta.title')}
+          </span>
           {meta.score !== null && meta.score !== undefined && (
             <ScoreBadge score={meta.score} />
           )}
@@ -72,10 +80,16 @@ const MetaDescriptionCard = memo(({ meta }: { meta: MetaComparison }) => {
           {/* Original */}
           <div>
             <div className="mb-1 text-xs font-medium text-gray-500 uppercase">
-              原始 ({meta.length_original} 字符)
+              {t('proofreading.comparison.meta.original', {
+                count: meta.length_original ?? 0,
+              })}
             </div>
             <div className="rounded bg-gray-50 p-3 text-sm text-gray-700">
-              {meta.original || <span className="text-gray-400 italic">未设置</span>}
+              {meta.original || (
+                <span className="text-gray-400 italic">
+                  {t('proofreading.comparison.meta.notSet')}
+                </span>
+              )}
             </div>
           </div>
 
@@ -83,7 +97,9 @@ const MetaDescriptionCard = memo(({ meta }: { meta: MetaComparison }) => {
           {meta.suggested && (
             <div>
               <div className="mb-1 text-xs font-medium text-purple-600 uppercase">
-                AI 建议 ({meta.length_suggested} 字符)
+                {t('proofreading.comparison.meta.suggested', {
+                  count: meta.length_suggested ?? 0,
+                })}
               </div>
               <div className="rounded bg-purple-50 p-3 text-sm text-gray-900">
                 {meta.suggested}
@@ -95,7 +111,7 @@ const MetaDescriptionCard = memo(({ meta }: { meta: MetaComparison }) => {
           {meta.reasoning && (
             <div>
               <div className="mb-1 text-xs font-medium text-gray-500 uppercase">
-                优化说明
+                {t('proofreading.comparison.meta.reasoning')}
               </div>
               <div className="text-sm text-gray-600">{meta.reasoning}</div>
             </div>
@@ -113,6 +129,7 @@ MetaDescriptionCard.displayName = 'MetaDescriptionCard';
  * Memoized to prevent re-renders when seo data doesn't change
  */
 const SEOKeywordsCard = memo(({ seo }: { seo: SEOComparison }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasContent = seo.suggested_keywords || seo.original_keywords.length > 0;
@@ -130,7 +147,9 @@ const SEOKeywordsCard = memo(({ seo }: { seo: SEOComparison }) => {
       >
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-blue-500" />
-          <span className="font-medium text-gray-900">SEO 关键词</span>
+          <span className="font-medium text-gray-900">
+            {t('proofreading.comparison.seo.title')}
+          </span>
           {seo.score !== null && seo.score !== undefined && (
             <ScoreBadge score={seo.score} />
           )}
@@ -147,7 +166,9 @@ const SEOKeywordsCard = memo(({ seo }: { seo: SEOComparison }) => {
           {/* Original Keywords */}
           <div>
             <div className="mb-2 text-xs font-medium text-gray-500 uppercase">
-              原始关键词 ({seo.original_keywords.length})
+              {t('proofreading.comparison.seo.original', {
+                count: seo.original_keywords.length,
+              })}
             </div>
             <div className="flex flex-wrap gap-2">
               {seo.original_keywords.length > 0 ? (
@@ -160,7 +181,9 @@ const SEOKeywordsCard = memo(({ seo }: { seo: SEOComparison }) => {
                   </span>
                 ))
               ) : (
-                <span className="text-sm text-gray-400 italic">未设置</span>
+                <span className="text-sm text-gray-400 italic">
+                  {t('proofreading.comparison.seo.notSet')}
+                </span>
               )}
             </div>
           </div>
@@ -169,7 +192,7 @@ const SEOKeywordsCard = memo(({ seo }: { seo: SEOComparison }) => {
           {seo.suggested_keywords && (
             <div>
               <div className="mb-2 text-xs font-medium text-blue-600 uppercase">
-                AI 建议关键词
+                {t('proofreading.comparison.seo.suggested')}
               </div>
               <div className="rounded bg-blue-50 p-3">
                 <pre className="text-xs text-gray-800 whitespace-pre-wrap">
@@ -183,7 +206,7 @@ const SEOKeywordsCard = memo(({ seo }: { seo: SEOComparison }) => {
           {seo.reasoning && (
             <div>
               <div className="mb-1 text-xs font-medium text-gray-500 uppercase">
-                优化说明
+                {t('proofreading.comparison.seo.reasoning')}
               </div>
               <div className="text-sm text-gray-600">{seo.reasoning}</div>
             </div>
@@ -201,6 +224,7 @@ SEOKeywordsCard.displayName = 'SEOKeywordsCard';
  * Memoized to prevent re-renders when proposals don't change
  */
 const FAQProposalsCard = memo(({ proposals }: { proposals: FAQProposal[] }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState(0);
 
@@ -215,9 +239,11 @@ const FAQProposalsCard = memo(({ proposals }: { proposals: FAQProposal[] }) => {
           <div className="flex h-5 w-5 items-center justify-center rounded bg-green-100 text-xs font-bold text-green-700">
             ?
           </div>
-          <span className="font-medium text-gray-900">FAQ Schema 提案</span>
+          <span className="font-medium text-gray-900">
+            {t('proofreading.comparison.faq.title')}
+          </span>
           <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-            {proposals.length} 个方案
+            {t('proofreading.comparison.faq.count', { count: proposals.length })}
           </span>
         </div>
         {isExpanded ? (
@@ -244,7 +270,7 @@ const FAQProposalsCard = memo(({ proposals }: { proposals: FAQProposal[] }) => {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   )}
                 >
-                  方案 {idx + 1}
+                  {t('proofreading.comparison.faq.proposal', { index: idx + 1 })}
                   {proposal.score !== null && proposal.score !== undefined && (
                     <span className="ml-1 opacity-75">
                       ({Math.round(proposal.score * 100)}%)
@@ -258,17 +284,24 @@ const FAQProposalsCard = memo(({ proposals }: { proposals: FAQProposal[] }) => {
           {/* Selected Proposal */}
           <div>
             <div className="mb-2 text-xs font-medium text-gray-500 uppercase">
-              Schema Type: {proposals[selectedProposal].schema_type}
+              {t('proofreading.comparison.faq.schemaType', {
+                type: proposals[selectedProposal].schema_type,
+              })}
             </div>
             <div className="space-y-3">
               {proposals[selectedProposal].questions.map((qa, idx) => (
                 <div key={idx} className="rounded-lg bg-green-50 p-3">
                   <div className="mb-1 text-sm font-medium text-gray-900">
-                    Q{idx + 1}: {(qa as any).question || JSON.stringify(qa)}
+                    {t('proofreading.comparison.faq.question', {
+                      index: idx + 1,
+                      question: (qa as any).question || JSON.stringify(qa),
+                    })}
                   </div>
                   {(qa as any).answer && (
                     <div className="text-sm text-gray-600">
-                      A: {(qa as any).answer}
+                      {t('proofreading.comparison.faq.answer', {
+                        answer: (qa as any).answer,
+                      })}
                     </div>
                   )}
                 </div>

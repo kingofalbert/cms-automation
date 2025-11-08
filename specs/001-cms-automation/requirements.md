@@ -59,10 +59,38 @@ This document provides a comprehensive checklist of all functional and non-funct
   - imported_count, skipped_count, failed_count
   - List of validation errors with details
 
+#### 1A. Structured Google Doc Parsing & Review Step (New)
+
+**Backend Requirements**
+
+- [ ] **FR-010a**: Parser extracts structured headers  
+  - Interpret “lines” as carriage-return-delimited strings:  
+    * 3 lines → line1=`title_prefix`, line2=`title_main`, line3=`title_suffix`.  
+    * 2 lines → line1=`title_main`, line2=`title_suffix`.  
+    * 1 line → `title_main`.  
+  - Fallback heuristics split same-line separators (`｜`,`—`,`：`) if needed.  
+  - Store `title_prefix`, `title_main` (required), `title_suffix` on `articles`.
+- [ ] **FR-010b**: Parser (powered by the same AI configuration as the Proofreading LLM) detects the author line (`文／xxx`) beneath the title and stores raw + normalized author fields.
+- [ ] **FR-010c**: Parser removes header/author/image/meta blocks from DOM and saves remaining HTML (with H1/H2) to `body_html` (same AI model performs the classification; scripts handle sanitization only).
+- [ ] **FR-010d**: Parser creates `article_images` records per inline image with `preview_path`, `source_path`, `source_url`, `caption`, `position`, `metadata` using AI to understand caption/source relationships.
+- [ ] **FR-010e**: Parser (AI-driven) extracts `meta_description`, `seo_keywords[]`, `tags[]`; strips them from `body_html`.
+- [ ] **FR-010f**: Worklist/article APIs expose the new structured fields and image list; review payload accepts `step_id` metadata.
+
+**Frontend Requirements**
+
+- [ ] **FR-010g**: Proofreading Review Step 1 renders “解析確認” with structured headers, author line, image gallery (preview + caption + source link), meta/SEO fields, and cleaned body HTML.
+- [ ] **FR-010h**: Step 1 allows reviewers to acknowledge parsing accuracy (boolean or notes) stored via existing review API with the new `step_id`.
+- [ ] **FR-010i**: Worklist detail drawer shows read-only parsed metadata to give context before review.
+- [ ] **FR-010j**: All new UI strings use the i18n namespace (`proofreading.parsing.*`) for zh-TW / en-US parity.
+- [ ] **FR-010k**: Database stores parsing confirmation state (`parsing_confirmed`, `confirmed_at`, `confirmed_by`, `parsing_notes`) and per-image review overrides (child table referencing `article_images`).
+- [ ] **FR-010l**: Step 1 must block Step 2 (正文校對) until `parsing_confirmed=true`; reviewers can return to Step 1 to amend their feedback without losing Step 2 progress.
+- [ ] **FR-010m**: For every downloaded source image, persist technical specs in `article_images.metadata` (width, height, aspect ratio, file size, mime type, EXIF timestamp). Step 1 UI must display these specs so reviewers can verify accuracy (exact KPI list to follow in the Image Spec doc).
+- [ ] **FR-010n**: Before publishing, images must pass a preprocessing pipeline (resize/compress/format normalization). The processed assets and their metadata must be uploaded to WordPress via the active provider (Playwright/Computer Use), and the automation must insert each image into the correct article position automatically.
+
 ### 2. SEO Optimization (Requirements: FR-011 to FR-020)
 
 - [ ] **FR-011**: System运行单一 Prompt 的 ProofreadingAnalysisService，输出统一校对+SEO结果
-  - 使用 Claude Messages API (claude-3-5-sonnet-20241022)
+  - 使用 Claude Messages API (claude-sonnet-4-5-20250929)
   - 返回结构包含：`issues[]`, `suggested_content`, `seo_metadata`, `processing_metadata`
   - `issues[]` 遵循 schema：`rule_id`, `category`, `severity`, `confidence`, `source (ai|script|merged)`, `blocks_publish`, `suggestion`
   - `statistics` 需包含 `total_issues`, `blocking_issue_count`, `source_breakdown`
@@ -126,7 +154,7 @@ This document provides a comprehensive checklist of all functional and non-funct
   - Deterministic script-based automation
 
 - [ ] **FR-024**: Anthropic provider uses Computer Use API
-  - Uses claude-3-5-sonnet-20241022 model
+  - Uses claude-sonnet-4-5-20250929 model
   - AI-driven adaptive automation
 
 - [ ] **FR-025**: Publishing workflow includes 8 core steps

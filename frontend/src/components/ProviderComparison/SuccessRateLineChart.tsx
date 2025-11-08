@@ -15,6 +15,7 @@ import {
 } from 'recharts';
 import { ProviderMetrics, ChartDataPoint } from '@/types/analytics';
 import { format, parseISO } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 export interface SuccessRateLineChartProps {
   metrics: ProviderMetrics[];
@@ -25,13 +26,15 @@ export const SuccessRateLineChart: React.FC<SuccessRateLineChartProps> = ({
   metrics,
   height = 300,
 }) => {
+  const { t } = useTranslation();
+
   // Transform data for Recharts
   const chartData: ChartDataPoint[] = [];
 
   if (metrics.length === 0 || metrics[0]?.last_30_days?.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
-        暂无数据
+        {t('providerComparison.noData')}
       </div>
     );
   }
@@ -93,7 +96,9 @@ export const SuccessRateLineChart: React.FC<SuccessRateLineChartProps> = ({
         />
         <Tooltip
           formatter={formatTooltip}
-          labelFormatter={(label) => `日期: ${label}`}
+          labelFormatter={(label) =>
+            `${t('providerComparison.charts.tooltip.date')}: ${label}`
+          }
           contentStyle={{
             backgroundColor: 'white',
             border: '1px solid #e5e7eb',
@@ -102,14 +107,9 @@ export const SuccessRateLineChart: React.FC<SuccessRateLineChartProps> = ({
         />
         <Legend
           wrapperStyle={{ fontSize: '14px' }}
-          formatter={(value) => {
-            const labels: Record<string, string> = {
-              playwright: 'Playwright',
-              computer_use: 'Computer Use',
-              hybrid: 'Hybrid',
-            };
-            return labels[value] || value;
-          }}
+          formatter={(value) =>
+            t(`providerComparison.providers.${value}`, { defaultValue: value })
+          }
         />
         {metrics.map((metric) => (
           <Line

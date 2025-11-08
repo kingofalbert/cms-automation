@@ -7,10 +7,12 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { routes } from '../../config/routes';
 import { cn } from '../../lib/cn';
+import { useTranslation } from 'react-i18next';
 
 export default function MobileMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { t } = useTranslation();
 
   // Filter routes that should show in navigation
   const navRoutes = routes.filter(route => route.showInNav);
@@ -64,7 +66,7 @@ export default function MobileMenu() {
       >
         {/* Drawer header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">菜單</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{t('common.menu')}</h2>
           <button
             onClick={closeMenu}
             className="p-2 rounded-md text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -100,7 +102,7 @@ export default function MobileMenu() {
                     : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                 )}
               >
-                {route.navLabel}
+                {route.navLabelKey ? t(route.navLabelKey) : route.navLabel}
               </Link>
             );
           })}

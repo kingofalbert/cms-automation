@@ -9,6 +9,7 @@
 
 import { memo } from 'react';
 import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 
 interface DiffViewProps {
@@ -76,14 +77,16 @@ const diffStyles = {
 };
 
 const DiffViewComponent = ({ original, suggested, title, className }: DiffViewProps) => {
+  const { t } = useTranslation();
+
   return (
     <div className={cn('mx-auto max-w-full', className)}>
       <h1 className="mb-4 text-2xl font-bold text-gray-900">{title}</h1>
       <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
           <div className="flex items-center justify-between text-sm font-medium text-gray-700">
-            <span>原始内容 (Original)</span>
-            <span>建议内容 (Suggested)</span>
+            <span>{t('proofreading.labels.original')}</span>
+            <span>{t('proofreading.labels.suggested')}</span>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -94,8 +97,8 @@ const DiffViewComponent = ({ original, suggested, title, className }: DiffViewPr
             compareMethod={DiffMethod.WORDS}
             useDarkTheme={false}
             styles={diffStyles}
-            leftTitle="原始 (Original)"
-            rightTitle="建议 (Suggested)"
+            leftTitle={t('proofreading.labels.original')}
+            rightTitle={t('proofreading.labels.suggested')}
             showDiffOnly={false}
             disableWordDiff={false}
             hideLineNumbers={false}

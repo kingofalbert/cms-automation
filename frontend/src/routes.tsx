@@ -14,6 +14,7 @@ import {
   DetailPageSkeleton,
   DashboardSkeleton,
 } from './components/ui/RouteLoadingFallback';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Get appropriate loading component based on route type
@@ -40,25 +41,32 @@ function getLoadingFallback(routeConfig?: RouteConfig) {
  */
 export function AppRoutes() {
   const location = useLocation();
+  const { t } = useTranslation();
   const currentRoute = getRouteConfig(location.pathname);
 
   // Update document title when route changes
   useEffect(() => {
-    if (currentRoute?.title) {
-      document.title = currentRoute.title;
+    const resolvedTitle = currentRoute?.titleKey
+      ? t(currentRoute.titleKey)
+      : currentRoute?.title;
+    if (resolvedTitle) {
+      document.title = resolvedTitle;
     }
 
-    // Update meta description
-    if (currentRoute?.description) {
+    const resolvedDescription = currentRoute?.descriptionKey
+      ? t(currentRoute.descriptionKey)
+      : currentRoute?.description;
+
+    if (resolvedDescription) {
       let metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {
         metaDesc = document.createElement('meta');
         metaDesc.setAttribute('name', 'description');
         document.head.appendChild(metaDesc);
       }
-      metaDesc.setAttribute('content', currentRoute.description);
+      metaDesc.setAttribute('content', resolvedDescription);
     }
-  }, [currentRoute]);
+  }, [currentRoute, t]);
 
   return (
     <Suspense fallback={getLoadingFallback(currentRoute)}>

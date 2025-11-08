@@ -5,7 +5,7 @@ export interface UseUnsavedChangesOptions {
   message?: string;
 }
 
-const DEFAULT_MESSAGE = '您有未保存的更改，确认要离开当前页面吗？';
+const DEFAULT_MESSAGE = 'You have unsaved changes. Are you sure you want to leave this page?';
 
 /**
  * Warn users when navigating away with unsaved changes.

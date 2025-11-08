@@ -6,6 +6,7 @@
 import { ProviderMetrics } from '@/types/analytics';
 import { Badge } from '@/components/ui';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface MetricsComparisonTableProps {
   metrics: ProviderMetrics[];
@@ -16,10 +17,12 @@ export const MetricsComparisonTable: React.FC<MetricsComparisonTableProps> = ({
   metrics,
   highlightBest = true,
 }) => {
+  const { t } = useTranslation();
+
   if (metrics.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
-        暂无数据
+        {t('providerComparison.noData')}
       </div>
     );
   }
@@ -34,20 +37,16 @@ export const MetricsComparisonTable: React.FC<MetricsComparisonTableProps> = ({
     return reverse ? value === bestValue : value === bestValue;
   };
 
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${minutes}分${secs}秒`;
-  };
+  const formatDuration = (seconds: number) =>
+    t('providerComparison.table.minutesSeconds', {
+      minutes: Math.floor(seconds / 60),
+      seconds: seconds % 60,
+    });
 
-  const getProviderLabel = (provider: string) => {
-    const labels: Record<string, string> = {
-      playwright: 'Playwright',
-      computer_use: 'Computer Use',
-      hybrid: 'Hybrid',
-    };
-    return labels[provider] || provider;
-  };
+  const getProviderLabel = (provider: string) =>
+    t(`providerComparison.providers.${provider}`, {
+      defaultValue: provider,
+    });
 
   return (
     <div className="overflow-x-auto">
@@ -55,22 +54,22 @@ export const MetricsComparisonTable: React.FC<MetricsComparisonTableProps> = ({
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Provider
+              {t('providerComparison.table.provider')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              总任务数
+              {t('providerComparison.table.totalTasks')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              成功率
+              {t('providerComparison.table.successRate')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              平均耗时
+              {t('providerComparison.table.avgDuration')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              平均成本
+              {t('providerComparison.table.avgCost')}
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              总成本
+              {t('providerComparison.table.totalCost')}
             </th>
           </tr>
         </thead>
@@ -84,7 +83,7 @@ export const MetricsComparisonTable: React.FC<MetricsComparisonTableProps> = ({
                   </span>
                   {metric.provider === 'hybrid' && (
                     <Badge variant="info" size="sm" className="ml-2">
-                      推荐
+                      {t('providerComparison.table.recommendedBadge')}
                     </Badge>
                   )}
                 </div>
@@ -92,7 +91,10 @@ export const MetricsComparisonTable: React.FC<MetricsComparisonTableProps> = ({
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="text-sm text-gray-900">{metric.total_tasks}</div>
                 <div className="text-xs text-gray-500">
-                  成功 {metric.successful_tasks} / 失败 {metric.failed_tasks}
+                  {t('providerComparison.table.successFailure', {
+                    success: metric.successful_tasks,
+                    failed: metric.failed_tasks,
+                  })}
                 </div>
               </td>
               <td className="px-6 py-4 whitespace-nowrap">

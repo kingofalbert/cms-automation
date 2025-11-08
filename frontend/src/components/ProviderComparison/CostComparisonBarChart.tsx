@@ -15,6 +15,7 @@ import {
   Cell,
 } from 'recharts';
 import { ProviderMetrics } from '@/types/analytics';
+import { useTranslation } from 'react-i18next';
 
 export interface CostComparisonBarChartProps {
   metrics: ProviderMetrics[];
@@ -27,10 +28,12 @@ export const CostComparisonBarChart: React.FC<CostComparisonBarChartProps> = ({
   height = 300,
   showTotalCost = false,
 }) => {
+  const { t } = useTranslation();
+
   if (metrics.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-500">
-        暂无数据
+        {t('providerComparison.noData')}
       </div>
     );
   }
@@ -49,14 +52,8 @@ export const CostComparisonBarChart: React.FC<CostComparisonBarChartProps> = ({
     hybrid: '#8b5cf6', // purple
   };
 
-  const getProviderLabel = (provider: string) => {
-    const labels: Record<string, string> = {
-      playwright: 'Playwright',
-      computer_use: 'Computer Use',
-      hybrid: 'Hybrid',
-    };
-    return labels[provider] || provider;
-  };
+  const getProviderLabel = (provider: string) =>
+    t(`providerComparison.providers.${provider}`, { defaultValue: provider });
 
   const formatCost = (value: number) => `$${value.toFixed(3)}`;
   const formatTotalCost = (value: number) => `$${value.toFixed(2)}`;
@@ -85,7 +82,11 @@ export const CostComparisonBarChart: React.FC<CostComparisonBarChartProps> = ({
         />
         <Legend
           wrapperStyle={{ fontSize: '14px' }}
-          formatter={() => showTotalCost ? '总成本' : '平均成本'}
+          formatter={() =>
+            showTotalCost
+              ? t('providerComparison.charts.legend.totalCost')
+              : t('providerComparison.charts.legend.avgCost')
+          }
         />
         <Bar
           dataKey={showTotalCost ? 'totalCost' : 'avgCost'}
