@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 import { Drawer, DrawerFooter, Button, Textarea } from '@/components/ui';
+import { useTranslation } from 'react-i18next';
 import { WorklistStatusBadge } from './WorklistStatusBadge';
 import type {
   WorklistItem,
@@ -51,16 +52,6 @@ const STATUS_ORDER: WorklistStatus[] = [
   'failed',
 ];
 
-const STATUS_LABELS: Record<WorklistStatus, string> = {
-  pending: '待处理',
-  proofreading: '校对中',
-  under_review: '审核中',
-  ready_to_publish: '待发布',
-  publishing: '发布中',
-  published: '已发布',
-  failed: '失败',
-};
-
 const STATUS_TRANSITIONS: Record<WorklistStatus, WorklistStatus[]> = {
   pending: ['proofreading', 'failed'],
   proofreading: ['under_review', 'failed'],
@@ -69,6 +60,16 @@ const STATUS_TRANSITIONS: Record<WorklistStatus, WorklistStatus[]> = {
   publishing: ['published', 'failed'],
   published: [],
   failed: ['pending'],
+};
+
+const STATUS_TRANSLATION_KEYS: Record<WorklistStatus, string> = {
+  pending: 'worklist.status.pending',
+  proofreading: 'worklist.status.proofreading',
+  under_review: 'worklist.status.under_review',
+  ready_to_publish: 'worklist.status.ready_to_publish',
+  publishing: 'worklist.status.publishing',
+  published: 'worklist.status.published',
+  failed: 'worklist.status.failed',
 };
 
 export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
@@ -80,6 +81,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
   onStatusChange,
   onPublish,
 }) => {
+  const { t } = useTranslation();
   const [note, setNote] = useState('');
   const [changingStatus, setChangingStatus] = useState(false);
 
@@ -126,16 +128,22 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
       return null;
     }
     return (
-      <Drawer isOpen={isOpen} onClose={onClose} title="工作清单详情" size="lg" position="right">
+      <Drawer
+        isOpen={isOpen}
+        onClose={onClose}
+        title={t('worklist.drawer.title')}
+        size="lg"
+        position="right"
+      >
         <div className="flex items-center justify-center h-64 text-gray-500">
           <div className="inline-flex flex-col items-center gap-2">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-primary-600" />
-            加载详情中...
+            {t('worklist.drawer.loadingMessage')}
           </div>
         </div>
         <DrawerFooter>
           <Button variant="outline" onClick={onClose}>
-            关闭
+            {t('common.close')}
           </Button>
         </DrawerFooter>
       </Drawer>
@@ -148,6 +156,8 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
   const driveMetadata = detail?.drive_metadata ?? {};
   const wordCount =
     typeof metadata?.word_count === 'number' ? metadata.word_count : undefined;
+  const formattedWordCount =
+    typeof wordCount === 'number' ? wordCount.toLocaleString() : undefined;
   const readingTime =
     typeof metadata?.estimated_reading_time === 'number'
       ? metadata.estimated_reading_time
@@ -168,7 +178,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title="工作清单详情"
+      title={t('worklist.drawer.title')}
       size="lg"
       position="right"
     >
@@ -187,9 +197,11 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
           <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-red-800">自动流程失败</p>
+              <p className="text-sm font-medium text-red-800">
+                {t('worklist.drawer.failureTitle')}
+              </p>
               <p className="text-sm text-red-700">
-                请检查错误详情后重新尝试同步或触发校对。
+                {t('worklist.drawer.failureDescription')}
               </p>
             </div>
           </div>
@@ -198,20 +210,35 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center text-sm text-gray-600">
             <User className="w-4 h-4 mr-2" />
-            <span>作者: {data.author || '未知作者'}</span>
+            <span>
+              {t('worklist.drawer.authorLabel')}:{' '}
+              {data.author || t('worklist.table.columns.unknownAuthor')}
+            </span>
           </div>
           <div className="flex items-center text-sm text-gray-600">
             <FileText className="w-4 h-4 mr-2" />
-            <span>{wordCount ? `${wordCount.toLocaleString()} 字` : '字数未知'}</span>
+            <span>
+              {t('worklist.drawer.wordCountLabel')}:{' '}
+              {formattedWordCount !== undefined
+                ? `${formattedWordCount} ${t('worklist.drawer.wordCountUnit')}`
+                : t('worklist.drawer.wordCountUnknown')}
+            </span>
           </div>
           <div className="flex items-center text-sm text-gray-600">
             <Clock className="w-4 h-4 mr-2" />
-            <span>{readingTime ? `${readingTime} 分钟阅读` : '阅读时间未知'}</span>
+            <span>
+              {t('worklist.drawer.readingTimeLabel')}:{' '}
+              {readingTime !== undefined
+                ? t('worklist.table.wordStats.readingTime', { minutes: readingTime })
+                : t('worklist.drawer.readingTimeUnknown')}
+            </span>
           </div>
           {qualityScore !== undefined && (
             <div className="flex items-center text-sm text-gray-600">
               <CheckCircle className="w-4 h-4 mr-2" />
-              <span>质量分数: {qualityScore.toFixed(0)}/100</span>
+              <span>
+                {t('worklist.drawer.qualityScoreLabel')}: {qualityScore.toFixed(0)}/100
+              </span>
             </div>
           )}
         </div>
@@ -255,27 +282,33 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
         )}
 
         <div className="bg-gray-50 rounded-lg p-4">
-          <h3 className="font-medium text-gray-900 mb-3">时间线</h3>
+          <h3 className="font-medium text-gray-900 mb-3">
+            {t('worklist.drawer.timelineTitle')}
+          </h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">创建时间:</span>
+              <span className="text-gray-600">{t('worklist.drawer.createdAt')}:</span>
               <span className="text-gray-900">{formatDate(data.created_at)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">更新时间:</span>
+              <span className="text-gray-600">{t('worklist.drawer.updatedAt')}:</span>
               <span className="text-gray-900">{formatDate(data.updated_at)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">最后同步:</span>
+              <span className="text-gray-600">{t('worklist.drawer.lastSynced')}:</span>
               <span className="text-gray-900">{formatDate(lastSyncedAt)}</span>
             </div>
           </div>
         </div>
 
         <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="font-medium text-gray-900 mb-3">状态历史</h3>
+          <h3 className="font-medium text-gray-900 mb-3">
+            {t('worklist.drawer.statusHistoryTitle')}
+          </h3>
           {statusHistory.length === 0 ? (
-            <p className="text-sm text-gray-500">暂无状态变化记录</p>
+            <p className="text-sm text-gray-500">
+              {t('worklist.drawer.noStatusHistory')}
+            </p>
           ) : (
             <div className="space-y-3 text-sm">
               {statusHistory.map((entry, idx) => (
@@ -292,7 +325,9 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
                   <div className="text-right text-gray-500">
                     <p>{formatDate(entry.created_at)}</p>
                     {entry.changed_by && (
-                      <p className="text-xs mt-1">由 {entry.changed_by}</p>
+                      <p className="text-xs mt-1">
+                        {t('worklist.drawer.changedBy', { name: entry.changed_by })}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -302,7 +337,9 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
         </div>
 
         <div>
-          <h3 className="font-medium text-gray-900 mb-2">内容预览</h3>
+          <h3 className="font-medium text-gray-900 mb-2">
+            {t('worklist.drawer.contentPreviewTitle')}
+          </h3>
           <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800 whitespace-pre-line max-h-64 overflow-y-auto">
             {contentPreview
               ? `${contentPreview}${
@@ -310,7 +347,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
                     ? '…'
                     : ''
                 }`
-              : '暂无内容'}
+              : t('worklist.drawer.noContent')}
           </div>
         </div>
 
@@ -323,11 +360,11 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
               className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700"
             >
               <ExternalLink className="w-4 h-4 mr-2" />
-              在 Google Drive 中打开
+              {t('worklist.drawer.openInDrive')}
             </a>
           ) : (
             <span className="text-sm text-gray-500">
-              文件 ID: {data.drive_file_id}
+              {t('worklist.drawer.fileId', { id: data.drive_file_id })}
             </span>
           )}
           {data.article_id && resolvedStatus === 'under_review' && (
@@ -336,19 +373,22 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
               className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium"
             >
               <ClipboardCheck className="w-4 h-4 mr-1" />
-              开始审核 →
+              {t('worklist.drawer.startReview')}
             </Link>
           )}
         </div>
 
         {data.notes && data.notes.length > 0 && (
           <div>
-            <h3 className="font-medium text-gray-900 mb-3">备注历史</h3>
+            <h3 className="font-medium text-gray-900 mb-3">
+              {t('worklist.drawer.notesTitle')}
+            </h3>
             <div className="space-y-3 max-h-60 overflow-y-auto">
               {data.notes.map((entry, index) => {
                 const noteId = (entry.id ?? `${data.id}-note-${index}`) as string;
                 const message = (entry.message ?? entry.content ?? '') as string;
-                const author = (entry.author ?? '未知作者') as string;
+                const author = (entry.author ??
+                  t('worklist.table.columns.unknownAuthor')) as string;
                 const resolved = Boolean(entry.resolved);
                 const timestamp =
                   (typeof entry.created_at === 'string' ? entry.created_at : undefined) ??
@@ -365,12 +405,12 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
                       <span className="text-xs text-gray-500">{formatDate(timestamp)}</span>
                     </div>
                     <p className="text-sm text-gray-700 whitespace-pre-line">
-                      {message || '（无备注内容）'}
+                      {message || t('worklist.drawer.noNoteContent')}
                     </p>
                     {resolved && (
                       <span className="inline-flex items-center text-xs text-green-600 mt-1">
                         <CheckCircle className="w-3 h-3 mr-1" />
-                        已解决
+                        {t('worklist.drawer.resolved')}
                       </span>
                     )}
                   </div>
@@ -382,11 +422,13 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
 
         {nextStatuses.length > 0 && (
           <div className="border-t border-gray-200 pt-4">
-            <h3 className="font-medium text-gray-900 mb-3">状态变更</h3>
+            <h3 className="font-medium text-gray-900 mb-3">
+              {t('worklist.drawer.statusChangeTitle')}
+            </h3>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="添加备注 (可选)"
+              placeholder={t('worklist.drawer.notePlaceholder')}
               rows={3}
               className="mb-3"
             />
@@ -399,7 +441,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
                   disabled={changingStatus}
                 >
                   <Send className="w-4 h-4 mr-2" />
-                  变更为: {STATUS_LABELS[status]}
+                  {t('worklist.drawer.changeTo')}: {t(STATUS_TRANSLATION_KEYS[status])}
                 </Button>
               ))}
             </div>
@@ -410,7 +452,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
           <div className="border-t border-gray-200 pt-4">
             <Button variant="primary" onClick={handlePublish} fullWidth>
               <Send className="w-4 h-4 mr-2" />
-              发布到 WordPress
+              {t('worklist.drawer.publish')}
             </Button>
           </div>
         )}
@@ -419,13 +461,13 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
       <DrawerFooter>
         <div className="flex items-center justify-between w-full">
           <Button variant="outline" onClick={onClose}>
-            关闭
+            {t('common.close')}
           </Button>
           {data.article_id && resolvedStatus === 'under_review' && (
             <Link to={`/worklist/${data.id}/review`}>
               <Button variant="primary">
                 <ClipboardCheck className="w-4 h-4 mr-2" />
-                开始审核
+                {t('worklist.drawer.startReview')}
               </Button>
             </Link>
           )}

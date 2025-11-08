@@ -8,6 +8,7 @@ import { Card, Input, Button } from '@/components/ui';
 import { CheckCircle, Eye, EyeOff, XCircle } from 'lucide-react';
 import { Controller, useFormContext } from 'react-hook-form';
 import type { SettingsFormValues } from '@/schemas/settings-schema';
+import { useTranslation } from 'react-i18next';
 
 export interface CMSConfigSectionProps {
   onTestConnection?: (payload: SettingsFormValues['cms_config']) => Promise<boolean>;
@@ -16,6 +17,7 @@ export interface CMSConfigSectionProps {
 export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
   onTestConnection,
 }) => {
+  const { t } = useTranslation();
   const {
     register,
     control,
@@ -54,12 +56,14 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">WordPress 连接配置</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        {t('settings.cms.title')}
+      </h2>
 
       <div className="space-y-4">
         <Input
           type="url"
-          label="WordPress URL"
+          label={t('settings.cms.wordpressUrl')}
           placeholder="https://example.com"
           required
           error={errors.cms_config?.wordpress_url?.message as string | undefined}
@@ -68,7 +72,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
 
         <Input
           type="text"
-          label="用户名"
+          label={t('settings.cms.username')}
           required
           error={errors.cms_config?.username?.message as string | undefined}
           {...register('cms_config.username')}
@@ -77,7 +81,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
         <div className="relative">
           <Input
             type={showPassword ? 'text' : 'password'}
-            label="密码"
+            label={t('settings.cms.password')}
             required
             error={errors.cms_config?.password?.message as string | undefined}
             {...register('cms_config.password')}
@@ -104,7 +108,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
                 onChange={(event) => field.onChange(event.target.checked)}
               />
               <label htmlFor="verify-ssl" className="ml-2 text-sm text-gray-700">
-                验证 SSL 证书
+                {t('settings.cms.verifySsl')}
               </label>
             </div>
           )}
@@ -112,7 +116,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
 
         <Input
           type="number"
-          label="超时时间 (毫秒)"
+          label={t('settings.cms.timeoutLabel')}
           min={1000}
           max={120000}
           error={errors.cms_config?.timeout?.message as string | undefined}
@@ -121,7 +125,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
 
         <Input
           type="number"
-          label="最大重试次数"
+          label={t('settings.cms.retriesLabel')}
           min={0}
           max={5}
           error={errors.cms_config?.max_retries?.message as string | undefined}
@@ -140,7 +144,7 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
             }
             className="w-full"
           >
-            {testing ? '测试中...' : '测试连接'}
+            {testing ? t('settings.cms.testing') : t('settings.cms.testButton')}
           </Button>
 
           {testResult && (
@@ -154,14 +158,14 @@ export const CMSConfigSection: React.FC<CMSConfigSectionProps> = ({
               {testResult === 'success' ? (
                 <>
                   <CheckCircle className="mr-2 h-5 w-5 text-green-600" />
-                  <span className="text-sm text-green-700">连接成功！WordPress 配置正确。</span>
+                  <span className="text-sm text-green-700">
+                    {t('settings.cms.testSuccess')}
+                  </span>
                 </>
               ) : (
                 <>
                   <XCircle className="mr-2 h-5 w-5 text-red-600" />
-                  <span className="text-sm text-red-700">
-                    连接失败。请检查 URL、用户名和密码是否正确。
-                  </span>
+                  <span className="text-sm text-red-700">{t('settings.cms.testFailed')}</span>
                 </>
               )}
             </div>

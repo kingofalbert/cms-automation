@@ -9,6 +9,7 @@ import { WorklistStatusBadge } from './WorklistStatusBadge';
 import { format } from 'date-fns';
 import { FileText, User, Calendar, RefreshCw, ClipboardCheck } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { useTranslation } from 'react-i18next';
 
 export interface WorklistTableProps {
   items: WorklistItem[];
@@ -26,6 +27,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
   isSyncing,
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const safeNumber = (value: unknown): number | null => {
     if (typeof value === 'number' && !Number.isNaN(value)) {
@@ -59,7 +61,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
     return (
       <div className="text-center py-12">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-primary-600" />
-        <p className="mt-2 text-gray-500">加载中...</p>
+        <p className="mt-2 text-gray-500">{t('common.loading')}</p>
       </div>
     );
   }
@@ -68,7 +70,8 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
     return (
       <div className="text-center py-12">
         <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-        <p className="text-gray-500">暂无工作清单项</p>
+        <p className="text-gray-500">{t('worklist.table.emptyTitle')}</p>
+        <p className="text-sm text-gray-500 mt-1">{t('worklist.table.emptyDescription')}</p>
         {onSync && (
           <button
             onClick={onSync}
@@ -78,7 +81,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
             <RefreshCw
               className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`}
             />
-            {isSyncing ? '同步中...' : '从 Google Drive 同步'}
+            {isSyncing ? t('worklist.table.syncing') : t('worklist.table.syncNow')}
           </button>
         )}
       </div>
@@ -128,7 +131,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
             <RefreshCw
               className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`}
             />
-            {isSyncing ? '同步中...' : '同步 Google Drive'}
+            {isSyncing ? t('worklist.table.syncing') : t('worklist.table.syncNow')}
           </button>
         </div>
       )}
@@ -139,25 +142,25 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                标题
+                {t('worklist.table.columns.title')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                状态
+                {t('worklist.table.columns.status')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                作者
+                {t('worklist.table.columns.author')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                字数
+                {t('worklist.table.columns.wordCount')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                质量分数
+                {t('worklist.table.columns.quality')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                更新时间
+                {t('worklist.table.columns.updatedAt')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                操作
+                {t('worklist.table.columns.actions')}
               </th>
             </tr>
           </thead>
@@ -195,7 +198,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center text-sm text-gray-900">
                       <User className="w-4 h-4 text-gray-400 mr-2" />
-                      {item.author || '未知作者'}
+                      {item.author || t('worklist.table.columns.unknownAuthor')}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -203,7 +206,9 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                       {wordCount !== null ? wordCount.toLocaleString() : '—'}
                     </div>
                     <div className="text-xs text-gray-500">
-                      {readingTime !== null ? `${readingTime} 分钟` : '—'}
+                      {readingTime !== null
+                        ? t('worklist.table.wordStats.readingTime', { minutes: readingTime })
+                        : '—'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -220,10 +225,14 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                         >
                           {qualityScore.toFixed(0)}
                         </span>
-                        <span className="text-xs text-gray-500 ml-1">/ 100</span>
+                        <span className="text-xs text-gray-500 ml-1">
+                          {t('worklist.table.quality.outOf', { score: 100 })}
+                        </span>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">未评分</span>
+                      <span className="text-sm text-gray-400">
+                        {t('worklist.table.quality.unrated')}
+                      </span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -243,7 +252,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                         }}
                       >
                         <ClipboardCheck className="mr-2 h-4 w-4" />
-                        审核
+                        {t('worklist.table.actions.review')}
                       </Button>
                     )}
                   </td>

@@ -7,6 +7,7 @@ import { Card, Input } from '@/components/ui';
 import { Camera, HardDrive } from 'lucide-react';
 import { Controller, useFormContext } from 'react-hook-form';
 import type { SettingsFormValues } from '@/schemas/settings-schema';
+import { useTranslation } from 'react-i18next';
 
 export interface ScreenshotRetentionSectionProps {
   estimatedStorageUsage?: number;
@@ -15,6 +16,7 @@ export interface ScreenshotRetentionSectionProps {
 export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProps> = ({
   estimatedStorageUsage = 0,
 }) => {
+  const { t } = useTranslation();
   const {
     register,
     control,
@@ -36,7 +38,7 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
     <Card className="p-6">
       <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
         <Camera className="w-6 h-6 mr-2" />
-        截图保留策略
+        {t('settings.screenshot.title')}
       </h2>
 
       <div className="space-y-6">
@@ -45,8 +47,12 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
             <div className="flex items-center">
               <HardDrive className="w-5 h-5 text-gray-500 mr-2" />
               <div>
-                <p className="text-sm font-medium text-gray-700">当前存储使用</p>
-                <p className="text-xs text-gray-500">所有截图占用的存储空间</p>
+                <p className="text-sm font-medium text-gray-700">
+                  {t('settings.screenshot.usageTitle')}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {t('settings.screenshot.usageDescription')}
+                </p>
               </div>
             </div>
             <div className="text-right">
@@ -60,20 +66,20 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
         <div className="space-y-4">
           <Input
             type="number"
-            label="保留天数"
+            label={t('settings.screenshot.retentionDaysLabel')}
             min={1}
             max={365}
-            helperText="超过此天数的截图将被自动删除"
+            helperText={t('settings.screenshot.retentionDaysHelper')}
             error={retentionErrors?.retention_days?.message as string | undefined}
             {...register('screenshot_retention.retention_days', { valueAsNumber: true })}
           />
 
           <Input
             type="number"
-            label="每任务最大截图数"
+            label={t('settings.screenshot.maxPerTaskLabel')}
             min={1}
             max={100}
-            helperText="单个任务保留的最大截图数量"
+            helperText={t('settings.screenshot.maxPerTaskHelper')}
             error={
               retentionErrors?.max_screenshots_per_task?.message as string | undefined
             }
@@ -95,7 +101,7 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
                   onChange={(event) => field.onChange(event.target.checked)}
                 />
                 <label htmlFor="compress-screenshots" className="ml-2 text-sm text-gray-700">
-                  压缩截图 (节省存储空间)
+                  {t('settings.screenshot.compressToggle')}
                 </label>
               </div>
             )}
@@ -104,11 +110,11 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
           {retention.compress_screenshots && (
             <Input
               type="number"
-              label="压缩质量 (%)"
+              label={t('settings.screenshot.qualityLabel')}
               min={10}
               max={100}
               step={10}
-              helperText="质量越高，文件越大。推荐 70-80"
+              helperText={t('settings.screenshot.qualityHelper')}
               error={
                 retentionErrors?.compression_quality?.message as string | undefined
               }
@@ -119,7 +125,9 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
           )}
 
           <div className="border-t border-gray-200 pt-4">
-            <p className="text-sm font-medium text-gray-700 mb-3">自动删除策略</p>
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              {t('settings.screenshot.policyTitle')}
+            </p>
 
             <Controller
               name="screenshot_retention.delete_on_success"
@@ -134,7 +142,7 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="delete-on-success" className="text-sm text-gray-700">
-                    任务成功后删除截图
+                    {t('settings.screenshot.deleteOnSuccess')}
                   </label>
                 </div>
               )}
@@ -153,14 +161,14 @@ export const ScreenshotRetentionSection: React.FC<ScreenshotRetentionSectionProp
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="delete-on-failure" className="text-sm text-gray-700">
-                    任务失败后删除截图
+                    {t('settings.screenshot.deleteOnFailure')}
                   </label>
                 </div>
               )}
             />
 
             <p className="mt-2 ml-6 text-xs text-gray-500">
-              注意：保留失败任务的截图有助于问题排查
+              {t('settings.screenshot.failureNote')}
             </p>
           </div>
         </div>

@@ -8,6 +8,7 @@ import { PublishTask } from '@/types/publishing';
 import { CurrentStepDisplay } from '../Publishing/CurrentStepDisplay';
 import { ScreenshotGallery } from '../Publishing/ScreenshotGallery';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 export interface TaskDetailDrawerProps {
   isOpen: boolean;
@@ -22,43 +23,55 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
   task,
   onRetry,
 }) => {
+  const { t } = useTranslation();
   if (!task) {
     return null;
   }
 
   const duration = task.duration
-    ? `${Math.floor(task.duration / 60)}分${task.duration % 60}秒`
-    : '进行中';
+    ? t('publishTasks.detail.durationValue', {
+        minutes: Math.floor(task.duration / 60),
+        seconds: (task.duration % 60).toString().padStart(2, '0'),
+      })
+    : t('publishTasks.detail.durationInProgress');
 
   return (
     <Drawer
       isOpen={isOpen}
       onClose={onClose}
-      title="任务详情"
+      title={t('publishTasks.detail.drawerTitle')}
       size="lg"
       position="right"
     >
       <div className="space-y-6">
         {/* Article Info */}
         <div>
-          <h3 className="font-semibold text-gray-900 mb-2">文章信息</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">
+            {t('publishTasks.detail.articleInfo')}
+          </h3>
           <div className="bg-gray-50 rounded-lg p-4 space-y-2">
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">标题:</span>
+              <span className="text-sm text-gray-600">
+                {t('publishTasks.detail.articleTitle')}:
+              </span>
               <span className="text-sm font-medium text-gray-900 max-w-xs truncate">
                 {task.article_title}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">任务 ID:</span>
+              <span className="text-sm text-gray-600">
+                {t('publishTasks.detail.taskId')}:
+              </span>
               <span className="text-sm text-gray-900 font-mono">
                 {task.id.substring(0, 8)}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-gray-600">Provider:</span>
+              <span className="text-sm text-gray-600">
+                {t('publishTasks.detail.provider')}:
+              </span>
               <span className="text-sm text-gray-900 capitalize">
-                {task.provider}
+                {t(`publishTasks.filters.providerOptions.${task.provider}` as const)}
               </span>
             </div>
           </div>
@@ -66,7 +79,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
         {/* Status */}
         <div>
-          <h3 className="font-semibold text-gray-900 mb-2">执行状态</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">
+            {t('publishTasks.detail.executionStatus')}
+          </h3>
           <CurrentStepDisplay
             status={task.status}
             currentStep={task.current_step}
@@ -77,21 +92,29 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
         {/* Metrics */}
         <div>
-          <h3 className="font-semibold text-gray-900 mb-2">执行指标</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">
+            {t('publishTasks.detail.metrics')}
+          </h3>
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-xs text-gray-500 mb-1">进度</p>
+              <p className="text-xs text-gray-500 mb-1">
+                {t('publishTasks.detail.progress')}
+              </p>
               <p className="text-xl font-bold text-primary-600">
                 {task.progress}%
               </p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
-              <p className="text-xs text-gray-500 mb-1">耗时</p>
+              <p className="text-xs text-gray-500 mb-1">
+                {t('publishTasks.detail.duration')}
+              </p>
               <p className="text-xl font-bold text-gray-900">{duration}</p>
             </div>
             {task.cost !== undefined && (
               <div className="bg-gray-50 rounded-lg p-3 text-center">
-                <p className="text-xs text-gray-500 mb-1">成本</p>
+                <p className="text-xs text-gray-500 mb-1">
+                  {t('publishTasks.detail.cost')}
+                </p>
                 <p className="text-xl font-bold text-green-600">
                   ${task.cost.toFixed(3)}
                 </p>
@@ -102,17 +125,23 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
 
         {/* Timeline */}
         <div>
-          <h3 className="font-semibold text-gray-900 mb-2">时间线</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">
+            {t('publishTasks.detail.timeline')}
+          </h3>
           <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">开始时间:</span>
+              <span className="text-gray-600">
+                {t('publishTasks.detail.startedAt')}:
+              </span>
               <span className="text-gray-900">
                 {format(new Date(task.started_at), 'yyyy-MM-dd HH:mm:ss')}
               </span>
             </div>
             {task.completed_at && (
               <div className="flex justify-between">
-                <span className="text-gray-600">完成时间:</span>
+                <span className="text-gray-600">
+                  {t('publishTasks.detail.completedAt')}:
+                </span>
                 <span className="text-gray-900">
                   {format(new Date(task.completed_at), 'yyyy-MM-dd HH:mm:ss')}
                 </span>
@@ -124,7 +153,9 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {/* Error Message */}
         {task.status === 'failed' && task.error_message && (
           <div>
-            <h3 className="font-semibold text-gray-900 mb-2">错误信息</h3>
+            <h3 className="font-semibold text-gray-900 mb-2">
+              {t('publishTasks.detail.error')}
+            </h3>
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <p className="text-sm text-red-700">{task.error_message}</p>
             </div>
@@ -135,7 +166,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
         {task.screenshots.length > 0 && (
           <div>
             <h3 className="font-semibold text-gray-900 mb-2">
-              执行截图 ({task.screenshots.length})
+              {t('publishTasks.detail.screenshots', { count: task.screenshots.length })}
             </h3>
             <ScreenshotGallery screenshots={task.screenshots} />
           </div>
@@ -145,11 +176,11 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
       {/* Footer */}
       <DrawerFooter>
         <Button variant="outline" onClick={onClose}>
-          关闭
+          {t('publishTasks.detail.close')}
         </Button>
         {task.status === 'failed' && onRetry && (
           <Button variant="primary" onClick={() => onRetry(task.id)}>
-            重试
+            {t('publishTasks.detail.retry')}
           </Button>
         )}
       </DrawerFooter>

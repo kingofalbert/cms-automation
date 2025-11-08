@@ -3,13 +3,13 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 
 // Import language resources
-import zhCN from './locales/zh-CN.json';
+import zhTW from './locales/zh-TW.json';
 import enUS from './locales/en-US.json';
 
 // Language resources
 const resources = {
-  'zh-CN': {
-    translation: zhCN,
+  'zh-TW': {
+    translation: zhTW,
   },
   'en-US': {
     translation: enUS,
@@ -22,7 +22,7 @@ i18n
   .use(initReactI18next) // Pass i18n instance to react-i18next
   .init({
     resources,
-    fallbackLng: 'zh-CN', // Default language
+    fallbackLng: 'zh-TW', // Default language
     debug: import.meta.env.DEV, // Enable debug in development
 
     // Language detection options
@@ -48,7 +48,7 @@ export default i18n;
 
 // Export supported languages
 export const SUPPORTED_LANGUAGES = [
-  { code: 'zh-CN', name: '简体中文', nativeName: '简体中文' },
+  { code: 'zh-TW', name: 'Traditional Chinese', nativeName: '繁體中文' },
   { code: 'en-US', name: 'English', nativeName: 'English' },
 ] as const;
 

@@ -5,6 +5,7 @@
 
 import { PublishStatus } from '@/types/publishing';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
 
 export interface CurrentStepDisplayProps {
   status: PublishStatus;
@@ -14,17 +15,17 @@ export interface CurrentStepDisplayProps {
   className?: string;
 }
 
-const STEP_INFO: Record<PublishStatus, { icon: string; label: string; color: string }> = {
-  idle: { icon: '⏸️', label: '待发布', color: 'text-gray-600' },
-  pending: { icon: '⏳', label: '等待中', color: 'text-gray-600' },
-  initializing: { icon: '🔧', label: '初始化', color: 'text-blue-600' },
-  logging_in: { icon: '🔑', label: '登录中', color: 'text-blue-600' },
-  creating_post: { icon: '✍️', label: '创建文章', color: 'text-blue-600' },
-  uploading_images: { icon: '🖼️', label: '上传图片', color: 'text-blue-600' },
-  configuring_seo: { icon: '🔍', label: '配置 SEO', color: 'text-blue-600' },
-  publishing: { icon: '🚀', label: '发布中', color: 'text-blue-600' },
-  completed: { icon: '✅', label: '完成', color: 'text-green-600' },
-  failed: { icon: '❌', label: '失败', color: 'text-red-600' },
+const STEP_INFO: Record<PublishStatus, { icon: string; color: string }> = {
+  idle: { icon: '⏸️', color: 'text-gray-600' },
+  pending: { icon: '⏳', color: 'text-gray-600' },
+  initializing: { icon: '🔧', color: 'text-blue-600' },
+  logging_in: { icon: '🔑', color: 'text-blue-600' },
+  creating_post: { icon: '✍️', color: 'text-blue-600' },
+  uploading_images: { icon: '🖼️', color: 'text-blue-600' },
+  configuring_seo: { icon: '🔍', color: 'text-blue-600' },
+  publishing: { icon: '🚀', color: 'text-blue-600' },
+  completed: { icon: '✅', color: 'text-green-600' },
+  failed: { icon: '❌', color: 'text-red-600' },
 };
 
 export const CurrentStepDisplay: React.FC<CurrentStepDisplayProps> = ({
@@ -34,6 +35,7 @@ export const CurrentStepDisplay: React.FC<CurrentStepDisplayProps> = ({
   totalSteps,
   className,
 }) => {
+  const { t } = useTranslation();
   const stepInfo = STEP_INFO[status];
   const progressPercent = totalSteps > 0 ? (completedSteps / totalSteps) * 100 : 0;
 
@@ -45,10 +47,13 @@ export const CurrentStepDisplay: React.FC<CurrentStepDisplayProps> = ({
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1">
             <h4 className={clsx('font-semibold text-lg', stepInfo.color)}>
-              {stepInfo.label}
+              {t(`publishTasks.statusLabels.${status}` as const)}
             </h4>
             <span className="text-sm text-gray-500">
-              {completedSteps}/{totalSteps} 步骤
+              {t('publishTasks.currentStep.steps', {
+                completed: completedSteps,
+                total: totalSteps,
+              })}
             </span>
           </div>
           <p className="text-sm text-gray-600">{currentStep}</p>
@@ -72,7 +77,7 @@ export const CurrentStepDisplay: React.FC<CurrentStepDisplayProps> = ({
             />
           </div>
           <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>进度</span>
+            <span>{t('publishTasks.currentStep.progressLabel')}</span>
             <span>{Math.round(progressPercent)}%</span>
           </div>
         </div>
@@ -93,7 +98,9 @@ export const CurrentStepDisplay: React.FC<CurrentStepDisplayProps> = ({
                 clipRule="evenodd"
               />
             </svg>
-            <span className="text-sm font-medium">文章已成功发布！</span>
+            <span className="text-sm font-medium">
+              {t('publishTasks.currentStep.completed')}
+            </span>
           </div>
         </div>
       )}
@@ -112,7 +119,9 @@ export const CurrentStepDisplay: React.FC<CurrentStepDisplayProps> = ({
                 clipRule="evenodd"
               />
             </svg>
-            <span className="text-sm font-medium">发布失败，请重试</span>
+            <span className="text-sm font-medium">
+              {t('publishTasks.currentStep.failed')}
+            </span>
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@
 import { Modal, ModalFooter, Button } from '@/components/ui';
 import { ProviderType, PublishOptions } from '@/types/publishing';
 import { Article } from '@/types/article';
+import { useTranslation } from 'react-i18next';
 
 export interface PublishConfirmationDialogProps {
   isOpen: boolean;
@@ -28,40 +29,64 @@ export const PublishConfirmationDialog: React.FC<
   options,
   isPublishing = false,
 }) => {
-  const getProviderName = (type: ProviderType): string => {
-    const names: Record<ProviderType, string> = {
-      playwright: 'Playwright',
-      computer_use: 'Computer Use',
-      hybrid: 'Hybrid (智能降级)',
-    };
-    return names[type];
-  };
-
-  const estimatedTime = provider === 'playwright' ? '45 秒' : provider === 'computer_use' ? '2 分钟' : '50 秒';
-  const estimatedCost = provider === 'playwright' ? '$0.02' : provider === 'computer_use' ? '$0.20' : '$0.04';
+  const { t } = useTranslation();
+  const providerName = t(`publishing.providerSelector.providers.${provider}.name`, {
+    defaultValue: provider,
+  });
+  const estimatedTimeSeconds =
+    provider === 'playwright'
+      ? 45
+      : provider === 'computer_use'
+      ? 120
+      : 50;
+  const estimatedTime = t('publishing.providerSelector.durationFormat', {
+    minutes: Math.floor(estimatedTimeSeconds / 60),
+    seconds: (estimatedTimeSeconds % 60).toString().padStart(2, '0'),
+  });
+  const estimatedCost =
+    provider === 'playwright'
+      ? '$0.02'
+      : provider === 'computer_use'
+      ? '$0.20'
+      : '$0.04';
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="确认发布" size="md">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('publishing.confirmation.title')}
+      size="md"
+    >
       <div className="space-y-4">
         {/* Article Info */}
         <div className="bg-gray-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-2">文章信息</h4>
+          <h4 className="font-semibold text-gray-900 mb-2">
+            {t('publishing.confirmation.articleInfo')}
+          </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">标题:</span>
+              <span className="text-gray-600">
+                {t('publishing.confirmation.fields.title')}:
+              </span>
               <span className="text-gray-900 font-medium max-w-xs truncate">
                 {article.title}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">字数:</span>
+              <span className="text-gray-600">
+                {t('publishing.confirmation.fields.wordCount')}:
+              </span>
               <span className="text-gray-900">
-                ~{Math.floor(article.content.length / 2)} 字
+                {t('publishing.confirmation.wordCountValue', {
+                  count: Math.floor(article.content.length / 2),
+                })}
               </span>
             </div>
             {article.seo_metadata?.meta_title && (
               <div className="flex justify-between">
-                <span className="text-gray-600">Meta Title:</span>
+                <span className="text-gray-600">
+                  {t('publishing.confirmation.fields.metaTitle')}:
+                </span>
                 <span className="text-gray-900 text-xs max-w-xs truncate">
                   {article.seo_metadata.meta_title}
                 </span>
@@ -72,26 +97,38 @@ export const PublishConfirmationDialog: React.FC<
 
         {/* Provider Info */}
         <div className="bg-blue-50 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-900 mb-2">发布设置</h4>
+          <h4 className="font-semibold text-gray-900 mb-2">
+            {t('publishing.confirmation.publishSettings')}
+          </h4>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-600">Provider:</span>
+              <span className="text-gray-600">
+                {t('publishing.confirmation.fields.provider')}:
+              </span>
               <span className="text-gray-900 font-medium">
-                {getProviderName(provider)}
+                {providerName}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">预计时长:</span>
+              <span className="text-gray-600">
+                {t('publishing.confirmation.fields.estimatedTime')}:
+              </span>
               <span className="text-gray-900">{estimatedTime}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">预计成本:</span>
+              <span className="text-gray-600">
+                {t('publishing.confirmation.fields.estimatedCost')}:
+              </span>
               <span className="text-gray-900">{estimatedCost}</span>
             </div>
             {options?.publish_immediately !== false && (
               <div className="flex justify-between">
-                <span className="text-gray-600">发布方式:</span>
-                <span className="text-green-600 font-medium">立即发布</span>
+                <span className="text-gray-600">
+                  {t('publishing.confirmation.fields.publishMode')}:
+                </span>
+                <span className="text-green-600 font-medium">
+                  {t('publishing.confirmation.fields.publishImmediately')}
+                </span>
               </div>
             )}
           </div>
@@ -116,7 +153,8 @@ export const PublishConfirmationDialog: React.FC<
                   />
                 </svg>
                 <span className="text-sm text-gray-600">
-                  分类: {options.categories.join(', ')}
+                  {t('publishing.confirmation.fields.categories')}:{' '}
+                  {options.categories.join(', ')}
                 </span>
               </div>
             )}
@@ -136,7 +174,8 @@ export const PublishConfirmationDialog: React.FC<
                   />
                 </svg>
                 <span className="text-sm text-gray-600">
-                  标签: {options.tags.join(', ')}
+                  {t('publishing.confirmation.fields.tags')}:{' '}
+                  {options.tags.join(', ')}
                 </span>
               </div>
             )}
@@ -154,7 +193,7 @@ export const PublishConfirmationDialog: React.FC<
                   />
                 </svg>
                 <span className="text-sm text-green-600 font-medium">
-                  已启用 SEO 优化
+                  {t('publishing.confirmation.fields.seoEnabled')}
                 </span>
               </div>
             )}
@@ -176,7 +215,7 @@ export const PublishConfirmationDialog: React.FC<
               />
             </svg>
             <p className="text-sm text-yellow-800">
-              发布后文章将直接上线到 WordPress 网站。请确认内容无误后再继续。
+              {t('publishing.confirmation.warning')}
             </p>
           </div>
         </div>
@@ -185,7 +224,7 @@ export const PublishConfirmationDialog: React.FC<
       {/* Footer */}
       <ModalFooter>
         <Button variant="outline" onClick={onClose} disabled={isPublishing}>
-          取消
+          {t('publishing.actions.cancel')}
         </Button>
         <Button
           variant="primary"
@@ -193,7 +232,9 @@ export const PublishConfirmationDialog: React.FC<
           disabled={isPublishing}
           isLoading={isPublishing}
         >
-          {isPublishing ? '发布中...' : '确认发布'}
+          {isPublishing
+            ? t('publishing.actions.publishing')
+            : t('publishing.actions.confirm')}
         </Button>
       </ModalFooter>
     </Modal>

@@ -12,6 +12,7 @@ import { PublishConfirmationDialog } from './PublishConfirmationDialog';
 import { PublishProgressModal } from './PublishProgressModal';
 import { ProviderType, PublishTask, PublishRequest, PublishResult } from '@/types/publishing';
 import type { Article } from '@/types/article';
+import { useTranslation } from 'react-i18next';
 
 export interface PublishButtonProps {
   article: Article;
@@ -28,6 +29,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
   onError,
   className,
 }) => {
+  const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<ProviderType>('hybrid');
   const [showProviderDialog, setShowProviderDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
@@ -54,7 +56,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
     },
     onError: (error) => {
       const message = error.response?.data?.message ?? error.message;
-      alert(`发布失败: ${message}`);
+      alert(t('publishing.messages.publishFailed', { message }));
       onError?.(error);
     },
   });
@@ -148,7 +150,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
             d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
           />
         </svg>
-        发布到 WordPress
+        {t('publishing.actions.publishToWordPress')}
       </Button>
 
       {/* Provider Selection Dialog */}
@@ -157,7 +159,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-2xl font-bold text-gray-900">
-                选择发布 Provider
+                {t('publishing.providerDialog.title')}
               </h2>
               <button
                 type="button"
@@ -190,10 +192,10 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
                 variant="outline"
                 onClick={() => setShowProviderDialog(false)}
               >
-                取消
+                {t('publishing.actions.cancel')}
               </Button>
               <Button variant="primary" onClick={handleProviderSelected}>
-                下一步
+                {t('publishing.actions.next')}
               </Button>
             </div>
           </div>

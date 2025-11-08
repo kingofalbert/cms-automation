@@ -5,6 +5,7 @@
 
 import { Select } from '@/components/ui';
 import { PublishStatus, ProviderType } from '@/types/publishing';
+import { useTranslation } from 'react-i18next';
 
 export interface TaskFiltersProps {
   statusFilter: PublishStatus | 'all';
@@ -21,31 +22,49 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
   onProviderFilterChange,
   className,
 }) => {
-  const statusOptions = [
-    { value: 'all', label: '全部状态' },
-    { value: 'pending', label: '等待中' },
-    { value: 'initializing', label: '初始化' },
-    { value: 'logging_in', label: '登录中' },
-    { value: 'creating_post', label: '创建文章' },
-    { value: 'uploading_images', label: '上传图片' },
-    { value: 'configuring_seo', label: '配置 SEO' },
-    { value: 'publishing', label: '发布中' },
-    { value: 'completed', label: '已完成' },
-    { value: 'failed', label: '失败' },
+  const { t } = useTranslation();
+  const statusValues: Array<PublishStatus | 'all'> = [
+    'all',
+    'idle',
+    'pending',
+    'initializing',
+    'logging_in',
+    'creating_post',
+    'uploading_images',
+    'configuring_seo',
+    'publishing',
+    'completed',
+    'failed',
   ];
 
-  const providerOptions = [
-    { value: 'all', label: '全部 Provider' },
-    { value: 'playwright', label: '🎭 Playwright' },
-    { value: 'computer_use', label: '🤖 Computer Use' },
-    { value: 'hybrid', label: '⚡ Hybrid' },
+  const statusOptions = statusValues.map((value) => ({
+    value,
+    label:
+      value === 'all'
+        ? t('publishTasks.filters.statusOptions.all')
+        : t(`publishTasks.statusLabels.${value}` as const),
+  }));
+
+  const providerValues: Array<ProviderType | 'all'> = [
+    'all',
+    'playwright',
+    'computer_use',
+    'hybrid',
   ];
+
+  const providerOptions = providerValues.map((value) => ({
+    value,
+    label:
+      value === 'all'
+        ? t('publishTasks.filters.providerOptions.all')
+        : t(`publishTasks.filters.providerOptions.${value}` as const),
+  }));
 
   return (
     <div className={className}>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Select
-          label="状态筛选"
+          label={t('publishTasks.filters.statusLabel')}
           value={statusFilter}
           onChange={(e) =>
             onStatusFilterChange(e.target.value as PublishStatus | 'all')
@@ -54,7 +73,7 @@ export const TaskFilters: React.FC<TaskFiltersProps> = ({
           fullWidth
         />
         <Select
-          label="Provider 筛选"
+          label={t('publishTasks.filters.providerLabel')}
           value={providerFilter}
           onChange={(e) =>
             onProviderFilterChange(e.target.value as ProviderType | 'all')

@@ -1,0 +1,787 @@
+{
+  "common": {
+    "appName": "CMS 自動化系統",
+    "language": "語言",
+    "settings": "設定",
+    "menu": "選單",
+    "back": "返回",
+    "close": "關閉",
+    "save": "儲存",
+    "cancel": "取消",
+    "confirm": "確認",
+    "loading": "載入中...",
+    "error": "錯誤",
+    "success": "成功",
+    "search": "搜尋",
+    "noResults": "暫無結果",
+    "backToList": "返回列表",
+    "clearAll": "清除全部"
+  },
+  "worklist": {
+    "title": "工作清單",
+    "subtitle": "管理來自 Google Drive 的文章，追蹤 7 階段審稿流程",
+    "sync": "同步 Google Drive",
+    "syncing": "同步中...",
+    "lastSync": "最後同步",
+    "neverSynced": "尚未同步",
+    "filters": {
+      "title": "篩選條件",
+      "search": "搜尋標題或內容...",
+      "author": "依作者篩選...",
+      "reset": "重設篩選"
+    },
+    "statistics": {
+      "total": "總文章數",
+      "pending": "待處理",
+      "inReview": "審核中",
+      "approved": "已核准"
+    },
+    "status": {
+      "all": "全部狀態",
+      "pending": "待處理",
+      "proofreading": "校對中",
+      "under_review": "審核中",
+      "ready_to_publish": "待發布",
+      "publishing": "發布中",
+      "published": "已發布",
+      "failed": "需處理"
+    },
+    "actions": {
+      "view": "查看詳情",
+      "edit": "編輯",
+      "approve": "核准",
+      "reject": "拒絕",
+      "publish": "發布"
+    },
+    "messages": {
+      "syncStarted": "Google Drive 同步已開始",
+      "syncFailed": "同步失敗",
+      "statusChanged": "狀態變更成功",
+      "statusChangeFailed": "狀態變更失敗",
+      "publishSubmitted": "發布任務已提交",
+      "publishFailed": "發布失敗"
+    },
+    "errors": {
+      "title": "同步錯誤",
+      "moreErrors": "...還有 {{count}} 個錯誤"
+    },
+    "empty": {
+      "title": "暫無文章",
+      "description": "從 Google Drive 同步文章以開始工作",
+      "action": "立即同步"
+    },
+    "details": {
+      "title": "文章詳情",
+      "content": "內容",
+      "metadata": "中繼資料",
+      "history": "歷史記錄",
+      "author": "作者",
+      "createdAt": "建立時間",
+      "updatedAt": "更新時間",
+      "wordCount": "字數"
+    },
+    "table": {
+      "emptyTitle": "暫無工作清單項目",
+      "emptyDescription": "請先同步 Google Drive 以載入工作項目",
+      "syncNow": "同步 Google Drive",
+      "syncing": "同步中...",
+      "columns": {
+        "title": "標題",
+        "status": "狀態",
+        "author": "作者",
+        "unknownAuthor": "未知作者",
+        "wordCount": "字數",
+        "readingTime": "預估閱讀",
+        "quality": "品質分數",
+        "updatedAt": "更新時間",
+        "actions": "操作"
+      },
+      "wordStats": {
+        "readingTime": "{{minutes}} 分鐘"
+      },
+      "quality": {
+        "outOf": "/ {{score}}",
+        "unrated": "未評分"
+      },
+      "actions": {
+        "review": "審核"
+      }
+    },
+    "statisticsCards": {
+      "wordsLabel": "{{count}} 字",
+      "readyHint": "可立即發布",
+      "avgCycle": "平均週期",
+      "cycleHint": "從進件到發布",
+      "noCycleData": "暫無數據",
+      "hours": "{{hours}} 小時",
+      "daysHours": "{{days}} 天 {{hours}} 小時",
+      "avgQuality": "平均品質",
+      "qualityHint": "滿分 100",
+      "publishedHint": "已完成發布流程"
+    },
+    "drawer": {
+      "title": "工作清單詳情",
+      "loadingMessage": "載入詳情中...",
+      "failureTitle": "自動流程失敗",
+      "failureDescription": "請檢查錯誤資訊後重新嘗試同步或觸發校對。",
+      "authorLabel": "作者",
+      "wordCountLabel": "字數",
+      "wordCountUnit": "字",
+      "wordCountUnknown": "字數未知",
+      "readingTimeLabel": "閱讀時間",
+      "readingTimeUnknown": "閱讀時間未知",
+      "qualityScoreLabel": "品質分數",
+      "timelineTitle": "時間軸",
+      "createdAt": "建立時間",
+      "updatedAt": "更新時間",
+      "lastSynced": "最後同步",
+      "statusHistoryTitle": "狀態歷史",
+      "noStatusHistory": "暫無狀態變更紀錄",
+      "changedBy": "由 {{name}}",
+      "contentPreviewTitle": "內容預覽",
+      "noContent": "暫無內容",
+      "openInDrive": "在 Google Drive 中開啟",
+      "fileId": "檔案 ID：{{id}}",
+      "startReview": "開始審核",
+      "notesTitle": "備註歷史",
+      "noNoteContent": "（無備註內容）",
+      "resolved": "已解決",
+      "statusChangeTitle": "狀態變更",
+      "notePlaceholder": "新增備註（可選）",
+      "changeTo": "變更為",
+      "publish": "發布到 WordPress"
+    }
+  },
+  "settings": {
+    "title": "系統設定",
+    "subtitle": "設定您的 CMS 自動化系統",
+    "sections": {
+      "general": "一般設定",
+      "language": "語言設定",
+      "appearance": "外觀設定",
+      "advanced": "進階功能",
+      "proofreading": "校對規則",
+      "tags": "標籤管理"
+    },
+    "language": {
+      "title": "介面語言",
+      "description": "選擇系統介面顯示語言",
+      "options": {
+        "zh-TW": "繁體中文",
+        "en-US": "English"
+      }
+    },
+    "appearance": {
+      "title": "外觀主題",
+      "description": "自訂系統介面外觀",
+      "theme": {
+        "label": "主題",
+        "light": "淺色",
+        "dark": "深色",
+        "auto": "跟隨系統"
+      }
+    },
+    "comingSoon": {
+      "title": "即將推出",
+      "description": "此功能正在開發中，敬請期待下一個版本。"
+    },
+    "proofreading": {
+      "title": "校對規則管理",
+      "subtitle": "管理文章校對規則與規則集",
+      "description": "查看並管理校對規則，設定自動校對行為",
+      "totalRules": "總規則數",
+      "publishedRulesets": "已發布規則集",
+      "appliedCount": "應用次數",
+      "recentRulesets": "最近發布的規則集",
+      "rules": "條規則",
+      "active": "啟用",
+      "inactive": "停用",
+      "noRulesets": "暫無規則集",
+      "noRulesetsHint": "點擊下方按鈕產生校對規則",
+      "generateRules": "產生規則",
+      "manageRules": "管理規則",
+      "testRules": "測試規則",
+      "viewStats": "查看統計"
+    },
+    "tags": {
+      "title": "標籤管理",
+      "subtitle": "管理文章標籤與分類",
+      "description": "查看、添加並管理文章標籤",
+      "addTag": "新增標籤",
+      "newTagLabel": "標籤名稱",
+      "newTagPlaceholder": "輸入新標籤名稱...",
+      "totalTags": "標籤總數",
+      "unusedTags": "未使用標籤",
+      "mostUsed": "最常用標籤",
+      "allTags": "所有標籤",
+      "usedInArticles": "已用於 {{count}} 篇文章",
+      "noTags": "暫無標籤",
+      "noTagsHint": "點擊右上角按鈕新增標籤",
+      "emptyTagError": "標籤名稱不得為空",
+      "duplicateTagError": "該標籤已存在",
+      "addSuccess": "標籤 \"{{name}}\" 新增成功",
+      "deleteSuccess": "標籤 \"{{name}}\" 已刪除",
+      "deleteError": "無法刪除已使用的標籤（已用於 {{count}} 篇文章）",
+      "noteTitle": "提示",
+      "noteDescription": "刪除標籤前，請確認沒有文章使用該標籤。已使用的標籤無法刪除。"
+    },
+    "provider": {
+      "title": "Provider 設定",
+      "playwright": {
+        "enable": "啟用 Playwright Provider",
+        "headless": "無頭模式 (Headless)",
+        "screenshotOnError": "錯誤時擷取截圖",
+        "browserLabel": "瀏覽器",
+        "browserPlaceholder": "選擇瀏覽器",
+        "timeoutLabel": "逾時 (毫秒)",
+        "retryLabel": "重試次數"
+      },
+      "computerUse": {
+        "enable": "啟用 Computer Use Provider",
+        "modelLabel": "模型",
+        "modelHelper": "Computer Use API 目前僅支援 claude-sonnet-4-5-20250929（依 Anthropic 限制）。",
+        "maxTokensLabel": "最大 Tokens",
+        "timeoutLabel": "逾時 (毫秒)",
+        "screenshotIntervalLabel": "截圖間隔 (毫秒)",
+        "screenshotIntervalHelper": "Computer Use 執行時的截圖間隔",
+        "retryLabel": "重試次數"
+      },
+      "hybrid": {
+        "enable": "啟用 Hybrid Provider",
+        "primaryLabel": "主要 Provider",
+        "primaryPlaceholder": "選擇主要 Provider",
+        "fallbackEnable": "啟用自動回退",
+        "fallbackOnError": "錯誤時自動回退",
+        "autoSwitchLabel": "自動切換門檻 (%)",
+        "autoSwitchHelper": "成功率低於門檻時自動切換 Provider"
+      }
+    },
+    "cms": {
+      "title": "WordPress 連線",
+      "wordpressUrl": "WordPress URL",
+      "username": "使用者名稱",
+      "password": "密碼",
+      "verifySsl": "驗證 SSL 憑證",
+      "timeoutLabel": "逾時 (毫秒)",
+      "retriesLabel": "最大重試次數",
+      "testButton": "測試連線",
+      "testing": "測試中...",
+      "testSuccess": "連線成功！WordPress 設定正確。",
+      "testFailed": "連線失敗，請檢查 URL、使用者名稱與密碼。"
+    },
+    "cost": {
+      "title": "成本上限",
+      "currentUsage": "目前使用狀況",
+      "todaySpend": "今日花費",
+      "monthSpend": "本月花費",
+      "alertTitle": "成本預警",
+      "dailyAlert": "今日花費已達 {{value}}%。",
+      "monthlyAlert": "本月花費已達 {{value}}%。",
+      "dailyLimitLabel": "每日限額 (USD)",
+      "dailyLimitHelper": "每日允許的最高花費",
+      "monthlyLimitLabel": "每月限額 (USD)",
+      "monthlyLimitHelper": "每月允許的最高花費",
+      "perTaskLimitLabel": "單任務限額 (USD)",
+      "perTaskLimitHelper": "每個發布任務允許的最高花費",
+      "alertThresholdLabel": "預警門檻 (%)",
+      "alertThresholdHelper": "達到此百分比時發送預警",
+      "autoPauseLabel": "達到限額後自動暫停發布"
+    },
+    "screenshot": {
+      "title": "截圖保留策略",
+      "usageTitle": "儲存使用量",
+      "usageDescription": "所有截圖占用的總儲存空間",
+      "retentionDaysLabel": "保留天數",
+      "retentionDaysHelper": "超過此天數的截圖會自動刪除",
+      "maxPerTaskLabel": "每任務最大截圖數",
+      "maxPerTaskHelper": "每個任務最多保留的截圖數",
+      "compressToggle": "壓縮截圖（節省空間）",
+      "qualityLabel": "壓縮品質 (%)",
+      "qualityHelper": "品質越高檔案越大，建議 70-80。",
+      "policyTitle": "自動刪除策略",
+      "deleteOnSuccess": "任務成功後刪除截圖",
+      "deleteOnFailure": "任務失敗後刪除截圖",
+      "failureNote": "保留失敗任務的截圖有助於問題排查。"
+    },
+    "fields": {
+      "browser": "瀏覽器",
+      "timeout": "逾時",
+      "retryCount": "重試次數",
+      "model": "模型",
+      "maxTokens": "最大 Tokens",
+      "screenshotInterval": "截圖間隔",
+      "primaryProvider": "主要 Provider",
+      "autoSwitchThreshold": "自動切換門檻",
+      "wordpressUrl": "WordPress URL",
+      "username": "使用者名稱",
+      "password": "密碼",
+      "maxRetries": "最大重試次數",
+      "dailyLimit": "每日限額",
+      "monthlyLimit": "每月限額",
+      "perTaskLimit": "單任務限額",
+      "alertThreshold": "預警門檻",
+      "retentionDays": "保留天數",
+      "maxScreenshots": "每任務截圖數",
+      "compressionQuality": "壓縮品質"
+    },
+    "units": {
+      "milliseconds": "毫秒",
+      "tokens": "Tokens",
+      "percent": "%",
+      "usd": "USD",
+      "days": "天"
+    },
+    "validation": {
+      "required": "{{field}} 為必填。",
+      "invalid": "格式不正確。",
+      "invalidUrl": "請輸入合法的 URL。",
+      "integer": "{{field}} 必須為整數。",
+      "minValue": "{{field}} 不得低於 {{value}}{{unit}}。",
+      "maxValue": "{{field}} 不得超過 {{value}}{{unit}}。"
+    },
+    "saved": "設定已儲存",
+    "saveFailed": "儲存設定失敗",
+    "messages": {
+      "genericError": "目前無法儲存設定，請稍後再試。",
+      "saveInProgress": "正在儲存設定...",
+      "saveSuccessTitle": "儲存成功！",
+      "saveSuccessDescription": "設定已更新。",
+      "saveErrorTitle": "儲存失敗",
+      "retry": "重試",
+      "unsavedPrompt": "您有未儲存的變更，確定要離開此頁面嗎？",
+      "noUpdateTime": "暫無更新時間",
+      "unsavedBadge": "未儲存的變更",
+      "unsavedDetected": "偵測到未儲存的變更",
+      "unsavedReminder": "離開前請先儲存，以免設定遺失。",
+      "lastUpdated": "最後更新：{{timestamp}}"
+    },
+    "actions": {
+      "reset": "重設",
+      "saveSettings": "儲存設定",
+      "saving": "儲存中...",
+      "discardChanges": "丟棄變更",
+      "saveNow": "立即儲存"
+    },
+    "loading": {
+      "provider": "Provider 設定載入中",
+      "cms": "WordPress 設定載入中",
+      "cost": "成本限額載入中",
+      "screenshot": "截圖保留策略載入中",
+      "lastUpdated": "最後更新時間載入中"
+    },
+    "errors": {
+      "loadFailedTitle": "無法載入設定",
+      "loadFailedDescription": "連線後端服務失敗，請確認服務已啟動。",
+      "reload": "重新載入"
+    },
+    "accordion": {
+      "provider": {
+        "title": "上傳設定",
+        "subtitle": "設定 Playwright、Computer Use 與 Hybrid 發布流程"
+      },
+      "cms": {
+        "title": "WordPress 設定",
+        "subtitle": "管理 WordPress 連線與登入資訊"
+      },
+      "cost": {
+        "title": "成本限額",
+        "subtitle": "設定每日與每月支出上限"
+      },
+      "screenshot": {
+        "title": "截圖保留策略",
+        "subtitle": "設定截圖自動清理規則"
+      }
+    }
+  },
+  "routes": {
+    "worklist": {
+      "title": "CMS自動化系統 - 工作清單",
+      "description": "管理您的文章校對工作流"
+    },
+    "settings": {
+      "title": "CMS自動化系統 - 設定",
+      "description": "配置系統設定與語言偏好"
+    },
+    "proofreadingReview": {
+      "title": "CMS自動化系統 - 校對審核",
+      "description": "審核校對建議並做出決策"
+    }
+  },
+  "proofreading": {
+    "title": "校對審核",
+    "subtitle": "審核 AI 校對建議並做出決策",
+    "breadcrumb": {
+      "review": "校對審核"
+    },
+    "labels": {
+      "issuesDecided": "個問題已決策",
+      "original": "原文",
+      "suggested": "建議",
+      "modified": "調整後",
+      "articleId": "文章 ID"
+    },
+    "reviewNotes": {
+      "label": "審核備註",
+      "placeholder": "輸入審核備註、建議或說明..."
+    },
+    "issueList": {
+      "filters": {
+        "severity": {
+          "all": "全部嚴重程度",
+          "critical": "高風險",
+          "warning": "警告",
+          "info": "資訊"
+        },
+        "status": {
+          "all": "全部狀態",
+          "pending": "待處理",
+          "accepted": "已接受",
+          "rejected": "已拒絕",
+          "modified": "已修改"
+        },
+        "category": {
+          "all": "全部分類"
+        },
+        "engine": {
+          "all": "全部引擎",
+          "ai": "AI",
+          "deterministic": "規則引擎"
+        }
+      },
+      "uncategorized": "未分類",
+      "noOriginalText": "（無可顯示的原文）",
+      "badges": {
+        "accepted": "✓ 已接受",
+        "rejected": "✗ 已拒絕",
+        "modified": "✎ 已修改",
+        "pending": "待決定"
+      }
+    },
+    "comparison": {
+      "title": "AI 最佳化建議",
+      "meta": {
+        "title": "Meta 描述",
+        "original": "原始內容 ({{count}} 字元)",
+        "suggested": "AI 建議 ({{count}} 字元)",
+        "notSet": "未設定",
+        "reasoning": "最佳化說明"
+      },
+      "seo": {
+        "title": "SEO 關鍵字",
+        "original": "原始關鍵字 ({{count}})",
+        "suggested": "AI 建議關鍵字",
+        "notSet": "未設定",
+        "reasoning": "最佳化說明"
+      },
+      "faq": {
+        "title": "FAQ Schema 提案",
+        "count": "{{count}} 個方案",
+        "proposal": "方案 {{index}}",
+        "schemaType": "Schema 類型：{{type}}",
+        "question": "Q{{index}}：{{question}}",
+        "answer": "A：{{answer}}"
+      }
+    },
+    "messages": {
+      "selectIssue": "請從左側選擇一個問題以查看詳情",
+      "noIssuesFound": "未發現校對問題",
+      "loadFailed": "載入失敗",
+      "decisionsSaved": "決策已儲存",
+      "reviewCompletedAndTransitioned": "審核完成並已更新狀態",
+      "saveFailed": "儲存失敗",
+      "decisionsCleared": "決策已清除",
+      "cancelConfirm": "您有未儲存的變更，確定要離開此審核嗎？",
+      "noArticleLinked": "此工作項目尚未連結文章。"
+    },
+    "actions": {
+      "saveDraft": "儲存草稿",
+      "completeReview": "完成審核",
+      "accept": "接受",
+      "reject": "拒絕",
+      "modify": "修改"
+    }
+  },
+  "publishTasks": {
+    "title": "發布任務監控",
+    "subtitle": "即時查看所有文章發布任務的執行情況",
+    "stats": {
+      "total": "總任務數",
+      "completed": "已完成",
+      "inProgress": "進行中",
+      "failed": "失敗"
+    },
+    "filters": {
+      "statusLabel": "狀態篩選",
+      "providerLabel": "Provider 篩選",
+      "statusOptions": {
+        "all": "全部狀態",
+        "idle": "待發布",
+        "pending": "等待中",
+        "initializing": "初始化",
+        "logging_in": "登入中",
+        "creating_post": "建立文章",
+        "uploading_images": "上傳圖片",
+        "configuring_seo": "設定 SEO",
+        "publishing": "發布中",
+        "completed": "已完成",
+        "failed": "失敗"
+      },
+      "providerOptions": {
+        "all": "全部 Provider",
+        "playwright": "Playwright",
+        "computer_use": "Computer Use",
+        "hybrid": "Hybrid"
+      }
+    },
+    "table": {
+      "loading": "載入任務中...",
+      "emptyTitle": "暫無發布任務",
+      "emptyDescription": "發布文章後，任務記錄會顯示在這裡",
+      "columns": {
+        "article": "文章標題",
+        "provider": "Provider",
+        "status": "狀態",
+        "progress": "進度",
+        "duration": "耗時",
+        "cost": "成本",
+        "startedAt": "開始時間"
+      }
+    },
+    "statusLabels": {
+      "idle": "待發布",
+      "pending": "等待中",
+      "initializing": "初始化",
+      "logging_in": "登入中",
+      "creating_post": "建立文章",
+      "uploading_images": "上傳圖片",
+      "configuring_seo": "設定 SEO",
+      "publishing": "發布中",
+      "completed": "已完成",
+      "failed": "失敗"
+    },
+    "detail": {
+      "drawerTitle": "任務詳情",
+      "articleInfo": "文章資訊",
+      "articleTitle": "標題",
+      "taskId": "任務 ID",
+      "provider": "Provider",
+      "executionStatus": "執行狀態",
+      "metrics": "執行指標",
+      "progress": "進度",
+      "duration": "耗時",
+      "cost": "成本",
+      "timeline": "時間線",
+      "startedAt": "開始時間",
+      "completedAt": "完成時間",
+      "error": "錯誤資訊",
+      "screenshots": "執行截圖 ({{count}})",
+      "close": "關閉",
+      "retry": "重試",
+      "durationValue": "{{minutes}} 分 {{seconds}} 秒",
+      "durationInProgress": "進行中"
+    },
+    "currentStep": {
+      "steps": "{{completed}} / {{total}} 步驟",
+      "progressLabel": "進度",
+      "completed": "文章已成功發布！",
+      "failed": "發布失敗，請重試。"
+    },
+    "messages": {
+      "retrySubmitted": "重試請求已送出",
+      "retryFailed": "重試失敗：{{message}}"
+    }
+  },
+  "providerComparison": {
+    "title": "Provider 性能對比",
+    "subtitle": "分析並比較不同發布 Provider 的指標",
+    "loading": "載入中...",
+    "noData": "暫無數據",
+    "timeRange": {
+      "label": "時間範圍",
+      "options": {
+        "7d": "近 7 天",
+        "30d": "近 30 天",
+        "90d": "近 90 天",
+        "all": "全部"
+      }
+    },
+    "summary": {
+      "bestSuccess": "最佳成功率",
+      "bestCost": "最佳性價比",
+      "bestSpeed": "最快速度",
+      "recommended": "推薦 Provider",
+      "recommendedDescription": "綜合評分最高"
+    },
+    "tabs": {
+      "overview": "總覽",
+      "trends": "趨勢分析",
+      "distribution": "任務分布",
+      "recommendations": "推薦"
+    },
+    "sections": {
+      "overview": "性能指標對比",
+      "successTrend": "成功率趨勢",
+      "avgCost": "平均成本對比",
+      "totalCost": "總成本對比",
+      "recommendationIntroTitle": "智能推薦系統",
+      "recommendationIntroDescription": "根據歷史數據，我們為不同場景推薦最合適的 Provider。評分綜合考量成功率、成本效益與執行速度。"
+    },
+    "providers": {
+      "playwright": "Playwright",
+      "computer_use": "Computer Use",
+      "hybrid": "Hybrid"
+    },
+    "table": {
+      "provider": "Provider",
+      "totalTasks": "總任務數",
+      "successRate": "成功率",
+      "avgDuration": "平均耗時",
+      "avgCost": "平均成本",
+      "totalCost": "總成本",
+      "recommendedBadge": "推薦",
+      "successFailure": "成功 {{success}} / 失敗 {{failed}}",
+      "minutesSeconds": "{{minutes}}分{{seconds}}秒"
+    },
+    "charts": {
+      "legend": {
+        "avgCost": "平均成本",
+        "totalCost": "總成本"
+      },
+      "tooltip": {
+        "date": "日期",
+        "tasks": "任務數",
+        "share": "占比"
+      },
+      "distributionTitle": "{{provider}} 任務分布"
+    },
+    "recommendations": {
+      "useCases": "適用場景",
+      "pros": "優勢",
+      "cons": "劣勢",
+      "scoreSuffix": "/ 100"
+    },
+    "statuses": {
+      "completed": "已完成",
+      "failed": "失敗",
+      "pending": "待處理",
+      "initializing": "初始化",
+      "logging_in": "登入中",
+      "creating_post": "建立文章",
+      "uploading_images": "上傳圖片",
+      "configuring_seo": "設定 SEO",
+      "publishing": "發布中",
+      "idle": "空閒"
+    }
+  },
+  "publishing": {
+    "actions": {
+      "publishToWordPress": "發布到 WordPress",
+      "cancel": "取消",
+      "next": "下一步",
+      "confirm": "確認發布",
+      "publishing": "發布中...",
+      "done": "完成",
+      "close": "關閉",
+      "retry": "重試發布",
+      "contactSupport": "聯繫支援",
+      "continuePublishing": "繼續發布",
+      "viewArticle": "查看文章"
+    },
+    "messages": {
+      "publishFailed": "發布失敗：{{message}}"
+    },
+    "providerDialog": {
+      "title": "選擇發布 Provider"
+    },
+    "providerSelector": {
+      "label": "發布 Provider",
+      "recommendedBadge": "推薦",
+      "metrics": {
+        "cost": "成本 / 篇",
+        "duration": "平均時長",
+        "successRate": "成功率"
+      },
+      "toggle": {
+        "show": "查看詳情",
+        "hide": "收起詳情"
+      },
+      "durationFormat": "{{minutes}}:{{seconds}}",
+      "providers": {
+        "playwright": {
+          "name": "Playwright",
+          "description": "快速、穩定的瀏覽器自動化",
+          "features": [
+            "快速執行",
+            "低成本",
+            "高成功率"
+          ],
+          "details": [
+            "採用 Playwright 瀏覽器自動化框架",
+            "預先定義選擇器，行為一致",
+            "最適合標準 WordPress 主題"
+          ]
+        },
+        "computer_use": {
+          "name": "Computer Use",
+          "description": "AI 驅動的智慧發布",
+          "features": [
+            "可適應動態頁面",
+            "處理複雜場景",
+            "容錯能力強"
+          ],
+          "details": [
+            "使用 Anthropic Computer Use API",
+            "AI 自動識別並操作頁面元素",
+            "適合客製化或非標準主題"
+          ]
+        },
+        "hybrid": {
+          "name": "Hybrid",
+          "description": "Playwright 優先，自動降級",
+          "features": [
+            "最佳整體性能",
+            "最高成功率",
+            "智慧降級機制"
+          ],
+          "details": [
+            "優先使用 Playwright（快速且成本低）",
+            "失敗時自動切換至 Computer Use",
+            "結合兩者優勢，可靠度最高"
+          ]
+        }
+      }
+    },
+    "confirmation": {
+      "title": "確認發布",
+      "articleInfo": "文章資訊",
+      "publishSettings": "發布設定",
+      "fields": {
+        "title": "標題",
+        "wordCount": "字數",
+        "metaTitle": "Meta Title",
+        "provider": "Provider",
+        "estimatedTime": "預計時長",
+        "estimatedCost": "預計成本",
+        "publishMode": "發布方式",
+        "publishImmediately": "立即發布",
+        "categories": "分類",
+        "tags": "標籤",
+        "seoEnabled": "已啟用 SEO 最佳化"
+      },
+      "wordCountValue": "~{{count}} 字",
+      "warning": "發布後文章會立即上線至 WordPress，請確認內容無誤後再繼續。"
+    }
+  },
+  "navigation": {
+    "home": "首頁",
+    "worklist": "工作清單",
+    "settings": "設定"
+  },
+  "errors": {
+    "generic": "發生錯誤，請再試一次",
+    "network": "網路連線失敗",
+    "unauthorized": "未授權的存取",
+    "notFound": "找不到資源",
+    "serverError": "伺服器錯誤"
+  }
+}

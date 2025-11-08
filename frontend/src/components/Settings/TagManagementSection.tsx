@@ -21,11 +21,11 @@ export const TagManagementSection: React.FC = () => {
 
   // Mock data - 实际应该从后端 API 获取
   const [tags, setTags] = useState<TagItem[]>([
-    { id: '1', name: 'SEO优化', count: 15, color: 'blue' },
-    { id: '2', name: '技术教程', count: 23, color: 'green' },
-    { id: '3', name: '产品评测', count: 8, color: 'purple' },
-    { id: '4', name: '行业动态', count: 12, color: 'orange' },
-    { id: '5', name: '用户体验', count: 6, color: 'pink' },
+    { id: '1', name: 'SEO Optimization', count: 15, color: 'blue' },
+    { id: '2', name: 'Tech Tutorials', count: 23, color: 'green' },
+    { id: '3', name: 'Product Reviews', count: 8, color: 'purple' },
+    { id: '4', name: 'Industry News', count: 12, color: 'orange' },
+    { id: '5', name: 'User Experience', count: 6, color: 'pink' },
   ]);
 
   const [newTagName, setNewTagName] = useState('');

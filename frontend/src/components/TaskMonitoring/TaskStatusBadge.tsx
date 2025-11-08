@@ -5,6 +5,8 @@
 
 import { Badge } from '@/components/ui';
 import { PublishStatus } from '@/types/publishing';
+import { useTranslation } from 'react-i18next';
+import type { BadgeProps } from '@/components/ui';
 
 export interface TaskStatusBadgeProps {
   status: PublishStatus;
@@ -12,20 +14,18 @@ export interface TaskStatusBadgeProps {
   dot?: boolean;
 }
 
-const STATUS_CONFIG: Record<
-  PublishStatus,
-  { variant: 'default' | 'success' | 'warning' | 'error' | 'info' | 'secondary'; label: string }
-> = {
-  idle: { variant: 'default', label: '待发布' },
-  pending: { variant: 'secondary', label: '等待中' },
-  initializing: { variant: 'info', label: '初始化' },
-  logging_in: { variant: 'info', label: '登录中' },
-  creating_post: { variant: 'info', label: '创建文章' },
-  uploading_images: { variant: 'info', label: '上传图片' },
-  configuring_seo: { variant: 'info', label: '配置 SEO' },
-  publishing: { variant: 'info', label: '发布中' },
-  completed: { variant: 'success', label: '已完成' },
-  failed: { variant: 'error', label: '失败' },
+type BadgeVariant = NonNullable<BadgeProps['variant']>;
+const STATUS_VARIANT: Record<PublishStatus, BadgeVariant> = {
+  idle: 'default',
+  pending: 'secondary',
+  initializing: 'info',
+  logging_in: 'info',
+  creating_post: 'info',
+  uploading_images: 'info',
+  configuring_seo: 'info',
+  publishing: 'info',
+  completed: 'success',
+  failed: 'error',
 };
 
 export const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({
@@ -33,11 +33,11 @@ export const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({
   size = 'md',
   dot = true,
 }) => {
-  const config = STATUS_CONFIG[status];
+  const { t } = useTranslation();
 
   return (
-    <Badge variant={config.variant} size={size} dot={dot}>
-      {config.label}
+    <Badge variant={STATUS_VARIANT[status]} size={size} dot={dot}>
+      {t(`publishTasks.statusLabels.${status}` as const)}
     </Badge>
   );
 };

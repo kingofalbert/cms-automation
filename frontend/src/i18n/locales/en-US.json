@@ -3,6 +3,8 @@
     "appName": "CMS Automation System",
     "language": "Language",
     "settings": "Settings",
+    "menu": "Menu",
+    "back": "Back",
     "close": "Close",
     "save": "Save",
     "cancel": "Cancel",
@@ -77,6 +79,77 @@
       "createdAt": "Created At",
       "updatedAt": "Updated At",
       "wordCount": "Word Count"
+    },
+    "table": {
+      "emptyTitle": "No worklist items yet",
+      "emptyDescription": "Start a Google Drive sync to populate the queue",
+      "syncNow": "Sync Google Drive",
+      "syncing": "Syncing...",
+      "columns": {
+        "title": "Title",
+        "status": "Status",
+        "author": "Author",
+        "unknownAuthor": "Unknown author",
+        "wordCount": "Word Count",
+        "readingTime": "Estimated read",
+        "quality": "Quality Score",
+        "updatedAt": "Updated At",
+        "actions": "Actions"
+      },
+      "wordStats": {
+        "readingTime": "{{minutes}} min read"
+      },
+      "quality": {
+        "outOf": "/ {{score}}",
+        "unrated": "Not rated"
+      },
+      "actions": {
+        "review": "Review"
+      }
+    },
+    "statisticsCards": {
+      "wordsLabel": "{{count}} words",
+      "readyHint": "Ready to go live",
+      "avgCycle": "Average Cycle",
+      "cycleHint": "From intake to publish",
+      "noCycleData": "No data yet",
+      "hours": "{{hours}} hours",
+      "daysHours": "{{days}} days {{hours}} hours",
+      "avgQuality": "Average Quality",
+      "qualityHint": "Out of 100",
+      "publishedHint": "Completed publishing workflow"
+    },
+    "drawer": {
+      "title": "Worklist Details",
+      "loadingMessage": "Loading details...",
+      "failureTitle": "Automation run failed",
+      "failureDescription": "Review the error details before retrying sync or proofreading.",
+      "authorLabel": "Author",
+      "wordCountLabel": "Word Count",
+      "wordCountUnit": "words",
+      "wordCountUnknown": "Word count unknown",
+      "readingTimeLabel": "Reading Time",
+      "readingTimeUnknown": "Reading time unknown",
+      "qualityScoreLabel": "Quality Score",
+      "timelineTitle": "Timeline",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At",
+      "lastSynced": "Last Synced",
+      "statusHistoryTitle": "Status History",
+      "noStatusHistory": "No status changes yet",
+      "changedBy": "By {{name}}",
+      "contentPreviewTitle": "Content Preview",
+      "noContent": "No content available",
+      "openInDrive": "Open in Google Drive",
+      "fileId": "File ID: {{id}}",
+      "startReview": "Start Review",
+      "notesTitle": "Note History",
+      "noNoteContent": "(No note content)",
+      "resolved": "Resolved",
+      "statusChangeTitle": "Status Change",
+      "notePlaceholder": "Add note (optional)",
+      "changeTo": "Change to",
+      "publish": "Publish to WordPress"
     }
   },
   "settings": {
@@ -94,7 +167,7 @@
       "title": "Interface Language",
       "description": "Choose the display language for the system interface",
       "options": {
-        "zh-CN": "简体中文",
+        "zh-TW": "繁體中文",
         "en-US": "English"
       }
     },
@@ -152,17 +225,262 @@
       "noteTitle": "Note",
       "noteDescription": "Before deleting a tag, ensure no articles are using it. Tags in use cannot be deleted."
     },
+    "provider": {
+      "title": "Provider Configuration",
+      "playwright": {
+        "enable": "Enable Playwright provider",
+        "headless": "Headless mode (no UI)",
+        "screenshotOnError": "Capture screenshots when errors occur",
+        "browserLabel": "Browser",
+        "browserPlaceholder": "Select a browser",
+        "timeoutLabel": "Timeout (ms)",
+        "retryLabel": "Retry attempts"
+      },
+      "computerUse": {
+        "enable": "Enable Computer Use provider",
+        "modelLabel": "Model",
+        "modelHelper": "Computer Use API currently supports claude-sonnet-4-5-20250929 only (per Anthropic limits).",
+        "maxTokensLabel": "Max tokens",
+        "timeoutLabel": "Timeout (ms)",
+        "screenshotIntervalLabel": "Screenshot interval (ms)",
+        "screenshotIntervalHelper": "Time between Computer Use screenshots",
+        "retryLabel": "Retry attempts"
+      },
+      "hybrid": {
+        "enable": "Enable Hybrid provider",
+        "primaryLabel": "Primary provider",
+        "primaryPlaceholder": "Select a primary provider",
+        "fallbackEnable": "Enable automatic fallback",
+        "fallbackOnError": "Fallback when errors occur",
+        "autoSwitchLabel": "Auto-switch threshold (%)",
+        "autoSwitchHelper": "Automatically switch providers when success rate drops below the threshold"
+      }
+    },
+    "cms": {
+      "title": "WordPress Connection",
+      "wordpressUrl": "WordPress URL",
+      "username": "Username",
+      "password": "Password",
+      "verifySsl": "Verify SSL certificates",
+      "timeoutLabel": "Timeout (ms)",
+      "retriesLabel": "Max retries",
+      "testButton": "Test connection",
+      "testing": "Testing...",
+      "testSuccess": "Connection successful! WordPress settings are valid.",
+      "testFailed": "Connection failed. Please verify the URL, username, and password."
+    },
+    "cost": {
+      "title": "Cost Limits",
+      "currentUsage": "Current usage",
+      "todaySpend": "Today's spend",
+      "monthSpend": "Monthly spend",
+      "alertTitle": "Cost alerts",
+      "dailyAlert": "Today's spend has reached {{value}}%.",
+      "monthlyAlert": "Monthly spend has reached {{value}}%.",
+      "dailyLimitLabel": "Daily limit (USD)",
+      "dailyLimitHelper": "Maximum spend per day",
+      "monthlyLimitLabel": "Monthly limit (USD)",
+      "monthlyLimitHelper": "Maximum spend per month",
+      "perTaskLimitLabel": "Per-task limit (USD)",
+      "perTaskLimitHelper": "Maximum spend per publishing task",
+      "alertThresholdLabel": "Alert threshold (%)",
+      "alertThresholdHelper": "Send alerts when spending reaches this percentage",
+      "autoPauseLabel": "Auto-pause publishing when limits are reached"
+    },
+    "screenshot": {
+      "title": "Screenshot Retention",
+      "usageTitle": "Storage usage",
+      "usageDescription": "Total storage used by screenshots",
+      "retentionDaysLabel": "Retention days",
+      "retentionDaysHelper": "Screenshots older than this will be deleted",
+      "maxPerTaskLabel": "Max screenshots per task",
+      "maxPerTaskHelper": "Maximum screenshots stored for each task",
+      "compressToggle": "Compress screenshots (save storage)",
+      "qualityLabel": "Compression quality (%)",
+      "qualityHelper": "Higher quality means larger files. Recommended 70-80.",
+      "policyTitle": "Automatic deletion policy",
+      "deleteOnSuccess": "Delete screenshots after successful tasks",
+      "deleteOnFailure": "Delete screenshots after failed tasks",
+      "failureNote": "Keep failed-task screenshots to help with troubleshooting."
+    },
+    "fields": {
+      "browser": "Browser",
+      "timeout": "Timeout",
+      "retryCount": "Retry attempts",
+      "model": "Model",
+      "maxTokens": "Max tokens",
+      "screenshotInterval": "Screenshot interval",
+      "primaryProvider": "Primary provider",
+      "autoSwitchThreshold": "Auto-switch threshold",
+      "wordpressUrl": "WordPress URL",
+      "username": "Username",
+      "password": "Password",
+      "maxRetries": "Max retries",
+      "dailyLimit": "Daily limit",
+      "monthlyLimit": "Monthly limit",
+      "perTaskLimit": "Per-task limit",
+      "alertThreshold": "Alert threshold",
+      "retentionDays": "Retention days",
+      "maxScreenshots": "Screenshots per task",
+      "compressionQuality": "Compression quality"
+    },
+    "units": {
+      "milliseconds": "ms",
+      "tokens": "tokens",
+      "percent": "%",
+      "usd": "USD",
+      "days": "days"
+    },
+    "validation": {
+      "required": "{{field}} is required.",
+      "invalid": "Invalid format.",
+      "invalidUrl": "Enter a valid URL.",
+      "integer": "{{field}} must be an integer.",
+      "minValue": "{{field}} cannot be less than {{value}}{{unit}}.",
+      "maxValue": "{{field}} cannot exceed {{value}}{{unit}}."
+    },
     "saved": "Settings saved successfully",
-    "saveFailed": "Failed to save settings"
+    "saveFailed": "Failed to save settings",
+    "messages": {
+      "genericError": "Unable to save settings right now. Please try again later.",
+      "saveInProgress": "Saving settings...",
+      "saveSuccessTitle": "Saved successfully!",
+      "saveSuccessDescription": "Settings have been updated.",
+      "saveErrorTitle": "Save failed",
+      "retry": "Retry",
+      "unsavedPrompt": "You have unsaved changes. Leave this page?",
+      "noUpdateTime": "No update time yet",
+      "unsavedBadge": "Unsaved changes",
+      "unsavedDetected": "Unsaved changes detected",
+      "unsavedReminder": "Save before leaving to avoid losing your updates.",
+      "lastUpdated": "Last updated: {{timestamp}}"
+    },
+    "actions": {
+      "reset": "Reset",
+      "saveSettings": "Save Settings",
+      "saving": "Saving...",
+      "discardChanges": "Discard changes",
+      "saveNow": "Save now"
+    },
+    "loading": {
+      "provider": "Loading provider configuration",
+      "cms": "Loading WordPress configuration",
+      "cost": "Loading cost limits",
+      "screenshot": "Loading screenshot retention rules",
+      "lastUpdated": "Loading last updated timestamp"
+    },
+    "errors": {
+      "loadFailedTitle": "Unable to load settings",
+      "loadFailedDescription": "Failed to connect to the backend service. Please ensure it is running.",
+      "reload": "Reload"
+    },
+    "accordion": {
+      "provider": {
+        "title": "Upload Settings",
+        "subtitle": "Configure Playwright, Computer Use and Hybrid publishing flows"
+      },
+      "cms": {
+        "title": "WordPress Configuration",
+        "subtitle": "Manage your WordPress connection credentials"
+      },
+      "cost": {
+        "title": "Cost Limits",
+        "subtitle": "Set daily and monthly spend caps"
+      },
+      "screenshot": {
+        "title": "Screenshot Retention",
+        "subtitle": "Configure automatic cleanup rules for screenshots"
+      }
+    }
+  },
+  "routes": {
+    "worklist": {
+      "title": "CMS Automation System - Worklist",
+      "description": "Manage your article proofreading workflow"
+    },
+    "settings": {
+      "title": "CMS Automation System - Settings",
+      "description": "Configure system settings and language preferences"
+    },
+    "proofreadingReview": {
+      "title": "CMS Automation System - Proofreading Review",
+      "description": "Review proofreading suggestions and make decisions"
+    }
   },
   "proofreading": {
     "title": "Proofreading Review",
     "subtitle": "Review AI proofreading suggestions and make decisions",
+    "breadcrumb": {
+      "review": "Proofreading Review"
+    },
     "labels": {
       "issuesDecided": "issues decided",
       "original": "Original",
       "suggested": "Suggested",
-      "modified": "Modified"
+      "modified": "Modified",
+      "articleId": "Article ID"
+    },
+    "reviewNotes": {
+      "label": "Review Notes",
+      "placeholder": "Enter review notes, suggestions, or explanations..."
+    },
+    "issueList": {
+      "filters": {
+        "severity": {
+          "all": "All Severity",
+          "critical": "Critical",
+          "warning": "Warning",
+          "info": "Info"
+        },
+        "status": {
+          "all": "All Status",
+          "pending": "Pending",
+          "accepted": "Accepted",
+          "rejected": "Rejected",
+          "modified": "Modified"
+        },
+        "category": {
+          "all": "All Categories"
+        },
+        "engine": {
+          "all": "All Engines",
+          "ai": "AI",
+          "deterministic": "Deterministic"
+        }
+      },
+      "uncategorized": "Uncategorized",
+      "noOriginalText": "(No original content)",
+      "badges": {
+        "accepted": "✓ Accepted",
+        "rejected": "✗ Rejected",
+        "modified": "✎ Modified",
+        "pending": "Pending"
+      }
+    },
+    "comparison": {
+      "title": "AI Optimization Suggestions",
+      "meta": {
+        "title": "Meta Description",
+        "original": "Original ({{count}} characters)",
+        "suggested": "AI Suggestion ({{count}} characters)",
+        "notSet": "Not set",
+        "reasoning": "Optimization Notes"
+      },
+      "seo": {
+        "title": "SEO Keywords",
+        "original": "Original keywords ({{count}})",
+        "suggested": "AI suggested keywords",
+        "notSet": "Not set",
+        "reasoning": "Optimization Notes"
+      },
+      "faq": {
+        "title": "FAQ Schema Proposals",
+        "count": "{{count}} proposals",
+        "proposal": "Proposal {{index}}",
+        "schemaType": "Schema Type: {{type}}",
+        "question": "Q{{index}}: {{question}}",
+        "answer": "A: {{answer}}"
+      }
     },
     "messages": {
       "selectIssue": "Select an issue from the left to view details",
@@ -171,7 +489,9 @@
       "decisionsSaved": "Decisions saved",
       "reviewCompletedAndTransitioned": "Review completed and status transitioned",
       "saveFailed": "Failed to save",
-      "decisionsCleared": "Decisions cleared"
+      "decisionsCleared": "Decisions cleared",
+      "cancelConfirm": "You have unsaved changes. Are you sure you want to leave this review?",
+      "noArticleLinked": "No article is linked to this worklist item."
     },
     "actions": {
       "saveDraft": "Save Draft",
@@ -179,6 +499,277 @@
       "accept": "Accept",
       "reject": "Reject",
       "modify": "Modify"
+    }
+  },
+  "publishTasks": {
+    "title": "Publish Task Monitoring",
+    "subtitle": "Track every article publishing job in real time",
+    "stats": {
+      "total": "Total Tasks",
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "failed": "Failed"
+    },
+    "filters": {
+      "statusLabel": "Status Filter",
+      "providerLabel": "Provider Filter",
+      "statusOptions": {
+        "all": "All Status",
+        "idle": "Idle",
+        "pending": "Pending",
+        "initializing": "Initializing",
+        "logging_in": "Logging In",
+        "creating_post": "Creating Post",
+        "uploading_images": "Uploading Images",
+        "configuring_seo": "Configuring SEO",
+        "publishing": "Publishing",
+        "completed": "Completed",
+        "failed": "Failed"
+      },
+      "providerOptions": {
+        "all": "All Providers",
+        "playwright": "Playwright",
+        "computer_use": "Computer Use",
+        "hybrid": "Hybrid"
+      }
+    },
+    "table": {
+      "loading": "Loading tasks...",
+      "emptyTitle": "No publish tasks yet",
+      "emptyDescription": "Tasks will appear here after you publish an article",
+      "columns": {
+        "article": "Article Title",
+        "provider": "Provider",
+        "status": "Status",
+        "progress": "Progress",
+        "duration": "Duration",
+        "cost": "Cost",
+        "startedAt": "Started At"
+      }
+    },
+    "statusLabels": {
+      "idle": "Idle",
+      "pending": "Pending",
+      "initializing": "Initializing",
+      "logging_in": "Logging In",
+      "creating_post": "Creating Post",
+      "uploading_images": "Uploading Images",
+      "configuring_seo": "Configuring SEO",
+      "publishing": "Publishing",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "detail": {
+      "drawerTitle": "Task Details",
+      "articleInfo": "Article Info",
+      "articleTitle": "Title",
+      "taskId": "Task ID",
+      "provider": "Provider",
+      "executionStatus": "Execution Status",
+      "metrics": "Execution Metrics",
+      "progress": "Progress",
+      "duration": "Duration",
+      "cost": "Cost",
+      "timeline": "Timeline",
+      "startedAt": "Started At",
+      "completedAt": "Completed At",
+      "error": "Error Message",
+      "screenshots": "Screenshots ({{count}})",
+      "close": "Close",
+      "retry": "Retry",
+      "durationValue": "{{minutes}}m {{seconds}}s",
+      "durationInProgress": "In progress"
+    },
+    "currentStep": {
+      "steps": "{{completed}} / {{total}} steps",
+      "progressLabel": "Progress",
+      "completed": "Article published successfully!",
+      "failed": "Publishing failed, please retry."
+    },
+    "messages": {
+      "retrySubmitted": "Retry request submitted",
+      "retryFailed": "Retry failed: {{message}}"
+    }
+  },
+  "providerComparison": {
+    "title": "Provider Performance Comparison",
+    "subtitle": "Analyze and compare publishing provider metrics",
+    "loading": "Loading...",
+    "noData": "No data available",
+    "timeRange": {
+      "label": "Time range",
+      "options": {
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "90d": "Last 90 days",
+        "all": "All time"
+      }
+    },
+    "summary": {
+      "bestSuccess": "Best success rate",
+      "bestCost": "Best cost efficiency",
+      "bestSpeed": "Fastest speed",
+      "recommended": "Recommended provider",
+      "recommendedDescription": "Highest overall score"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "trends": "Trends",
+      "distribution": "Distribution",
+      "recommendations": "Recommendations"
+    },
+    "sections": {
+      "overview": "Performance comparison",
+      "successTrend": "Success rate trend",
+      "avgCost": "Average cost comparison",
+      "totalCost": "Total cost comparison",
+      "recommendationIntroTitle": "Smart recommendation system",
+      "recommendationIntroDescription": "Based on historical performance, we suggest the best provider for each scenario. Scores factor in success rate, cost efficiency, and execution speed."
+    },
+    "providers": {
+      "playwright": "Playwright",
+      "computer_use": "Computer Use",
+      "hybrid": "Hybrid"
+    },
+    "table": {
+      "provider": "Provider",
+      "totalTasks": "Total tasks",
+      "successRate": "Success rate",
+      "avgDuration": "Average duration",
+      "avgCost": "Average cost",
+      "totalCost": "Total cost",
+      "recommendedBadge": "Recommended",
+      "successFailure": "Success {{success}} / Failed {{failed}}",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s"
+    },
+    "charts": {
+      "legend": {
+        "avgCost": "Average cost",
+        "totalCost": "Total cost"
+      },
+      "tooltip": {
+        "date": "Date",
+        "tasks": "Tasks",
+        "share": "Share"
+      },
+      "distributionTitle": "{{provider}} task distribution"
+    },
+    "recommendations": {
+      "useCases": "Use cases",
+      "pros": "Pros",
+      "cons": "Cons",
+      "scoreSuffix": "/ 100"
+    },
+    "statuses": {
+      "completed": "Completed",
+      "failed": "Failed",
+      "pending": "Pending",
+      "initializing": "Initializing",
+      "logging_in": "Logging in",
+      "creating_post": "Creating post",
+      "uploading_images": "Uploading images",
+      "configuring_seo": "Configuring SEO",
+      "publishing": "Publishing",
+      "idle": "Idle"
+    }
+  },
+  "publishing": {
+    "actions": {
+      "publishToWordPress": "Publish to WordPress",
+      "cancel": "Cancel",
+      "next": "Next",
+      "confirm": "Confirm publish",
+      "publishing": "Publishing...",
+      "done": "Done",
+      "close": "Close",
+      "retry": "Retry publish",
+      "contactSupport": "Contact support",
+      "continuePublishing": "Publish another article",
+      "viewArticle": "View article"
+    },
+    "messages": {
+      "publishFailed": "Publishing failed: {{message}}"
+    },
+    "providerDialog": {
+      "title": "Choose publishing provider"
+    },
+    "providerSelector": {
+      "label": "Publishing provider",
+      "recommendedBadge": "Recommended",
+      "metrics": {
+        "cost": "Cost / post",
+        "duration": "Average duration",
+        "successRate": "Success rate"
+      },
+      "toggle": {
+        "show": "View details",
+        "hide": "Hide details"
+      },
+      "durationFormat": "{{minutes}}:{{seconds}}",
+      "providers": {
+        "playwright": {
+          "name": "Playwright",
+          "description": "Fast, stable browser automation",
+          "features": [
+            "Fast execution",
+            "Low cost",
+            "High success rate"
+          ],
+          "details": [
+            "Powered by the Playwright browser automation framework",
+            "Predefined selectors deliver consistent behavior",
+            "Best for standard WordPress themes"
+          ]
+        },
+        "computer_use": {
+          "name": "Computer Use",
+          "description": "AI-driven intelligent publishing",
+          "features": [
+            "Adapts to dynamic layouts",
+            "Handles complex scenarios",
+            "Higher fault tolerance"
+          ],
+          "details": [
+            "Leverages Anthropic's Computer Use API",
+            "AI identifies and interacts with page elements",
+            "Ideal for custom or non-standard themes"
+          ]
+        },
+        "hybrid": {
+          "name": "Hybrid",
+          "description": "Playwright first with automatic fallback",
+          "features": [
+            "Best overall performance",
+            "Highest success rate",
+            "Smart fallback logic"
+          ],
+          "details": [
+            "Prioritizes Playwright for speed and cost efficiency",
+            "Automatically switches to Computer Use on failure",
+            "Combines both strengths for maximum reliability"
+          ]
+        }
+      }
+    },
+    "confirmation": {
+      "title": "Confirm publish",
+      "articleInfo": "Article details",
+      "publishSettings": "Publishing settings",
+      "fields": {
+        "title": "Title",
+        "wordCount": "Word count",
+        "metaTitle": "Meta title",
+        "provider": "Provider",
+        "estimatedTime": "Estimated duration",
+        "estimatedCost": "Estimated cost",
+        "publishMode": "Publish mode",
+        "publishImmediately": "Publish immediately",
+        "categories": "Categories",
+        "tags": "Tags",
+        "seoEnabled": "SEO optimization enabled"
+      },
+      "wordCountValue": "~{{count}} words",
+      "warning": "Publishing will immediately send the article live to WordPress. Please confirm the content before proceeding."
     }
   },
   "navigation": {

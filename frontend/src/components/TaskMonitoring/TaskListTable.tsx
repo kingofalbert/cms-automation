@@ -8,6 +8,7 @@ import { PublishTask } from '@/types/publishing';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { clsx } from 'clsx';
 import { format } from 'date-fns';
+import { useTranslation } from 'react-i18next';
 
 export interface TaskListTableProps {
   tasks: PublishTask[];
@@ -24,6 +25,7 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
 }) => {
   const [sortBy, setSortBy] = useState<keyof PublishTask>('started_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const { t } = useTranslation();
 
   const handleSort = (column: keyof PublishTask) => {
     if (sortBy === column) {
@@ -71,7 +73,7 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-          <span className="text-gray-600">加载中...</span>
+          <span className="text-gray-600">{t('publishTasks.table.loading')}</span>
         </div>
       </div>
     );
@@ -93,9 +95,11 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <p className="text-gray-600 text-lg mb-2">暂无发布任务</p>
+        <p className="text-gray-600 text-lg mb-2">
+          {t('publishTasks.table.emptyTitle')}
+        </p>
         <p className="text-gray-500 text-sm">
-          发布文章后，任务记录将显示在这里
+          {t('publishTasks.table.emptyDescription')}
         </p>
       </div>
     );
@@ -110,7 +114,7 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
               className="px-4 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('article_title')}
             >
-              文章标题
+              {t('publishTasks.table.columns.article')}
               {sortBy === 'article_title' && (
                 <span className="ml-1">
                   {sortOrder === 'asc' ? '↑' : '↓'}
@@ -121,7 +125,7 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
               className="px-4 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('provider')}
             >
-              Provider
+              {t('publishTasks.table.columns.provider')}
               {sortBy === 'provider' && (
                 <span className="ml-1">
                   {sortOrder === 'asc' ? '↑' : '↓'}
@@ -132,7 +136,7 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
               className="px-4 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('status')}
             >
-              状态
+              {t('publishTasks.table.columns.status')}
               {sortBy === 'status' && (
                 <span className="ml-1">
                   {sortOrder === 'asc' ? '↑' : '↓'}
@@ -140,19 +144,19 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
               )}
             </th>
             <th className="px-4 py-3 text-center font-semibold text-gray-700">
-              进度
+              {t('publishTasks.table.columns.progress')}
             </th>
             <th className="px-4 py-3 text-center font-semibold text-gray-700">
-              耗时
+              {t('publishTasks.table.columns.duration')}
             </th>
             <th className="px-4 py-3 text-center font-semibold text-gray-700">
-              成本
+              {t('publishTasks.table.columns.cost')}
             </th>
             <th
               className="px-4 py-3 text-left font-semibold text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('started_at')}
             >
-              开始时间
+              {t('publishTasks.table.columns.startedAt')}
               {sortBy === 'started_at' && (
                 <span className="ml-1">
                   {sortOrder === 'asc' ? '↑' : '↓'}
@@ -182,7 +186,7 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
                 </td>
                 <td className="px-4 py-3">
                   <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded capitalize">
-                    {task.provider}
+                    {t(`publishTasks.filters.providerOptions.${task.provider}` as const)}
                   </span>
                 </td>
                 <td className="px-4 py-3">

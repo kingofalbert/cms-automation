@@ -6,6 +6,7 @@
 import { Card, Input, Select, Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { Controller, useFormContext } from 'react-hook-form';
 import type { SettingsFormValues } from '@/schemas/settings-schema';
+import { useTranslation } from 'react-i18next';
 
 const browserOptions = [
   { value: 'chromium', label: 'Chromium' },
@@ -19,13 +20,16 @@ const primaryProviderOptions = [
 ];
 
 export const ProviderConfigSection: React.FC = () => {
+  const { t } = useTranslation();
   const { register, control, formState: { errors } } = useFormContext<SettingsFormValues>();
 
   const providerErrors = errors.provider_config;
 
   return (
     <Card className="p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">Provider 配置</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">
+        {t('settings.provider.title')}
+      </h2>
 
       <Tabs defaultValue="playwright">
         <TabsList>
@@ -49,7 +53,7 @@ export const ProviderConfigSection: React.FC = () => {
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="playwright-enabled" className="ml-2 text-sm text-gray-700">
-                    启用 Playwright Provider
+                    {t('settings.provider.playwright.enable')}
                   </label>
                 </div>
               )}
@@ -68,7 +72,7 @@ export const ProviderConfigSection: React.FC = () => {
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="playwright-headless" className="ml-2 text-sm text-gray-700">
-                    无头模式 (Headless)
+                    {t('settings.provider.playwright.headless')}
                   </label>
                 </div>
               )}
@@ -87,23 +91,23 @@ export const ProviderConfigSection: React.FC = () => {
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="playwright-screenshot" className="ml-2 text-sm text-gray-700">
-                    错误时截图
+                    {t('settings.provider.playwright.screenshotOnError')}
                   </label>
                 </div>
               )}
             />
 
             <Select
-              label="浏览器"
+              label={t('settings.provider.playwright.browserLabel')}
               options={browserOptions}
-              placeholder="选择浏览器"
+              placeholder={t('settings.provider.playwright.browserPlaceholder')}
               error={providerErrors?.playwright?.browser?.message as string | undefined}
               {...register('provider_config.playwright.browser')}
             />
 
             <Input
               type="number"
-              label="超时时间 (毫秒)"
+              label={t('settings.provider.playwright.timeoutLabel')}
               min={1000}
               max={120000}
               error={providerErrors?.playwright?.timeout?.message as string | undefined}
@@ -114,7 +118,7 @@ export const ProviderConfigSection: React.FC = () => {
 
             <Input
               type="number"
-              label="重试次数"
+              label={t('settings.provider.playwright.retryLabel')}
               min={0}
               max={5}
               error={providerErrors?.playwright?.retry_count?.message as string | undefined}
@@ -140,7 +144,7 @@ export const ProviderConfigSection: React.FC = () => {
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="computer-use-enabled" className="ml-2 text-sm text-gray-700">
-                    启用 Computer Use Provider
+                    {t('settings.provider.computerUse.enable')}
                   </label>
                 </div>
               )}
@@ -148,16 +152,16 @@ export const ProviderConfigSection: React.FC = () => {
 
             <Input
               type="text"
-              label="模型"
+              label={t('settings.provider.computerUse.modelLabel')}
               disabled
-              helperText="Computer Use API 目前仅支持 claude-3-5-sonnet-20241022 (由 Anthropic API 限制)"
+              helperText={t('settings.provider.computerUse.modelHelper')}
               error={providerErrors?.computer_use?.model?.message as string | undefined}
               {...register('provider_config.computer_use.model')}
             />
 
             <Input
               type="number"
-              label="最大 Tokens"
+              label={t('settings.provider.computerUse.maxTokensLabel')}
               min={1024}
               max={32768}
               error={providerErrors?.computer_use?.max_tokens?.message as string | undefined}
@@ -168,7 +172,7 @@ export const ProviderConfigSection: React.FC = () => {
 
             <Input
               type="number"
-              label="超时时间 (毫秒)"
+              label={t('settings.provider.computerUse.timeoutLabel')}
               min={1000}
               max={300000}
               error={providerErrors?.computer_use?.timeout?.message as string | undefined}
@@ -179,10 +183,10 @@ export const ProviderConfigSection: React.FC = () => {
 
             <Input
               type="number"
-              label="截图间隔 (毫秒)"
+              label={t('settings.provider.computerUse.screenshotIntervalLabel')}
               min={1000}
               max={600000}
-              helperText="Computer Use 执行时的截图间隔"
+              helperText={t('settings.provider.computerUse.screenshotIntervalHelper')}
               error={
                 providerErrors?.computer_use?.screenshot_interval?.message as string | undefined
               }
@@ -193,7 +197,7 @@ export const ProviderConfigSection: React.FC = () => {
 
             <Input
               type="number"
-              label="重试次数"
+              label={t('settings.provider.computerUse.retryLabel')}
               min={0}
               max={5}
               error={providerErrors?.computer_use?.retry_count?.message as string | undefined}
@@ -219,16 +223,16 @@ export const ProviderConfigSection: React.FC = () => {
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="hybrid-enabled" className="ml-2 text-sm text-gray-700">
-                    启用 Hybrid Provider
+                    {t('settings.provider.hybrid.enable')}
                   </label>
                 </div>
               )}
             />
 
             <Select
-              label="主 Provider"
+              label={t('settings.provider.hybrid.primaryLabel')}
               options={primaryProviderOptions}
-              placeholder="选择主 Provider"
+              placeholder={t('settings.provider.hybrid.primaryPlaceholder')}
               error={providerErrors?.hybrid?.primary_provider?.message as string | undefined}
               {...register('provider_config.hybrid.primary_provider')}
             />
@@ -246,7 +250,7 @@ export const ProviderConfigSection: React.FC = () => {
                     onChange={(event) => field.onChange(event.target.checked)}
                   />
                   <label htmlFor="hybrid-fallback-enabled" className="ml-2 text-sm text-gray-700">
-                    启用自动回退
+                    {t('settings.provider.hybrid.fallbackEnable')}
                   </label>
                 </div>
               )}
@@ -268,7 +272,7 @@ export const ProviderConfigSection: React.FC = () => {
                     htmlFor="hybrid-fallback-on-error"
                     className="ml-2 text-sm text-gray-700"
                   >
-                    错误时自动回退
+                    {t('settings.provider.hybrid.fallbackOnError')}
                   </label>
                 </div>
               )}
@@ -276,10 +280,10 @@ export const ProviderConfigSection: React.FC = () => {
 
             <Input
               type="number"
-              label="自动切换阈值 (%)"
+              label={t('settings.provider.hybrid.autoSwitchLabel')}
               min={0}
               max={100}
-              helperText="低于指定成功率时自动切换 Provider"
+              helperText={t('settings.provider.hybrid.autoSwitchHelper')}
               error={
                 providerErrors?.hybrid?.auto_switch_threshold?.message as string | undefined
               }

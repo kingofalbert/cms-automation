@@ -5,9 +5,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { routes } from '../../config/routes';
 import MobileMenu from './MobileMenu';
+import { useTranslation } from 'react-i18next';
 
 export default function Navigation() {
   const location = useLocation();
+  const { t } = useTranslation();
 
   // Filter routes that should show in navigation
   const navRoutes = routes.filter(route => route.showInNav);
@@ -19,9 +21,9 @@ export default function Navigation() {
           {/* Logo/Brand */}
           <Link
             to="/"
-            className="text-xl font-bold text-gray-900 hover:text-blue-600"
+            className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
           >
-            CMS Automation
+            CMS Automation System
           </Link>
 
           {/* Desktop Navigation Links - Hidden on mobile */}
@@ -41,7 +43,7 @@ export default function Navigation() {
                     }
                   `}
                 >
-                  {route.navLabel}
+                  {route.navLabelKey ? t(route.navLabelKey) : route.navLabel}
                 </Link>
               );
             })}

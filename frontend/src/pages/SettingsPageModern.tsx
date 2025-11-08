@@ -17,27 +17,26 @@ import {
   SkeletonSettingsSection,
 } from '@/components/ui';
 import { ProviderConfigSection } from '@/components/Settings/ProviderConfigSection';
-import { CMSConfigSection } from '@/components/Settings/CMSConfigSection';
 import { CostLimitsSection } from '@/components/Settings/CostLimitsSection';
-import { ScreenshotRetentionSection } from '@/components/Settings/ScreenshotRetentionSection';
 import { ProofreadingRulesSection } from '@/components/Settings/ProofreadingRulesSection';
-import { TagManagementSection } from '@/components/Settings/TagManagementSection';
+// Hidden in Phase 1:
+// import { CMSConfigSection } from '@/components/Settings/CMSConfigSection';
+// import { ScreenshotRetentionSection } from '@/components/Settings/ScreenshotRetentionSection';
+// import { TagManagementSection } from '@/components/Settings/TagManagementSection';
 import { AppSettings, SettingsUpdateRequest } from '@/types/settings';
 import {
   Save,
   RotateCcw,
   Monitor,
-  Globe,
   DollarSign,
-  Camera,
   AlertCircle,
   Sparkles,
   CheckCircle,
-  Tag,
+  // Hidden in Phase 1: Globe, Camera, Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  settingsFormSchema,
+  createSettingsFormSchema,
   type SettingsFormValues,
 } from '@/schemas/settings-schema';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -54,7 +53,7 @@ const createDefaultSettings = (): SettingsFormValues => ({
     },
     computer_use: {
       enabled: false,
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 8192,
       timeout: 60000,
       retry_count: 2,
@@ -162,10 +161,11 @@ const buildDefaultSettings = (settings?: AppSettings | null): SettingsFormValues
       },
     },
     cms_config: {
+      // Map backend field names to frontend form field names
       wordpress_url:
-        settings.cms_config?.wordpress_url ?? defaults.cms_config.wordpress_url,
+        (settings.cms_config as any)?.base_url ?? defaults.cms_config.wordpress_url,
       username: settings.cms_config?.username ?? defaults.cms_config.username,
-      password: settings.cms_config?.password ?? defaults.cms_config.password,
+      password: (settings.cms_config as any)?.application_password ?? defaults.cms_config.password,
       verify_ssl: settings.cms_config?.verify_ssl ?? defaults.cms_config.verify_ssl,
       timeout: settings.cms_config?.timeout ?? defaults.cms_config.timeout,
       max_retries: settings.cms_config?.max_retries ?? defaults.cms_config.max_retries,
@@ -208,10 +208,11 @@ const buildDefaultSettings = (settings?: AppSettings | null): SettingsFormValues
 };
 
 export default function SettingsPageModern() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const defaultValues = useMemo(() => buildDefaultSettings(null), []);
+  const validationSchema = useMemo(() => createSettingsFormSchema(t), [t]);
   const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(settingsFormSchema),
+    resolver: zodResolver(validationSchema),
     mode: 'onBlur',
     reValidateMode: 'onBlur',
     defaultValues,
@@ -257,24 +258,25 @@ export default function SettingsPageModern() {
     },
   });
 
-  const testConnection = async (overrideConfig?: SettingsFormValues['cms_config']) => {
-    const cmsConfig = overrideConfig ?? form.getValues('cms_config');
-
-    try {
-      const response = await api.post<{ success: boolean }>(
-        '/v1/settings/test-connection',
-        {
-          cms_type: 'wordpress',
-          base_url: cmsConfig.wordpress_url,
-          username: cmsConfig.username,
-          application_password: cmsConfig.password,
-        }
-      );
-      return response.success;
-    } catch {
-      return false;
-    }
-  };
+  // Disabled in Phase 1 - CMS Config hidden
+  // const testConnection = async (overrideConfig?: SettingsFormValues['cms_config']) => {
+  //   const cmsConfig = overrideConfig ?? form.getValues('cms_config');
+  //
+  //   try {
+  //     const response = await api.post<{ success: boolean }>(
+  //       '/v1/settings/test-connection',
+  //       {
+  //         cms_type: 'wordpress',
+  //         base_url: cmsConfig.wordpress_url,
+  //         username: cmsConfig.username,
+  //         application_password: cmsConfig.password,
+  //       }
+  //     );
+  //     return response.success;
+  //   } catch {
+  //     return false;
+  //   }
+  // };
 
   // Fetch cost usage
   const { data: costUsage } = useQuery({
@@ -290,16 +292,16 @@ export default function SettingsPageModern() {
     refetchInterval: 60000,
   });
 
-  // Fetch storage usage
-  const { data: storageUsage } = useQuery({
-    queryKey: ['storage-usage'],
-    queryFn: async () => {
-      const response = await api.get<{ total_mb: number }>(
-        '/v1/analytics/storage-usage'
-      );
-      return response;
-    },
-  });
+  // Disabled in Phase 1 - Screenshot Retention hidden
+  // const { data: storageUsage } = useQuery({
+  //   queryKey: ['storage-usage'],
+  //   queryFn: async () => {
+  //     const response = await api.get<{ total_mb: number }>(
+  //       '/v1/analytics/storage-usage'
+  //     );
+  //     return response;
+  //   },
+  // });
 
   const resolveErrorMessage = (error: unknown) => {
     if (
@@ -317,13 +319,21 @@ export default function SettingsPageModern() {
     if (error instanceof Error) {
       return error.message;
     }
-    return '保存失败，请稍后再试。';
+    return t('settings.messages.genericError');
   };
 
   const onSubmit = async (values: SettingsFormValues) => {
+    // Map frontend field names back to backend field names
     const updates: SettingsUpdateRequest = {
       provider_config: values.provider_config,
-      cms_config: values.cms_config,
+      cms_config: {
+        ...(values.cms_config.wordpress_url && { base_url: values.cms_config.wordpress_url }),
+        ...(values.cms_config.username && { username: values.cms_config.username }),
+        ...(values.cms_config.password && { application_password: values.cms_config.password }),
+        ...(values.cms_config.verify_ssl !== undefined && { verify_ssl: values.cms_config.verify_ssl }),
+        ...(values.cms_config.timeout && { timeout: values.cms_config.timeout }),
+        ...(values.cms_config.max_retries !== undefined && { max_retries: values.cms_config.max_retries }),
+      } as any,
       cost_limits: values.cost_limits,
       screenshot_retention: values.screenshot_retention,
     };
@@ -331,16 +341,16 @@ export default function SettingsPageModern() {
     const mutationPromise = updateMutation.mutateAsync(updates);
 
     toast.promise(mutationPromise, {
-      loading: '保存设置中...',
+      loading: t('settings.messages.saveInProgress'),
       success: {
-        message: '保存成功！',
-        description: '设置已更新。',
+        message: t('settings.messages.saveSuccessTitle'),
+        description: t('settings.messages.saveSuccessDescription'),
       },
       error: (error) => ({
-        message: '保存失败',
+        message: t('settings.messages.saveErrorTitle'),
         description: resolveErrorMessage(error),
         action: {
-          label: '重试',
+          label: t('settings.messages.retry'),
           onClick: () => {
             void form.handleSubmit(onSubmit)();
           },
@@ -367,20 +377,21 @@ export default function SettingsPageModern() {
   };
 
   const hasChanges = isDirty;
-  const unsavedPromptMessage = '您有未保存的更改，确认要离开当前页面吗？';
+  const unsavedPromptMessage = t('settings.messages.unsavedPrompt');
   useUnsavedChanges({ when: hasChanges, message: unsavedPromptMessage });
   const isSaving = isSubmitting || updateMutation.isPending;
   const updatedAt = watch('updated_at');
+  const locale = i18n.language === 'en-US' ? 'en-US' : 'zh-TW';
   const formattedUpdatedAt =
     updatedAt && updatedAt.length > 0
-      ? new Date(updatedAt).toLocaleString('zh-CN', {
+      ? new Date(updatedAt).toLocaleString(locale, {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
           hour: '2-digit',
           minute: '2-digit',
         })
-      : '暂无更新时间';
+      : t('settings.messages.noUpdateTime');
 
   if (isLoading) {
     return (
@@ -406,29 +417,29 @@ export default function SettingsPageModern() {
             fieldCount={6}
             hasTabs
             showIcon
-            aria-label="Provider 配置加载中"
+            aria-label={t('settings.loading.provider')}
           />
           <SkeletonSettingsSection
             fieldCount={4}
             showIcon
-            aria-label="WordPress 配置加载中"
+            aria-label={t('settings.loading.cms')}
           />
           <SkeletonSettingsSection
             fieldCount={4}
             showIcon
-            aria-label="成本限额加载中"
+            aria-label={t('settings.loading.cost')}
           />
           <SkeletonSettingsSection
             fieldCount={5}
             showIcon
-            aria-label="截图保留策略加载中"
+            aria-label={t('settings.loading.screenshot')}
           />
           <div className="mt-12 border-t border-gray-200 pt-8 text-center">
             <Skeleton
               shape="text"
               lines={1}
               lineWidths={['220px']}
-              aria-label="最后更新时间加载中"
+              aria-label={t('settings.loading.lastUpdated')}
             />
           </div>
         </div>
@@ -444,15 +455,17 @@ export default function SettingsPageModern() {
             <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-error-100">
               <AlertCircle className="h-8 w-8 text-error-600" />
             </div>
-            <h2 className="mb-3 text-2xl font-bold text-gray-900">无法加载设置</h2>
+            <h2 className="mb-3 text-2xl font-bold text-gray-900">
+              {t('settings.errors.loadFailedTitle')}
+            </h2>
             <p className="mb-8 text-gray-600">
               {error instanceof Error
                 ? error.message
-                : '连接到后端服务失败。请确保后端服务正在运行。'}
+                : t('settings.errors.loadFailedDescription')}
             </p>
             <Button onClick={() => refetch()} variant="primary" size="lg" fullWidth>
               <RotateCcw className="mr-2 h-5 w-5" />
-              重新加载
+              {t('settings.errors.reload')}
             </Button>
           </div>
         </div>
@@ -482,7 +495,7 @@ export default function SettingsPageModern() {
             <div className="flex items-center gap-3">
               {hasChanges && (
                 <div className="animate-in fade-in duration-200 rounded-lg border border-warning-200 bg-warning-50 px-4 py-2 text-sm font-medium text-warning-700">
-                  未保存的更改
+                  {t('settings.messages.unsavedBadge')}
                 </div>
               )}
               <Button
@@ -493,7 +506,7 @@ export default function SettingsPageModern() {
                 size="md"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
-                重置
+                {t('settings.actions.reset')}
               </Button>
               <Button
                 variant="primary"
@@ -503,7 +516,7 @@ export default function SettingsPageModern() {
                 size="md"
               >
                 <Save className="mr-2 h-4 w-4" />
-                {isSaving ? '保存中...' : '保存设置'}
+                {isSaving ? t('settings.actions.saving') : t('settings.actions.saveSettings')}
               </Button>
             </div>
           </div>
@@ -515,9 +528,11 @@ export default function SettingsPageModern() {
               <div className="flex items-start gap-3">
                 <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold">检测到未保存的更改</p>
+                  <p className="text-sm font-semibold">
+                    {t('settings.messages.unsavedDetected')}
+                  </p>
                   <p className="text-sm text-warning-700/90">
-                    请保存后再离开，避免丢失您的设置。
+                    {t('settings.messages.unsavedReminder')}
                   </p>
                 </div>
               </div>
@@ -529,7 +544,7 @@ export default function SettingsPageModern() {
                   onClick={handleReset}
                   disabled={isSaving}
                 >
-                  丢弃更改
+                  {t('settings.actions.discardChanges')}
                 </Button>
                 <Button
                   variant="primary"
@@ -538,7 +553,7 @@ export default function SettingsPageModern() {
                   disabled={isSaving}
                   isLoading={isSaving}
                 >
-                  立即保存
+                  {t('settings.actions.saveNow')}
                 </Button>
               </div>
             </div>
@@ -546,25 +561,26 @@ export default function SettingsPageModern() {
 
           <Accordion spacing="lg">
             <AccordionItem
-              title="Provider 配置"
-              subtitle="配置 Playwright、Computer Use 和 Hybrid 发布方式"
+              title={t('settings.accordion.provider.title')}
+              subtitle={t('settings.accordion.provider.subtitle')}
               icon={<Monitor className="h-5 w-5" />}
               defaultOpen
             >
               <ProviderConfigSection />
             </AccordionItem>
 
-            <AccordionItem
-              title="WordPress 配置"
-              subtitle="配置 WordPress 站点连接信息"
+            {/* WordPress Configuration - Hidden in Phase 1 */}
+            {/* <AccordionItem
+              title={t('settings.accordion.cms.title')}
+              subtitle={t('settings.accordion.cms.subtitle')}
               icon={<Globe className="h-5 w-5" />}
             >
               <CMSConfigSection onTestConnection={testConnection} />
-            </AccordionItem>
+            </AccordionItem> */}
 
             <AccordionItem
-              title="成本限额"
-              subtitle="设置每日和每月的支出限额"
+              title={t('settings.accordion.cost.title')}
+              subtitle={t('settings.accordion.cost.subtitle')}
               icon={<DollarSign className="h-5 w-5" />}
             >
               <CostLimitsSection
@@ -573,15 +589,16 @@ export default function SettingsPageModern() {
               />
             </AccordionItem>
 
-            <AccordionItem
-              title="截图保留策略"
-              subtitle="配置截图自动清理规则"
+            {/* Screenshot Retention - Hidden in Phase 1 */}
+            {/* <AccordionItem
+              title={t('settings.accordion.screenshot.title')}
+              subtitle={t('settings.accordion.screenshot.subtitle')}
               icon={<Camera className="h-5 w-5" />}
             >
               <ScreenshotRetentionSection
                 estimatedStorageUsage={storageUsage?.total_mb ?? 0}
               />
-            </AccordionItem>
+            </AccordionItem> */}
 
             <AccordionItem
               title={t('settings.sections.proofreading')}
@@ -591,17 +608,20 @@ export default function SettingsPageModern() {
               <ProofreadingRulesSection />
             </AccordionItem>
 
-            <AccordionItem
+            {/* Tag Management - Hidden in Phase 1 */}
+            {/* <AccordionItem
               title={t('settings.sections.tags')}
               subtitle={t('settings.tags.subtitle')}
               icon={<Tag className="h-5 w-5" />}
             >
               <TagManagementSection />
-            </AccordionItem>
+            </AccordionItem> */}
           </Accordion>
 
           <div className="mt-12 border-t border-gray-200 pt-8 text-center">
-            <p className="text-sm text-gray-500">最后更新: {formattedUpdatedAt}</p>
+            <p className="text-sm text-gray-500">
+              {t('settings.messages.lastUpdated', { timestamp: formattedUpdatedAt })}
+            </p>
           </div>
         </div>
       </form>

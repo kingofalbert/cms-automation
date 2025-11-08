@@ -14,12 +14,15 @@ export interface RouteConfig {
   preload?: () => Promise<any>;
   /** Route title for meta tags */
   title?: string;
+  titleKey?: string;
   /** Route description for meta tags */
   description?: string;
+  descriptionKey?: string;
   /** Whether to show in navigation */
   showInNav?: boolean;
   /** Navigation label */
   navLabel?: string;
+  navLabelKey?: string;
   /** Icon for navigation */
   icon?: string;
   /** Loading fallback type */
@@ -69,16 +72,16 @@ export const routes: RouteConfig[] = [
   {
     path: '/',
     ...WorklistPage,
-    title: 'CMS自动化系统 - 工作清单',
-    description: '管理您的文章校对工作流',
+    titleKey: 'routes.worklist.title',
+    descriptionKey: 'routes.worklist.description',
     loadingType: 'list',
   },
   // Phase 1: Worklist - Main page
   {
     path: '/worklist',
     ...WorklistPage,
-    title: 'CMS自动化系统 - 工作清单',
-    description: '管理您的文章校对工作流',
+    titleKey: 'routes.worklist.title',
+    descriptionKey: 'routes.worklist.description',
     showInNav: false, // No navigation menu in Phase 1
     loadingType: 'list',
   },
@@ -86,8 +89,8 @@ export const routes: RouteConfig[] = [
   {
     path: '/settings',
     ...SettingsPage,
-    title: 'CMS自动化系统 - 设置',
-    description: '配置系统设置和语言偏好',
+    titleKey: 'routes.settings.title',
+    descriptionKey: 'routes.settings.description',
     showInNav: false, // No navigation menu in Phase 1
     loadingType: 'detail',
   },
@@ -95,8 +98,8 @@ export const routes: RouteConfig[] = [
   {
     path: '/worklist/:id/review',
     ...ProofreadingReviewPage,
-    title: 'CMS自动化系统 - 校对审核',
-    description: '审核校对建议并做出决策',
+    titleKey: 'routes.proofreadingReview.title',
+    descriptionKey: 'routes.proofreadingReview.description',
     showInNav: false,
     loadingType: 'detail',
   },

@@ -159,7 +159,7 @@ export const ProofreadingRulesSection: React.FC = () => {
                         </p>
                         <p className="text-xs text-gray-500">
                           {ruleset.total_rules || 0} {t('settings.proofreading.rules')} •{' '}
-                          {new Date(ruleset.created_at).toLocaleDateString('zh-CN')}
+                          {new Date(ruleset.created_at).toLocaleDateString('zh-TW')}
                         </p>
                       </div>
                     </div>
