@@ -3,7 +3,7 @@
  * Center panel displaying article with highlighted issues.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ProofreadingIssue, DecisionPayload } from '@/types/worklist';
@@ -33,6 +33,27 @@ export function ProofreadingArticleContent({
   onIssueClick,
   suggestedContent,
 }: ProofreadingArticleContentProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to selected issue when it changes
+  useEffect(() => {
+    if (!selectedIssue) return;
+
+    // Small delay to ensure DOM is updated
+    const timer = setTimeout(() => {
+      const element = document.querySelector(`[data-issue-id="${selectedIssue.id}"]`);
+      if (element) {
+        element.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center', // Center the element in the viewport
+          inline: 'nearest'
+        });
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [selectedIssue]);
+
   // If in diff mode and we have suggested content, show diff view
   if (viewMode === 'diff' && suggestedContent) {
     return <DiffView original={content} suggested={suggestedContent} title={title} />;
