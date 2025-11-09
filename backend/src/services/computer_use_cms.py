@@ -23,7 +23,7 @@ class ComputerUseCMSService:
     def __init__(self) -> None:
         """Initialize Computer Use CMS service."""
         self.client = Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"  # Computer Use supported model
+        self.model = "claude-sonnet-4-5-20250929"  # Computer Use supported model
         self.max_tokens = 4096
         self.display_width = 1920
         self.display_height = 1080

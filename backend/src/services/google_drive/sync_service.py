@@ -323,7 +323,9 @@ class GoogleDriveSyncService:
             )
             raise
 
-        parsed = self._parse_document_content(content)
+        # Parse content and use Drive file name as fallback title
+        file_name = file_metadata.get("name")
+        parsed = self._parse_document_content(content, file_name=file_name)
         parsed["drive_metadata"] = {
             "id": file_metadata.get("id"),
             "name": file_metadata.get("name"),
@@ -376,7 +378,7 @@ class GoogleDriveSyncService:
             status = ParsingStatus.FALLBACK if ParsingStatus else None
             return text.strip(), status
 
-    def _parse_document_content(self, content: str) -> dict[str, Any]:
+    def _parse_document_content(self, content: str, file_name: str | None = None) -> dict[str, Any]:
         """Parse raw document content into structured data.
 
         Supports YAML front matter format:
@@ -394,6 +396,10 @@ class GoogleDriveSyncService:
         author: Author Name
         ---
         Article body content here...
+
+        Args:
+            content: Raw document content
+            file_name: Optional file name from Google Drive to use as fallback title
         """
         # Try to parse YAML front matter
         yaml_pattern = re.compile(r'^---\s*\n(.*?)\n---\s*\n(.*)$', re.DOTALL)
@@ -406,7 +412,8 @@ class GoogleDriveSyncService:
                 metadata = yaml.safe_load(front_matter_raw) or {}
 
                 # Extract structured metadata
-                title = metadata.get("title", "Untitled Document")
+                # Use file_name as fallback if title not in YAML
+                title = metadata.get("title") or file_name or "Untitled Document"
                 meta_description = metadata.get("meta_description")
                 seo_keywords = metadata.get("seo_keywords", [])
                 tags = metadata.get("tags", [])
@@ -448,16 +455,36 @@ class GoogleDriveSyncService:
                 )
                 # Fall back to plain text parsing
 
-        # Fallback: Plain text parsing (no YAML front matter)
-        lines = [line.strip() for line in content.splitlines()]
-        lines = [line for line in lines if line]
-
-        if not lines:
-            title = "Untitled Document"
-            body = ""
+        # Fallback: Use file name as title if available, otherwise extract from content
+        if file_name:
+            # Use Google Drive file name as title (most reliable)
+            title = file_name[:500]
+            body = content.strip()
         else:
-            title = lines[0][:500]
-            body = "\n".join(lines[1:]) if len(lines) > 1 else ""
+            # Extract from content as last resort
+            lines = [line.strip() for line in content.splitlines()]
+            lines = [line for line in lines if line]
+
+            if not lines:
+                title = "Untitled Document"
+                body = ""
+            else:
+                # Try to find a reasonable title (skip CSS/style lines)
+                title = "Untitled Document"
+                title_line_idx = 0
+
+                # Skip lines that look like CSS/style code
+                for idx, line in enumerate(lines):
+                    # Skip lines with CSS patterns
+                    if line.startswith('.') or line.startswith('#') or '{' in line or '}' in line:
+                        continue
+                    # Found a potential title
+                    if len(line) > 0:
+                        title = line[:500]
+                        title_line_idx = idx
+                        break
+
+                body = "\n".join(lines[title_line_idx + 1:]) if len(lines) > title_line_idx + 1 else ""
 
         return {
             "title": title,

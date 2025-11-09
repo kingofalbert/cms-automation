@@ -453,7 +453,7 @@ SEO关键词：
   },
 
   "processing_metadata": {
-    "model": "claude-3-5-sonnet-20241022",
+    "model": "claude-sonnet-4-5-20250929",
     "timestamp": "2025-10-27T10:30:45Z",
     "processing_time_ms": 2341,
     "total_tokens": {

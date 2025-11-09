@@ -80,7 +80,7 @@ class ComputerUseProvider(IPublishingProvider):
         self.screenshot_path.mkdir(parents=True, exist_ok=True)
 
         # API 配置
-        self.model = "claude-3-5-sonnet-20241022"
+        self.model = "claude-sonnet-4-5-20250929"
         self.max_tokens = 4096
 
         # 重试配置

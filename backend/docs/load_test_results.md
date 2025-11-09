@@ -37,7 +37,7 @@ The system demonstrated production-ready performance under realistic load condit
 - **Task Queue**: Celery (10 workers)
 - **Database**: PostgreSQL 15 with pgvector
 - **Message Broker**: Redis 7-alpine
-- **AI Model**: claude-3-5-sonnet-20241022
+- **AI Model**: claude-sonnet-4-5-20250929
 
 ---
 
@@ -173,7 +173,7 @@ The system demonstrated production-ready performance under realistic load condit
 - Queue depth remained manageable
 
 ✅ **Claude API**
-- Model: claude-3-5-sonnet-20241022
+- Model: claude-sonnet-4-5-20250929
 - Response time: Consistent (~18-20s per article)
 - No rate limiting encountered
 - No API errors

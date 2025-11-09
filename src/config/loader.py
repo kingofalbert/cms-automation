@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     # ==================== Anthropic API 配置 ====================
     anthropic_api_key: str = Field(default="", description="Anthropic API Key")
-    anthropic_model: str = Field(default="claude-3-5-sonnet-20241022", description="使用的模型")
+    anthropic_model: str = Field(default="claude-sonnet-4-5-20250929", description="使用的模型")
     anthropic_timeout: int = Field(default=300, description="API 超时时间 (秒)")
 
     # ==================== 应用配置 ====================

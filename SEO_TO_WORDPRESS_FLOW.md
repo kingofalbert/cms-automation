@@ -454,7 +454,7 @@ await session.commit()
 
     // ← 文章生成阶段的元数据
     "cost_usd": 0.08,
-    "model": "claude-3-5-sonnet-20241022",
+    "model": "claude-sonnet-4-5-20250929",
     "input_tokens": 1500,
     "output_tokens": 3000
   }

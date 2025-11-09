@@ -143,7 +143,7 @@ WORDPRESS_LOCALE=zh_TW
 ANTHROPIC_API_KEY=sk-ant-api03-xxxxxxxxxxxxx
 
 # API 模型版本
-ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 ```
 
 #### Provider 配置

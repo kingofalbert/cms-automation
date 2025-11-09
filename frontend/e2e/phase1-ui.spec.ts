@@ -39,7 +39,7 @@ test.describe('Phase 1 UI - Core Functionality', () => {
     await expect(languageSwitcher).toBeVisible();
 
     // Check settings button (should be visible on worklist page)
-    const settingsButton = header.locator('button:has-text("设置"), button:has-text("Settings")');
+    const settingsButton = header.locator('button:has-text("設定"), button:has-text("Settings")');
     await expect(settingsButton).toBeVisible();
   });
 
@@ -48,17 +48,17 @@ test.describe('Phase 1 UI - Core Functionality', () => {
     await page.waitForLoadState('networkidle');
 
     // Click settings button
-    const settingsButton = page.locator('button:has-text("设置"), button:has-text("Settings")').first();
+    const settingsButton = page.locator('button:has-text("設定"), button:has-text("Settings")').first();
     await settingsButton.click();
 
     // Wait for navigation
     await page.waitForURL(/.*#\/settings/);
 
     // Verify we're on settings page
-    await expect(page.locator('h1:has-text("系统设置"), h1:has-text("System Settings")')).toBeVisible();
+    await expect(page.locator('h1:has-text("系統設定"), h1:has-text("System Settings")')).toBeVisible();
 
     // Check that Worklist button is now visible instead of Settings
-    const worklistButton = page.locator('button:has-text("工作清单"), button:has-text("Worklist")');
+    const worklistButton = page.locator('button:has-text("工作清單"), button:has-text("Worklist")');
     await expect(worklistButton).toBeVisible();
   });
 
@@ -67,14 +67,14 @@ test.describe('Phase 1 UI - Core Functionality', () => {
     await page.waitForLoadState('networkidle');
 
     // Click worklist button
-    const worklistButton = page.locator('button:has-text("工作清单"), button:has-text("Worklist")').first();
+    const worklistButton = page.locator('button:has-text("工作清單"), button:has-text("Worklist")').first();
     await worklistButton.click();
 
     // Wait for navigation
     await page.waitForURL(/.*#\/(worklist)?/);
 
     // Verify we're on worklist page
-    await expect(page.locator('h1:has-text("工作清单"), h1:has-text("Worklist")')).toBeVisible();
+    await expect(page.locator('h1:has-text("工作清單"), h1:has-text("Worklist")')).toBeVisible();
   });
 });
 
@@ -89,11 +89,11 @@ test.describe('Phase 1 UI - Internationalization', () => {
   test('should default to Chinese language', async ({ page }) => {
     // Check that default language is Chinese
     const languageSwitcher = page.locator('select').first();
-    await expect(languageSwitcher).toHaveValue('zh-CN');
+    await expect(languageSwitcher).toHaveValue('zh-TW');
 
     // Check Chinese text is displayed
-    await expect(page.locator('h1')).toContainText('CMS 自动化系统');
-    await expect(page.locator('text=工作清单')).toBeVisible();
+    await expect(page.locator('h1')).toContainText('CMS 自動化系統');
+    await expect(page.locator('text=工作清單')).toBeVisible();
   });
 
   test('should switch to English language', async ({ page }) => {
@@ -129,12 +129,12 @@ test.describe('Phase 1 UI - Internationalization', () => {
     const languageSwitcher = page.locator('select').first();
 
     // Test Chinese
-    await languageSwitcher.selectOption('zh-CN');
+    await languageSwitcher.selectOption('zh-TW');
     await page.waitForTimeout(500);
 
-    await expect(page.locator('button:has-text("设置")')).toBeVisible();
-    await expect(page.locator('h1:has-text("工作清单")')).toBeVisible();
-    await expect(page.locator('text=管理来自 Google Drive 的文章')).toBeVisible();
+    await expect(page.locator('button:has-text("設定")')).toBeVisible();
+    await expect(page.locator('h1:has-text("工作清單")')).toBeVisible();
+    await expect(page.locator('text=管理來自 Google Drive 的文章')).toBeVisible();
 
     // Test English
     await languageSwitcher.selectOption('en-US');
@@ -149,18 +149,18 @@ test.describe('Phase 1 UI - Internationalization', () => {
 test.describe('Phase 1 UI - WorklistPage Internationalization', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`${BASE_URL}#/worklist`);
-    await page.evaluate(() => localStorage.setItem('cms_automation_language', 'zh-CN'));
+    await page.evaluate(() => localStorage.setItem('cms_automation_language', 'zh-TW'));
     await page.reload();
     await page.waitForLoadState('networkidle');
   });
 
   test('should display worklist page in Chinese', async ({ page }) => {
     // Check page title and subtitle
-    await expect(page.locator('h1:has-text("工作清单")')).toBeVisible();
-    await expect(page.locator('text=管理来自 Google Drive 的文章，跟踪 7 阶段审稿流程')).toBeVisible();
+    await expect(page.locator('h1:has-text("工作清單")')).toBeVisible();
+    await expect(page.locator('text=管理來自 Google Drive 的文章，追蹤 7 階段審稿流程')).toBeVisible();
 
     // Check filter section
-    await expect(page.locator('h2:has-text("筛选条件")')).toBeVisible();
+    await expect(page.locator('h2:has-text("篩選條件")')).toBeVisible();
 
     // Switch to English
     const languageSwitcher = page.locator('select').first();
@@ -177,7 +177,7 @@ test.describe('Phase 1 UI - WorklistPage Internationalization', () => {
     const languageSwitcher = page.locator('select').first();
 
     // Chinese filter options
-    await languageSwitcher.selectOption('zh-CN');
+    await languageSwitcher.selectOption('zh-TW');
     await page.waitForTimeout(500);
 
     const statusFilter = page.locator('select').nth(1); // Second select is status filter
@@ -187,9 +187,9 @@ test.describe('Phase 1 UI - WorklistPage Internationalization', () => {
     await statusFilter.click();
 
     // Check Chinese status options
-    await expect(page.locator('option:has-text("全部状态")')).toBeVisible();
-    await expect(page.locator('option:has-text("待评估")')).toBeVisible();
-    await expect(page.locator('option:has-text("待确认")')).toBeVisible();
+    await expect(page.locator('option:has-text("全部狀態")')).toBeVisible();
+    await expect(page.locator('option:has-text("待處理")')).toBeVisible();
+    await expect(page.locator('option:has-text("審核中")')).toBeVisible();
 
     // Switch to English
     await languageSwitcher.selectOption('en-US');
@@ -207,12 +207,12 @@ test.describe('Phase 1 UI - WorklistPage Internationalization', () => {
     const languageSwitcher = page.locator('select').first();
 
     // Check Chinese placeholders
-    await languageSwitcher.selectOption('zh-CN');
+    await languageSwitcher.selectOption('zh-TW');
     await page.waitForTimeout(500);
 
-    const searchInput = page.locator('input[placeholder*="搜索"]');
+    const searchInput = page.locator('input[placeholder*="搜尋"]');
     await expect(searchInput).toBeVisible();
-    await expect(searchInput).toHaveAttribute('placeholder', '搜索标题或内容...');
+    await expect(searchInput).toHaveAttribute('placeholder', '搜尋標題或內容...');
 
     const authorInput = page.locator('input[placeholder*="作者"]');
     await expect(authorInput).toBeVisible();
@@ -233,15 +233,15 @@ test.describe('Phase 1 UI - WorklistPage Internationalization', () => {
 test.describe('Phase 1 UI - SettingsPage Internationalization', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`${BASE_URL}#/settings`);
-    await page.evaluate(() => localStorage.setItem('cms_automation_language', 'zh-CN'));
+    await page.evaluate(() => localStorage.setItem('cms_automation_language', 'zh-TW'));
     await page.reload();
     await page.waitForLoadState('networkidle');
   });
 
   test('should display settings page in Chinese', async ({ page }) => {
     // Check page title and subtitle
-    await expect(page.locator('h1:has-text("系统设置")')).toBeVisible();
-    await expect(page.locator('text=配置您的 CMS 自动化系统')).toBeVisible();
+    await expect(page.locator('h1:has-text("系統設定")')).toBeVisible();
+    await expect(page.locator('text=設定您的 CMS 自動化系統')).toBeVisible();
 
     // Switch to English
     const languageSwitcher = page.locator('select').first();
@@ -257,7 +257,7 @@ test.describe('Phase 1 UI - SettingsPage Internationalization', () => {
     const languageSwitcher = page.locator('select').first();
 
     // Check Chinese buttons
-    await languageSwitcher.selectOption('zh-CN');
+    await languageSwitcher.selectOption('zh-TW');
     await page.waitForTimeout(500);
 
     // Note: These buttons may not be visible if they're in accordion sections
@@ -279,17 +279,17 @@ test.describe('Phase 1 UI - Route Simplification', () => {
     // Test root route redirects to worklist
     await page.goto(BASE_URL);
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1:has-text("工作清单"), h1:has-text("Worklist")')).toBeVisible();
+    await expect(page.locator('h1:has-text("工作清單"), h1:has-text("Worklist")')).toBeVisible();
 
     // Test /worklist route
     await page.goto(`${BASE_URL}#/worklist`);
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1:has-text("工作清单"), h1:has-text("Worklist")')).toBeVisible();
+    await expect(page.locator('h1:has-text("工作清單"), h1:has-text("Worklist")')).toBeVisible();
 
     // Test /settings route
     await page.goto(`${BASE_URL}#/settings`);
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1:has-text("系统设置"), h1:has-text("System Settings")')).toBeVisible();
+    await expect(page.locator('h1:has-text("系統設定"), h1:has-text("System Settings")')).toBeVisible();
   });
 
   test('should not display global navigation menu', async ({ page }) => {
@@ -353,7 +353,7 @@ test.describe('Phase 1 UI - Accessibility', () => {
     expect(ariaLabel).toBeTruthy();
 
     // Check buttons have proper labels
-    const settingsButton = page.locator('button:has-text("设置"), button:has-text("Settings")').first();
+    const settingsButton = page.locator('button:has-text("設定"), button:has-text("Settings")').first();
     const buttonAriaLabel = await settingsButton.getAttribute('aria-label');
     expect(buttonAriaLabel).toBeTruthy();
   });
@@ -367,7 +367,7 @@ test.describe('Phase 1 UI - Accessibility', () => {
     await page.keyboard.press('Tab'); // Settings button
 
     // Check focus is on settings button
-    const settingsButton = page.locator('button:has-text("设置"), button:has-text("Settings")').first();
+    const settingsButton = page.locator('button:has-text("設定"), button:has-text("Settings")').first();
     await expect(settingsButton).toBeFocused();
 
     // Press Enter to navigate
@@ -375,6 +375,6 @@ test.describe('Phase 1 UI - Accessibility', () => {
     await page.waitForTimeout(500);
 
     // Verify navigation occurred
-    await expect(page.locator('h1:has-text("系统设置"), h1:has-text("System Settings")')).toBeVisible();
+    await expect(page.locator('h1:has-text("系統設定"), h1:has-text("System Settings")')).toBeVisible();
   });
 });

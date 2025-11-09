@@ -103,7 +103,7 @@ GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG
 
 # ============= Anthropic API =============
 ANTHROPIC_API_KEY=sk-ant-api03-*** (已隐藏)
-ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 ANTHROPIC_MAX_TOKENS=4096
 
 # ============= 其他配置 =============

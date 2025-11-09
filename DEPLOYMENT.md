@@ -84,7 +84,7 @@ REDIS_MAX_CONNECTIONS=50
 
 # Claude API
 ANTHROPIC_API_KEY=<your-production-api-key>
-ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 ANTHROPIC_MAX_TOKENS=8192
 
 # CMS Integration

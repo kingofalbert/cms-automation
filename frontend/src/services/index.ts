@@ -14,5 +14,17 @@ export { settingsAPI } from './settings';
 export { authAPI } from './auth';
 export { default as ruleManagementAPI } from './ruleManagementAPI';
 
+// Phase 7: Article parsing service
+export * as parsingAPI from './parsing';
+export type {
+  ParseArticleRequest,
+  ParseArticleResponse,
+  ParsedArticleData,
+  ArticleImage,
+  ConfirmParsingRequest,
+  ImageReviewRequest,
+  ImageReviewAction,
+} from './parsing';
+
 // Re-export all types from api.ts for convenience
 export type * from '../types/api';

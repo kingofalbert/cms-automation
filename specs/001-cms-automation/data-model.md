@@ -1,8 +1,8 @@
 # Data Model Specification - CMS Automation System
 
-**Document Version**: 3.0
-**Last Updated**: 2025-10-29
-**Status**: Active - Google Drive Integration & Worklist Added
+**Document Version**: 4.0
+**Last Updated**: 2025-11-08 🆕
+**Status**: Active - Article Structured Parsing Added
 
 ---
 
@@ -21,7 +21,8 @@ This document defines the complete database schema for the CMS Automation System
 
 - **Phase 1-3**: Core article processing, SEO optimization (Computer Use MVP)
 - **Phase 4-5**: Multi-provider publishing, hybrid architecture
-- **Phase 6** 🆕: Google Drive integration, status tracking, worklist
+- **Phase 6**: Google Drive integration, status tracking, worklist
+- **Phase 7** 🆕: Article structured parsing, image management, parsing confirmation
 
 ---
 
@@ -33,6 +34,8 @@ erDiagram
     articles ||--o{ article_status_history : "has history"
     articles ||--o| seo_metadata : "has SEO data"
     articles ||--o{ publish_tasks : "has publish attempts"
+    articles ||--o{ article_images : "has images" %% NEW
+    article_images ||--o{ article_image_reviews : "has reviews" %% NEW
     publish_tasks ||--o{ execution_logs : "generates logs"
 
     google_drive_documents {
@@ -198,7 +201,7 @@ CREATE TABLE articles (
         'failed'                -- Publishing failed
     )),
 
-    -- Google Drive Integration Fields 🆕
+    -- Google Drive Integration Fields
     google_drive_doc_id VARCHAR(255),
     google_drive_file_name VARCHAR(500),
     google_drive_folder_id VARCHAR(255),
@@ -206,6 +209,21 @@ CREATE TABLE articles (
     google_drive_processed_at TIMESTAMP,
     google_drive_retry_count INTEGER DEFAULT 0,
     google_drive_error_message TEXT,
+
+    -- Article Structured Parsing Fields 🆕 (Phase 7)
+    title_prefix VARCHAR(200),                  -- First part of title (optional)
+    title_main VARCHAR(500) NOT NULL,           -- Main title (required)
+    title_suffix VARCHAR(200),                  -- Subtitle/suffix (optional)
+    author_line VARCHAR(300),                   -- Raw author line (e.g., "文／張三")
+    author_name VARCHAR(100),                   -- Cleaned author name (e.g., "張三")
+    body_html TEXT,                             -- Sanitized body HTML (headers/images/meta removed)
+    meta_description TEXT,                      -- Extracted meta description for SEO
+    seo_keywords TEXT[],                        -- Array of SEO keywords
+    tags TEXT[],                                -- Array of content tags/categories
+    parsing_confirmed BOOLEAN DEFAULT FALSE,    -- Whether parsing has been reviewed & confirmed
+    parsing_confirmed_at TIMESTAMP,             -- When parsing was confirmed
+    parsing_confirmed_by VARCHAR(100),          -- Who confirmed the parsing
+    parsing_feedback TEXT,                      -- Reviewer feedback on parsing quality
 
     -- Timestamps
     created_at TIMESTAMP DEFAULT NOW(),
@@ -431,6 +449,84 @@ CREATE INDEX idx_execution_logs_created_at ON execution_logs(created_at DESC);
 
 ---
 
+### 3.7 article_images 🆕
+
+**Purpose**: Stores structured information about images extracted from articles, including source assets and technical specifications.
+
+```sql
+CREATE TABLE article_images (
+    id SERIAL PRIMARY KEY,
+    article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    preview_path VARCHAR(500),           -- Path to preview/thumbnail image
+    source_path VARCHAR(500),            -- Path to downloaded high-res source image
+    source_url VARCHAR(1000),            -- Original "原圖/點此下載" URL from Google Doc
+    caption TEXT,                        -- Image caption from document
+    position INTEGER NOT NULL,           -- Paragraph index (0-based) where image should appear
+    metadata JSONB,                      -- Technical specifications (width, height, etc.)
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+
+    -- Constraints
+    CONSTRAINT positive_position CHECK (position >= 0)
+);
+
+-- Indexes
+CREATE INDEX idx_article_images_article_id ON article_images(article_id);
+CREATE INDEX idx_article_images_position ON article_images(article_id, position);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_article_images_updated_at
+    BEFORE UPDATE ON article_images
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+```
+
+**JSONB metadata Structure**:
+```json
+{
+  "width": 1920,
+  "height": 1080,
+  "aspect_ratio": "16:9",
+  "file_size_bytes": 2458624,
+  "mime_type": "image/jpeg",
+  "format": "JPEG",
+  "color_mode": "RGB",
+  "has_transparency": false,
+  "exif_date": "2025-11-08T10:30:00Z",
+  "download_timestamp": "2025-11-08T12:00:00Z"
+}
+```
+
+---
+
+### 3.8 article_image_reviews 🆕
+
+**Purpose**: Tracks reviewer feedback and actions on individual images during parsing confirmation (Step 1).
+
+```sql
+CREATE TABLE article_image_reviews (
+    id SERIAL PRIMARY KEY,
+    article_image_id INTEGER NOT NULL REFERENCES article_images(id) ON DELETE CASCADE,
+    worklist_item_id INTEGER,            -- Optional FK to worklist_items table
+    action VARCHAR(20) NOT NULL CHECK (action IN (
+        'keep',                          -- Image is correct, no changes needed
+        'remove',                        -- Remove this image from article
+        'replace_caption',               -- Caption needs correction
+        'replace_source'                 -- Source URL is incorrect, needs replacement
+    )),
+    new_caption TEXT,                    -- Replacement caption (if action='replace_caption')
+    new_source_url VARCHAR(1000),        -- Replacement source URL (if action='replace_source')
+    reviewer_notes TEXT,                 -- Notes explaining the review decision
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_article_image_reviews_article_image ON article_image_reviews(article_image_id);
+CREATE INDEX idx_article_image_reviews_worklist_item ON article_image_reviews(worklist_item_id);
+```
+
+---
+
 ## 4. Database Constraints & Rules
 
 ### 4.1 Foreign Key Constraints
@@ -456,6 +552,14 @@ ALTER TABLE execution_logs
 ALTER TABLE google_drive_documents
     ADD CONSTRAINT fk_google_drive_documents_article
     FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL;
+
+ALTER TABLE article_images
+    ADD CONSTRAINT fk_article_images_article
+    FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE;
+
+ALTER TABLE article_image_reviews
+    ADD CONSTRAINT fk_article_image_reviews_article_image
+    FOREIGN KEY (article_image_id) REFERENCES article_images(id) ON DELETE CASCADE;
 ```
 
 ### 4.2 Check Constraints
@@ -958,14 +1062,17 @@ pg_restore -U cms_user -d cms_automation -t articles articles_backup.dump
 | 1.0     | 2025-10-20 | Initial schema: articles, seo_metadata, publish_tasks      |
 | 2.0     | 2025-10-26 | Added multi-provider support, execution logs               |
 | 3.0     | 2025-10-29 | Added Google Drive integration, Worklist, status tracking  |
+| 4.0     | 2025-11-08 | 🆕 Added article structured parsing, article_images table, article_image_reviews table, parsing confirmation fields |
 
 ---
 
 ## 11. Related Documentation
 
-- **Functional Requirements**: See `spec.md` sections FR-071 to FR-087
-- **API Endpoints**: See `plan.md` section 7.2.4
-- **Implementation Tasks**: See `tasks.md` Phase 6 (T6.1-T6.20)
+- **Functional Requirements**: See `spec.md` sections FR-071 to FR-087 (Worklist), FR-088 to FR-105 (Parsing)
+- **API Endpoints**: See `plan.md` section 7.2.4 (Worklist), section 8.2 (Parsing)
+- **Implementation Tasks**: See `tasks.md` Phase 6 (T6.1-T6.20), Phase 7 (T-PARSE-1.1 to T-PARSE-5.4)
+- **Parsing Requirements**: See `../../docs/article_parsing_requirements.md`
+- **Technical Analysis**: See `../../docs/ARTICLE_PARSING_TECHNICAL_ANALYSIS.md`
 - **UI Components**: See `UI_IMPLEMENTATION_TASKS.md` Task Group 4.1-4.2
 
 ---

@@ -212,7 +212,7 @@ async def publish_article_with_fallback(
 - `computer.scroll` - Scroll page content
 - `computer.wait` - Wait for element visibility or timeout
 
-**API Model**: `claude-3-5-sonnet-20241022` (latest Computer Use model)
+**API Model**: `claude-sonnet-4-5-20250929` (latest Computer Use model)
 
 **Pricing** (as of 2025-10-26):
 - Input: $3.00 per million tokens

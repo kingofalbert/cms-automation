@@ -15,10 +15,11 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 # Production Environment Configuration
-PROJECT_ID="${GCP_PROJECT_ID_PROD:-cms-automation-prod}"
+PROJECT_ID="${GCP_PROJECT_ID_PROD:-cmsupload-476323}"
 REGION="${GCP_REGION_PROD:-us-east1}"
 SERVICE_NAME="cms-automation-backend"
 IMAGE_TAG="${1:-prod-v$(date +%Y%m%d)}"
+ARTIFACT_REGISTRY_REPO="cms-backend"
 
 # =============================================================================
 # Helper Functions
@@ -88,18 +89,19 @@ log_info "Setting GCP project..."
 gcloud config set project "$PROJECT_ID"
 
 # Build Docker image for linux/amd64 (Cloud Run requirement)
-log_info "Building Docker image: gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${IMAGE_TAG}"
+IMAGE_URL="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${SERVICE_NAME}"
+log_info "Building Docker image: ${IMAGE_URL}:${IMAGE_TAG}"
 log_info "Platform: linux/amd64 (Cloud Run compatible)"
 docker buildx build --platform linux/amd64 \
-    -t "gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${IMAGE_TAG}" \
-    -t "gcr.io/${PROJECT_ID}/${SERVICE_NAME}:latest" \
+    -t "${IMAGE_URL}:${IMAGE_TAG}" \
+    -t "${IMAGE_URL}:latest" \
     --push \
     .
 
 # Deploy to Cloud Run (Production Configuration)
 log_info "Deploying to Cloud Run (Production)..."
 gcloud run deploy "$SERVICE_NAME" \
-    --image "gcr.io/${PROJECT_ID}/${SERVICE_NAME}:${IMAGE_TAG}" \
+    --image "${IMAGE_URL}:${IMAGE_TAG}" \
     --region "$REGION" \
     --platform managed \
     --memory 2Gi \

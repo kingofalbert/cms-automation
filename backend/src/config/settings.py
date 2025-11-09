@@ -109,6 +109,12 @@ class Settings(BaseSettings):
         description="Google Drive folder ID for file uploads",
     )
 
+    # Local Image Storage Configuration (Phase 7)
+    IMAGE_STORAGE_PATH: Path = Field(
+        default=PROJECT_ROOT / "data" / "images",
+        description="Local path for storing downloaded article images",
+    )
+
     # CMS Integration
     CMS_TYPE: Literal["wordpress", "strapi", "contentful", "ghost"] = Field(
         default="wordpress",

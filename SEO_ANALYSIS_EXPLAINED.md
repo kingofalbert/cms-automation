@@ -289,7 +289,7 @@ class SEOAnalyzerService:
 
     def __init__(self):
         self.client = AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-        self.model = "claude-3-5-sonnet-20241022"
+        self.model = "claude-sonnet-4-5-20250929"
 
     async def analyze_article(
         self,

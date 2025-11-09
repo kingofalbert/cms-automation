@@ -48,7 +48,7 @@
 
 #### `.env` 文件
 ```diff
-- ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+- ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 + ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 - ANTHROPIC_MAX_TOKENS=4096
 + ANTHROPIC_MAX_TOKENS=16384  # 提升到 16K（4倍）
@@ -57,7 +57,7 @@
 #### `src/config/settings.py`
 ```diff
   ANTHROPIC_MODEL: str = Field(
--     default="claude-3-5-sonnet-20241022",
+-     default="claude-sonnet-4-5-20250929",
 -     description="Claude model to use for generation",
 +     default="claude-sonnet-4-5-20250929",
 +     description="Claude model to use for generation (upgraded to 4.5 Sonnet)",
@@ -307,7 +307,7 @@ watch -n 60 'docker-compose logs backend | grep "proofreading_analysis_completed
 cp .env.backup.YYYYMMDD .env
 
 # 或手动修改
-sed -i 's/claude-sonnet-4-5-20250929/claude-3-5-sonnet-20241022/g' .env
+sed -i 's/claude-sonnet-4-5-20250929/claude-sonnet-4-5-20250929/g' .env
 
 # 2. 重启服务
 docker-compose restart backend

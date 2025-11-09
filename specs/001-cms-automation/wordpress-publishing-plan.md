@@ -1490,7 +1490,7 @@ class ComputerUseProvider(IPublishingProvider):
 
         # 调用 Anthropic Computer Use API
         response = self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",  # 支持 Computer Use 的模型
+            model="claude-sonnet-4-5-20250929",  # 支持 Computer Use 的模型
             max_tokens=1024,
             tools=[
                 {

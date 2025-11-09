@@ -915,7 +915,7 @@ async def login_wordpress(
     """
 
     response = await client.messages.create(
-        model="claude-3-5-sonnet-20241022",
+        model="claude-sonnet-4-5-20250929",
         system=system_prompt,
         tools=[{"type": "computer_20241022", "name": "computer"}],
         messages=[{"role": "user", "content": "开始登录"}]

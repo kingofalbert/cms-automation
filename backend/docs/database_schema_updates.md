@@ -190,7 +190,7 @@ COMMENT ON COLUMN articles.critical_issues_count IS '关键问题数量（F类�
 ALTER TABLE articles ADD COLUMN suggested_generated_at TIMESTAMP WITH TIME ZONE;
 COMMENT ON COLUMN articles.suggested_generated_at IS '建议版本生成时间';
 
-ALTER TABLE articles ADD COLUMN ai_model_used VARCHAR(50) DEFAULT 'claude-3-5-sonnet-20241022';
+ALTER TABLE articles ADD COLUMN ai_model_used VARCHAR(50) DEFAULT 'claude-sonnet-4-5-20250929';
 COMMENT ON COLUMN articles.ai_model_used IS '使用的AI模型名称 (v1.1默认Claude 3.5 Sonnet)';
 
 ALTER TABLE articles ADD COLUMN generation_cost DECIMAL(10,4);

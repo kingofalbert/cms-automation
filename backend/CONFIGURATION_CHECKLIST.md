@@ -78,7 +78,7 @@ docker compose exec redis redis-cli info clients
 | 配置项 | 环境变量 | 状态 | 说明 |
 |--------|----------|------|------|
 | **API Key** | `ANTHROPIC_API_KEY` | ❌ 未配置 | Claude API 密钥（用于 Computer Use 发布） |
-| **Model** | `ANTHROPIC_MODEL` | ⚠️ 可选 | 默认: claude-3-5-sonnet-20241022 |
+| **Model** | `ANTHROPIC_MODEL` | ⚠️ 可选 | 默认: claude-sonnet-4-5-20250929 |
 
 **获取 API Key**:
 1. 访问 [Anthropic Console](https://console.anthropic.com/)
@@ -93,7 +93,7 @@ curl https://api.anthropic.com/v1/messages \
   -H "anthropic-version: 2023-06-01" \
   -H "content-type: application/json" \
   -d '{
-    "model": "claude-3-5-sonnet-20241022",
+    "model": "claude-sonnet-4-5-20250929",
     "max_tokens": 1024,
     "messages": [{"role": "user", "content": "Hello"}]
   }'

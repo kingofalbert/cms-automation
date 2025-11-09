@@ -54,7 +54,7 @@ test.describe('Phase 1 UI Production - Core Functionality', () => {
     await page.waitForSelector('header', { timeout: 10000 });
 
     // Click settings button (looking for either Chinese or English text)
-    const settingsButton = page.locator('button:has-text("设置"), button:has-text("Settings")').first();
+    const settingsButton = page.locator('button:has-text("設定"), button:has-text("Settings")').first();
     await expect(settingsButton).toBeVisible();
     await settingsButton.click();
 
@@ -66,7 +66,7 @@ test.describe('Phase 1 UI Production - Core Functionality', () => {
     expect(url).toContain('#/settings');
 
     // Verify settings page title is visible
-    await page.waitForSelector('h1:has-text("系统设置"), h1:has-text("System Settings")', { timeout: 5000 });
+    await page.waitForSelector('h1:has-text("系統設定"), h1:has-text("System Settings")', { timeout: 5000 });
 
     console.log('✅ Navigation to settings page works in production');
   });
@@ -79,7 +79,7 @@ test.describe('Phase 1 UI Production - Core Functionality', () => {
     await page.waitForSelector('header', { timeout: 10000 });
 
     // Click worklist button
-    const worklistButton = page.locator('button:has-text("工作清单"), button:has-text("Worklist")').first();
+    const worklistButton = page.locator('button:has-text("工作清單"), button:has-text("Worklist")').first();
     await expect(worklistButton).toBeVisible();
     await worklistButton.click();
 
@@ -111,12 +111,12 @@ test.describe('Phase 1 UI Production - Internationalization', () => {
     await expect(languageSwitcher).toBeVisible();
 
     const selectedValue = await languageSwitcher.inputValue();
-    expect(selectedValue).toBe('zh-CN');
+    expect(selectedValue).toBe('zh-TW');
 
     // Check Chinese text is displayed in app name
     const appName = page.locator('h1');
     const appNameText = await appName.textContent();
-    expect(appNameText).toContain('CMS 自动化系统');
+    expect(appNameText).toContain('CMS 自動化系統');
 
     console.log('✅ Production site defaults to Chinese');
   });
@@ -227,7 +227,7 @@ test.describe('Phase 1 UI Production - Accessibility', () => {
     expect(ariaLabel).toBeTruthy();
 
     // Check buttons have proper labels
-    const settingsButton = page.locator('button:has-text("设置"), button:has-text("Settings")').first();
+    const settingsButton = page.locator('button:has-text("設定"), button:has-text("Settings")').first();
     const buttonAriaLabel = await settingsButton.getAttribute('aria-label');
     expect(buttonAriaLabel).toBeTruthy();
 
@@ -246,7 +246,7 @@ test.describe('Phase 1 UI Production - Accessibility', () => {
     await page.keyboard.press('Tab'); // Settings button
 
     // Check focus is on settings button
-    const settingsButton = page.locator('button:has-text("设置"), button:has-text("Settings")').first();
+    const settingsButton = page.locator('button:has-text("設定"), button:has-text("Settings")').first();
     await expect(settingsButton).toBeFocused();
 
     // Press Enter to navigate
@@ -296,13 +296,13 @@ test.describe('Phase 1 UI Production - Visual Verification', () => {
     await page.waitForLoadState('domcontentloaded');
 
     // Wait for settings page
-    await page.waitForSelector('h1:has-text("系统设置"), h1:has-text("System Settings")', { timeout: 10000 });
+    await page.waitForSelector('h1:has-text("系統設定"), h1:has-text("System Settings")', { timeout: 10000 });
 
     // Take screenshot
     await page.screenshot({ path: 'test-results/phase1-production-settings.png', fullPage: true });
 
     // Verify worklist button is visible on settings page
-    const worklistButton = page.locator('button:has-text("工作清单"), button:has-text("Worklist")');
+    const worklistButton = page.locator('button:has-text("工作清單"), button:has-text("Worklist")');
     await expect(worklistButton).toBeVisible();
 
     console.log('✅ Settings page rendered correctly in production');

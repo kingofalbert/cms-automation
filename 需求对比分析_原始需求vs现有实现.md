@@ -133,7 +133,7 @@ graph LR
 ```python
 # 使用 Claude Messages API，不是 Computer Use
 response = await client.messages.create(
-    model="claude-3-5-sonnet-20241022",
+    model="claude-sonnet-4-5-20250929",
     messages=[{"role": "user", "content": topic_prompt}]
 )
 ```

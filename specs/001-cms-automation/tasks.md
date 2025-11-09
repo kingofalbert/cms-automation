@@ -1,12 +1,12 @@
 # Tasks: SEO Optimization & Multi-Provider Computer Use Publishing
 
-**Version**: 2.0.0
-**Last Updated**: 2025-11-02
-**Status**: Phase 1-3, 6 Complete ✅ | Phase 4-5 Partial ⏳
-**Overall Completion**: ~85%
-**Architecture**: Article Import → SEO Analysis (Messages API) → Multi-Provider Computer Use Publishing
+**Version**: 3.0.0 🆕
+**Last Updated**: 2025-11-08
+**Status**: Phase 1-3, 6 Complete ✅ | Phase 4-5 Partial ⏳ | Phase 7 Design Complete
+**Overall Completion**: ~85% (existing) + Phase 7 Ready for Implementation
+**Architecture**: Article Import → SEO Analysis (Messages API) → Multi-Provider Computer Use Publishing → **Article Structured Parsing** 🆕
 **Input**: Design documents from `/specs/001-cms-automation/`
-**Prerequisites**: plan.md v2.0, spec.md v2.0, data-model.md, contracts/api-spec.yaml
+**Prerequisites**: plan.md v4.0, spec.md v4.0, data-model.md v4.0, contracts/api-spec.yaml
 
 ---
 
@@ -4059,7 +4059,1699 @@ async def get_worklist(
 
 ---
 
-## Phase 7: Proofreading Feedback & Tuning Loop (2 weeks) ⭐新增
+## Phase 7: Article Structured Parsing 🆕 (7 weeks)
+
+**Goal**: Transform raw Google Doc HTML into normalized, structured data (title parts, author, images with specs, body, SEO metadata) with quality confirmation UI, and integrate with proofreading workflow
+**Duration**: 7 weeks (Week 16-23)
+**Estimated Hours**: 151 hours (140 parsing + 11 proofreading integration)
+**Status**: Not Started ⏳
+**Dependencies**: Phase 6 (Google Drive integration, Worklist UI)
+**Reference**: See `docs/ARTICLE_PARSING_TECHNICAL_ANALYSIS.md`, `docs/article_parsing_requirements.md`, `backend/docs/phase7_proofreading_integration_analysis.md`
+
+**Key Deliverables**:
+- ✅ Extended database schema with parsing fields
+- ✅ AI-driven ArticleParserService (Claude 4.5 Sonnet)
+- ✅ ImageProcessor service with PIL specs extraction
+- ✅ Proofreading Step 1 UI (解析確認)
+- ✅ Two-step workflow with Step 2 blocking logic
+- ✅ Proofreading integration (body_html priority, backward compatibility)
+- ✅ 85%+ test coverage (backend), 80%+ (frontend)
+
+---
+
+### Week 16: Database Schema & Migrations (16 hours)
+
+#### T7.1 [US7][P0] Design Extended Articles Schema
+
+**Description**: Design final database schema for extended `articles` table with structured parsing fields, new `article_images` table with JSONB metadata, and `article_image_reviews` table for reviewer feedback.
+
+**Dependencies**: None
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- ER diagram showing `articles` ← `article_images` ← `article_image_reviews` relationships
+- SQL DDL for all new fields and tables
+- JSONB metadata structure specification for `article_images.metadata`
+- Design document with field naming conventions and data types
+
+**Acceptance Criteria**:
+- [ ] All parsing fields documented (title_prefix, title_main, title_suffix, author_line, author_name, body_html, meta_description, seo_keywords, tags)
+- [ ] `article_images` table includes: preview_path, source_path, source_url, caption, position, metadata JSONB
+- [ ] `article_image_reviews` table supports actions: keep, remove, replace_caption, replace_source
+- [ ] ER diagram approved by tech lead
+
+**File Paths**:
+- `specs/001-cms-automation/data-model.md` (updated)
+- `docs/parsing-schema-design.md` (new)
+
+---
+
+#### T7.2 [US7][P0] Create Alembic Migration Script
+
+**Description**: Create comprehensive Alembic migration to add parsing fields to `articles` table, create `article_images` and `article_image_reviews` tables, add indexes, and ensure backwards compatibility.
+
+**Dependencies**: T7.1
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- Migration file: `migrations/versions/20251108_article_parsing.py`
+- Downgrade logic for safe rollback
+- Index creation for `(article_id, position)` on `article_images`
+- Update trigger for `article_images.updated_at`
+
+**Acceptance Criteria**:
+- [ ] Migration adds 13 new columns to `articles` table
+- [ ] Creates `article_images` table with CHECK constraint `position >= 0`
+- [ ] Creates `article_image_reviews` table with action ENUM constraint
+- [ ] Creates indexes: `idx_article_images_article_id`, `idx_article_images_position`
+- [ ] Downgrade logic tested (can rollback without data loss)
+- [ ] Migration idempotent (safe to run multiple times)
+
+**File Paths**:
+- `backend/migrations/versions/20251108_article_parsing.py`
+
+---
+
+#### T7.3 [US7][P0] Update SQLAlchemy Models
+
+**Description**: Extend `Article` model with parsing fields, create `ArticleImage` and `ArticleImageReview` models with proper relationships and constraints.
+
+**Dependencies**: T7.2
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Updated `Article` model in `backend/src/models/article.py`
+- New `ArticleImage` model in `backend/src/models/article_image.py`
+- New `ArticleImageReview` model in `backend/src/models/article_image_review.py`
+- Relationship definitions (one-to-many, cascade deletes)
+
+**Acceptance Criteria**:
+- [ ] `Article` model has all parsing fields with correct types
+- [ ] `ArticleImage` model has `metadata` as JSONB column
+- [ ] Relationships configured: `article.images`, `article_image.reviews`
+- [ ] Cascade deletes configured (ON DELETE CASCADE)
+- [ ] Models pass SQLAlchemy validation
+- [ ] Type hints complete (Pydantic integration ready)
+
+**File Paths**:
+- `backend/src/models/article.py`
+- `backend/src/models/article_image.py`
+- `backend/src/models/article_image_review.py`
+
+---
+
+#### T7.4 [US7][P0] Test Migration on Dev Database
+
+**Description**: Execute migration on development database, insert test data, verify indexes and constraints, measure migration performance.
+
+**Dependencies**: T7.2, T7.3
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Migration execution log (success/failure)
+- Test data insertion script
+- Index usage verification query results
+- Performance benchmark (migration duration)
+
+**Acceptance Criteria**:
+- [ ] Migration completes in <5 minutes on dev database
+- [ ] Sample article with parsing fields inserts successfully
+- [ ] Sample images with JSONB metadata insert successfully
+- [ ] Indexes verified with `EXPLAIN ANALYZE`
+- [ ] Downgrade tested and verified
+- [ ] Zero data loss confirmed
+
+**File Paths**:
+- `backend/tests/migrations/test_20251108_article_parsing.py`
+- Migration log: `logs/migration-20251108.log`
+
+---
+
+### Week 17-18: Backend Parsing Engine (40 hours)
+
+#### T7.5 [US7][P0] Implement ArticleParserService Skeleton
+
+**Description**: Create `ArticleParserService` with main `parse_document()` orchestration method, define dataclasses for structured parsing results (`ParsedArticle`, `HeaderFields`, `AuthorFields`, `ImageRecord`, `MetaSEOFields`).
+
+**Dependencies**: T7.3
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `ArticleParserService` class in `backend/src/services/parser/article_parser.py`
+- Dataclasses in `backend/src/services/parser/types.py`
+- Main orchestration method with placeholder implementations
+- Dependency injection setup (LLM client, storage service)
+
+**Acceptance Criteria**:
+- [ ] `parse_document(raw_html: str, article_id: int) -> ParsedArticle` method signature defined
+- [ ] All dataclasses have complete type hints
+- [ ] Service initializes with Anthropic client and storage service
+- [ ] Placeholder implementations for: `_parse_header()`, `_extract_author()`, `_extract_images()`, `_extract_meta_seo()`, `_clean_body_html()`
+- [ ] Unit test skeleton created
+
+**File Paths**:
+- `backend/src/services/parser/article_parser.py`
+- `backend/src/services/parser/types.py`
+- `backend/tests/unit/services/parser/test_article_parser.py`
+
+---
+
+#### T7.6 [US7][P0] Implement Header Parsing (AI + Fallback)
+
+**Description**: Implement `_parse_header()` method using Claude 4.5 Sonnet to detect 1/2/3-line title structure, with regex-based fallback for same-line separators (｜, —, ：). Extract `title_prefix`, `title_main`, `title_suffix`.
+
+**Dependencies**: T7.5
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `_parse_header()` method implementation
+- Claude prompt template for title parsing
+- Regex fallback logic for inline separators
+- Unit tests with mocked Claude responses
+- Test fixtures with diverse title formats
+
+**Acceptance Criteria**:
+- [ ] Correctly parses 3-line titles (prefix, main, suffix)
+- [ ] Correctly parses 2-line titles (main, suffix)
+- [ ] Correctly parses 1-line titles (main only)
+- [ ] Fallback regex handles: "前標｜主標｜副標", "前標—主標", "主標：副標"
+- [ ] Unit tests cover 10+ title variations
+- [ ] AI parsing accuracy ≥90% on test set
+- [ ] Gracefully handles malformed titles (returns main only)
+
+**File Paths**:
+- `backend/src/services/parser/article_parser.py` (update)
+- `backend/src/services/parser/prompts/title_parsing.txt`
+- `backend/tests/unit/services/parser/test_header_parsing.py`
+- `backend/tests/fixtures/sample_titles.json`
+
+---
+
+#### T7.7 [US7][P0] Implement Author Extraction
+
+**Description**: Implement `_extract_author()` method using Claude to detect author patterns ("文／XXX", "撰稿／XXX", "作者：XXX"). Extract raw `author_line` and cleaned `author_name`.
+
+**Dependencies**: T7.5
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `_extract_author()` method implementation
+- Claude prompt template for author extraction
+- Cleaning logic (strip prefixes, whitespace)
+- Unit tests with mocked Claude responses
+
+**Acceptance Criteria**:
+- [ ] Detects "文／張三" → author_line="文／張三", author_name="張三"
+- [ ] Detects "撰稿／李四" → author_line="撰稿／李四", author_name="李四"
+- [ ] Detects "作者：王五" → author_line="作者：王五", author_name="王五"
+- [ ] Handles missing author (returns None)
+- [ ] Unit tests cover 8+ author variations
+- [ ] AI extraction accuracy ≥95%
+
+**File Paths**:
+- `backend/src/services/parser/article_parser.py` (update)
+- `backend/src/services/parser/prompts/author_extraction.txt`
+- `backend/tests/unit/services/parser/test_author_extraction.py`
+
+---
+
+#### T7.8 [US7][P0] Implement Image Extraction
+
+**Description**: Implement `_extract_images()` method to parse DOM, identify image blocks (preview + caption + source link), download high-res images, extract paragraph position, create `ImageRecord` instances.
+
+**Dependencies**: T7.5, T7.9 (ImageProcessor)
+
+**Estimated Hours**: 10 hours
+
+**Deliverables**:
+- `_extract_images()` method implementation
+- DOM parsing logic (BeautifulSoup)
+- Image download with retry logic
+- Position tracking (paragraph index)
+- Integration with `ImageProcessor` service
+
+**Acceptance Criteria**:
+- [ ] Identifies image blocks with preview, caption, and "點此下載" link
+- [ ] Downloads high-res images from source URLs
+- [ ] Records correct paragraph position (0-based index)
+- [ ] Handles download failures gracefully (retries 3x, saves partial result)
+- [ ] Replaces inline image nodes with placeholders
+- [ ] Unit tests cover 5+ image extraction scenarios
+- [ ] Integration test with mock HTTP downloads
+
+**File Paths**:
+- `backend/src/services/parser/article_parser.py` (update)
+- `backend/tests/unit/services/parser/test_image_extraction.py`
+- `backend/tests/integration/test_image_download.py`
+
+---
+
+#### T7.9 [US7][P0] Implement ImageProcessor Service
+
+**Description**: Create `ImageProcessor` service to download images from URLs, extract technical specs using PIL/Pillow (width, height, aspect ratio, file size, MIME type, EXIF data), store in chosen backend.
+
+**Dependencies**: T7.3
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `ImageProcessor` class in `backend/src/services/media/image_processor.py`
+- `download_and_process()` method with HTTP download
+- `extract_specs()` method using PIL
+- Storage backend integration (Supabase Storage or Google Drive)
+
+**Acceptance Criteria**:
+- [ ] Downloads images from HTTP/HTTPS URLs
+- [ ] Extracts: width, height, format, MIME type, file size
+- [ ] Extracts EXIF date if available
+- [ ] Calculates aspect ratio (e.g., "16:9")
+- [ ] Stores in configured backend (path returned)
+- [ ] Handles corrupt images gracefully
+- [ ] Unit tests with sample images (JPEG, PNG, WEBP)
+- [ ] Specs accuracy 100% (PIL can read all supported formats)
+
+**File Paths**:
+- `backend/src/services/media/image_processor.py`
+- `backend/tests/unit/services/media/test_image_processor.py`
+- `backend/tests/fixtures/sample_images/` (JPEG, PNG, WEBP samples)
+
+---
+
+#### T7.10 [US7][P0] Implement Meta/SEO Extraction
+
+**Description**: Implement `_extract_meta_seo()` method using Claude to detect Meta/SEO blocks ("Meta Description：", "關鍵詞：", "Tags："), extract into `meta_description`, `seo_keywords[]`, `tags[]`, strip from DOM.
+
+**Dependencies**: T7.5
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `_extract_meta_seo()` method implementation
+- Claude prompt template for Meta/SEO detection
+- Array parsing logic (comma/newline separated)
+- DOM stripping after extraction
+
+**Acceptance Criteria**:
+- [ ] Detects "Meta Description：..." → meta_description
+- [ ] Detects "關鍵詞：A, B, C" → seo_keywords=["A", "B", "C"]
+- [ ] Detects "Tags：X, Y" → tags=["X", "Y"]
+- [ ] Supports both Chinese and English labels
+- [ ] Strips detected blocks from DOM
+- [ ] Handles missing meta blocks (returns None/empty arrays)
+- [ ] Unit tests cover 6+ meta extraction scenarios
+
+**File Paths**:
+- `backend/src/services/parser/article_parser.py` (update)
+- `backend/src/services/parser/prompts/meta_seo_extraction.txt`
+- `backend/tests/unit/services/parser/test_meta_extraction.py`
+
+---
+
+#### T7.11 [US7][P0] Implement Body HTML Cleaning
+
+**Description**: Implement `_clean_body_html()` method to remove extracted elements (header, author, images, meta), sanitize HTML with bleach whitelist, preserve semantic structure.
+
+**Dependencies**: T7.6, T7.7, T7.8, T7.10
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `_clean_body_html()` method implementation
+- Bleach configuration (whitelist: H1, H2, p, ul, ol, strong, em, a)
+- DOM manipulation to remove extracted nodes
+- Sanitization with XSS prevention
+
+**Acceptance Criteria**:
+- [ ] Removes header nodes (title, author)
+- [ ] Removes image blocks (replaced with placeholders)
+- [ ] Removes Meta/SEO blocks
+- [ ] Preserves semantic tags: H1, H2, p, ul, ol, strong, em, a
+- [ ] Strips dangerous HTML (script, onclick, etc.)
+- [ ] Preserves clean structure (no orphaned tags)
+- [ ] Unit tests with complex HTML samples
+- [ ] XSS prevention verified
+
+**File Paths**:
+- `backend/src/services/parser/article_parser.py` (update)
+- `backend/tests/unit/services/parser/test_html_cleaning.py`
+- `backend/tests/fixtures/sample_html.html`
+
+---
+
+#### T7.12 [US7][P] Unit Tests for Parsing Service
+
+**Description**: Comprehensive unit test suite for `ArticleParserService` covering all parsing methods, edge cases, error handling, and AI mocking.
+
+**Dependencies**: T7.5, T7.6, T7.7, T7.8, T7.9, T7.10, T7.11
+
+**Estimated Hours**: 8 hours (included in above tasks, consolidated here)
+
+**Deliverables**:
+- Complete test suite: `backend/tests/unit/services/parser/`
+- Mocked Claude responses (fixtures)
+- Edge case tests (missing fields, malformed HTML, download failures)
+- Test coverage report
+
+**Acceptance Criteria**:
+- [ ] Test coverage ≥85% for `article_parser.py`
+- [ ] Test coverage ≥90% for `image_processor.py`
+- [ ] All edge cases covered (missing author, no images, malformed titles, corrupt images)
+- [ ] Mocked Claude responses with varied structures
+- [ ] Tests run in <30 seconds
+- [ ] All tests passing
+
+**File Paths**:
+- `backend/tests/unit/services/parser/test_article_parser.py`
+- `backend/tests/unit/services/parser/test_header_parsing.py`
+- `backend/tests/unit/services/parser/test_author_extraction.py`
+- `backend/tests/unit/services/parser/test_image_extraction.py`
+- `backend/tests/unit/services/media/test_image_processor.py`
+- `backend/tests/unit/services/parser/test_meta_extraction.py`
+- `backend/tests/unit/services/parser/test_html_cleaning.py`
+- `backend/tests/fixtures/`
+
+---
+
+### Week 19: API & Integration (12 hours)
+
+#### T7.13 [US7][P0] Extend Worklist API Response
+
+**Description**: Update `GET /v1/worklist/:id` endpoint to return structured parsing fields (`title_prefix`, `title_main`, `title_suffix`, `author_line`, `author_name`, `body_html`, `meta_description`, `seo_keywords`, `tags`) plus `images[]` array with metadata, plus confirmation state.
+
+**Dependencies**: T7.3
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Updated Pydantic response model: `WorklistItemDetailResponse`
+- Extended API route: `backend/src/api/routes/worklist.py`
+- JSON schema for `images[]` array
+- API integration tests
+
+**Acceptance Criteria**:
+- [ ] Response includes all parsing fields
+- [ ] `images[]` array includes: id, preview_path, source_path, source_url, caption, position, metadata
+- [ ] `metadata` JSONB includes: width, height, aspect_ratio, file_size_bytes, mime_type, format, exif_date
+- [ ] Response includes: parsing_confirmed, parsing_confirmed_at, parsing_confirmed_by
+- [ ] Pydantic validation passes
+- [ ] API returns 200 with complete data
+- [ ] Integration test verifies response schema
+
+**File Paths**:
+- `backend/src/api/routes/worklist.py` (update)
+- `backend/src/api/schemas/worklist.py` (update)
+- `backend/tests/integration/api/test_worklist_detail.py`
+
+---
+
+#### T7.14 [US7][P0] Create Parsing Confirmation Endpoint
+
+**Description**: Create `POST /v1/worklist/:id/confirm-parsing` endpoint to accept parsing confirmation payload (`parsing_confirmed`, `parsing_feedback`, `image_reviews[]`), save to database, update confirmation state.
+
+**Dependencies**: T7.3, T7.13
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- New API route: `POST /v1/worklist/:id/confirm-parsing`
+- Pydantic request model: `ParsingConfirmationRequest`
+- Database update logic
+- Image reviews creation logic
+- API integration tests
+
+**Acceptance Criteria**:
+- [ ] Accepts: `parsing_confirmed` (bool), `parsing_feedback` (str), `image_reviews[]` (array)
+- [ ] Updates `articles` table: `parsing_confirmed`, `parsing_confirmed_at`, `parsing_confirmed_by`
+- [ ] Creates `article_image_reviews` records for each image review
+- [ ] Returns: `worklist_item_id`, `parsing_confirmed_at` timestamp
+- [ ] Validates image_reviews actions: keep, remove, replace_caption, replace_source
+- [ ] Returns 200 on success, 400 on validation error
+- [ ] Integration test verifies database updates
+
+**File Paths**:
+- `backend/src/api/routes/worklist.py` (update)
+- `backend/src/api/schemas/worklist.py` (update)
+- `backend/tests/integration/api/test_parsing_confirmation.py`
+
+---
+
+#### T7.15 [US7][P0] Integrate Parser into Google Drive Sync
+
+**Description**: Modify `GoogleDriveSyncService` to call `ArticleParserService.parse_document()` after downloading Google Doc content. Create article with structured fields, create `article_images` records.
+
+**Dependencies**: T7.5, T7.6, T7.7, T7.8, T7.9, T7.10, T7.11
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Updated `GoogleDriveSyncService.process_new_document()` method
+- Integration with `ArticleParserService`
+- Bulk insert for `article_images`
+- Error handling for parsing failures
+
+**Acceptance Criteria**:
+- [ ] Downloads Google Doc HTML
+- [ ] Calls `ArticleParserService.parse_document(raw_html, article_id)`
+- [ ] Creates article record with all structured fields
+- [ ] Creates `article_images` records (bulk insert)
+- [ ] Sets `current_status = 'pending'` (awaiting parsing confirmation)
+- [ ] Handles parsing errors gracefully (logs error, sets article status to 'failed')
+- [ ] Integration test: Google Doc → Parsed Article → Images created
+- [ ] Parsing completes in ≤20 seconds for typical article
+
+**File Paths**:
+- `backend/src/services/google_drive/sync_service.py` (update)
+- `backend/tests/integration/services/test_google_drive_parsing.py`
+
+---
+
+### Week 20-21: Frontend Step 1 UI (48 hours)
+
+#### T7.16 [US7][P0] Create Step Indicator Component
+
+**Description**: Build two-step wizard UI component with visual progress indicator (Step 1: 解析確認, Step 2: 正文校對). Support navigation between steps.
+
+**Dependencies**: None (frontend)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `StepIndicator.tsx` component
+- Step state management (current step, completed steps)
+- Visual styling (progress bar, step numbers)
+- Click navigation with validation
+
+**Acceptance Criteria**:
+- [ ] Displays two steps with labels in Chinese and English
+- [ ] Highlights current step
+- [ ] Shows completed steps with checkmark
+- [ ] Clicking Step 2 blocked if Step 1 not confirmed
+- [ ] Smooth transitions between steps
+- [ ] Responsive design (mobile-friendly)
+- [ ] Component tests with React Testing Library
+
+**File Paths**:
+- `frontend/src/components/Proofreading/StepIndicator.tsx`
+- `frontend/src/components/Proofreading/StepIndicator.test.tsx`
+
+---
+
+#### T7.17 [US7][P0] Build Structured Headers Card
+
+**Description**: Build card component displaying editable title fields (`title_prefix`, `title_main`, `title_suffix`) with character counters and validation.
+
+**Dependencies**: None (frontend)
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `StructuredHeadersCard.tsx` component
+- Three input fields with labels
+- Character counters (prefix: 200, main: 500, suffix: 200)
+- Validation (title_main required, min 5 chars)
+- Auto-save on blur
+
+**Acceptance Criteria**:
+- [ ] Displays three labeled fields (可選前標, 主標題*, 可選副標)
+- [ ] Character counter updates in real-time
+- [ ] Validation error shown if title_main < 5 chars
+- [ ] Auto-save on blur (debounced 500ms)
+- [ ] Displays save status (saving, saved, error)
+- [ ] Component tests verify validation logic
+- [ ] i18n support (zh-TW, en-US)
+
+**File Paths**:
+- `frontend/src/components/Proofreading/StructuredHeadersCard.tsx`
+- `frontend/src/components/Proofreading/StructuredHeadersCard.test.tsx`
+
+---
+
+#### T7.18 [US7][P0] Build Author Info Card
+
+**Description**: Build card component displaying `author_line` (raw, read-only) and editable `author_name` field.
+
+**Dependencies**: None (frontend)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `AuthorInfoCard.tsx` component
+- Read-only display of `author_line`
+- Editable input for `author_name`
+- Auto-save on blur
+
+**Acceptance Criteria**:
+- [ ] Displays author_line in read-only field (e.g., "文／張三")
+- [ ] Displays editable author_name field (e.g., "張三")
+- [ ] Auto-save on blur
+- [ ] Displays save status
+- [ ] Handles missing author gracefully (shows "未檢測到作者")
+- [ ] Component tests
+- [ ] i18n support
+
+**File Paths**:
+- `frontend/src/components/Proofreading/AuthorInfoCard.tsx`
+- `frontend/src/components/Proofreading/AuthorInfoCard.test.tsx`
+
+---
+
+#### T7.19 [US7][P0] Build Image Gallery Card with Specs Table
+
+**Description**: Build comprehensive image gallery component with grid of previews, captions, source links, technical specs table for each image, and per-image review actions.
+
+**Dependencies**: T7.20 (ImageSpecsTable)
+
+**Estimated Hours**: 12 hours
+
+**Deliverables**:
+- `ImageGalleryCard.tsx` component
+- `ImagePreviewGrid.tsx` sub-component
+- `ImagePreviewItem.tsx` sub-component (each image)
+- Integration with `ImageSpecsTable.tsx`
+- Image review action buttons (keep, remove, replace_caption, replace_source)
+
+**Acceptance Criteria**:
+- [ ] Grid layout (responsive, 2-3 columns on desktop, 1 on mobile)
+- [ ] Each item shows: preview thumbnail, caption (editable), source link button, specs table
+- [ ] Clicking source link opens image in new tab
+- [ ] Specs table highlights out-of-range values (width <800 or >3000px, non-standard aspect ratio)
+- [ ] Action buttons: Keep (default), Remove, Replace Caption, Replace Source
+- [ ] Replace Caption: shows inline input
+- [ ] Replace Source: shows inline URL input with validation
+- [ ] Reviewer notes textarea for each action
+- [ ] Auto-save actions on selection
+- [ ] Component tests
+- [ ] i18n support
+
+**File Paths**:
+- `frontend/src/components/Proofreading/ImageGalleryCard.tsx`
+- `frontend/src/components/Proofreading/ImagePreviewGrid.tsx`
+- `frontend/src/components/Proofreading/ImagePreviewItem.tsx`
+- `frontend/src/components/Proofreading/ImageGalleryCard.test.tsx`
+
+---
+
+#### T7.20 [US7][P0] Build Image Specs Table Component
+
+**Description**: Build table component displaying technical image specifications (width, height, aspect ratio, file size, MIME type, EXIF date) with visual warnings for out-of-tolerance values.
+
+**Dependencies**: None (frontend)
+
+**Estimated Hours**: 4 hours (included in T7.19)
+
+**Deliverables**:
+- `ImageSpecsTable.tsx` component
+- Spec rows: Width, Height, Aspect Ratio, File Size, Format, EXIF Date
+- Conditional styling for warnings
+- Tooltip explanations for warnings
+
+**Acceptance Criteria**:
+- [ ] Displays all specs in table format
+- [ ] Width: red warning if <800px or >3000px, otherwise green
+- [ ] Aspect ratio: amber warning if non-standard (not 16:9, 4:3, 1:1)
+- [ ] File size: formatted as human-readable (e.g., "2.4 MB")
+- [ ] Format: displays MIME type (e.g., "image/jpeg")
+- [ ] EXIF date: formatted as readable date (if available)
+- [ ] Tooltips explain thresholds
+- [ ] Component tests verify warning logic
+- [ ] i18n support
+
+**File Paths**:
+- `frontend/src/components/Proofreading/ImageSpecsTable.tsx`
+- `frontend/src/components/Proofreading/ImageSpecsTable.test.tsx`
+
+---
+
+#### T7.21 [US7][P0] Build Meta/SEO Card
+
+**Description**: Build card component for editing `meta_description` (with character counter), `seo_keywords` (tag input), and `tags` (tag input).
+
+**Dependencies**: None (frontend)
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `MetaSEOCard.tsx` component
+- Textarea for `meta_description` (160 char max recommended)
+- Tag input for `seo_keywords` (add/remove tags)
+- Tag input for `tags`
+- Auto-save on changes
+
+**Acceptance Criteria**:
+- [ ] Meta description textarea with character counter
+- [ ] Warning if >160 chars (not blocking, just advisory)
+- [ ] SEO keywords: tag input, add with Enter/comma, remove with X button
+- [ ] Tags: tag input, add with Enter/comma, remove with X button
+- [ ] Auto-save on blur (debounced 500ms)
+- [ ] Displays save status
+- [ ] Component tests
+- [ ] i18n support
+
+**File Paths**:
+- `frontend/src/components/Proofreading/MetaSEOCard.tsx`
+- `frontend/src/components/Proofreading/MetaSEOCard.test.tsx`
+
+---
+
+#### T7.22 [US7][P0] Build Body HTML Preview Card
+
+**Description**: Build card component for read-only preview of sanitized `body_html` with proper HTML rendering.
+
+**Dependencies**: None (frontend)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `BodyHTMLPreviewCard.tsx` component
+- Safe HTML rendering (DOMPurify or similar)
+- Scrollable container for long content
+- Styling for semantic HTML tags
+
+**Acceptance Criteria**:
+- [ ] Renders sanitized HTML safely (no XSS risk)
+- [ ] Preserves semantic structure (H1, H2, p, ul, ol, strong, em, a)
+- [ ] Scrollable if content exceeds viewport
+- [ ] Read-only (no editing)
+- [ ] Styled for readability
+- [ ] Component tests verify safe rendering
+- [ ] i18n support (labels)
+
+**File Paths**:
+- `frontend/src/components/Proofreading/BodyHTMLPreviewCard.tsx`
+- `frontend/src/components/Proofreading/BodyHTMLPreviewCard.test.tsx`
+
+---
+
+#### T7.23 [US7][P0] Implement Confirmation Actions & State Management
+
+**Description**: Create Zustand store for parsing confirmation state, implement "確認解析" button and "需要修正" toggle, handle save/unlock logic.
+
+**Dependencies**: T7.13, T7.14
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- Zustand store: `useParsingConfirmationStore`
+- Store actions: `updateTitleFields`, `updateAuthor`, `updateMetaSEO`, `addImageReview`, `confirmParsing`
+- Confirmation button component
+- "Needs fix" toggle component
+- API integration for saving confirmation
+
+**Acceptance Criteria**:
+- [ ] Store holds all parsing state (title, author, meta, images, confirmation status)
+- [ ] Actions update store immutably
+- [ ] `confirmParsing()` calls `POST /v1/worklist/:id/confirm-parsing`
+- [ ] Button disabled while saving
+- [ ] Success: shows toast, unlocks Step 2, redirects to Step 2
+- [ ] Error: shows error toast, keeps Step 1 active
+- [ ] "Needs fix" toggle: if ON, blocks confirmation and Step 2 access
+- [ ] Store tests with mock API
+- [ ] i18n support
+
+**File Paths**:
+- `frontend/src/stores/useParsingConfirmationStore.ts`
+- `frontend/src/components/Proofreading/ConfirmationActions.tsx`
+- `frontend/src/stores/useParsingConfirmationStore.test.ts`
+
+---
+
+#### T7.24 [US7][P0] Add Step 2 Blocking Logic
+
+**Description**: Implement logic to block Step 2 (正文校對) access until Step 1 parsing confirmation is complete. Show warning alert if user attempts to access Step 2 prematurely.
+
+**Dependencies**: T7.16, T7.23
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Blocking logic in Step navigation
+- Warning alert component
+- "Return to Step 1" button in alert
+- State synchronization with API
+
+**Acceptance Criteria**:
+- [ ] Step 2 tab/button disabled if `parsing_confirmed === false`
+- [ ] Clicking Step 2 shows warning alert: "請先完成解析確認"
+- [ ] Alert includes "返回 Step 1" button
+- [ ] After confirmation, Step 2 immediately unlocked
+- [ ] Reviewer can return to Step 1 after confirming (editing allowed)
+- [ ] State persists across page reloads (fetch from API)
+- [ ] Component tests verify blocking logic
+- [ ] i18n support
+
+**File Paths**:
+- `frontend/src/components/Proofreading/ProofreadingReviewPage.tsx` (update)
+- `frontend/src/components/Proofreading/Step2BlockingAlert.tsx`
+- `frontend/src/components/Proofreading/ProofreadingReviewPage.test.tsx`
+
+---
+
+#### T7.25 [US7][P0] i18n Support for Parsing UI
+
+**Description**: Add internationalization support for all parsing UI strings (zh-TW primary, en-US secondary) in `proofreading.parsing.*` namespace.
+
+**Dependencies**: All frontend tasks
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Updated locale files: `frontend/src/locales/zh-TW.json`, `en-US.json`
+- All UI strings using `t('proofreading.parsing.*')`
+- Translation keys for: field labels, placeholders, validation messages, button text, warnings
+
+**Acceptance Criteria**:
+- [ ] All parsing UI strings externalized
+- [ ] zh-TW translations complete and accurate
+- [ ] en-US translations complete and accurate
+- [ ] Language switch works without page reload
+- [ ] No hardcoded strings in components
+- [ ] i18n tests verify key existence
+
+**File Paths**:
+- `frontend/src/locales/zh-TW.json` (update)
+- `frontend/src/locales/en-US.json` (update)
+- `frontend/tests/i18n/test_parsing_translations.test.ts`
+
+---
+
+### Week 21: Integration & Testing (24 hours)
+
+#### T7.26 [US7][P0] End-to-End Workflow Test
+
+**Description**: Comprehensive E2E test using Playwright to verify full workflow: Google Doc import → Parsing → Step 1 Confirmation → Step 2 Access.
+
+**Dependencies**: T7.15, T7.16-T7.25
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- E2E test spec: `frontend/e2e/parsing-confirmation-workflow.spec.ts`
+- Test fixtures: sample Google Doc HTML
+- Screenshot assertions
+- Performance measurements
+
+**Acceptance Criteria**:
+- [ ] Test imports Google Doc
+- [ ] Verifies parsing completes (all fields populated)
+- [ ] Opens Proofreading Review page
+- [ ] Verifies Step 1 UI displays all parsed fields
+- [ ] Edits title, author, meta fields
+- [ ] Confirms parsing
+- [ ] Verifies Step 2 unlocked
+- [ ] Accesses Step 2 successfully
+- [ ] Returns to Step 1 (edit allowed)
+- [ ] Test passes in <90 seconds
+- [ ] Screenshots captured at key steps
+
+**File Paths**:
+- `frontend/e2e/parsing-confirmation-workflow.spec.ts`
+- `frontend/e2e/fixtures/sample-google-doc.html`
+
+---
+
+#### T7.27 [US7][P0] Parsing Accuracy Validation
+
+**Description**: Test parsing accuracy with 20 diverse Google Docs covering various title structures, author formats, image counts, and meta blocks. Measure accuracy for each field type.
+
+**Dependencies**: T7.5-T7.11, T7.15
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- Test suite: `backend/tests/accuracy/test_parsing_accuracy.py`
+- 20 test fixtures (Google Doc samples)
+- Ground truth labels (expected parsing results)
+- Accuracy report (CSV/JSON)
+
+**Acceptance Criteria**:
+- [ ] 20 diverse test documents prepared (1-3 line titles, 0-10 images, with/without meta)
+- [ ] Ground truth labels manually verified
+- [ ] Accuracy measured per field: title (≥90%), author (≥95%), images (≥90%), meta (≥85%)
+- [ ] Overall accuracy ≥90%
+- [ ] Failure cases documented with root cause analysis
+- [ ] Accuracy report generated: `docs/parsing-accuracy-report.json`
+
+**File Paths**:
+- `backend/tests/accuracy/test_parsing_accuracy.py`
+- `backend/tests/fixtures/accuracy/doc_001.html` (×20)
+- `backend/tests/fixtures/accuracy/ground_truth.json`
+- `docs/parsing-accuracy-report.json`
+
+---
+
+#### T7.28 [US7][P0] Performance Testing
+
+**Description**: Measure parsing latency for typical articles (1500 words, 5 images). Verify parsing completes in ≤20 seconds.
+
+**Dependencies**: T7.5-T7.11, T7.15
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Performance test script: `backend/tests/performance/test_parsing_performance.py`
+- Typical article fixtures (various sizes)
+- Performance benchmark report
+
+**Acceptance Criteria**:
+- [ ] Tests parsing for 1500-word, 5-image article
+- [ ] Parsing completes in ≤20 seconds (95th percentile)
+- [ ] Tests parsing for 500-word, 1-image article (should be faster)
+- [ ] Tests parsing for 3000-word, 10-image article (edge case)
+- [ ] Identifies performance bottlenecks (profiling)
+- [ ] Benchmark report: `docs/parsing-performance-benchmarks.md`
+
+**File Paths**:
+- `backend/tests/performance/test_parsing_performance.py`
+- `backend/tests/fixtures/performance/typical_article.html`
+- `docs/parsing-performance-benchmarks.md`
+
+---
+
+#### T7.29 [US7][P0] Bug Fixes & Edge Cases
+
+**Description**: Handle edge cases and fix bugs discovered during testing: missing fields, malformed HTML, image download failures, corrupt images, etc.
+
+**Dependencies**: T7.26, T7.27, T7.28
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Bug fix commits
+- Edge case handling code
+- Regression tests for fixed bugs
+- Bug fixes log
+
+**Acceptance Criteria**:
+- [ ] Handles missing author gracefully (author_line=null, author_name=null)
+- [ ] Handles articles with 0 images (empty array)
+- [ ] Handles malformed HTML (parsing doesn't crash, logs error)
+- [ ] Handles image download failures (retries 3x, saves partial result, logs error)
+- [ ] Handles corrupt images (PIL can't read → logs error, metadata=null)
+- [ ] Handles missing meta blocks (returns None/empty arrays)
+- [ ] All edge cases have regression tests
+- [ ] Bug fixes log: `docs/parsing-bug-fixes-log.md`
+
+**File Paths**:
+- Various (backend/src/services/parser/, backend/src/services/media/)
+- `backend/tests/edge_cases/`
+- `docs/parsing-bug-fixes-log.md`
+
+---
+
+---
+
+### Week 23: Proofreading Integration with Parsed Content (11 hours) 🆕
+
+**Goal**: Ensure proofreading workflow correctly integrates with Phase 7 parsing results
+
+#### T7.30 [US7][P0] Update Proofreading Payload Construction
+
+**Description**: Modify `_build_article_payload()` in `src/api/routes/articles.py` to prioritize `body_html` over `body` and include parsing metadata.
+
+**Dependencies**: T7.3 (SQLAlchemy models), T7.15 (Parser integration)
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Updated `_build_article_payload()` function with priority logic:
+  1. Use `article.body_html` if parsing confirmed
+  2. Fallback to `article.body` for unparsed articles
+  3. Add parsing metadata to payload
+- Code documentation explaining the logic
+
+**Acceptance Criteria**:
+- [ ] Parsed articles use `body_html` for proofreading content
+- [ ] Unparsed articles use `body` (backward compatibility)
+- [ ] Parsing metadata included in payload JSON
+- [ ] Warning emitted when using unparsed content
+
+**File Paths**:
+- `backend/src/api/routes/articles.py` (update `_build_article_payload()`)
+- `backend/docs/phase7_proofreading_integration_analysis.md` (reference)
+
+---
+
+#### T7.31 [US7][P0] Add Parsing Prerequisite Check (Optional)
+
+**Description**: Add optional check in proofreading endpoint to warn if article not yet parsed/confirmed.
+
+**Dependencies**: T7.30
+
+**Estimated Hours**: 1 hour
+
+**Deliverables**:
+- Warning flag in proofreading response if `parsing_confirmed = false`
+- Configuration option to enforce prerequisite (default: warn only)
+- API response includes `parsing_warning` field
+
+**Acceptance Criteria**:
+- [ ] Warning message: "建议先进行文章解析以获得更准确的校对结果"
+- [ ] Configurable enforcement level (warn/block)
+- [ ] User can proceed with warning (backward compatibility)
+
+**File Paths**:
+- `backend/src/api/routes/articles.py` (proofreading endpoint)
+- `backend/src/config/settings.py` (add REQUIRE_PARSING_BEFORE_PROOFREADING config)
+
+---
+
+#### T7.32 [US7][P0] Update Proofreading Result Application Logic
+
+**Description**: Ensure proofreading results update correct field (`body_html` for parsed, `body` for unparsed) without overwriting structured fields.
+
+**Dependencies**: T7.30
+
+**Estimated Hours**: 1.5 hours
+
+**Deliverables**:
+- Updated result application logic in proofreading service
+- Preservation logic for structured fields (`title_*`, `author_*`, SEO fields)
+- Documentation of field update strategy
+
+**Acceptance Criteria**:
+- [ ] Parsed articles: update `body_html` with corrected content
+- [ ] Unparsed articles: update `body` (legacy behavior)
+- [ ] Structured fields (`title_prefix`, `title_main`, `title_suffix`, `author_name`, `author_line`, `meta_description`, `seo_keywords`, `tags`) never overwritten
+- [ ] Test coverage for both scenarios
+
+**File Paths**:
+- `backend/src/services/proofreading/service.py` (result application)
+- `backend/src/api/routes/articles.py` (apply changes endpoint)
+
+---
+
+#### T7.33 [US7][P0] Unit Tests for Payload Construction
+
+**Description**: Write comprehensive unit tests for updated `_build_article_payload()` logic.
+
+**Dependencies**: T7.30, T7.31, T7.32
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Test cases for:
+  - Parsed article with confirmed parsing
+  - Parsed article with unconfirmed parsing
+  - Unparsed legacy article
+  - Parsing metadata inclusion
+  - Warning generation
+
+**Acceptance Criteria**:
+- [ ] All test cases pass
+- [ ] Coverage ≥95% for modified functions
+- [ ] Fixtures for both parsed and unparsed articles
+- [ ] Assertions verify correct content source selection
+
+**File Paths**:
+- `backend/tests/unit/test_proofreading_payload.py` (new file)
+- `backend/tests/fixtures/articles.py` (add parsed/unparsed fixtures)
+
+---
+
+#### T7.34 [US7][P0] Integration Tests for Proofreading Workflow
+
+**Description**: End-to-end tests verifying proofreading workflow with parsed articles.
+
+**Dependencies**: T7.30, T7.31, T7.32, T7.33
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Integration test scenarios:
+  1. Import → Parse → Confirm → Proofread → Apply → Verify
+  2. Import → Proofread (unparsed) → Verify warning
+  3. Verify structured fields preserved after proofreading
+- Database fixtures with realistic data
+
+**Acceptance Criteria**:
+- [ ] Full workflow test passes with parsed article
+- [ ] Backward compatibility test passes with unparsed article
+- [ ] Structured field preservation verified
+- [ ] Warning system tested
+
+**File Paths**:
+- `backend/tests/integration/test_parsing_proofreading_integration.py` (new file)
+- `backend/tests/fixtures/workflows.py` (add workflow fixtures)
+
+---
+
+#### T7.35 [US7][P0] Update API Documentation
+
+**Description**: Document the proofreading integration changes in API specs and developer docs.
+
+**Dependencies**: T7.30, T7.31, T7.32
+
+**Estimated Hours**: 1 hour
+
+**Deliverables**:
+- Updated OpenAPI/Swagger documentation
+- Developer documentation explaining workflow
+- Migration guide for existing users
+
+**Acceptance Criteria**:
+- [ ] API spec updated with new payload structure
+- [ ] Parsing metadata schema documented
+- [ ] Warning field documented
+- [ ] Workflow diagram updated
+
+**File Paths**:
+- `specs/001-cms-automation/api-spec.yaml` (update proofreading endpoints)
+- `backend/docs/api/proofreading.md` (update workflow docs)
+- `backend/docs/phase7_proofreading_integration_analysis.md` (reference)
+
+---
+
+#### T7.36 [US7][P0] Update SpecKit Documentation
+
+**Description**: Update spec.md, plan.md, and tasks.md with proofreading integration requirements and tasks.
+
+**Dependencies**: T7.35
+
+**Estimated Hours**: 1.5 hours
+
+**Deliverables**:
+- Updated `spec.md` with FR-106 to FR-110 requirements
+- Updated `plan.md` with integration strategy
+- Updated `tasks.md` with T7.30-T7.36 tasks
+- Workflow diagrams showing integration points
+
+**Acceptance Criteria**:
+- [ ] All requirements (FR-106 to FR-110) documented in spec.md ✅
+- [ ] Task breakdown (T7.30-T7.36) added to tasks.md ✅
+- [ ] Implementation plan documented
+- [ ] Review by stakeholders
+
+**File Paths**:
+- `specs/001-cms-automation/spec.md` ✅
+- `specs/001-cms-automation/wordpress-publishing-plan.md`
+- `specs/001-cms-automation/tasks.md` ✅
+
+---
+
+### Week 24-25: Unified AI Optimization Service (64 hours) 🆕
+
+**Goal**: Implement unified AI service that generates title + SEO + FAQ suggestions in one API call, saving 40-60% cost and 30-40% time.
+
+**Design Document**: `backend/docs/phase7_unified_ai_optimization_service.md`
+
+---
+
+#### T7.37 [US7][P0] Database Schema for Unified Optimization
+
+**Description**: Create database tables for title suggestions, SEO suggestions, and FAQs. Add unified_optimization tracking fields to articles table.
+
+**Dependencies**: T7.3 (Article parsing schema)
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Alembic migration creating 3 tables:
+  - `title_suggestions`: Store title optimization suggestions (3段式)
+  - `seo_suggestions`: Store SEO keywords, meta description, tags
+  - `article_faqs`: Store FAQ questions and answers
+- Add fields to `articles` table:
+  - `unified_optimization_generated`: BOOLEAN
+  - `unified_optimization_generated_at`: TIMESTAMP
+  - `unified_optimization_cost`: DECIMAL(10, 4)
+- ORM models for all new tables
+- Migration downgrade script
+
+**Acceptance Criteria**:
+- [ ] All tables created with proper foreign keys (article_id → articles.id)
+- [ ] Indexes on article_id for fast lookup
+- [ ] JSONB fields for flexible metadata storage
+- [ ] Unique constraint: one title_suggestions/seo_suggestions per article
+- [ ] Migration runs successfully on PostgreSQL
+- [ ] Downgrade migration works correctly
+
+**File Paths**:
+- `backend/alembic/versions/*_add_unified_optimization_tables.py`
+- `backend/src/models/title_suggestions.py` (new)
+- `backend/src/models/seo_suggestions.py` (new)
+- `backend/src/models/article_faq.py` (new)
+
+**Database Schema**:
+```sql
+CREATE TABLE title_suggestions (
+    id SERIAL PRIMARY KEY,
+    article_id INTEGER NOT NULL UNIQUE REFERENCES articles(id) ON DELETE CASCADE,
+    original_title_prefix VARCHAR(200),
+    original_title_main VARCHAR(500) NOT NULL,
+    original_title_suffix VARCHAR(200),
+    suggested_title_sets JSONB NOT NULL,
+    optimization_notes TEXT[],
+    generated_at TIMESTAMP DEFAULT NOW(),
+    generated_by VARCHAR(100) DEFAULT 'unified_optimization_service'
+);
+
+CREATE TABLE seo_suggestions (
+    id SERIAL PRIMARY KEY,
+    article_id INTEGER NOT NULL UNIQUE REFERENCES articles(id) ON DELETE CASCADE,
+    focus_keyword VARCHAR(100),
+    focus_keyword_rationale TEXT,
+    primary_keywords TEXT[],
+    secondary_keywords TEXT[],
+    keyword_difficulty JSONB,
+    search_volume_estimate JSONB,
+    suggested_meta_description TEXT,
+    meta_description_improvements TEXT[],
+    meta_description_score INTEGER,
+    suggested_tags JSONB,
+    tag_strategy TEXT,
+    generated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE article_faqs (
+    id SERIAL PRIMARY KEY,
+    article_id INTEGER NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    question_type VARCHAR(20),
+    search_intent VARCHAR(20),
+    keywords_covered TEXT[],
+    confidence DECIMAL(3, 2),
+    position INTEGER NOT NULL DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'draft',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+#### T7.38 [US7][P0] UnifiedOptimizationService Implementation
+
+**Description**: Implement core service that calls Claude API once to generate all optimization suggestions (title + SEO + FAQ).
+
+**Dependencies**: T7.37
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `backend/src/services/parsing/unified_optimization_service.py`:
+  - `UnifiedOptimizationService` class
+  - `generate_all_optimizations()` method
+  - `_build_unified_prompt()` - comprehensive prompt with 5 tasks
+  - `_parse_unified_response()` - JSON parsing
+  - `_store_optimizations()` - save to 3 tables
+  - `_build_full_title()` helper
+- Prompt template covering:
+  - Task 1: Title optimization (3段式, 2-3 options)
+  - Task 2: SEO keywords (focus/primary/secondary)
+  - Task 3: Meta description optimization
+  - Task 4: Tags recommendations (6-8)
+  - Task 5: FAQ generation (8-10 questions)
+- Response validation and error handling
+- Cost tracking and logging
+
+**Acceptance Criteria**:
+- [ ] Service successfully generates all 5 types of suggestions
+- [ ] Prompt length ~2,500 tokens (within Claude limits)
+- [ ] Response parsing handles JSON extraction from markdown code blocks
+- [ ] Error handling for malformed responses
+- [ ] All results saved to database atomically (transaction)
+- [ ] Cost and token usage logged
+- [ ] Service can be instantiated with AsyncAnthropic client
+
+**File Paths**:
+- `backend/src/services/parsing/unified_optimization_service.py` (new)
+
+**Code Structure**:
+```python
+class UnifiedOptimizationService:
+    def __init__(self, anthropic_client: AsyncAnthropic):
+        self.client = anthropic_client
+        self.model = "claude-sonnet-4.5-20250929"
+
+    async def generate_all_optimizations(
+        self, article: Article
+    ) -> Dict[str, Any]:
+        """Generate title + SEO + FAQ in one call"""
+        prompt = self._build_unified_prompt(article)
+        response = await self.client.messages.create(...)
+        result = self._parse_unified_response(response.content[0].text)
+        await self._store_optimizations(article.id, result)
+        return result
+```
+
+---
+
+#### T7.39 [US7][P0] API Endpoints for Unified Optimization
+
+**Description**: Create API endpoints for generating and retrieving unified optimization suggestions.
+
+**Dependencies**: T7.38
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `POST /v1/articles/{id}/generate-all-optimizations`:
+  - Trigger unified AI generation
+  - Support regenerate flag
+  - Return all suggestions in response
+  - Track cost and performance
+- `GET /v1/articles/{id}/optimizations`:
+  - Retrieve cached optimization results
+  - Return title/SEO/FAQ suggestions
+  - Include generation metadata
+- `DELETE /v1/articles/{id}/optimizations`:
+  - Clear cached optimizations
+  - Allow regeneration
+- Request/response Pydantic models
+- OpenAPI documentation
+
+**Acceptance Criteria**:
+- [ ] POST endpoint validates article exists and is parsed
+- [ ] POST returns 409 if optimizations exist (unless regenerate=true)
+- [ ] GET returns 404 if no optimizations generated
+- [ ] Response includes generation_metadata with cost/time/savings
+- [ ] All endpoints have proper error handling
+- [ ] OpenAPI schema complete with examples
+
+**File Paths**:
+- `backend/src/api/routes/optimizations.py` (new)
+- `backend/src/schemas/optimizations.py` (new)
+
+**API Schemas**:
+```python
+class GenerateOptimizationsRequest(BaseModel):
+    regenerate: bool = False
+    options: OptimizationOptions = OptimizationOptions()
+
+class OptimizationOptions(BaseModel):
+    include_title: bool = True
+    include_seo: bool = True
+    include_tags: bool = True
+    include_faqs: bool = True
+    faq_target_count: int = 10
+
+class OptimizationsResponse(BaseModel):
+    success: bool
+    generation_id: str
+    title_suggestions: TitleSuggestionsData
+    seo_suggestions: SEOSuggestionsData
+    faqs: List[FAQData]
+    generation_metadata: GenerationMetadata
+```
+
+---
+
+#### T7.40 [US7][P0] Step 1 UI - Title Optimization Card
+
+**Description**: Add title optimization UI component to ArticleParsingPage (Step 1), displaying AI-generated title suggestions.
+
+**Dependencies**: T7.39, Frontend ArticleParsingPage exists
+
+**Estimated Hours**: 8 hours
+
+**Deliverables**:
+- `frontend/src/components/parsing/TitleOptimizationCard.tsx`:
+  - Display original 3-part title (prefix/main/suffix)
+  - Show 2-3 AI optimization options
+  - Display score, type, strengths for each option
+  - Allow user to select option
+  - Allow user to edit selected option
+  - Allow user to keep original
+  - Character count indicators
+- Integration with ArticleParsingPage
+- API client functions in `frontend/src/services/parsing.ts`:
+  - `generateOptimizations(articleId)`
+  - `getOptimizations(articleId)`
+- TanStack Query hooks
+- Loading/error states
+- Responsive design
+
+**Acceptance Criteria**:
+- [ ] Card displays after parsing confirmation
+- [ ] All 3 title components shown (prefix/main/suffix)
+- [ ] AI options displayed with visual distinction (cards/tabs)
+- [ ] Character count updates in real-time
+- [ ] Validation: total length ≤ 70 characters
+- [ ] User can select, edit, or reject suggestions
+- [ ] Selection saved to article.title_* fields
+- [ ] Loading state during AI generation (20-30s)
+- [ ] Error handling with retry option
+
+**File Paths**:
+- `frontend/src/components/parsing/TitleOptimizationCard.tsx` (new)
+- `frontend/src/pages/ArticleParsingPage.tsx` (updated)
+- `frontend/src/services/parsing.ts` (updated)
+
+**UI Design**:
+```
+┌─ Title Optimization ────────────────────────────────┐
+│ Original Title:                                      │
+│ [前缀] | 主标题 | [副标题]                            │
+│                                                      │
+│ AI Optimization Suggestions:                         │
+│                                                      │
+│ ┌─ Option 1 (Data-Driven) ────── Score: 95 ─┐      │
+│ │ 前缀: 深度解析 (4)                          │      │
+│ │ 主标题: 人工智能革新医疗诊断：准确率提升30% │      │
+│ │ 副标题: 权威指南 (4)                        │      │
+│ │ Total: 34 characters                        │      │
+│ │                                             │      │
+│ │ Strengths:                                  │      │
+│ │ • Contains specific data (30%)              │      │
+│ │ • Compelling action words                   │      │
+│ │ [ Select ] [ Preview ]                      │      │
+│ └─────────────────────────────────────────────┘      │
+│                                                      │
+│ ┌─ Option 2 (How-To) ────────── Score: 88 ──┐      │
+│ │ ...                                         │      │
+│ └─────────────────────────────────────────────┘      │
+│                                                      │
+│ [ Keep Original ] [ Use Selected ] [ Regenerate ]   │
+└──────────────────────────────────────────────────────┘
+```
+
+---
+
+#### T7.41 [US7][P0] Step 3 Page - SEO & FAQ Confirmation UI
+
+**Description**: Create new Step 3 page for SEO metadata and FAQ confirmation, loading cached results from Step 1.
+
+**Dependencies**: T7.39
+
+**Estimated Hours**: 20 hours
+
+**Deliverables**:
+- `frontend/src/pages/ArticleSEOConfirmationPage.tsx` (new page):
+  - Load cached optimizations from Step 1
+  - Display SEO keywords (focus/primary/secondary)
+  - Display meta description with improvements
+  - Display tags recommendations
+  - Display 8-10 FAQs with Q&A
+  - Allow approve/reject/edit for each section
+  - FAQ management: accept/reject/edit/delete individual items
+- Components:
+  - `frontend/src/components/seo/SEOKeywordsCard.tsx`
+  - `frontend/src/components/seo/MetaDescriptionCard.tsx`
+  - `frontend/src/components/seo/TagsCard.tsx`
+  - `frontend/src/components/seo/FAQCard.tsx`
+- Route configuration in `frontend/src/config/routes.ts`
+- Navigation from Step 2 (Proofreading) to Step 3
+- API integration for saving confirmed SEO data
+
+**Acceptance Criteria**:
+- [ ] Page loads cached optimizations (no AI call)
+- [ ] All 4 sections (keywords/meta/tags/FAQ) displayed
+- [ ] User can approve/reject each section independently
+- [ ] FAQs displayed with question type and search intent badges
+- [ ] FAQ reordering support (drag-and-drop)
+- [ ] Character count for meta description (150-160)
+- [ ] Warning if focus keyword not in meta description
+- [ ] Confirmation saves to article.meta_description, article.seo_keywords, article.tags
+- [ ] FAQs saved to article_faqs table with selected items
+- [ ] Navigation to Step 4 (Publishing) after confirmation
+
+**File Paths**:
+- `frontend/src/pages/ArticleSEOConfirmationPage.tsx` (new)
+- `frontend/src/components/seo/*.tsx` (new components)
+- `frontend/src/config/routes.ts` (updated)
+
+**UI Flow**:
+```
+Step 1: Parsing → Generate ALL optimizations (one AI call)
+           ↓ Save to DB
+           ↓ Display title suggestions only
+
+Step 2: Proofreading (uses body_html)
+           ↓
+
+Step 3: SEO Confirmation → Load cached optimizations (no AI call)
+           ↓ Display SEO + FAQ
+           ↓ User confirms
+
+Step 4: Publishing → WordPress
+```
+
+---
+
+#### T7.42 [US7][P0] Workflow Integration - Call Unified Service in Step 1
+
+**Description**: Integrate unified optimization service into existing parsing workflow, automatically generating all suggestions after parsing confirmation.
+
+**Dependencies**: T7.38, T7.40, Existing ArticleParsingPage
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- Update `backend/src/api/routes/articles.py`:
+  - After parsing confirmation, trigger unified optimization
+  - Handle generation in background (async)
+  - Update article.unified_optimization_generated flag
+- Update `frontend/src/pages/ArticleParsingPage.tsx`:
+  - After parsing confirmation, call generate-all-optimizations
+  - Show loading state (20-30s)
+  - Display title optimization card when ready
+  - Handle errors gracefully
+- Add configuration flag: `ENABLE_UNIFIED_OPTIMIZATION` (default true)
+- Fallback to separate calls if unified service fails
+
+**Acceptance Criteria**:
+- [ ] Unified optimization triggered automatically after parsing
+- [ ] Generation happens asynchronously (doesn't block confirmation)
+- [ ] User sees progress indicator during generation
+- [ ] Title suggestions appear after generation completes
+- [ ] If unified service fails, fallback to old flow (separate calls)
+- [ ] Generation failure doesn't break parsing workflow
+- [ ] Cost and time metrics logged
+
+**File Paths**:
+- `backend/src/api/routes/articles.py` (updated)
+- `frontend/src/pages/ArticleParsingPage.tsx` (updated)
+- `backend/src/config/settings.py` (add ENABLE_UNIFIED_OPTIMIZATION)
+
+---
+
+#### T7.43 [US7][P0] Unit Tests for UnifiedOptimizationService
+
+**Description**: Comprehensive unit tests for unified optimization service, covering prompt generation, response parsing, and storage.
+
+**Dependencies**: T7.38
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `backend/tests/services/parsing/test_unified_optimization_service.py`:
+  - Test prompt generation with different article structures
+  - Test response parsing (valid JSON)
+  - Test response parsing (JSON in markdown code blocks)
+  - Test malformed response handling
+  - Test storage to 3 tables
+  - Test transaction rollback on partial failure
+  - Mock Anthropic API calls
+- Test coverage ≥ 90%
+
+**Acceptance Criteria**:
+- [ ] All prompt generation edge cases covered
+- [ ] Response parsing handles various formats
+- [ ] Error cases properly tested
+- [ ] Storage tested with different data structures
+- [ ] All tests pass
+- [ ] No database side effects between tests
+
+**File Paths**:
+- `backend/tests/services/parsing/test_unified_optimization_service.py` (new)
+
+---
+
+#### T7.44 [US7][P0] Integration Tests for Unified Optimization Workflow
+
+**Description**: End-to-end integration tests for complete workflow: Import → Parse → Generate Optimizations → Confirm Title → Proofread → Confirm SEO → Publish.
+
+**Dependencies**: T7.40, T7.41, T7.42
+
+**Estimated Hours**: 6 hours
+
+**Deliverables**:
+- `backend/tests/integration/test_unified_optimization_workflow.py`:
+  - Test full workflow with real database
+  - Verify one AI call generates all suggestions
+  - Verify title suggestions available in Step 1
+  - Verify SEO suggestions available in Step 3
+  - Verify cost savings vs separate calls
+  - Test regeneration flow
+  - Test fallback to separate calls
+- Mock Claude API responses
+
+**Acceptance Criteria**:
+- [ ] Full workflow completes successfully
+- [ ] Only one Anthropic API call made (unified)
+- [ ] All 3 tables populated correctly
+- [ ] Title confirmation updates article fields
+- [ ] SEO confirmation updates article fields
+- [ ] FAQs saved with correct article_id
+- [ ] Cost metadata tracked correctly
+- [ ] All tests pass with clean database state
+
+**File Paths**:
+- `backend/tests/integration/test_unified_optimization_workflow.py` (new)
+
+---
+
+#### T7.45 [US7][P0] Performance & Cost Monitoring
+
+**Description**: Add monitoring and analytics for unified optimization service to verify cost/time savings.
+
+**Dependencies**: T7.42
+
+**Estimated Hours**: 3 hours
+
+**Deliverables**:
+- Metrics tracking:
+  - Token usage per generation
+  - Cost per generation (USD)
+  - Generation time (ms)
+  - Savings vs separate calls (%)
+  - Success/failure rates
+- Dashboard or logging:
+  - Log to structured JSON
+  - Include article_id, timestamp, metrics
+  - Aggregate daily/weekly stats
+- Alerts for anomalies (cost spike, high failure rate)
+
+**Acceptance Criteria**:
+- [ ] All generations logged with full metrics
+- [ ] Cost savings calculated and logged
+- [ ] Time savings calculated and logged
+- [ ] Logs queryable for analysis
+- [ ] Can generate weekly cost report
+- [ ] Alerts configured (optional)
+
+**File Paths**:
+- `backend/src/services/parsing/unified_optimization_service.py` (add logging)
+- `backend/src/utils/metrics.py` (new)
+
+---
+
+#### T7.46 [US7][P0] Update API Documentation
+
+**Description**: Update OpenAPI spec and API documentation with new unified optimization endpoints.
+
+**Dependencies**: T7.39
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Update `specs/001-cms-automation/api-spec.yaml`:
+  - Add `/v1/articles/{id}/generate-all-optimizations` endpoint
+  - Add `/v1/articles/{id}/optimizations` endpoint
+  - Add request/response schemas
+  - Add examples
+- Update `backend/docs/api/optimizations.md`:
+  - Document unified optimization workflow
+  - Provide usage examples
+  - Document cost savings
+  - Document error handling
+
+**Acceptance Criteria**:
+- [ ] OpenAPI spec validates
+- [ ] All endpoints documented with examples
+- [ ] Response schemas complete
+- [ ] Error codes documented (400, 404, 409, 500)
+- [ ] Workflow diagram included in docs
+
+**File Paths**:
+- `specs/001-cms-automation/api-spec.yaml` (updated)
+- `backend/docs/api/optimizations.md` (new)
+
+---
+
+#### T7.47 [US7][P0] Frontend E2E Tests
+
+**Description**: Playwright end-to-end tests for unified optimization UI workflow.
+
+**Dependencies**: T7.40, T7.41
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- `frontend/e2e/unified-optimization.spec.ts`:
+  - Test Step 1: Parsing → Title optimization display
+  - Test title selection and confirmation
+  - Test Step 3: SEO confirmation UI
+  - Test FAQ approve/reject/edit
+  - Test full workflow navigation
+- Mock API responses for predictable testing
+- Visual regression tests for UI cards
+
+**Acceptance Criteria**:
+- [ ] All user flows tested
+- [ ] Tests pass in headless mode
+- [ ] Screenshots captured for visual regression
+- [ ] Tests run in CI pipeline
+- [ ] Tests cover error states
+
+**File Paths**:
+- `frontend/e2e/unified-optimization.spec.ts` (new)
+
+---
+
+#### T7.48 [US7][P0] Update SpecKit Documentation
+
+**Description**: Update spec.md and tasks.md with unified optimization requirements and implementation details.
+
+**Dependencies**: T7.46
+
+**Estimated Hours**: 3 hours
+
+**Deliverables**:
+- Update `specs/001-cms-automation/spec.md`:
+  - Add FR-111 to FR-115 (Unified AI Optimization)
+  - Document cost savings (40-60%)
+  - Document workflow changes
+- Update `specs/001-cms-automation/tasks.md`:
+  - Add T7.37-T7.48 tasks ✅ (this task)
+- Update Phase 7 summary:
+  - Duration: 7 weeks → 9 weeks
+  - Hours: 151h → 215h
+- Update `specs/001-cms-automation/wordpress-publishing-plan.md`:
+  - Document unified optimization architecture
+
+**Acceptance Criteria**:
+- [ ] All new requirements documented
+- [ ] All tasks added to tasks.md ✅
+- [ ] Phase 7 summary updated
+- [ ] Architecture diagrams included
+- [ ] Cost comparison documented
+
+**File Paths**:
+- `specs/001-cms-automation/spec.md` (updated)
+- `specs/001-cms-automation/tasks.md` (updated) ✅
+- `specs/001-cms-automation/wordpress-publishing-plan.md` (updated)
+
+---
+
+**Week 24-25 Summary**:
+- **Duration**: 2 weeks
+- **Estimated Hours**: 64 hours
+- **Cost Savings**: 40-60% per article ($0.10-0.13 → $0.06-0.08)
+- **Time Savings**: 30-40% per article (30-40s → 20-30s)
+- **Key Deliverables**:
+  - ✅ Unified AI Optimization Service (one Prompt for all)
+  - ✅ Database schema (3 tables)
+  - ✅ API endpoints (generate + retrieve)
+  - ✅ Step 1 UI (title optimization)
+  - ✅ Step 3 UI (SEO + FAQ confirmation)
+  - ✅ Comprehensive tests (unit + integration + E2E)
+  - ✅ Performance monitoring
+  - ✅ Complete documentation
+
+---
+
+**Phase 7 Checkpoint**: ✅ Article parsing operational, Step 1 UI complete with title optimization, proofreading integration complete, Step 3 SEO+FAQ confirmation ready, unified AI optimization saving 40-60% cost, parsing accuracy ≥90%, performance ≤30s total, tests passing, ready for production
+
+---
+
+## Phase 8: Proofreading Feedback & Tuning Loop (2 weeks) ⭐新增
 
 **Goal**: Capture用户决策、收集反馈、沉淀反馈数据用于脚本/Prompt 调优、支撑模型/脚本持续迭代  
 **Duration**: 2 weeks (Week 16-17)  

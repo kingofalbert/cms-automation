@@ -11,9 +11,13 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.models.base import Base, TimestampMixin
 
 if TYPE_CHECKING:
+    from src.models.article_faq import ArticleFAQ
+    from src.models.article_image import ArticleImage, ArticleImageReview
     from src.models.proofreading import ProofreadingDecision, ProofreadingHistory
     from src.models.publish import PublishTask
     from src.models.seo import SEOMetadata
+    from src.models.seo_suggestions import SEOSuggestion
+    from src.models.title_suggestions import TitleSuggestion
     from src.models.topic_request import TopicRequest
     from src.models.uploaded_file import UploadedFile
 
@@ -201,6 +205,84 @@ class Article(Base, TimestampMixin):
         comment="API cost for generating suggestions (USD)",
     )
 
+    # Phase 7: Article Structured Parsing Fields
+    # Title decomposition
+    title_prefix: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment='First part of title (optional), e.g., "【專題報導】"',
+    )
+
+    title_main: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment='Main title (required for new articles), e.g., "2024年醫療保健創新趨勢"',
+    )
+
+    title_suffix: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment='Subtitle/suffix (optional), e.g., "從AI診斷到遠距醫療"',
+    )
+
+    # Author information
+    author_line: Mapped[str | None] = mapped_column(
+        String(300),
+        nullable=True,
+        comment='Raw author line from document, e.g., "文／張三｜編輯／李四"',
+    )
+
+    author_name: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment='Cleaned author name extracted from author_line, e.g., "張三"',
+    )
+
+    # Cleaned body content
+    body_html: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Sanitized body HTML with headers/images/meta removed, ready for publishing",
+    )
+
+    # SEO and metadata
+    meta_description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Extracted meta description for SEO (150-160 chars recommended)",
+    )
+
+    seo_keywords: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
+        nullable=True,
+        comment="Array of SEO keywords extracted from content",
+    )
+
+    # Parsing confirmation workflow
+    parsing_confirmed: Mapped[bool] = mapped_column(
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment="Whether parsing has been reviewed and confirmed by user (Step 1)",
+    )
+
+    parsing_confirmed_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+        comment="Timestamp when parsing was confirmed",
+    )
+
+    parsing_confirmed_by: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="User ID or identifier who confirmed the parsing",
+    )
+
+    parsing_feedback: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="User feedback on parsing quality during confirmation",
+    )
+
     # CMS integration
     cms_article_id: Mapped[str | None] = mapped_column(
         String(255),
@@ -285,6 +367,39 @@ class Article(Base, TimestampMixin):
         back_populates="article",
         cascade="all, delete-orphan",
         order_by="ArticleStatusHistory.created_at",
+    )
+
+    # Phase 7: Article Images relationships (1:N)
+    article_images: Mapped[list["ArticleImage"]] = relationship(
+        "ArticleImage",
+        back_populates="article",
+        cascade="all, delete-orphan",
+        order_by="ArticleImage.position",
+    )
+
+    # Phase 7: Unified AI Optimization relationships
+    # Title suggestions (1:1 relationship)
+    title_suggestion: Mapped[Optional["TitleSuggestion"]] = relationship(
+        "TitleSuggestion",
+        back_populates="article",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    # SEO suggestions (1:1 relationship)
+    seo_suggestion: Mapped[Optional["SEOSuggestion"]] = relationship(
+        "SEOSuggestion",
+        back_populates="article",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    # Article FAQs (1:N relationship)
+    faqs: Mapped[list["ArticleFAQ"]] = relationship(
+        "ArticleFAQ",
+        back_populates="article",
+        cascade="all, delete-orphan",
+        order_by="ArticleFAQ.position",
     )
 
     def __repr__(self) -> str:

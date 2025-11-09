@@ -15,6 +15,20 @@ from src.api.schemas.base import (
     TimestampSchema,
 )
 from src.api.schemas.monitoring import ExecutionLogEntry, TaskFilters, TaskStatistics
+from src.api.schemas.optimization import (
+    FAQData,
+    GenerateOptimizationsRequest,
+    GenerationMetadata,
+    MetaDescriptionData,
+    OptimizationError,
+    OptimizationOptions,
+    OptimizationStatusResponse,
+    OptimizationsResponse,
+    SEOKeywordsData,
+    SEOSuggestionsData,
+    TagsData,
+    TitleSuggestionsData,
+)
 from src.api.schemas.proofreading import (
     ArticleSummary,
     BatchDecisionsPayload,
@@ -100,4 +114,17 @@ __all__ = [
     "WorklistSyncStatusResponse",
     "WorklistStatusUpdateRequest",
     "WorklistSyncTriggerResponse",
+    # Optimization schemas (Phase 7 - Unified AI Optimization)
+    "GenerateOptimizationsRequest",
+    "OptimizationOptions",
+    "OptimizationsResponse",
+    "TitleSuggestionsData",
+    "SEOSuggestionsData",
+    "SEOKeywordsData",
+    "MetaDescriptionData",
+    "TagsData",
+    "FAQData",
+    "GenerationMetadata",
+    "OptimizationStatusResponse",
+    "OptimizationError",
 ]

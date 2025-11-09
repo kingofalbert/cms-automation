@@ -102,7 +102,7 @@ curl -X POST http://localhost:8000/v1/articles/42/proofread \
     "source_breakdown": {"script": 2, "ai": 2, "merged": 1}
   },
   "processing_metadata": {
-    "ai_model": "claude-3-5-sonnet-20241022",
+    "ai_model": "claude-sonnet-4-5-20250929",
     "rule_manifest_version": "2025.02.05",
     "prompt_hash": "c13c8e5..."
   }

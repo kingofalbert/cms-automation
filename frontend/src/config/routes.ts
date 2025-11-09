@@ -45,6 +45,12 @@ const SettingsPage = createLazyRoute(() => import('../pages/SettingsPageModern')
 const WorklistPage = createLazyRoute(() => import('../pages/WorklistPage'));
 const ProofreadingReviewPage = createLazyRoute(() => import('../pages/ProofreadingReviewPage'));
 
+// Phase 7: Article parsing page
+const ArticleParsingPage = createLazyRoute(() => import('../pages/ArticleParsingPage'));
+
+// Phase 7: Article SEO confirmation page
+const ArticleSEOConfirmationPage = createLazyRoute(() => import('../pages/ArticleSEOConfirmationPage'));
+
 // Phase 2+: Commented out for future use
 // const HomePage = createLazyRoute(() => import('../pages/HomePage'));
 // const ArticleGeneratorPage = createLazyRoute(() => import('../pages/ArticleGeneratorPage'));
@@ -100,6 +106,24 @@ export const routes: RouteConfig[] = [
     ...ProofreadingReviewPage,
     titleKey: 'routes.proofreadingReview.title',
     descriptionKey: 'routes.proofreadingReview.description',
+    showInNav: false,
+    loadingType: 'detail',
+  },
+  // Phase 7: Article Parsing page
+  {
+    path: '/articles/:id/parsing',
+    ...ArticleParsingPage,
+    title: 'Article Parsing',
+    description: 'Parse and extract structured data from articles',
+    showInNav: false,
+    loadingType: 'detail',
+  },
+  // Phase 7: Article SEO Confirmation page
+  {
+    path: '/articles/:id/seo-confirmation',
+    ...ArticleSEOConfirmationPage,
+    title: 'SEO & FAQ Confirmation',
+    description: 'Review and confirm AI-generated SEO keywords, meta description, tags, and FAQs',
     showInNav: false,
     loadingType: 'detail',
   },

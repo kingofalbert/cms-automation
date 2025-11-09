@@ -2,9 +2,9 @@
 
 **Feature Branch**: `001-cms-automation`
 **Created**: 2025-10-26
-**Last Updated**: 2025-11-02
-**Status**: Production Ready (Core Features Complete)
-**Completion**: ~85% (Backend/API 100%, Frontend 60%, Tests 80%)
+**Last Updated**: 2025-11-08 🆕
+**Status**: Production Ready (Core Features Complete) + New Parsing Feature Design
+**Completion**: ~85% (Backend/API 100%, Frontend 60%, Tests 80%) + Parsing 0% (Design Phase)
 **Last Deployment**: 2025-11-02
 **Input**: "Implement SEO optimization for existing articles and automated CMS publishing using flexible Computer Use providers (Anthropic/Gemini/Playwright) with browser automation."
 
@@ -367,6 +367,86 @@ Published Article with SEO ✅
 
 ---
 
+### User Story 7 - Structured Article Parsing & Review Confirmation (Priority: P0) 🆕
+
+**As a** content quality reviewer
+**I want to** verify that imported Google Docs are correctly parsed into structured fields (title parts, author, images, body, SEO metadata)
+**So that** I can ensure data quality before proceeding with content proofreading and publishing
+
+**Why this priority**: Parsing accuracy is the foundation for all downstream workflows. Incorrect parsing leads to publishing errors, broken images, missing metadata, and poor SEO. This must be verified before expensive proofreading and publishing operations.
+
+**Independent Test**: Import 20 Google Docs with varying structures (1-3 line titles, different author formats, 0-10 images, with/without meta blocks). Verify ≥90% parsing accuracy across all fields.
+
+**Acceptance Scenarios**:
+
+1. **Given** a Google Doc with 3-line title ("前標題｜主標題｜副標題")
+   **When** the AI parser processes the document
+   **Then** the system correctly extracts:
+   - `title_prefix` = "前標題"
+   - `title_main` = "主標題"
+   - `title_suffix` = "副標題"
+   - All three fields stored in `articles` table
+   - Visual confirmation UI shows all three title parts
+
+2. **Given** a Google Doc with author line "文／張三" following the title
+   **When** the AI parser processes the document
+   **Then** the system correctly extracts:
+   - `author_line` = "文／張三" (raw text)
+   - `author_name` = "張三" (cleaned name)
+   - Author removed from `body_html`
+
+3. **Given** a Google Doc with 5 inline images (each with preview, caption, and "原圖/點此下載" link)
+   **When** the image extraction pipeline runs
+   **Then** the system:
+   - Creates 5 `article_images` records
+   - Downloads all 5 high-resolution source images
+   - Records position (paragraph index) for each image
+   - Extracts technical specs: width, height, file size, MIME type, EXIF date
+   - Step 1 UI displays all specs for reviewer verification
+   - Images removed from `body_html`, leaving clean text
+
+4. **Given** a Google Doc with terminal blocks "Meta Description：...", "關鍵詞：...", "Tags：..."
+   **When** the Meta/SEO extractor runs
+   **Then** the system:
+   - Extracts `meta_description` (string)
+   - Extracts `seo_keywords` (array of strings)
+   - Extracts `tags` (array of strings)
+   - Strips all meta blocks from `body_html`
+   - Step 1 UI displays extracted metadata for confirmation
+
+5. **Given** a reviewer accesses Proofreading Review page for a newly imported article
+   **When** they view Step 1 "解析確認"
+   **Then** the UI displays:
+   - Structured headers (editable fields: prefix, main, suffix)
+   - Author line + name (editable)
+   - Image gallery with previews, captions, source links, and specs table
+   - Meta description, keywords, tags (all editable)
+   - Cleaned body HTML preview
+   - "Looks good / Needs fix" toggle buttons
+   - Step 1 must be confirmed before accessing Step 2 (正文校對)
+
+6. **Given** a reviewer confirms parsing in Step 1 by clicking "確認解析"
+   **When** the confirmation is saved
+   **Then** the system:
+   - Sets `parsing_confirmed = true`
+   - Records `parsing_confirmed_at` timestamp
+   - Records `parsing_confirmed_by` (reviewer user ID)
+   - Saves any edits to title, author, meta fields
+   - Unlocks Step 2 (正文校對) for access
+   - Reviewer can return to Step 1 later to amend if needed
+
+7. **Given** a reviewer identifies an incorrect image source URL
+   **When** they provide feedback in Step 1
+   **Then** the system:
+   - Creates `article_image_reviews` record with action='replace_source'
+   - Stores new_source_url provided by reviewer
+   - Stores reviewer_notes explaining the issue
+   - Operations team can reprocess the image with correct URL
+
+**Dependencies**: User Story 1 (requires article import), Google Drive integration (Phase 6)
+
+---
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -415,7 +495,7 @@ Published Article with SEO ✅
   - `screenshot(name) -> str`
   - `cleanup() -> None`
 - **FR-023**: System MUST implement `ProviderFactory` for dynamic provider instantiation
-- **FR-024**: System MUST implement Anthropic Computer Use provider using `claude-3-5-sonnet-20241022` model with `computer_20241022` tool
+- **FR-024**: System MUST implement Anthropic Computer Use provider using `claude-sonnet-4-5-20250929` model with `computer_20241022` tool
 - **FR-025**: System MUST implement Gemini Computer Use provider using `gemini-2.0-flash-exp` model (when available)
 - **FR-026**: System MUST implement Playwright provider using CSS selectors for WordPress UI elements
 - **FR-027**: System MUST perform the following operations via Computer Use:
@@ -567,6 +647,201 @@ Published Article with SEO ✅
 
 ---
 
+#### Article Structured Parsing (FR-088 to FR-105) 🆕
+
+**Status**: 🆕 New Requirements Added (2025-11-08)
+**Reference**: See [Article Parsing Requirements](../../docs/article_parsing_requirements.md) and [Technical Analysis](../../docs/ARTICLE_PARSING_TECHNICAL_ANALYSIS.md)
+
+**Overview**: Transform raw Google Doc HTML into normalized, structured data separating titles, authors, body content, images, and SEO metadata. This enables data quality validation before expensive proofreading and publishing operations.
+
+##### Backend Parsing Engine (FR-088 to FR-093)
+
+- **FR-088**: System MUST implement AI-driven `ArticleParserService` using Claude 4.5 Sonnet to interpret document structure
+- **FR-089**: Parser MUST extract structured headers using line-break detection:
+  - 3 lines → line1=`title_prefix`, line2=`title_main`, line3=`title_suffix`
+  - 2 lines → line1=`title_main`, line2=`title_suffix`
+  - 1 line → `title_main` only
+  - Fallback heuristics: split same-line separators (`｜`, `—`, `：`) if multi-line detection fails
+- **FR-090**: Parser MUST extract author information:
+  - Detect first line under title matching "文／XXX", "撰稿／XXX", "作者：XXX" patterns
+  - Store raw `author_line` (verbatim) and cleaned `author_name` (extracted name only)
+- **FR-091**: Parser MUST extract image groups for each inline image block:
+  - Capture preview image URL/path
+  - Capture caption text
+  - Capture source link ("原圖/點此下載" URL)
+  - Download high-resolution source image to storage backend
+  - Extract technical specs: width, height, aspect ratio, file size, MIME type, EXIF date
+  - Record `position` (zero-based paragraph index before which image appeared)
+  - Create `article_images` record with all metadata
+- **FR-092**: Parser MUST extract Meta/SEO blocks:
+  - Detect blocks labeled "Meta Description：", "關鍵詞：", "Tags：" (support English labels)
+  - Extract content into `meta_description`, `seo_keywords[]`, `tags[]`
+  - Strip meta blocks from DOM after extraction
+- **FR-093**: Parser MUST clean body HTML:
+  - Remove extracted elements: header, author, images, meta/SEO blocks
+  - Preserve semantic tags: H1, H2, `<p>`, `<ul>`, `<ol>`, `<strong>`, `<em>`, `<a>`
+  - Sanitize HTML (reuse existing bleach sanitizer) while keeping structure
+  - Store as `body_html` field
+
+##### Database Schema (FR-094 to FR-096)
+
+- **FR-094**: System MUST extend `articles` table with structured parsing fields:
+  - `title_prefix` VARCHAR(200)
+  - `title_main` VARCHAR(500) NOT NULL
+  - `title_suffix` VARCHAR(200)
+  - `author_line` VARCHAR(300)
+  - `author_name` VARCHAR(100)
+  - `body_html` TEXT (cleaned HTML)
+  - `meta_description` TEXT
+  - `seo_keywords` TEXT[] (PostgreSQL array)
+  - `tags` TEXT[] (PostgreSQL array)
+- **FR-095**: System MUST create `article_images` table:
+  - `article_id` FK to articles (CASCADE delete)
+  - `preview_path` VARCHAR(500) (preview/thumbnail)
+  - `source_path` VARCHAR(500) (downloaded high-res)
+  - `source_url` VARCHAR(1000) (original source link)
+  - `caption` TEXT
+  - `position` INTEGER NOT NULL (paragraph index, ≥0)
+  - `metadata` JSONB (technical specs)
+  - Indexes: `article_id`, `(article_id, position)`
+- **FR-096**: System MUST track parsing confirmation state on `worklist_items` or `proofreading_reviews`:
+  - `parsing_confirmed` BOOLEAN DEFAULT FALSE
+  - `parsing_confirmed_at` TIMESTAMP
+  - `parsing_confirmed_by` VARCHAR(100)
+  - `parsing_feedback` TEXT
+
+##### Frontend Proofreading Step 1 UI (FR-097 to FR-102)
+
+- **FR-097**: System MUST implement Proofreading Review Step 1 "解析確認" UI showing:
+  - Structured headers card: editable `title_prefix`, `title_main`, `title_suffix`
+  - Author info card: display `author_line` (raw), editable `author_name`
+  - Image gallery card: grid of previews with captions, source links, and specs table
+  - Meta/SEO card: editable `meta_description`, `seo_keywords` (tag input), `tags` (tag input)
+  - Body HTML preview card: read-only sanitized HTML rendering
+  - Confirmation actions: "確認解析" button (saves & unlocks Step 2), "需要修正" toggle (blocks Step 2)
+- **FR-098**: Image specs table MUST display for each image:
+  - Width (px) - highlight if outside 800-3000px range
+  - Height (px)
+  - Aspect ratio (e.g., "16:9") - highlight if non-standard
+  - File size (human-readable, e.g., "2.4 MB")
+  - MIME type (e.g., "image/jpeg")
+  - EXIF date (if available)
+  - Threshold warnings for images outside publishing tolerances (exact KPIs defined in future Image Spec doc)
+- **FR-099**: System MUST block Step 2 (正文校對) access until `parsing_confirmed = true`
+  - Show warning alert if user attempts to access Step 2 without confirming Step 1
+  - Allow reviewers to return to Step 1 after confirmation to amend feedback without losing Step 2 progress
+- **FR-100**: System MUST support per-image review actions via `article_image_reviews` table:
+  - `action` ENUM: 'keep', 'remove', 'replace_caption', 'replace_source'
+  - `new_caption` TEXT (if action='replace_caption')
+  - `new_source_url` VARCHAR(1000) (if action='replace_source')
+  - `reviewer_notes` TEXT
+  - FK to `article_image_id` and `worklist_item_id`
+- **FR-101**: System MUST provide i18n support for all parsing UI strings:
+  - Namespace: `t('proofreading.parsing.*')`
+  - Languages: zh-TW (primary), en-US (secondary)
+  - Update locale files: `frontend/src/locales/zh-TW.json`, `en-US.json`
+- **FR-102**: System MUST expose parsing confirmation API:
+  - `GET /v1/worklist/:id` returns all structured parsing fields + `images[]` array + confirmation state
+  - `POST /v1/worklist/:id/confirm-parsing` accepts confirmation payload: `parsing_confirmed`, `parsing_feedback`, `image_reviews[]`
+  - Response includes `parsing_confirmed_at` timestamp
+
+##### Image Processing Pipeline (FR-103 to FR-105)
+
+- **FR-103**: System MUST implement `ImageProcessor` service to download and extract specs:
+  - Download image from `source_url`
+  - Use PIL (Pillow) to extract: dimensions, aspect ratio, file size, MIME type, EXIF data
+  - Store downloaded image in chosen storage backend (Google Drive or Supabase Storage - decision pending)
+  - Return `ProcessedImage` with `source_path` and `metadata` JSONB
+- **FR-104**: Image metadata JSONB MUST include:
+  ```json
+  {
+    "width": 1920,
+    "height": 1080,
+    "aspect_ratio": "16:9",
+    "file_size_bytes": 2458624,
+    "mime_type": "image/jpeg",
+    "format": "JPEG",
+    "color_mode": "RGB",
+    "has_transparency": false,
+    "exif_date": "2025-11-08T10:30:00Z",
+    "download_timestamp": "2025-11-08T12:00:00Z"
+  }
+  ```
+- **FR-105**: System MUST handle image preprocessing before publishing (future):
+  - Resize/compress/format normalization pipeline (deferred to separate epic)
+  - Upload processed images to WordPress via active provider (Playwright/Computer Use)
+  - Insert images into correct article positions automatically using `position` field
+  - *(This is a placeholder requirement; detailed specs in future Image Publishing epic)*
+
+**Implementation Priority**: P0 (Critical) - Data quality foundation
+**Estimated Effort**: 140 hours (6 weeks: 2 weeks backend + 2 weeks frontend + 2 weeks integration)
+**Dependencies**: Requires Google Drive integration (FR-071 to FR-075), Worklist UI (FR-076 to FR-083)
+
+---
+
+#### Proofreading Integration with Parsed Content (FR-106 to FR-110) 🆕
+
+**Status**: 🆕 New Requirements Added (2025-11-08)
+**Reference**: See [Proofreading Integration Analysis](../../backend/docs/phase7_proofreading_integration_analysis.md)
+
+**Overview**: Ensure proofreading workflow correctly uses parsed `body_html` content (not structured fields like title/author), maintain backward compatibility with unparsed legacy articles, and provide clear user feedback about parsing prerequisites.
+
+##### Content Source Selection (FR-106 to FR-107)
+
+- **FR-106**: When building proofreading payload, system MUST prioritize content sources in this order:
+  1. `article.body_html` (parsed clean content) - if `parsing_confirmed = true`
+  2. `article.body` (original content) - for unparsed legacy articles
+  3. Emit warning if using unparsed content: "建议先进行文章解析以获得更准确的校对结果"
+- **FR-107**: Proofreading MUST NOT check structured fields already extracted during parsing:
+  - ❌ Do NOT proofread: `title_prefix`, `title_main`, `title_suffix` (already reviewed in Step 1)
+  - ❌ Do NOT proofread: `author_name`, `author_line` (already reviewed in Step 1)
+  - ❌ Do NOT proofread: `meta_description`, `seo_keywords`, `tags` (already reviewed in Step 1)
+  - ✅ ONLY proofread: `body_html` content (正文)
+
+##### Parsing Metadata Inclusion (FR-108)
+
+- **FR-108**: System MUST include parsing status in proofreading payload metadata:
+  ```json
+  {
+    "parsing": {
+      "parsed": true,
+      "parsing_confirmed": true,
+      "parsing_confirmed_at": "2025-11-08T12:00:00Z",
+      "parsing_confirmed_by": "reviewer_user_id",
+      "title_components": {
+        "prefix": "前標題",
+        "main": "主標題",
+        "suffix": "副標題"
+      },
+      "author": {
+        "name": "張三",
+        "line": "文／張三"
+      }
+    }
+  }
+  ```
+
+##### Result Application Logic (FR-109)
+
+- **FR-109**: When applying proofreading results, system MUST:
+  - For parsed articles (`body_html` exists): Update `body_html` with corrected content
+  - For unparsed articles: Update `body` field (legacy behavior)
+  - Preserve all structured parsing fields (`title_*`, `author_*`, SEO fields) - do NOT overwrite
+
+##### Workflow Prerequisites (FR-110)
+
+- **FR-110**: System SHOULD (optional, configurable) enforce parsing prerequisite:
+  - Display warning in UI if accessing proofreading before parsing confirmation
+  - Warning message: "建议先完成文章解析（Step 1）以确保校对准确性"
+  - Allow user to proceed anyway (backward compatibility)
+  - Track "bypass_parsing_warning" flag in `proofreading_history`
+
+**Implementation Priority**: P0 (Critical) - Blocks correct workflow integration
+**Estimated Effort**: 11 hours (7 tasks across backend/testing/docs)
+**Dependencies**: Requires Phase 7 Article Parsing (FR-088 to FR-105)
+
+---
+
 ### Non-Functional Requirements
 
 #### Performance (NFR-001 to NFR-006)
@@ -625,18 +900,27 @@ Published Article with SEO ✅
 
 ### Articles
 - `id`: Primary key
-- `title`: Article title (VARCHAR 500)
-- `content`: Article body (TEXT)
+- `title`: Article title (VARCHAR 500) - **⚠️ Deprecated, use structured title fields**
+- `content`: Article body (TEXT) - **⚠️ Deprecated, use `body_html`**
 - `excerpt`: Short summary (TEXT, optional)
 - `category`: Article category (VARCHAR 100)
-- `tags`: Article tags (TEXT[], array)
+- `tags`: Article tags (TEXT[], array) - **🆕 Also stored at root level from parsing**
 - `status`: Article status (`imported`, `seo_optimized`, `ready_to_publish`, `publishing`, `published`)
 - `source`: Content source (`imported`, `manual_entry`)
 - `featured_image_path`: Featured image path (VARCHAR 500)
-- `additional_images`: Additional images (JSONB array)
+- `additional_images`: Additional images (JSONB array) - **⚠️ Deprecated, use `article_images` table**
 - `published_url`: Published article URL (VARCHAR 500)
 - `cms_article_id`: WordPress post ID (VARCHAR 100)
 - `article_metadata`: Custom metadata (JSONB)
+- **🆕 Structured Parsing Fields**:
+  - `title_prefix`: VARCHAR(200) - First part of title (optional)
+  - `title_main`: VARCHAR(500) NOT NULL - Main title (required)
+  - `title_suffix`: VARCHAR(200) - Subtitle/suffix (optional)
+  - `author_line`: VARCHAR(300) - Raw author line from doc (e.g., "文／張三")
+  - `author_name`: VARCHAR(100) - Cleaned author name (e.g., "張三")
+  - `body_html`: TEXT - Sanitized body HTML (headers/images/meta removed)
+  - `meta_description`: TEXT - Extracted meta description
+  - `seo_keywords`: TEXT[] - Array of SEO keywords
 - `created_at`, `updated_at`, `published_at`: Timestamps
 
 ### SEO Metadata
@@ -687,6 +971,43 @@ Published Article with SEO ✅
 - `screenshot_path`: Screenshot path (VARCHAR 500)
 - `created_at`: Timestamp
 
+### Article Images 🆕
+- `id`: Primary key
+- `article_id`: Foreign key to articles (CASCADE delete)
+- `preview_path`: VARCHAR(500) - Path to preview/thumbnail image
+- `source_path`: VARCHAR(500) - Path to downloaded high-res source image
+- `source_url`: VARCHAR(1000) - Original "原圖/點此下載" URL from Google Doc
+- `caption`: TEXT - Image caption from document
+- `position`: INTEGER NOT NULL - Paragraph index (0-based) where image should appear
+- `metadata`: JSONB - Technical specifications:
+  ```json
+  {
+    "width": 1920,
+    "height": 1080,
+    "aspect_ratio": "16:9",
+    "file_size_bytes": 2458624,
+    "mime_type": "image/jpeg",
+    "format": "JPEG",
+    "color_mode": "RGB",
+    "has_transparency": false,
+    "exif_date": "2025-11-08T10:30:00Z",
+    "download_timestamp": "2025-11-08T12:00:00Z"
+  }
+  ```
+- `created_at`, `updated_at`: Timestamps
+- **Indexes**: `article_id`, `(article_id, position)`
+- **Constraints**: `position >= 0`
+
+### Article Image Reviews 🆕
+- `id`: Primary key
+- `article_image_id`: Foreign key to article_images (CASCADE delete)
+- `worklist_item_id`: Foreign key to worklist_items (CASCADE delete)
+- `action`: VARCHAR(20) - Review action: `keep`, `remove`, `replace_caption`, `replace_source`
+- `new_caption`: TEXT - Replacement caption (if action='replace_caption')
+- `new_source_url`: VARCHAR(1000) - Replacement source URL (if action='replace_source')
+- `reviewer_notes`: TEXT - Notes explaining the review decision
+- `created_at`: Timestamp
+
 ---
 
 ## Success Criteria *(mandatory)*
@@ -708,6 +1029,14 @@ Published Article with SEO ✅
 - **SC-013**: Playwright fallback success rate ≥80% when AI providers fail
 - **SC-014**: Screenshot retention policy enforced (90 days, auto-deletion verified)
 - **SC-015**: Zero security vulnerabilities (HIGH/CRITICAL) in dependency scans
+- **SC-016**: 🆕 Article parsing accuracy ≥90% across all fields (title, author, images, meta)
+- **SC-017**: 🆕 Parsing completes in ≤20 seconds for typical article (1500 words, 5 images)
+- **SC-018**: 🆕 100% of downloaded images have complete metadata (width, height, size, MIME)
+- **SC-019**: 🆕 Image specs extraction accuracy 100% (PIL can read all supported formats)
+- **SC-020**: 🆕 Reviewers can confirm parsing in Step 1 UI in <2 minutes
+- **SC-021**: 🆕 Step 2 blocking logic works 100% (cannot access without Step 1 confirmation)
+- **SC-022**: 🆕 All parsing fields editable in Step 1 UI with instant save
+- **SC-023**: 🆕 Test coverage for parsing module ≥85% (backend), ≥80% (frontend)
 
 ---
 

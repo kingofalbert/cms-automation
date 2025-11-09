@@ -2,17 +2,19 @@
  * Base UI components export.
  */
 
-export { Button } from './Button';
-export type { ButtonProps } from './Button';
+// Shadcn-style UI components
+export { Button, buttonVariants } from './button';
+export type { ButtonProps } from './button';
+
+export { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from './card';
+
+export { Badge, badgeVariants } from './badge';
+export type { BadgeProps } from './badge';
+
+export { Alert, AlertTitle, AlertDescription } from './alert';
 
 export { Input } from './Input';
 export type { InputProps } from './Input';
-
-export { Card, CardHeader, CardContent, CardFooter } from './Card';
-export type { CardProps, CardHeaderProps } from './Card';
-
-export { Badge } from './Badge';
-export type { BadgeProps } from './Badge';
 
 export { Spinner } from './Spinner';
 export type { SpinnerProps } from './Spinner';
@@ -50,9 +52,4 @@ export type { AccordionProps, AccordionItemProps } from './Accordion';
 export { Toast, ToastContainer } from './Toast';
 export type { ToastProps, ToastContainerProps, ToastType } from './Toast';
 
-export { Skeleton, SkeletonCard, SkeletonSettingsSection } from './Skeleton';
-export type {
-  SkeletonProps,
-  SkeletonCardProps,
-  SkeletonSettingsSectionProps,
-} from './Skeleton';
+export { Skeleton } from './skeleton';

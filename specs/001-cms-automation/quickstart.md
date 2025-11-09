@@ -110,7 +110,7 @@ PLAYWRIGHT_TIMEOUT=60000  # 60 seconds
 
 # Anthropic Computer Use Configuration (Optional AI provider)
 ANTHROPIC_COMPUTER_USE_ENABLED=false  # Set true to use Anthropic
-ANTHROPIC_COMPUTER_USE_MODEL=claude-3-5-sonnet-20241022
+ANTHROPIC_COMPUTER_USE_MODEL=claude-sonnet-4-5-20250929
 ANTHROPIC_MAX_COST_PER_ARTICLE=1.50  # Cost limit per article
 
 # Gemini Computer Use Configuration (Future)
@@ -414,7 +414,7 @@ curl -X POST http://localhost:8000/v1/articles/1/proofread \
 #     "keywords": ["Docker 教學", "Docker 指令", "容器部署"]
 #   },
 #   "processing_metadata": {
-#     "ai_model": "claude-3-5-sonnet-20241022",
+#     "ai_model": "claude-sonnet-4-5-20250929",
 #     "prompt_hash": "c13c8e5...",
 #     "rule_manifest_version": "2025.02.05",
 #     "script_engine_version": "0.1.0"

@@ -2,10 +2,12 @@
 set -e
 
 # Run migrations against Supabase production database
-export DATABASE_URL="postgresql+asyncpg://postgres.twsbhjmlmspjwfystpti:Xieping890\$@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+# IMPORTANT: Add sslmode=require for Supabase SSL connections
+export DATABASE_URL="postgresql+asyncpg://postgres.twsbhjmlmspjwfystpti:Xieping890\$@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
 
 echo "Running database migrations against Supabase..."
 echo "Database: aws-1-us-east-1.pooler.supabase.com:5432/postgres"
+echo "SSL Mode: require"
 
 # Use production Docker image (which has all dependencies)
 # Build the image first if needed

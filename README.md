@@ -346,6 +346,11 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for:
 - [Sprint 6 Completion Summary](docs/SPRINT6_COMPLETION_SUMMARY.md) - Performance optimization & monitoring ✅
 - [Sprint 6 Acceptance Checklist](docs/SPRINT6_ACCEPTANCE_CHECKLIST.md) - Verification checklist ✅
 
+### 📚 Knowledge Base
+- **[Production Troubleshooting Guide](docs/knowledge-base/)** - ⭐ **实战经验库** ⭐
+  - [数据库连接故障排查](docs/knowledge-base/production-database-connectivity-troubleshooting.md) - 系统化诊断流程、可复用工具、真实案例
+  - 包含 Supabase Pooler 配置、URL 编码、连接池优化等生产环境最佳实践
+
 ### Technical Specifications
 - [Feature Specification - WordPress Publishing](specs/001-cms-automation/wordpress-publishing-spec.md)
 - [Implementation Plan](specs/001-cms-automation/wordpress-publishing-plan.md)

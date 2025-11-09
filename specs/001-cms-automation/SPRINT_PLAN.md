@@ -1242,7 +1242,7 @@ class ComputerUseProvider(IPublishingProvider):
         try:
             # 调用 Anthropic API
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
+                model="claude-sonnet-4-5-20250929",
                 max_tokens=4096,
                 tools=[{
                     "type": "computer_20241022",
@@ -1660,7 +1660,7 @@ class ComputerUseProvider(IPublishingProvider):
     async def _execute_instruction(self, instruction: str):
         """执行 Computer Use 指令"""
         response = self.client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-5-20250929",
             max_tokens=1024,
             tools=[{
                 "type": "computer_20241022",

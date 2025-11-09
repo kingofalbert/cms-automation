@@ -1,11 +1,11 @@
 # Implementation Plan: SEO Optimization & Multi-Provider Computer Use Publishing
 
 **Date**: 2025-10-26
-**Last Updated**: 2025-11-02
+**Last Updated**: 2025-11-08 🆕
 **Feature ID**: 001-cms-automation
-**Version**: 3.0.0 (Multi-Provider Refactor)
-**Status**: Implementation Complete (Phase 1-3, 6) | Partial (Phase 4-5)
-**Overall Completion**: ~85%
+**Version**: 4.0.0 (Article Structured Parsing Added)
+**Status**: Implementation Complete (Phase 1-3, 6) | Partial (Phase 4-5) | Design (Phase 7)
+**Overall Completion**: ~85% (existing) + Phase 7 in design
 **Original Timeline**: 8-10 weeks (52-65 days)
 **Current Phase**: Production Monitoring & UI Enhancement
 
@@ -1415,7 +1415,235 @@ WS     /api/v1/worklist/ws                   # WebSocket real-time updates
 
 ---
 
-## 8. Risk Management
+## 8. Phase 7 – Article Structured Parsing 🆕 (6 weeks)
+
+**Status**: 🆕 New Phase Added (2025-11-08)
+**Reference**: See [Article Parsing Requirements](../../docs/article_parsing_requirements.md) and [Technical Analysis](../../docs/ARTICLE_PARSING_TECHNICAL_ANALYSIS.md)
+**Duration**: Week 16-21 (6 weeks)
+**Goal**: Transform raw Google Doc HTML into normalized, structured data (title parts, author, images with specs, body, SEO metadata) with quality confirmation UI
+
+### 8.1 Overview
+
+This phase adds intelligent document parsing to separate mixed content into clean, structured fields. Currently, Google Docs are stored as single HTML blobs. This creates data quality issues and makes downstream processing (proofreading, SEO, publishing) error-prone.
+
+**Key Components**:
+1. **AI-Driven Parser**: Uses Claude 4.5 Sonnet to interpret document structure
+2. **Image Processing Pipeline**: Downloads high-res images, extracts technical specs
+3. **Database Schema**: New structured fields on `articles`, new `article_images` table
+4. **Proofreading Step 1 UI**: "解析確認" review step with editable fields and image gallery
+5. **Confirmation Workflow**: Step 2 blocked until parsing confirmed in Step 1
+
+**User Value**:
+- ✅ **Data Quality**: Structured fields enable validation before expensive operations
+- ✅ **Image Management**: Proper tracking of source assets with technical specs
+- ✅ **Better SEO**: Explicit meta fields improve search optimization
+- ✅ **Audit Trail**: Parsing confirmation creates accountability
+
+### 8.2 Week-by-Week Plan
+
+#### Week 16: Database Schema & Migrations (16 hours)
+
+**T-PARSE-1.1** [P0] Design Extended Articles Schema (4h)
+- Add fields: `title_prefix`, `title_main`, `title_suffix`, `author_line`, `author_name`, `body_html`, `meta_description`, `seo_keywords[]`, `tags[]`
+- Design `article_images` table with JSONB metadata
+- Design `article_image_reviews` table for reviewer feedback
+- **Deliverable**: ER diagram + SQL DDL
+
+**T-PARSE-1.2** [P0] Create Alembic Migration (6h)
+- Migration: `20251108_article_parsing.py`
+- Add columns to `articles` table (backwards compatible)
+- Create `article_images` and `article_image_reviews` tables
+- Add indexes: `(article_id, position)` on images
+- **Deliverable**: Tested migration script
+
+**T-PARSE-1.3** [P0] Update SQLAlchemy Models (4h)
+- Extend `Article` model with parsing fields
+- Create `ArticleImage` model with metadata JSONB
+- Create `ArticleImageReview` model
+- Add relationships and constraints
+- **Deliverable**: Updated models in `backend/src/models/`
+
+**T-PARSE-1.4** [P0] Test Migration on Dev (2h)
+- Run migration: `alembic upgrade head`
+- Insert test data
+- Verify indexes and constraints
+- **Deliverable**: Migration success log
+
+#### Week 17-18: Backend Parsing Engine (40 hours)
+
+**T-PARSE-2.1** [P0] Implement ArticleParserService Skeleton (6h)
+- Create `backend/src/services/parser/article_parser.py`
+- Define `ParsedArticle`, `HeaderFields`, `AuthorFields`, `ImageRecord`, `MetaSEOFields` dataclasses
+- Implement main `parse_document()` method with orchestration logic
+- **Deliverable**: Service skeleton with type hints
+
+**T-PARSE-2.2** [P0] Implement Header Parsing (8h)
+- AI-driven: Prompt Claude to detect 1/2/3-line title structure
+- Fallback: Regex-based separator detection (`｜`, `—`, `：`)
+- Extract `title_prefix`, `title_main`, `title_suffix`
+- Unit tests with mock Claude responses
+- **Deliverable**: `_parse_header()` method + tests
+
+**T-PARSE-2.3** [P0] Implement Author Extraction (4h)
+- AI-driven: Detect "文／XXX", "撰稿／XXX", "作者：XXX" patterns
+- Extract raw `author_line` and cleaned `author_name`
+- **Deliverable**: `_extract_author()` method + tests
+
+**T-PARSE-2.4** [P0] Implement Image Extraction (10h)
+- Parse DOM to find image blocks (preview + caption + source link)
+- Download high-res images from `source_url`
+- Extract paragraph position (0-based index)
+- Create `ImageRecord` with all fields
+- **Deliverable**: `_extract_images()` method + tests
+
+**T-PARSE-2.5** [P0] Implement ImageProcessor Service (6h)
+- Create `backend/src/services/media/image_processor.py`
+- Use PIL/Pillow to extract: width, height, aspect ratio, file size, MIME, EXIF
+- Store downloaded image in chosen backend (Supabase Storage recommended)
+- **Deliverable**: `ImageProcessor` class + tests
+
+**T-PARSE-2.6** [P0] Implement Meta/SEO Extraction (4h)
+- AI-driven: Detect "Meta Description：", "關鍵詞：", "Tags：" blocks
+- Extract into `meta_description`, `seo_keywords[]`, `tags[]`
+- Strip blocks from DOM
+- **Deliverable**: `_extract_meta_seo()` method + tests
+
+**T-PARSE-2.7** [P0] Implement Body HTML Cleaning (4h)
+- Remove extracted elements (header, author, images, meta)
+- Sanitize with bleach (whitelist: H1, H2, p, ul, ol, strong, em, a)
+- Preserve semantic structure
+- **Deliverable**: `_clean_body_html()` method + tests
+
+#### Week 19: API & Integration (12 hours)
+
+**T-PARSE-3.1** [P0] Extend Worklist API (4h)
+- Update `GET /v1/worklist/:id` to return structured parsing fields + `images[]`
+- Add `parsing_confirmed`, `parsing_confirmed_at`, `parsing_confirmed_by` fields
+- Update Pydantic models
+- **Deliverable**: Extended API response schema
+
+**T-PARSE-3.2** [P0] Create Parsing Confirmation Endpoint (4h)
+- `POST /v1/worklist/:id/confirm-parsing`
+- Accept: `parsing_confirmed`, `parsing_feedback`, `image_reviews[]`
+- Save to database, update confirmation state
+- **Deliverable**: New API endpoint + tests
+
+**T-PARSE-3.3** [P0] Integrate Parser into Google Drive Sync (4h)
+- Modify `backend/src/services/google_drive/sync_service.py`
+- Call `ArticleParserService.parse_document()` after download
+- Create article with structured fields
+- Create `article_images` records
+- **Deliverable**: Updated sync service
+
+#### Week 20-21: Frontend Step 1 UI (48 hours)
+
+**T-PARSE-4.1** [P0] Create Step Indicator Component (4h)
+- Two-step wizard: Step 1 (解析確認), Step 2 (正文校對)
+- Visual progress indicator
+- **Deliverable**: `StepIndicator.tsx`
+
+**T-PARSE-4.2** [P0] Build Structured Headers Card (6h)
+- Editable fields: `title_prefix`, `title_main`, `title_suffix`
+- Character counters, validation
+- **Deliverable**: `StructuredHeadersCard.tsx`
+
+**T-PARSE-4.3** [P0] Build Author Info Card (4h)
+- Display `author_line` (raw), editable `author_name`
+- **Deliverable**: `AuthorInfoCard.tsx`
+
+**T-PARSE-4.4** [P0] Build Image Gallery Card (12h)
+- Grid of image previews with captions
+- Source link buttons
+- Specs table for each image (width, height, size, MIME, EXIF)
+- Highlight out-of-range values (width <800 or >3000px)
+- Per-image actions: keep, remove, replace_caption, replace_source
+- **Deliverable**: `ImageGalleryCard.tsx` + `ImageSpecsTable.tsx`
+
+**T-PARSE-4.5** [P0] Build Meta/SEO Card (6h)
+- Editable `meta_description` with character counter (160 max)
+- Tag inputs for `seo_keywords` and `tags`
+- **Deliverable**: `MetaSEOCard.tsx`
+
+**T-PARSE-4.6** [P0] Build Body HTML Preview Card (4h)
+- Read-only sanitized HTML rendering
+- **Deliverable**: `BodyHTMLPreviewCard.tsx`
+
+**T-PARSE-4.7** [P0] Implement Confirmation Actions & State (6h)
+- Zustand store: `useParsingConfirmationStore`
+- "確認解析" button (saves & unlocks Step 2)
+- "需要修正" toggle (blocks Step 2)
+- **Deliverable**: Store + action buttons
+
+**T-PARSE-4.8** [P0] Add Step 2 Blocking Logic (4h)
+- Check `parsing_confirmed` before allowing Step 2 access
+- Show warning alert if not confirmed
+- Allow return to Step 1 after confirmation
+- **Deliverable**: Blocking logic + warning UI
+
+**T-PARSE-4.9** [P0] i18n Support (2h)
+- Add `proofreading.parsing.*` namespace
+- Update `zh-TW.json` and `en-US.json`
+- **Deliverable**: Locale files
+
+#### Week 21: Integration & Testing (24 hours)
+
+**T-PARSE-5.1** [P0] End-to-End Workflow Test (8h)
+- Test: Google Doc → Parsed → Step 1 Confirmation → Step 2 Access
+- Verify all fields correctly extracted and displayed
+- **Deliverable**: E2E test script
+
+**T-PARSE-5.2** [P0] Parsing Accuracy Validation (8h)
+- Test with 20 diverse Google Docs
+- Measure accuracy for title, author, images, meta fields
+- Target: ≥90% accuracy
+- **Deliverable**: Accuracy report
+
+**T-PARSE-5.3** [P0] Performance Testing (4h)
+- Measure parsing latency for typical article (1500 words, 5 images)
+- Target: ≤20 seconds
+- **Deliverable**: Performance benchmarks
+
+**T-PARSE-5.4** [P0] Bug Fixes & Edge Cases (4h)
+- Handle missing fields gracefully
+- Handle malformed HTML
+- Handle image download failures
+- **Deliverable**: Bug fixes log
+
+### 8.3 Success Criteria (Phase 7)
+
+- [ ] Parsing accuracy ≥90% across all fields (title, author, images, meta)
+- [ ] Parsing completes in ≤20 seconds for typical article (1500 words, 5 images)
+- [ ] 100% of downloaded images have complete metadata (width, height, size, MIME)
+- [ ] Reviewers can confirm parsing in Step 1 UI in <2 minutes
+- [ ] Step 2 blocking logic works 100% (cannot access without Step 1 confirmation)
+- [ ] All parsing fields editable in Step 1 UI with instant save
+- [ ] Test coverage ≥85% (backend), ≥80% (frontend)
+- [ ] Database migration completes with zero data loss
+
+### 8.4 Dependencies
+
+**Prerequisites**:
+- Phase 6 (Google Drive integration) completed
+- Worklist UI operational
+- Claude 4.5 Sonnet API access
+
+**Blockers**:
+- Storage backend decision (Google Drive vs Supabase Storage)
+- Image spec KPIs definition (publishing tolerances)
+
+### 8.5 Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| AI parsing accuracy <90% | Medium | High | Extensive test suite; fallback heuristics; iterative prompt engineering |
+| Image download failures (403, timeout) | Medium | Medium | Retry logic with exponential backoff; save partial results; manual upload option |
+| Large images exceed storage limits | Low | Medium | Compression; max file size limit (10MB); resize before storage |
+| Parsing latency >20 seconds | Medium | Medium | Async processing; progress indicator; optimize Claude prompts |
+| Legacy articles backfill complexity | Medium | Low | Mark as "legacy-unparsed"; parse on-demand or in batches |
+
+---
+
+## 9. Risk Management
 
 ### 7.1 Risk Register
 
