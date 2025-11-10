@@ -61,6 +61,30 @@ This checklist guides you through deploying the extended worklist status workflo
 
 ## Deployment Steps
 
+### Choose Your Deployment Method
+
+#### Method A: Automated Deployment Script (Recommended) ⭐
+
+Run the automated deployment script that handles both migration and deployment:
+
+```bash
+cd backend
+./deploy.sh production
+```
+
+This script will:
+1. ✅ Run database migration automatically
+2. ✅ Deploy backend to Cloud Run
+3. ✅ Verify deployment health
+
+**Prerequisites**:
+- Set environment variables: `PRODUCTION_DATABASE_URL`
+- gcloud CLI authenticated and configured
+
+---
+
+#### Method B: Manual Step-by-Step Deployment
+
 ### Step 1: Deploy Backend (Code + Migration)
 
 #### 1.1 Deploy Backend Code
@@ -77,7 +101,7 @@ gcloud run deploy cms-automation-backend \
 
 #### 1.2 Run Database Migration
 
-**Option A: Using Cloud SQL Proxy (Recommended)**
+**Option A: Using Alembic with Cloud SQL Proxy (Recommended)**
 ```bash
 # Connect to production database
 cloud_sql_proxy -instances=PROJECT:REGION:INSTANCE=tcp:5432
@@ -88,7 +112,17 @@ export DATABASE_URL="postgresql+asyncpg://user:pass@localhost:5432/dbname"
 alembic upgrade head
 ```
 
-**Option B: Direct SQL in Supabase Dashboard**
+**Option B: Automatic Migration on Deployment**
+```bash
+# Deploy with migration command (runs migration before starting server)
+gcloud run deploy cms-automation-backend \
+  --source . \
+  --region us-east1 \
+  --platform managed \
+  --command="sh,-c,alembic upgrade head && uvicorn src.main:app --host 0.0.0.0 --port 8080"
+```
+
+**Option C: Direct SQL in Supabase Dashboard**
 ```sql
 -- 1. Add new enum values
 ALTER TYPE workliststatus ADD VALUE IF NOT EXISTS 'parsing';
