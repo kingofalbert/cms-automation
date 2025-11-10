@@ -4,7 +4,7 @@
  */
 
 import { useNavigate } from 'react-router-dom';
-import { WorklistItem, WorklistStatus } from '@/types/worklist';
+import { WorklistItem, WorklistStatus, LEGACY_STATUS_MAP } from '@/types/worklist';
 import { WorklistStatusBadge } from './WorklistStatusBadge';
 import { format } from 'date-fns';
 import { FileText, User, Calendar, RefreshCw, ClipboardCheck } from 'lucide-react';
@@ -43,17 +43,22 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
   };
 
   const resolveStatus = (status: WorklistStatus | string): WorklistStatus => {
+    // Handle legacy status mapping
+    const mappedStatus = LEGACY_STATUS_MAP[status] || status;
+
     const statuses: WorklistStatus[] = [
       'pending',
+      'parsing',
+      'parsing_review',
       'proofreading',
-      'under_review',
+      'proofreading_review',
       'ready_to_publish',
       'publishing',
       'published',
       'failed',
     ];
-    return statuses.includes(status as WorklistStatus)
-      ? (status as WorklistStatus)
+    return statuses.includes(mappedStatus as WorklistStatus)
+      ? (mappedStatus as WorklistStatus)
       : 'pending';
   };
 
@@ -99,12 +104,14 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
   const getStatusOrder = (status: WorklistStatus): number => {
     const order: Record<WorklistStatus, number> = {
       pending: 1,
-      proofreading: 2,
-      under_review: 3,
-      ready_to_publish: 4,
-      publishing: 5,
-      published: 6,
-      failed: 7,
+      parsing: 2,
+      parsing_review: 3,
+      proofreading: 4,
+      proofreading_review: 5,
+      ready_to_publish: 6,
+      publishing: 7,
+      published: 8,
+      failed: 9,
     };
     return order[status];
   };
@@ -242,7 +249,24 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {resolveStatus(item.status) === 'under_review' && item.article_id && (
+                    {/* Parsing Review - Review article parsing results (title, author, SEO, images) */}
+                    {resolveStatus(item.status) === 'parsing_review' && item.article_id && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/articles/${item.article_id}/parsing`);
+                        }}
+                      >
+                        <ClipboardCheck className="mr-2 h-4 w-4" />
+                        {t('worklist.table.actions.reviewParsing')}
+                      </Button>
+                    )}
+
+                    {/* Proofreading Review - Review proofreading issues (includes backward compat for legacy 'under_review') */}
+                    {(resolveStatus(item.status) === 'proofreading_review' ||
+                      item.status === 'under_review') && item.article_id && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -252,7 +276,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                         }}
                       >
                         <ClipboardCheck className="mr-2 h-4 w-4" />
-                        {t('worklist.table.actions.review')}
+                        {t('worklist.table.actions.reviewProofreading')}
                       </Button>
                     )}
                   </td>

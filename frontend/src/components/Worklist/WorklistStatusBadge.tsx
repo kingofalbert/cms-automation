@@ -1,15 +1,15 @@
 /**
  * Worklist Status Badge component.
- * Displays status badge for worklist items with 7 states.
+ * Displays status badge for worklist items with 9 states.
  */
 
-import { WorklistStatus } from '@/types/worklist';
+import { WorklistStatus, LEGACY_STATUS_MAP } from '@/types/worklist';
 import { Badge } from '@/components/ui';
 import type { BadgeProps } from '@/components/ui';
 import { useTranslation } from 'react-i18next';
 
 export interface WorklistStatusBadgeProps {
-  status: WorklistStatus;
+  status: WorklistStatus | string;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -19,7 +19,10 @@ export const WorklistStatusBadge: React.FC<WorklistStatusBadgeProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const getStatusConfig = (status: WorklistStatus) => {
+  const getStatusConfig = (status: WorklistStatus | string) => {
+    // Handle legacy status mapping
+    const normalizedStatus = (LEGACY_STATUS_MAP[status] || status) as WorklistStatus;
+
     type BadgeVariant = NonNullable<BadgeProps['variant']>;
     const configs: Record<
       WorklistStatus,
@@ -30,14 +33,24 @@ export const WorklistStatusBadge: React.FC<WorklistStatusBadgeProps> = ({
         label: t('worklist.status.pending'),
         dot: true,
       },
+      parsing: {
+        variant: 'info',
+        label: t('worklist.status.parsing'),
+        dot: true,
+      },
+      parsing_review: {
+        variant: 'info',
+        label: t('worklist.status.parsing_review'),
+        dot: true,
+      },
       proofreading: {
         variant: 'warning',
         label: t('worklist.status.proofreading'),
         dot: true,
       },
-      under_review: {
+      proofreading_review: {
         variant: 'info',
-        label: t('worklist.status.under_review'),
+        label: t('worklist.status.proofreading_review'),
         dot: true,
       },
       ready_to_publish: {
@@ -62,7 +75,7 @@ export const WorklistStatusBadge: React.FC<WorklistStatusBadgeProps> = ({
       },
     };
 
-    return configs[status];
+    return configs[normalizedStatus] || configs.pending;
   };
 
   const config = getStatusConfig(status);

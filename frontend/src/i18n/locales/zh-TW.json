@@ -39,7 +39,10 @@
     "status": {
       "all": "全部狀態",
       "pending": "待處理",
+      "parsing": "解析中",
+      "parsing_review": "解析審核中",
       "proofreading": "校對中",
+      "proofreading_review": "校對審核中",
       "under_review": "審核中",
       "ready_to_publish": "待發布",
       "publishing": "發布中",
@@ -104,7 +107,9 @@
         "unrated": "未評分"
       },
       "actions": {
-        "review": "審核"
+        "review": "審核",
+        "reviewParsing": "審核解析",
+        "reviewProofreading": "審核校對"
       }
     },
     "statisticsCards": {
@@ -143,6 +148,8 @@
       "openInDrive": "在 Google Drive 中開啟",
       "fileId": "檔案 ID：{{id}}",
       "startReview": "開始審核",
+      "reviewParsing": "審核解析結果",
+      "reviewProofreading": "審核校對問題",
       "notesTitle": "備註歷史",
       "noNoteContent": "（無備註內容）",
       "resolved": "已解決",

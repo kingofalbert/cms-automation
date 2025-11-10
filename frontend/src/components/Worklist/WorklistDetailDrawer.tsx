@@ -27,6 +27,7 @@ import type {
   WorklistItemDetail,
   WorklistStatus,
 } from '@/types/worklist';
+import { LEGACY_STATUS_MAP } from '@/types/worklist';
 
 export interface WorklistDetailDrawerProps {
   isOpen: boolean;
@@ -44,8 +45,10 @@ export interface WorklistDetailDrawerProps {
 
 const STATUS_ORDER: WorklistStatus[] = [
   'pending',
+  'parsing',
+  'parsing_review',
   'proofreading',
-  'under_review',
+  'proofreading_review',
   'ready_to_publish',
   'publishing',
   'published',
@@ -53,9 +56,11 @@ const STATUS_ORDER: WorklistStatus[] = [
 ];
 
 const STATUS_TRANSITIONS: Record<WorklistStatus, WorklistStatus[]> = {
-  pending: ['proofreading', 'failed'],
-  proofreading: ['under_review', 'failed'],
-  under_review: ['ready_to_publish', 'failed'],
+  pending: ['parsing', 'proofreading', 'failed'],
+  parsing: ['parsing_review', 'failed'],
+  parsing_review: ['proofreading', 'failed'],
+  proofreading: ['proofreading_review', 'failed'],
+  proofreading_review: ['ready_to_publish', 'failed'],
   ready_to_publish: ['publishing', 'failed'],
   publishing: ['published', 'failed'],
   published: [],
@@ -64,8 +69,10 @@ const STATUS_TRANSITIONS: Record<WorklistStatus, WorklistStatus[]> = {
 
 const STATUS_TRANSLATION_KEYS: Record<WorklistStatus, string> = {
   pending: 'worklist.status.pending',
+  parsing: 'worklist.status.parsing',
+  parsing_review: 'worklist.status.parsing_review',
   proofreading: 'worklist.status.proofreading',
-  under_review: 'worklist.status.under_review',
+  proofreading_review: 'worklist.status.proofreading_review',
   ready_to_publish: 'worklist.status.ready_to_publish',
   publishing: 'worklist.status.publishing',
   published: 'worklist.status.published',
@@ -367,13 +374,25 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
               {t('worklist.drawer.fileId', { id: data.drive_file_id })}
             </span>
           )}
-          {data.article_id && resolvedStatus === 'under_review' && (
+          {/* Parsing Review Link */}
+          {data.article_id && resolvedStatus === 'parsing_review' && (
+            <Link
+              to={`/articles/${data.article_id}/parsing`}
+              className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              <ClipboardCheck className="w-4 h-4 mr-1" />
+              {t('worklist.drawer.reviewParsing')}
+            </Link>
+          )}
+
+          {/* Proofreading Review Link (includes backward compat for legacy 'under_review' status) */}
+          {data.article_id && (resolvedStatus === 'proofreading_review' || data.status === 'under_review') && (
             <Link
               to={`/worklist/${data.id}/review`}
               className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium"
             >
               <ClipboardCheck className="w-4 h-4 mr-1" />
-              {t('worklist.drawer.startReview')}
+              {t('worklist.drawer.reviewProofreading')}
             </Link>
           )}
         </div>
@@ -463,11 +482,22 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
           <Button variant="outline" onClick={onClose}>
             {t('common.close')}
           </Button>
-          {data.article_id && resolvedStatus === 'under_review' && (
+          {/* Parsing Review Button */}
+          {data.article_id && resolvedStatus === 'parsing_review' && (
+            <Link to={`/articles/${data.article_id}/parsing`}>
+              <Button variant="primary">
+                <ClipboardCheck className="w-4 h-4 mr-2" />
+                {t('worklist.drawer.reviewParsing')}
+              </Button>
+            </Link>
+          )}
+
+          {/* Proofreading Review Button (includes backward compat for legacy 'under_review' status) */}
+          {data.article_id && (resolvedStatus === 'proofreading_review' || data.status === 'under_review') && (
             <Link to={`/worklist/${data.id}/review`}>
               <Button variant="primary">
                 <ClipboardCheck className="w-4 h-4 mr-2" />
-                {t('worklist.drawer.startReview')}
+                {t('worklist.drawer.reviewProofreading')}
               </Button>
             </Link>
           )}

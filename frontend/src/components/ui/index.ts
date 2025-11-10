@@ -3,13 +3,13 @@
  */
 
 // Shadcn-style UI components
-export { Button, buttonVariants } from './button';
-export type { ButtonProps } from './button';
+export { Button } from './Button';
+export type { ButtonProps } from './Button';
 
-export { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from './card';
+export { Card, CardHeader, CardContent, CardFooter, CardTitle, CardDescription } from './Card';
 
-export { Badge, badgeVariants } from './badge';
-export type { BadgeProps } from './badge';
+export { Badge } from './Badge';
+export type { BadgeProps } from './Badge';
 
 export { Alert, AlertTitle, AlertDescription } from './alert';
 
@@ -52,4 +52,4 @@ export type { AccordionProps, AccordionItemProps } from './Accordion';
 export { Toast, ToastContainer } from './Toast';
 export type { ToastProps, ToastContainerProps, ToastType } from './Toast';
 
-export { Skeleton } from './skeleton';
+export { Skeleton } from './Skeleton';

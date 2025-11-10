@@ -3,16 +3,27 @@
  */
 
 /**
- * Worklist status - 7-state workflow.
+ * Worklist status - Extended 9-state workflow.
+ *
+ * Workflow: pending → parsing → parsing_review → proofreading → proofreading_review → ready_to_publish → publishing → published
  */
 export type WorklistStatus =
   | 'pending' // 待处理
-  | 'proofreading' // 校对中
-  | 'under_review' // 审核中
+  | 'parsing' // 解析中 (Phase 7 - Article parsing in progress)
+  | 'parsing_review' // 解析审核中 (Phase 7 - Review title/author/SEO/images)
+  | 'proofreading' // 校对中 (AI proofreading in progress)
+  | 'proofreading_review' // 校对审核中 (Review proofreading issues) - replaces 'under_review'
   | 'ready_to_publish' // 待发布
   | 'publishing' // 发布中
   | 'published' // 已发布
   | 'failed'; // 失败/需重试
+
+/**
+ * Legacy status mapping for backward compatibility
+ */
+export const LEGACY_STATUS_MAP: Record<string, WorklistStatus> = {
+  'under_review': 'proofreading_review', // Map old status to new
+};
 
 /**
  * Worklist item from Google Drive.

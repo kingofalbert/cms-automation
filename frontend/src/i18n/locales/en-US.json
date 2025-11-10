@@ -39,7 +39,10 @@
     "status": {
       "all": "All Status",
       "pending": "Pending",
+      "parsing": "Parsing",
+      "parsing_review": "Parsing Review",
       "proofreading": "Proofreading",
+      "proofreading_review": "Proofreading Review",
       "under_review": "Under Review",
       "ready_to_publish": "Ready to Publish",
       "publishing": "Publishing",
@@ -104,7 +107,9 @@
         "unrated": "Not rated"
       },
       "actions": {
-        "review": "Review"
+        "review": "Review",
+        "reviewParsing": "Review Parsing",
+        "reviewProofreading": "Review Proofreading"
       }
     },
     "statisticsCards": {
@@ -143,6 +148,8 @@
       "openInDrive": "Open in Google Drive",
       "fileId": "File ID: {{id}}",
       "startReview": "Start Review",
+      "reviewParsing": "Review Parsing Results",
+      "reviewProofreading": "Review Proofreading Issues",
       "notesTitle": "Note History",
       "noNoteContent": "(No note content)",
       "resolved": "Resolved",
