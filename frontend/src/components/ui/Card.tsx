@@ -118,3 +118,39 @@ export const CardFooter = forwardRef<
 });
 
 CardFooter.displayName = 'CardFooter';
+
+/**
+ * Card Title component.
+ */
+export const CardTitle = forwardRef<
+  HTMLHeadingElement,
+  HTMLAttributes<HTMLHeadingElement>
+>(({ className, ...props }, ref) => {
+  return (
+    <h3
+      ref={ref}
+      className={clsx('text-lg font-semibold text-gray-900', className)}
+      {...props}
+    />
+  );
+});
+
+CardTitle.displayName = 'CardTitle';
+
+/**
+ * Card Description component.
+ */
+export const CardDescription = forwardRef<
+  HTMLParagraphElement,
+  HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => {
+  return (
+    <p
+      ref={ref}
+      className={clsx('mt-1 text-sm text-gray-500', className)}
+      {...props}
+    />
+  );
+});
+
+CardDescription.displayName = 'CardDescription';
