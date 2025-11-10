@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_db
+from src.config.database import get_session as get_db
 from src.api.schemas.optimization import (
     GenerateOptimizationsRequest,
     OptimizationError,

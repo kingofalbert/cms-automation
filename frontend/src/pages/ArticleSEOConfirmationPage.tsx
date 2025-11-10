@@ -17,11 +17,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+} from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Skeleton } from '../components/ui/skeleton';
+import { Skeleton } from '../components/ui/Skeleton';
 import { parsingAPI } from '../services';
 import type {
   OptimizationsResponse,

@@ -10,7 +10,7 @@ from src.api.routes import (
     files_routes,
     import_routes,
     monitoring_routes,
-    optimization_monitoring_routes,
+    # optimization_monitoring_routes,  # Temporarily disabled - service not available
     optimization_routes,
     parsing_routes,
     proofreading_decisions,
@@ -42,7 +42,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(computer_use.router, prefix="/v1", tags=["Computer Use"])
     app.include_router(publish_routes.router, prefix="/v1", tags=["Publishing"])
     app.include_router(monitoring_routes.router, prefix="/v1", tags=["Monitoring"])
-    app.include_router(optimization_monitoring_routes.router, prefix="/v1", tags=["Optimization Monitoring"])
+    # app.include_router(optimization_monitoring_routes.router, prefix="/v1", tags=["Optimization Monitoring"])  # Temporarily disabled
     app.include_router(analytics_routes.router, prefix="/v1", tags=["Analytics"])
     app.include_router(settings_routes.router, prefix="/v1", tags=["Settings"])
     app.include_router(worklist_routes.router, prefix="/v1", tags=["Worklist"])

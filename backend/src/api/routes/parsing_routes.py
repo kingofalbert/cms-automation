@@ -14,7 +14,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_db
+from src.config.database import get_session as get_db
 from src.models.article import Article
 from src.models.article_image import ArticleImage, ArticleImageReview, ImageReviewAction
 from src.services.parser import (
