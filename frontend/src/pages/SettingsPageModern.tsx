@@ -14,7 +14,6 @@ import {
   AccordionItem,
   Button,
   Skeleton,
-  SkeletonSettingsSection,
 } from '@/components/ui';
 import { ProviderConfigSection } from '@/components/Settings/ProviderConfigSection';
 import { CostLimitsSection } from '@/components/Settings/CostLimitsSection';
@@ -399,48 +398,38 @@ export default function SettingsPageModern() {
         <div className="sticky top-0 z-40 border-b border-gray-200 bg-white shadow-sm">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
             <div className="flex items-center gap-4">
-              <Skeleton shape="circle" width={48} height={48} />
+              <Skeleton className="h-12 w-12 rounded-full" />
               <div className="space-y-2">
-                <Skeleton width="200px" height={24} />
-                <Skeleton shape="text" lines={1} lineWidths={['240px']} />
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-4 w-60" />
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Skeleton width={130} height={44} radius="lg" />
-              <Skeleton width={160} height={44} radius="lg" />
+              <Skeleton className="h-11 w-32" />
+              <Skeleton className="h-11 w-40" />
             </div>
           </div>
         </div>
 
         <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
-          <SkeletonSettingsSection
-            fieldCount={6}
-            hasTabs
-            showIcon
-            aria-label={t('settings.loading.provider')}
-          />
-          <SkeletonSettingsSection
-            fieldCount={4}
-            showIcon
-            aria-label={t('settings.loading.cms')}
-          />
-          <SkeletonSettingsSection
-            fieldCount={4}
-            showIcon
-            aria-label={t('settings.loading.cost')}
-          />
-          <SkeletonSettingsSection
-            fieldCount={5}
-            showIcon
-            aria-label={t('settings.loading.screenshot')}
-          />
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-56 w-full" />
+          </div>
           <div className="mt-12 border-t border-gray-200 pt-8 text-center">
-            <Skeleton
-              shape="text"
-              lines={1}
-              lineWidths={['220px']}
-              aria-label={t('settings.loading.lastUpdated')}
-            />
+            <Skeleton className="h-4 w-56 mx-auto" />
           </div>
         </div>
       </div>
@@ -463,7 +452,7 @@ export default function SettingsPageModern() {
                 ? error.message
                 : t('settings.errors.loadFailedDescription')}
             </p>
-            <Button onClick={() => refetch()} variant="primary" size="lg" fullWidth>
+            <Button onClick={() => refetch()} variant="default" size="lg" fullWidth>
               <RotateCcw className="mr-2 h-5 w-5" />
               {t('settings.errors.reload')}
             </Button>
@@ -503,17 +492,17 @@ export default function SettingsPageModern() {
                 type="button"
                 onClick={handleReset}
                 disabled={!hasChanges || isSaving}
-                size="md"
+                size="default"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
                 {t('settings.actions.reset')}
               </Button>
               <Button
-                variant="primary"
+                variant="default"
                 type="submit"
                 disabled={!hasChanges || isSaving}
                 isLoading={isSaving}
-                size="md"
+                size="default"
               >
                 <Save className="mr-2 h-4 w-4" />
                 {isSaving ? t('settings.actions.saving') : t('settings.actions.saveSettings')}
@@ -547,7 +536,7 @@ export default function SettingsPageModern() {
                   {t('settings.actions.discardChanges')}
                 </Button>
                 <Button
-                  variant="primary"
+                  variant="default"
                   size="sm"
                   type="submit"
                   disabled={isSaving}
