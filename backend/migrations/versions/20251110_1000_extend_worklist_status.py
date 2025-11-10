@@ -27,14 +27,24 @@ def upgrade() -> None:
 
     For PostgreSQL: ALTER TYPE to add new values
     For SQLite: The enum is just a string constraint, values are validated in Python
+
+    Note: PostgreSQL requires enum values to be committed in a separate transaction
+    before they can be used. We use COMMIT after adding enum values.
     """
     # Check if we're using PostgreSQL (has native ENUM type)
     conn = op.get_bind()
     if conn.dialect.name == "postgresql":
         # Add new enum values to existing WorklistStatus type
+        # These must be committed before we can use them in UPDATE statements
         op.execute("ALTER TYPE workliststatus ADD VALUE IF NOT EXISTS 'parsing'")
         op.execute("ALTER TYPE workliststatus ADD VALUE IF NOT EXISTS 'parsing_review'")
         op.execute("ALTER TYPE workliststatus ADD VALUE IF NOT EXISTS 'proofreading_review'")
+
+        # Commit the enum changes so they become available
+        op.execute("COMMIT")
+
+        # Start a new transaction for data migration
+        op.execute("BEGIN")
 
     # Migrate existing 'under_review' records to 'proofreading_review'
     op.execute(
