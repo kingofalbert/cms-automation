@@ -115,10 +115,10 @@ class WorklistPipelineService:
 
         self._apply_proofreading_result(article, result)
 
-        item.mark_status(WorklistStatus.UNDER_REVIEW)
+        item.mark_status(WorklistStatus.PROOFREADING_REVIEW)
         item.add_note(
             {
-                "message": "自动校对完成，等待人工审核",
+                "message": "自动校对完成，等待人工审核校对问题",
                 "level": "info",
                 "metadata": {
                     "issue_count": len(result.issues),

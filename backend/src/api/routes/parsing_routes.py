@@ -237,6 +237,34 @@ async def parse_article(
                 f"Article {article_id} parsed successfully: "
                 f"{result['parsing_method']}, {result['images_processed']} images"
             )
+
+            # Update worklist status to parsing_review if article is linked to worklist
+            from src.models.worklist import WorklistItem, WorklistStatus
+            from sqlalchemy import select
+
+            result_query = await db.execute(
+                select(WorklistItem).where(WorklistItem.article_id == article_id)
+            )
+            worklist_item = result_query.scalar_one_or_none()
+
+            if worklist_item:
+                worklist_item.mark_status(WorklistStatus.PARSING_REVIEW)
+                worklist_item.add_note(
+                    {
+                        "message": "文章解析完成，等待人工审核标题、作者、SEO 和图片",
+                        "level": "info",
+                        "metadata": {
+                            "parsing_method": result["parsing_method"],
+                            "parsing_confidence": result["parsing_confidence"],
+                            "images_processed": result["images_processed"],
+                        },
+                    }
+                )
+                await db.commit()
+                logger.info(
+                    f"Updated worklist item {worklist_item.id} status to PARSING_REVIEW after successful parsing"
+                )
+
             return ParseArticleResponse(
                 success=True,
                 article_id=article_id,
@@ -387,6 +415,31 @@ async def confirm_parsing(
     article.parsing_confirmed_at = datetime.utcnow()
     article.parsing_confirmed_by = request.confirmed_by
     article.parsing_feedback = request.feedback
+
+    # Update worklist status if article is linked to worklist
+    from src.models.worklist import WorklistItem, WorklistStatus
+    from sqlalchemy import select
+
+    result = await db.execute(
+        select(WorklistItem).where(WorklistItem.article_id == article_id)
+    )
+    worklist_item = result.scalar_one_or_none()
+
+    if worklist_item:
+        worklist_item.mark_status(WorklistStatus.PROOFREADING)
+        worklist_item.add_note(
+            {
+                "message": "解析审核已完成，开始自动校对",
+                "level": "info",
+                "metadata": {
+                    "parsing_confirmed_by": request.confirmed_by,
+                    "parsing_confirmed_at": datetime.utcnow().isoformat(),
+                },
+            }
+        )
+        logger.info(
+            f"Updated worklist item {worklist_item.id} status to PROOFREADING after parsing confirmation"
+        )
 
     await db.commit()
 

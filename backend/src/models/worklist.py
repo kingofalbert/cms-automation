@@ -22,11 +22,19 @@ JSONType = JSONB if JSONB is not None else JSON
 
 
 class WorklistStatus(str, PyEnum):
-    """Workflow status for synced Drive articles."""
+    """Workflow status for synced Drive articles.
+
+    Extended 9-state workflow:
+    pending → parsing → parsing_review → proofreading → proofreading_review
+    → ready_to_publish → publishing → published | failed
+    """
 
     PENDING = "pending"
+    PARSING = "parsing"  # Phase 7: Article parsing in progress
+    PARSING_REVIEW = "parsing_review"  # Phase 7: Review title/author/SEO/images
     PROOFREADING = "proofreading"
-    UNDER_REVIEW = "under_review"
+    PROOFREADING_REVIEW = "proofreading_review"  # Review proofreading issues
+    UNDER_REVIEW = "under_review"  # DEPRECATED: Use PROOFREADING_REVIEW instead
     READY_TO_PUBLISH = "ready_to_publish"
     PUBLISHING = "publishing"
     PUBLISHED = "published"
