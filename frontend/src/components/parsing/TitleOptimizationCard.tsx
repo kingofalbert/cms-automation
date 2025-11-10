@@ -56,15 +56,15 @@ function getScoreColor(score: number): string {
 /**
  * Get badge variant for title type.
  */
-function getTypeVariant(type: string): 'default' | 'secondary' | 'outline' {
-  const typeMap: Record<string, 'default' | 'secondary' | 'outline'> = {
+function getTypeVariant(type: string): 'default' | 'secondary' | 'info' {
+  const typeMap: Record<string, 'default' | 'secondary' | 'info'> = {
     data_driven: 'default',
     authority_backed: 'secondary',
     how_to: 'default',
     comprehensive_guide: 'secondary',
-    question_based: 'outline',
+    question_based: 'info',
   };
-  return typeMap[type] || 'outline';
+  return typeMap[type] || 'info';
 }
 
 /**
@@ -130,7 +130,7 @@ export default function TitleOptimizationCard({
         <div className="border-l-4 border-gray-300 pl-4 py-2 bg-gray-50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">原始标题</span>
-            <Badge variant="outline">当前使用</Badge>
+            <Badge variant="default">当前使用</Badge>
           </div>
           <p className="text-lg font-semibold text-gray-900">{original.full}</p>
           {(original.prefix || original.suffix) && (
@@ -200,7 +200,7 @@ export default function TitleOptimizationCard({
                         <>
                           <Button
                             size="sm"
-                            variant={isSelected ? 'default' : 'outline'}
+                            variant={isSelected ? 'primary' : 'outline'}
                             onClick={() => onSelect?.(option.id)}
                           >
                             {isSelected ? '✓ 已选择' : '选择'}

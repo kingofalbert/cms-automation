@@ -227,13 +227,13 @@ export default function ArticleParsingPage() {
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Button
-                variant={parseMode === 'ai' ? 'default' : 'outline'}
+                variant={parseMode === 'ai' ? 'primary' : 'outline'}
                 onClick={() => setParseMode('ai')}
               >
                 AI 模式 (Claude)
               </Button>
               <Button
-                variant={parseMode === 'heuristic' ? 'default' : 'outline'}
+                variant={parseMode === 'heuristic' ? 'primary' : 'outline'}
                 onClick={() => setParseMode('heuristic')}
               >
                 启发式模式 (快速)
@@ -330,10 +330,10 @@ export default function ArticleParsingPage() {
               )}
 
               <div className="flex gap-2">
-                <Badge variant="outline">
+                <Badge variant="info">
                   方法: {parsingData.parsing_method}
                 </Badge>
-                <Badge variant="outline">
+                <Badge variant="info">
                   置信度:{' '}
                   {(parsingData.parsing_confidence * 100).toFixed(0)}%
                 </Badge>
@@ -530,7 +530,7 @@ export default function ArticleParsingPage() {
                           </Button>
                           <Button
                             size="sm"
-                            variant="destructive"
+                            variant="danger"
                             onClick={() => handleRemoveImage(image.id)}
                             disabled={reviewImageMutation.isPending}
                           >

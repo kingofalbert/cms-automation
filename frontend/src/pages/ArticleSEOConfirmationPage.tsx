@@ -278,7 +278,7 @@ export default function ArticleSEOConfirmationPage() {
               </label>
               <div className="flex flex-wrap gap-2 mt-2">
                 {seoSuggestions.seo_keywords.secondary_keywords.map((keyword, idx) => (
-                  <Badge key={idx} variant="outline">
+                  <Badge key={idx} variant="secondary">
                     {keyword}
                   </Badge>
                 ))}
@@ -326,7 +326,7 @@ export default function ArticleSEOConfirmationPage() {
                   {metaLength} / 150-160 字符
                 </span>
                 {seoSuggestions.meta_description.meta_description_score && (
-                  <Badge variant="outline">
+                  <Badge variant="info">
                     评分: {seoSuggestions.meta_description.meta_description_score}/10
                   </Badge>
                 )}
@@ -464,7 +464,7 @@ export default function ArticleSEOConfirmationPage() {
                       <p className="font-medium">{faq.question}</p>
                       <div className="flex gap-1">
                         {faq.question_type && (
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="info" className="text-xs">
                             {faq.question_type}
                           </Badge>
                         )}
@@ -479,7 +479,7 @@ export default function ArticleSEOConfirmationPage() {
                     {faq.keywords_covered.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {faq.keywords_covered.map((keyword, kidx) => (
-                          <Badge key={kidx} variant="outline" className="text-xs">
+                          <Badge key={kidx} variant="secondary" className="text-xs">
                             {keyword}
                           </Badge>
                         ))}

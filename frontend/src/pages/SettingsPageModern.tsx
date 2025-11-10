@@ -452,7 +452,7 @@ export default function SettingsPageModern() {
                 ? error.message
                 : t('settings.errors.loadFailedDescription')}
             </p>
-            <Button onClick={() => refetch()} variant="default" size="lg" fullWidth>
+            <Button onClick={() => refetch()} variant="primary" size="lg" fullWidth>
               <RotateCcw className="mr-2 h-5 w-5" />
               {t('settings.errors.reload')}
             </Button>
@@ -492,17 +492,17 @@ export default function SettingsPageModern() {
                 type="button"
                 onClick={handleReset}
                 disabled={!hasChanges || isSaving}
-                size="default"
+                size="md"
               >
                 <RotateCcw className="mr-2 h-4 w-4" />
                 {t('settings.actions.reset')}
               </Button>
               <Button
-                variant="default"
+                variant="primary"
                 type="submit"
                 disabled={!hasChanges || isSaving}
                 isLoading={isSaving}
-                size="default"
+                size="md"
               >
                 <Save className="mr-2 h-4 w-4" />
                 {isSaving ? t('settings.actions.saving') : t('settings.actions.saveSettings')}
@@ -536,7 +536,7 @@ export default function SettingsPageModern() {
                   {t('settings.actions.discardChanges')}
                 </Button>
                 <Button
-                  variant="default"
+                  variant="primary"
                   size="sm"
                   type="submit"
                   disabled={isSaving}
