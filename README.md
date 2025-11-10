@@ -31,6 +31,13 @@ Intelligent article proofreading, review, and publishing system using Claude AI.
 - React Query (data fetching)
 - React Hook Form (forms)
 
+## 📚 重要文檔
+
+在開始之前，請先閱讀以下文檔：
+
+- **[環境配置指南](./ENVIRONMENTS.md)** - 生產/測試環境配置、部署命令、故障排除
+- **環境檢查工具** - 運行 `./scripts/check-environment.sh` 驗證當前環境
+
 ## Quick Start
 
 ### Prerequisites

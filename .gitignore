@@ -105,3 +105,9 @@ tests/fixtures/images/
 # Credentials directory
 backend/credentials/
 .env.supabase.local
+
+# 環境檢查臨時文件
+/tmp/db_url.txt
+/tmp/test-*.html
+/tmp/reset_worklist.sql
+/tmp/cors-env.yaml

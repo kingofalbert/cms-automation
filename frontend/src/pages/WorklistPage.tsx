@@ -167,7 +167,7 @@ export default function WorklistPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <main className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Page Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -312,6 +312,6 @@ export default function WorklistPage() {
           </ul>
         </div>
       )}
-    </div>
+    </main>
   );
 }

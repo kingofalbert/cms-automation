@@ -56,11 +56,11 @@ function getScoreColor(score: number): string {
 /**
  * Get badge variant for title type.
  */
-function getTypeVariant(type: string): 'default' | 'secondary' | 'info' {
-  const typeMap: Record<string, 'default' | 'secondary' | 'info'> = {
-    data_driven: 'default',
+function getTypeVariant(type: string): 'default' | 'secondary' | 'info' | 'success' {
+  const typeMap: Record<string, 'default' | 'secondary' | 'info' | 'success'> = {
+    data_driven: 'info',
     authority_backed: 'secondary',
-    how_to: 'default',
+    how_to: 'success',
     comprehensive_guide: 'secondary',
     question_based: 'info',
   };
