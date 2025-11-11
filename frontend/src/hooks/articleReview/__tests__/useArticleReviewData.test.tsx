@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useArticleReviewData } from '../useArticleReviewData';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { type ReactNode } from 'react';
 
 // Mock the articles service
 vi.mock('@/services/articles', () => ({
@@ -23,9 +23,10 @@ const createWrapper = () => {
       },
     },
   });
-  return ({ children }: { children: ReactNode }) => (
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+  return Wrapper;
 };
 
 describe('useArticleReviewData', () => {

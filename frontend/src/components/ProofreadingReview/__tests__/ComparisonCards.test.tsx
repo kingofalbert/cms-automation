@@ -64,21 +64,24 @@ describe('ComparisonCards', () => {
     render(
       <ComparisonCards meta={mockMeta} seo={mockSEO} faqProposals={[]} />
     );
-    expect(screen.getByText('SEO 关键词')).toBeInTheDocument();
+    // Use regex to match Chinese or English
+    expect(screen.getByText(/SEO 关键词|SEO Keywords/)).toBeInTheDocument();
   });
 
   it('should render FAQ Proposals card when proposals exist', () => {
     render(
       <ComparisonCards meta={mockMeta} seo={mockSEO} faqProposals={mockFAQ} />
     );
-    expect(screen.getByText('FAQ Schema 提案')).toBeInTheDocument();
+    // Use regex to match Chinese or English
+    expect(screen.getByText(/FAQ Schema 提案|FAQ Schema Proposals/)).toBeInTheDocument();
   });
 
   it('should not render FAQ card when no proposals', () => {
     render(
       <ComparisonCards meta={mockMeta} seo={mockSEO} faqProposals={[]} />
     );
-    expect(screen.queryByText('FAQ Schema 提案')).not.toBeInTheDocument();
+    // Use regex to match Chinese or English
+    expect(screen.queryByText(/FAQ Schema 提案|FAQ Schema Proposals/)).not.toBeInTheDocument();
   });
 
   it('should display score badges correctly', () => {

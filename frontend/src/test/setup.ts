@@ -23,15 +23,36 @@ i18n.use(initReactI18next).init({
   resources: {
     'zh-TW': {
       translation: {
+        // Proofreading - Comparison Cards
         'proofreading.comparison.title': 'AI 优化建议',
         'proofreading.comparison.meta.title': 'Meta Description',
-        'proofreading.comparison.seo.title': 'SEO 优化',
+        'proofreading.comparison.meta.original': '原始 ({{count}} 字符)',
+        'proofreading.comparison.meta.suggested': '建议 ({{count}} 字符)',
+        'proofreading.comparison.meta.reasoning': '优化理由',
+        'proofreading.comparison.meta.notSet': '未设置',
+        'proofreading.comparison.seo.title': 'SEO 关键词',
+        'proofreading.comparison.seo.original': '原始关键词 ({{count}})',
+        'proofreading.comparison.seo.suggested': '建议关键词',
+        'proofreading.comparison.seo.reasoning': '优化理由',
+        'proofreading.comparison.seo.notSet': '未设置',
+        'proofreading.comparison.faq.title': 'FAQ Schema 提案',
+        'proofreading.comparison.faq.count': '{{count}} 个提案',
+        'proofreading.comparison.faq.proposal': '提案 {{index}}',
+        'proofreading.comparison.faq.schemaType': '类型: {{type}}',
+        'proofreading.comparison.faq.question': 'Q{{index}}: {{question}}',
+        'proofreading.comparison.faq.answer': 'A: {{answer}}',
+        // Proofreading - DiffView
+        'proofreading.labels.original': '原始内容',
+        'proofreading.labels.suggested': '建议内容',
         'proofreading.diffView.original': '原始内容',
         'proofreading.diffView.suggested': '建议内容',
+        // Article Review - Steps
         'articleReview.steps.parsing': '解析审核',
         'articleReview.steps.proofreading': '校对审核',
         'articleReview.steps.publish': '发布预览',
+        // Article Review - Parsing
         'articleReview.parsing.title': '标题',
+        // Article Review - Actions
         'articleReview.actions.approve': '批准',
         'articleReview.actions.edit': '编辑',
         'articleReview.actions.save': '保存',
@@ -40,15 +61,36 @@ i18n.use(initReactI18next).init({
     },
     'en-US': {
       translation: {
+        // Proofreading - Comparison Cards
         'proofreading.comparison.title': 'AI Optimization Suggestions',
         'proofreading.comparison.meta.title': 'Meta Description',
-        'proofreading.comparison.seo.title': 'SEO Optimization',
+        'proofreading.comparison.meta.original': 'Original ({{count}} chars)',
+        'proofreading.comparison.meta.suggested': 'Suggested ({{count}} chars)',
+        'proofreading.comparison.meta.reasoning': 'Reasoning',
+        'proofreading.comparison.meta.notSet': 'Not set',
+        'proofreading.comparison.seo.title': 'SEO Keywords',
+        'proofreading.comparison.seo.original': 'Original Keywords ({{count}})',
+        'proofreading.comparison.seo.suggested': 'Suggested Keywords',
+        'proofreading.comparison.seo.reasoning': 'Reasoning',
+        'proofreading.comparison.seo.notSet': 'Not set',
+        'proofreading.comparison.faq.title': 'FAQ Schema Proposals',
+        'proofreading.comparison.faq.count': '{{count}} proposals',
+        'proofreading.comparison.faq.proposal': 'Proposal {{index}}',
+        'proofreading.comparison.faq.schemaType': 'Type: {{type}}',
+        'proofreading.comparison.faq.question': 'Q{{index}}: {{question}}',
+        'proofreading.comparison.faq.answer': 'A: {{answer}}',
+        // Proofreading - DiffView
+        'proofreading.labels.original': 'Original Content',
+        'proofreading.labels.suggested': 'Suggested Content',
         'proofreading.diffView.original': 'Original Content',
         'proofreading.diffView.suggested': 'Suggested Content',
+        // Article Review - Steps
         'articleReview.steps.parsing': 'Parsing Review',
         'articleReview.steps.proofreading': 'Proofreading Review',
         'articleReview.steps.publish': 'Publish Preview',
+        // Article Review - Parsing
         'articleReview.parsing.title': 'Title',
+        // Article Review - Actions
         'articleReview.actions.approve': 'Approve',
         'articleReview.actions.edit': 'Edit',
         'articleReview.actions.save': 'Save',

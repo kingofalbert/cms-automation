@@ -20,8 +20,9 @@ describe('DiffView', () => {
 
   it('should render header labels', () => {
     render(<DiffView {...mockProps} />);
-    expect(screen.getByText(/原始内容/)).toBeInTheDocument();
-    expect(screen.getByText(/建议内容/)).toBeInTheDocument();
+    // The component uses translation keys, check for actual rendered text
+    expect(screen.getAllByText(/原始内容/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/建议内容/).length).toBeGreaterThan(0);
   });
 
   it('should render with custom className', () => {

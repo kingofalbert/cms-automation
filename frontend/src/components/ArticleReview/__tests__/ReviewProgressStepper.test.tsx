@@ -2,85 +2,29 @@
  * Tests for ReviewProgressStepper component
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ReviewProgressStepper } from '../ReviewProgressStepper';
 
 describe('ReviewProgressStepper', () => {
-  const mockOnStepClick = vi.fn();
+  it('should render all three steps with labels', () => {
+    render(<ReviewProgressStepper currentStep={0} />);
 
-  const defaultProps = {
-    currentStep: 'parsing_review' as const,
-    completedSteps: [] as const[],
-    onStepClick: mockOnStepClick,
-  };
-
-  it('should render all three steps', () => {
-    render(<ReviewProgressStepper {...defaultProps} />);
-
-    expect(screen.getByText(/解析审核|Parsing Review/)).toBeInTheDocument();
-    expect(screen.getByText(/校对审核|Proofreading Review/)).toBeInTheDocument();
-    expect(screen.getByText(/发布预览|Publish Preview/)).toBeInTheDocument();
+    expect(screen.getByText('解析审核')).toBeInTheDocument();
+    expect(screen.getByText('校对审核')).toBeInTheDocument();
+    expect(screen.getByText('发布预览')).toBeInTheDocument();
   });
 
-  it('should highlight current step', () => {
-    const { rerender } = render(<ReviewProgressStepper {...defaultProps} />);
+  it('should render step descriptions', () => {
+    render(<ReviewProgressStepper currentStep={0} />);
 
-    // Check parsing_review is active
-    let activeStep = screen.getByText(/解析审核|Parsing Review/).closest('button');
-    expect(activeStep).toHaveClass('border-blue-500');
-
-    // Change to proofreading_review
-    rerender(
-      <ReviewProgressStepper
-        {...defaultProps}
-        currentStep="proofreading_review"
-      />
-    );
-
-    activeStep = screen.getByText(/校对审核|Proofreading Review/).closest('button');
-    expect(activeStep).toHaveClass('border-blue-500');
-  });
-
-  it('should show completed steps with checkmark', () => {
-    render(
-      <ReviewProgressStepper
-        {...defaultProps}
-        currentStep="proofreading_review"
-        completedSteps={['parsing_review']}
-      />
-    );
-
-    const completedStep = screen.getByText(/解析审核|Parsing Review/).closest('button');
-    expect(completedStep).toHaveClass('border-green-500');
-  });
-
-  it('should call onStepClick when clicking a step', () => {
-    render(<ReviewProgressStepper {...defaultProps} />);
-
-    const proofreadingStep = screen.getByText(/校对审核|Proofreading Review/);
-    proofreadingStep.click();
-
-    expect(mockOnStepClick).toHaveBeenCalledWith('proofreading_review');
-  });
-
-  it('should allow clicking completed steps', () => {
-    render(
-      <ReviewProgressStepper
-        {...defaultProps}
-        currentStep="publish_preview"
-        completedSteps={['parsing_review', 'proofreading_review']}
-      />
-    );
-
-    const parsingStep = screen.getByText(/解析审核|Parsing Review/);
-    parsingStep.click();
-
-    expect(mockOnStepClick).toHaveBeenCalledWith('parsing_review');
+    expect(screen.getByText(/审核标题、作者、图片、SEO/)).toBeInTheDocument();
+    expect(screen.getByText(/审核校对建议和修改/)).toBeInTheDocument();
+    expect(screen.getByText(/最终预览和发布/)).toBeInTheDocument();
   });
 
   it('should show step numbers correctly', () => {
-    render(<ReviewProgressStepper {...defaultProps} />);
+    render(<ReviewProgressStepper currentStep={0} />);
 
     // Should show numbers 1, 2, 3
     expect(screen.getByText('1')).toBeInTheDocument();
@@ -88,26 +32,66 @@ describe('ReviewProgressStepper', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
   });
 
-  it('should connect steps with lines', () => {
-    const { container } = render(<ReviewProgressStepper {...defaultProps} />);
+  it('should highlight current step (parsing)', () => {
+    const { container } = render(<ReviewProgressStepper currentStep={0} />);
 
-    // Check for connector lines between steps
-    const lines = container.querySelectorAll('.border-t-2');
-    expect(lines.length).toBeGreaterThan(0);
+    // Step 1 should have active styling
+    const step1 = screen.getByText('1').closest('span');
+    expect(step1).toHaveClass('text-primary-600');
   });
 
-  it('should render with all steps completed', () => {
-    render(
-      <ReviewProgressStepper
-        {...defaultProps}
-        currentStep="publish_preview"
-        completedSteps={['parsing_review', 'proofreading_review', 'publish_preview']}
-      />
-    );
+  it('should highlight current step (proofreading)', () => {
+    const { container } = render(<ReviewProgressStepper currentStep={1} />);
 
-    const allSteps = screen.getAllByRole('button');
-    allSteps.forEach(step => {
-      expect(step).toHaveClass('border-green-500');
-    });
+    // Step 2 should have active styling
+    const step2 = screen.getByText('2').closest('span');
+    expect(step2).toHaveClass('text-primary-600');
+  });
+
+  it('should highlight current step (publish)', () => {
+    const { container } = render(<ReviewProgressStepper currentStep={2} />);
+
+    // Step 3 should have active styling
+    const step3 = screen.getByText('3').closest('span');
+    expect(step3).toHaveClass('text-primary-600');
+  });
+
+  it('should show checkmark for completed steps', () => {
+    const { container } = render(<ReviewProgressStepper currentStep={2} />);
+
+    // Steps 0 and 1 should have checkmarks (completed)
+    const checkmarks = container.querySelectorAll('svg path[fill-rule="evenodd"]');
+    expect(checkmarks.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('should apply completed styling to completed steps', () => {
+    render(<ReviewProgressStepper currentStep={2} />);
+
+    // First step label should have completed styling
+    const step1Label = screen.getByText('解析审核');
+    expect(step1Label).toHaveClass('text-gray-900');
+  });
+
+  it('should apply upcoming styling to future steps', () => {
+    render(<ReviewProgressStepper currentStep={0} />);
+
+    // Third step should have upcoming styling
+    const step3Number = screen.getByText('3').closest('span');
+    expect(step3Number).toHaveClass('text-gray-500');
+  });
+
+  it('should render progress navigation', () => {
+    const { container } = render(<ReviewProgressStepper currentStep={1} />);
+
+    const nav = container.querySelector('nav[aria-label="Progress"]');
+    expect(nav).toBeInTheDocument();
+  });
+
+  it('should render connector lines between steps', () => {
+    const { container } = render(<ReviewProgressStepper currentStep={0} />);
+
+    // Check for connector lines
+    const connectors = container.querySelectorAll('.absolute.top-4');
+    expect(connectors.length).toBeGreaterThan(0);
   });
 });
