@@ -119,50 +119,43 @@ describe('TitleReviewSection', () => {
     expect(screen.getByText('AI 优化中...')).toBeInTheDocument();
   });
 
-  it.skip('should display AI suggestions after optimization', async () => {
-    vi.useFakeTimers();
-
+  it('should display AI suggestions after optimization', async () => {
     render(<TitleReviewSection {...defaultProps} />);
 
     const aiButton = screen.getByRole('button', { name: /AI 优化标题/ });
     fireEvent.click(aiButton);
 
-    // Fast-forward time to complete mock optimization
-    await act(async () => {
-      vi.advanceTimersByTime(1100);
-      await Promise.resolve();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('AI 建议标题')).toBeInTheDocument();
-    });
-
-    vi.useRealTimers();
+    // Wait for suggestions to appear (component uses 1000ms timeout)
+    await waitFor(
+      () => {
+        expect(screen.getByText('AI 建议标题')).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
   });
 
-  it.skip('should apply suggestion when clicked', async () => {
-    vi.useFakeTimers();
-
+  it('should apply suggestion when clicked', async () => {
     render(<TitleReviewSection {...defaultProps} />);
 
     const aiButton = screen.getByRole('button', { name: /AI 优化标题/ });
     fireEvent.click(aiButton);
 
-    vi.advanceTimersByTime(1000);
-
-    await waitFor(() => {
-      expect(screen.getByText('AI 建议标题')).toBeInTheDocument();
-    });
+    // Wait for suggestions to appear
+    await waitFor(
+      () => {
+        expect(screen.getByText('AI 建议标题')).toBeInTheDocument();
+      },
+      { timeout: 2000 }
+    );
 
     const suggestions = screen.getAllByText(/点击使用/);
     const firstSuggestion = suggestions[0].closest('button');
 
+    expect(firstSuggestion).toBeInTheDocument();
     if (firstSuggestion) {
       fireEvent.click(firstSuggestion);
       expect(mockOnTitleChange).toHaveBeenCalled();
     }
-
-    vi.useRealTimers();
   });
 
   it('should show title quality indicators', () => {

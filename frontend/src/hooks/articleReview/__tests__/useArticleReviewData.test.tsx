@@ -8,12 +8,14 @@ import { useArticleReviewData } from '../useArticleReviewData';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode } from 'react';
 
-// Mock the articles service
-vi.mock('@/services/articles', () => ({
-  getArticleById: vi.fn(),
+// Mock the worklist API
+vi.mock('@/services/worklist', () => ({
+  worklistAPI: {
+    get: vi.fn(),
+  },
 }));
 
-import { getArticleById } from '@/services/articles';
+import { worklistAPI } from '@/services/worklist';
 
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -30,34 +32,27 @@ const createWrapper = () => {
 };
 
 describe('useArticleReviewData', () => {
-  const mockArticleId = '123';
-  const mockArticleData = {
-    id: '123',
+  const mockWorklistItemId = 123;
+  const mockWorklistData = {
+    id: 123,
     title: 'Test Article',
     content: 'Test content',
     status: 'parsing_review' as const,
-    parsing_result: {
-      title: { original: 'Test', suggested: 'Test Article' },
-      author: { name: 'John Doe', bio: 'Author bio' },
-      images: [],
-      faqs: [],
-      seo: { keywords: [], description: '', slug: 'test-article' },
-    },
-    proofreading_result: {
-      content: 'Proofread content',
-      issues: [],
-    },
+    url: 'https://example.com/test',
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+    proofreading_issues: [],
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should fetch article data successfully', async () => {
-    vi.mocked(getArticleById).mockResolvedValue(mockArticleData);
+  it('should fetch worklist item data successfully', async () => {
+    vi.mocked(worklistAPI.get).mockResolvedValue(mockWorklistData);
 
     const { result } = renderHook(
-      () => useArticleReviewData(mockArticleId),
+      () => useArticleReviewData(mockWorklistItemId),
       {
         wrapper: createWrapper(),
       }
@@ -67,62 +62,63 @@ describe('useArticleReviewData', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.article).toEqual(mockArticleData);
-    expect(result.current.isError).toBe(false);
+    expect(result.current.data).toBeDefined();
+    expect(result.current.data?.id).toBe(mockWorklistItemId);
+    expect(result.current.error).toBeNull();
   });
 
   it('should handle loading state', () => {
-    vi.mocked(getArticleById).mockImplementation(
+    vi.mocked(worklistAPI.get).mockImplementation(
       () => new Promise(() => {}) // Never resolves
     );
 
     const { result } = renderHook(
-      () => useArticleReviewData(mockArticleId),
+      () => useArticleReviewData(mockWorklistItemId),
       {
         wrapper: createWrapper(),
       }
     );
 
     expect(result.current.isLoading).toBe(true);
-    expect(result.current.article).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
   it('should handle error state', async () => {
-    const error = new Error('Failed to fetch article');
-    vi.mocked(getArticleById).mockRejectedValue(error);
+    const error = new Error('Failed to fetch worklist item');
+    vi.mocked(worklistAPI.get).mockRejectedValue(error);
 
     const { result } = renderHook(
-      () => useArticleReviewData(mockArticleId),
+      () => useArticleReviewData(mockWorklistItemId),
       {
         wrapper: createWrapper(),
       }
     );
 
     await waitFor(() => {
-      expect(result.current.isError).toBe(true);
+      expect(result.current.error).toBeDefined();
     });
 
-    expect(result.current.error).toBeDefined();
-    expect(result.current.article).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
   });
 
-  it('should return null data when articleId is null', () => {
+  it('should not fetch when worklistItemId is 0 or negative', () => {
     const { result } = renderHook(
-      () => useArticleReviewData(null),
+      () => useArticleReviewData(0),
       {
         wrapper: createWrapper(),
       }
     );
 
-    expect(result.current.article).toBeUndefined();
+    expect(result.current.data).toBeUndefined();
     expect(result.current.isLoading).toBe(false);
+    expect(worklistAPI.get).not.toHaveBeenCalled();
   });
 
   it('should refetch data when calling refetch', async () => {
-    vi.mocked(getArticleById).mockResolvedValue(mockArticleData);
+    vi.mocked(worklistAPI.get).mockResolvedValue(mockWorklistData);
 
     const { result } = renderHook(
-      () => useArticleReviewData(mockArticleId),
+      () => useArticleReviewData(mockWorklistItemId),
       {
         wrapper: createWrapper(),
       }
@@ -132,19 +128,21 @@ describe('useArticleReviewData', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(getArticleById).toHaveBeenCalledTimes(1);
+    expect(worklistAPI.get).toHaveBeenCalledTimes(1);
 
     // Refetch
     await result.current.refetch();
 
-    expect(getArticleById).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+      expect(worklistAPI.get).toHaveBeenCalledTimes(2);
+    });
   });
 
-  it('should extract parsing data correctly', async () => {
-    vi.mocked(getArticleById).mockResolvedValue(mockArticleData);
+  it('should compute hasParsingData correctly', async () => {
+    vi.mocked(worklistAPI.get).mockResolvedValue(mockWorklistData);
 
     const { result } = renderHook(
-      () => useArticleReviewData(mockArticleId),
+      () => useArticleReviewData(mockWorklistItemId),
       {
         wrapper: createWrapper(),
       }
@@ -154,14 +152,18 @@ describe('useArticleReviewData', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.parsingData).toEqual(mockArticleData.parsing_result);
+    expect(result.current.data?.hasParsingData).toBe(true);
   });
 
-  it('should extract proofreading data correctly', async () => {
-    vi.mocked(getArticleById).mockResolvedValue(mockArticleData);
+  it('should compute hasProofreadingData correctly', async () => {
+    const dataWithIssues = {
+      ...mockWorklistData,
+      proofreading_issues: [{ type: 'grammar', message: 'Test issue' }],
+    };
+    vi.mocked(worklistAPI.get).mockResolvedValue(dataWithIssues);
 
     const { result } = renderHook(
-      () => useArticleReviewData(mockArticleId),
+      () => useArticleReviewData(mockWorklistItemId),
       {
         wrapper: createWrapper(),
       }
@@ -171,6 +173,6 @@ describe('useArticleReviewData', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    expect(result.current.proofreadingData).toEqual(mockArticleData.proofreading_result);
+    expect(result.current.data?.hasProofreadingData).toBe(true);
   });
 });
