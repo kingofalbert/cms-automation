@@ -18,8 +18,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card } from '../ui';
+import { Button } from '../ui';
 import { FinalContentPreview } from './FinalContentPreview';
 import { PublishSettingsSection } from './PublishSettingsSection';
 import { PublishConfirmation } from './PublishConfirmation';

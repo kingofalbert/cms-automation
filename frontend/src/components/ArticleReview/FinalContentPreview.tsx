@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { FileText, User, Hash, Tag as TagIcon, Image as ImageIcon } from 'lucide-react';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ui';
 
 export interface FinalContentPreviewProps {
   /** Content data to preview */

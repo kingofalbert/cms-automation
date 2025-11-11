@@ -9,7 +9,7 @@
  */
 
 import React, { useState } from 'react';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { Input } from '../ui/Input';
 import { Sparkles, RotateCw } from 'lucide-react';
 

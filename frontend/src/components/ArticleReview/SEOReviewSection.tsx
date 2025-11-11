@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { Textarea } from '../ui/Textarea';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ui';
 import { Search, X } from 'lucide-react';
 import { Input } from '../ui/Input';
 

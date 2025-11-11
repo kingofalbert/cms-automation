@@ -15,9 +15,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../ui/Card';
-import { Button } from '../ui/Button';
-import { Badge } from '../ui/Badge';
+} from '../ui';
+import { Button } from '../ui';
+import { Badge } from '../ui';
 import { Alert, AlertDescription } from '../ui/alert';
 import type { TitleOption } from '../../services/parsing';
 

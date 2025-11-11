@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { Image as ImageIcon, Upload, X } from 'lucide-react';
 
 export interface ImageReviewSectionProps {

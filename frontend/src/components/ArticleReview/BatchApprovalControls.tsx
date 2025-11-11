@@ -8,7 +8,7 @@
  */
 
 import React, { useMemo } from 'react';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { CheckSquare, XSquare, Filter } from 'lucide-react';
 import type { ProofreadingIssue, DecisionPayload } from '../../types/worklist';
 

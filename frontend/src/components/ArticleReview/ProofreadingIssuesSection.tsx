@@ -8,8 +8,8 @@
  */
 
 import React, { useState } from 'react';
-import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
+import { Badge } from '../ui';
+import { Button } from '../ui';
 import { AlertCircle, Info, AlertTriangle, Check, X } from 'lucide-react';
 import type { ProofreadingIssue, DecisionPayload, IssueSeverity } from '../../types/worklist';
 

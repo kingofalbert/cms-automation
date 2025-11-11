@@ -11,7 +11,7 @@
  */
 
 import React, { useState } from 'react';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { Settings, Calendar, Eye, Lock, Hash, Tag as TagIcon, Image as ImageIcon, FileText } from 'lucide-react';
 
 export interface PublishSettingsSectionProps {

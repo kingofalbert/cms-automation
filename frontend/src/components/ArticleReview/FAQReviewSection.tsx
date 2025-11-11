@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { Textarea } from '../ui/Textarea';
 import { Input } from '../ui/Input';
 import { HelpCircle, Plus, Trash2 } from 'lucide-react';

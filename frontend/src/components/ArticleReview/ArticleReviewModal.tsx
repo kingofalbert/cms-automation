@@ -16,7 +16,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Modal, ModalFooter } from '../ui/Modal';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/Tabs';
-import { Button } from '../ui/Button';
+import { Button } from '../ui';
 import { ReviewProgressStepper } from './ReviewProgressStepper';
 import { ParsingReviewPanel, ParsingData } from './ParsingReviewPanel';
 import { ProofreadingReviewPanel } from './ProofreadingReviewPanel';

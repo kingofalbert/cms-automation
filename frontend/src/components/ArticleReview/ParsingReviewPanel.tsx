@@ -16,8 +16,8 @@
  */
 
 import React, { useState } from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card } from '../ui';
+import { Button } from '../ui';
 import { TitleReviewSection } from './TitleReviewSection';
 import { AuthorReviewSection } from './AuthorReviewSection';
 import { ImageReviewSection } from './ImageReviewSection';

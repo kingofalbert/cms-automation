@@ -18,8 +18,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Card } from '../ui/Card';
-import { Button } from '../ui/Button';
+import { Card } from '../ui';
+import { Button } from '../ui';
 import { DiffViewSection } from './DiffViewSection';
 import { ProofreadingIssuesSection } from './ProofreadingIssuesSection';
 import { BatchApprovalControls } from './BatchApprovalControls';
