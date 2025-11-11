@@ -292,9 +292,9 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
 
       {/* Tabs Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Tabs defaultValue="parsing" value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col">
+        <Tabs defaultValue="parsing" value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
           {/* Tab Headers */}
-          <div className="px-6 pt-4 border-b bg-white">
+          <div className="px-6 pt-4 border-b bg-white flex-shrink-0">
             <TabsList className="w-full justify-start">
               <TabsTrigger value="parsing" className="flex-1 max-w-xs">
                 解析审核
@@ -308,9 +308,9 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
             </TabsList>
           </div>
 
-          {/* Tab Content */}
-          <div className="flex-1 overflow-auto">
-            <TabsContent value="parsing" className="h-full p-6">
+          {/* Tab Content - Scrollable container */}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+            <TabsContent value="parsing" className="p-6 min-h-0">
               {/* Phase 8.2: ParsingReviewPanel */}
               <ParsingReviewPanel
                 data={data}
@@ -319,7 +319,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
               />
             </TabsContent>
 
-            <TabsContent value="proofreading" className="h-full p-6">
+            <TabsContent value="proofreading" className="p-6 min-h-0">
               {/* Phase 8.3: ProofreadingReviewPanel */}
               <ProofreadingReviewPanel
                 data={data}
@@ -328,7 +328,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
               />
             </TabsContent>
 
-            <TabsContent value="publish" className="h-full p-6">
+            <TabsContent value="publish" className="p-6 min-h-0">
               {/* Phase 8.4: PublishPreviewPanel */}
               <PublishPreviewPanel
                 data={data}

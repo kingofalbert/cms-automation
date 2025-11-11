@@ -47,6 +47,9 @@ class DatabaseConfig:
                 "pool_timeout": self.settings.DATABASE_POOL_TIMEOUT,
                 "pool_recycle": self.settings.DATABASE_POOL_RECYCLE,
                 "pool_pre_ping": True,  # Verify connections before using
+                # Disable prepared statements for pgbouncer compatibility
+                # Required when using Supabase pooler or any pgbouncer in transaction mode
+                "connect_args": {"statement_cache_size": 0},
             }
 
             if self.settings.ENVIRONMENT == "test":
