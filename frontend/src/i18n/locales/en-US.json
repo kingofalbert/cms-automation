@@ -30,6 +30,13 @@
       "author": "Filter by author...",
       "reset": "Reset Filters"
     },
+    "quickFilters": {
+      "needsAttention": "Needs My Attention",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "failed": "Has Issues",
+      "all": "All"
+    },
     "statistics": {
       "total": "Total Articles",
       "pending": "Pending",
@@ -49,12 +56,25 @@
       "published": "Published",
       "failed": "Needs Attention"
     },
+    "statusDescriptions": {
+      "pending": "Article imported, awaiting parsing",
+      "parsing": "AI is extracting and structuring content",
+      "parsing_review": "AI parsing complete, please review content accuracy",
+      "proofreading": "AI and script are analyzing content issues",
+      "proofreading_review": "Proofreading complete, please review and accept/reject suggestions",
+      "ready_to_publish": "All checks passed, ready to publish to WordPress",
+      "publishing": "Publishing to WordPress, please wait",
+      "published": "Successfully published to WordPress",
+      "failed": "An error occurred during processing, please check error logs"
+    },
     "actions": {
       "view": "View Details",
       "edit": "Edit",
       "approve": "Approve",
       "reject": "Reject",
-      "publish": "Publish"
+      "publish": "Publish to WordPress",
+      "retry": "Retry",
+      "openUrl": "Open Article"
     },
     "messages": {
       "syncStarted": "Google Drive sync started",
@@ -109,7 +129,13 @@
       "actions": {
         "review": "Review",
         "reviewParsing": "Review Parsing",
-        "reviewProofreading": "Review Proofreading"
+        "reviewProofreading": "Review Proofreading",
+        "view": "View",
+        "approve": "Approve",
+        "reject": "Reject",
+        "publish": "Publish",
+        "retry": "Retry",
+        "openUrl": "Open"
       }
     },
     "statisticsCards": {

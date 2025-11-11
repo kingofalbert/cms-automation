@@ -2,24 +2,40 @@
 
 **Feature Branch**: `001-cms-automation`
 **Created**: 2025-10-26
-**Last Updated**: 2025-11-08 🆕
-**Status**: Production Ready (Core Features Complete) + New Parsing Feature Design
-**Completion**: ~85% (Backend/API 100%, Frontend 60%, Tests 80%) + Parsing 0% (Design Phase)
+**Last Updated**: 2025-11-10 🆕
+**Status**: Production Ready (Core Features Complete) + Phase 8 Workflow Simplification Design
+**Completion**: ~85% (Backend/API 100%, Frontend 60%, Tests 80%) + Phase 8 0% (Design Phase)
 **Last Deployment**: 2025-11-02
 **Input**: "Implement SEO optimization for existing articles and automated CMS publishing using flexible Computer Use providers (Anthropic/Gemini/Playwright) with browser automation."
+
+**Phase 8 Update**: Comprehensive workflow simplification to eliminate all page jumps and consolidate the review process into a single ArticleReviewModal. Target: 0 page jumps (from 5), 50% fewer clicks (from 30-33 to 15-18), and 13% faster completion time (from 238s to 208s).
 
 ## Overview
 
 This feature provides an automated content management platform that optimizes existing articles for SEO and publishes them to WordPress CMS using flexible browser automation providers.
 
-### Core Workflow
+### Core Workflow (Simplified in Phase 8)
 
 ```
 External Articles (Existing Content)
     ↓
 [1] Article Import (CSV/JSON/Manual)
+    Status: pending
     ↓
-[2] Proofreading & SEO Analysis
+[2] AI Parsing & Extraction
+    Status: parsing → parsing_review
+    ├─ Initial Content Analysis (Claude)
+    │   ├─ Extract structured metadata
+    │   ├─ Identify key sections
+    │   └─ Generate initial formatting
+    ├─ Human Review (parsing_review) - ⭐ Step 1 in ArticleReviewModal
+    │   ├─ Verify extracted content accuracy
+    │   ├─ Approve or request re-parsing
+    │   └─ Manual adjustments if needed
+    └─ Status transition: parsing_review → proofreading
+    ↓
+[3] Proofreading & SEO Analysis
+    Status: proofreading → proofreading_review
     ├─ Single Prompt (Claude Messages API)
     │   ├─ A–F 规则检查（返回 issue 列表 + rule_coverage）
     │   ├─ Suggested Content / Meta / Keywords / FAQ
@@ -27,14 +43,24 @@ External Articles (Existing Content)
     ├─ Deterministic Rule Engine (Python)
     │   ├─ F 类强制：图片宽度 / 标题层级 / 授权字段
     │   └─ 高置信度规则库（B2-002、A1-001 等，可扩展）
-    └─ Result Merger
-        ├─ 比对 AI vs Script，统一 schema（ProofreadingIssue）
-        ├─ source_breakdown（ai/script/merged）
-        └─ F 类阻断 → `critical_issues_count`
+    ├─ Result Merger
+    │   ├─ 比对 AI vs Script，统一 schema（ProofreadingIssue）
+    │   ├─ source_breakdown（ai/script/merged）
+    │   └─ F 类阻断 → `critical_issues_count`
+    └─ Human Review (proofreading_review) - ⭐ Step 2 in ArticleReviewModal
+        ├─ Review all detected issues (zero page jumps)
+        ├─ Accept/reject AI suggestions in Modal
+        ├─ Apply manual corrections
+        └─ Status transition: proofreading_review → ready_to_publish
     ↓
-[3] Human Review & Manual Adjustments (Optional)
+[4] Ready for Publication
+    Status: ready_to_publish - ⭐ Step 3 in ArticleReviewModal
+    ├─ Final quality checks passed
+    ├─ All critical issues resolved
+    └─ Publish directly from Modal (no page jump)
     ↓
-[4] CMS Publishing (Multi-Provider Computer Use)
+[5] CMS Publishing (Multi-Provider Computer Use)
+    Status: publishing → published/failed
     ├─ Provider Options:
     │   ├─ Anthropic Computer Use (AI-driven, adaptive)
     │   ├─ Gemini Computer Use (AI-driven, cost-effective)
@@ -45,10 +71,39 @@ External Articles (Existing Content)
     │   ├─ Content & Image Upload
     │   ├─ Yoast SEO / Rank Math Configuration
     │   └─ Publication & Verification
-    └─ Screenshot Audit Trail (8+ steps)
+    ├─ Screenshot Audit Trail (8+ steps)
+    └─ Status: published (success) or failed (error)
     ↓
-Published Article with SEO ✅
+Published Article with SEO ✅ (Status: published)
 ```
+
+**Phase 8 Workflow Simplification**:
+- All review operations (Parsing, Proofreading, Publishing) consolidated into single ArticleReviewModal
+- **Zero page jumps**: From 5 page transitions → 0 transitions
+- **50% fewer clicks**: From 30-33 clicks → 15-18 clicks
+- **13% faster task completion**: From 238 seconds → 208 seconds
+- Three review panels accessed via tabs within the Modal, preserving context between stages
+
+**9-State Workflow Status Transitions**:
+
+| Status | Description | Next States | User Actions | Automated Transitions |
+|--------|-------------|-------------|--------------|----------------------|
+| **pending** | Article imported, awaiting parsing | parsing | Start parsing | Auto-start if enabled |
+| **parsing** | AI extracting and structuring content | parsing_review, failed | View progress | Auto → parsing_review on completion |
+| **parsing_review** | Human reviewing parsed content | proofreading, parsing (retry) | Approve, Reject, Edit | Manual approval required |
+| **proofreading** | AI & script analyzing for issues | proofreading_review, failed | View progress | Auto → proofreading_review on completion |
+| **proofreading_review** | Human reviewing proofreading issues | ready_to_publish, proofreading (retry) | Accept/Reject suggestions | Manual approval required |
+| **ready_to_publish** | Approved, ready for publication | publishing | Publish to CMS | Manual publish trigger |
+| **publishing** | Computer Use publishing in progress | published, failed | View progress, Cancel | Auto → published/failed on completion |
+| **published** | Successfully published to CMS | N/A (terminal) | View article URL | Terminal state |
+| **failed** | Error occurred in any stage | parsing, proofreading, publishing | Retry, View error logs | Manual retry from failed stage |
+
+**Key Workflow Improvements**:
+- **Parsing Stage**: New AI-driven content extraction before proofreading
+- **Review Gates**: Human approval required at parsing_review and proofreading_review
+- **Flexible Retries**: Can retry from any failed stage (parsing, proofreading, publishing)
+- **Status Visibility**: Clear status indicators in UI (see UI_DESIGN_SPECIFICATIONS.md Section 2.8)
+- **Automated Progression**: Auto-transitions where appropriate, manual gates where needed
 
 **Core Value Propositions**:
 - **Batch SEO Optimization**: Process existing article libraries at scale
@@ -853,6 +908,14 @@ Published Article with SEO ✅
 - **NFR-005**: Screenshot storage MUST NOT exceed 10MB per task
 - **NFR-006**: Database queries MUST return within 500ms for article/SEO metadata retrieval
 
+#### User Experience (NFR-041 to NFR-045) 🆕 Phase 8
+
+- **NFR-041**: Workflow MUST achieve zero page jumps for article review tasks (Baseline: 5 jumps → Target: 0 jumps)
+- **NFR-042**: Click count MUST be reduced by 50% per article (Baseline: 30-33 clicks → Target: 15-18 clicks)
+- **NFR-043**: Task completion time MUST be reduced by 13% (Baseline: 238s → Target: 208s)
+- **NFR-044**: User satisfaction (CSAT) MUST be ≥ 4.0/5.0 (measured via post-deployment survey)
+- **NFR-045**: Error rate MUST be < 5% (failed operations / total operations in ArticleReviewModal)
+
 #### Reliability (NFR-007 to NFR-012)
 
 - **NFR-007**: Computer Use publishing success rate MUST be ≥90% (target: 95%)
@@ -1037,6 +1100,295 @@ Published Article with SEO ✅
 - **SC-021**: 🆕 Step 2 blocking logic works 100% (cannot access without Step 1 confirmation)
 - **SC-022**: 🆕 All parsing fields editable in Step 1 UI with instant save
 - **SC-023**: 🆕 Test coverage for parsing module ≥85% (backend), ≥80% (frontend)
+
+---
+
+## Phase 8: Workflow Simplification (P0 Priority) 🆕
+
+**Added**: 2025-11-10
+**Status**: Design Complete, Implementation Pending
+**Goal**: Eliminate all page jumps and consolidate the review workflow into a single, streamlined ArticleReviewModal
+
+### 8.1 Background & Problem Statement
+
+**Current Pain Points** (as of Phase 7):
+- **5 page transitions per article**: Worklist → Parsing Page → SEO Confirmation → Worklist → Review Page → Worklist
+- **30-33 clicks required**: Excessive interaction overhead for simple review tasks
+- **238 seconds average completion time**: Includes 2.5s of page load waiting per transition
+- **Context loss**: Each page jump requires data refetch and user reorientation
+- **Fragmented experience**: Three separate full-page layouts (Parsing, SEO, Proofreading) with inconsistent UI patterns
+- **Cognitive overhead**: Users must remember information across page transitions
+
+**User Feedback Highlights**:
+> "每次审核都要跳转好几个页面,感觉很割裂,经常忘记之前看到什么。" - User A
+> "解析审核和校对审核分开的意义是什么?能不能合在一起?" - User B
+
+**Quantified Impact** (per article):
+- **Page load time**: 5 jumps × 0.5s = 2.5s wasted on loading
+- **Navigation clicks**: 3 "返回工作列表" clicks that could be eliminated
+- **Data refetches**: 5 API calls that could be avoided with proper state management
+
+### 8.2 Solution: ArticleReviewModal Architecture
+
+#### 8.2.1 Core Design Principles
+
+1. **Zero Page Jumps**: All review operations contained within a single full-screen Modal
+2. **Tab-Based Navigation**: Three review stages (Parsing, Proofreading, Publish) as tabs within Modal
+3. **Context Preservation**: React Query caches all data; tab switching doesn't trigger refetches
+4. **Progressive Disclosure**: Progress stepper shows current stage and completed milestones
+5. **Unified Actions**: Common action buttons (Save, Next, Publish) in fixed footer
+
+#### 8.2.2 Component Architecture
+
+```
+ArticleReviewModal (Full-Screen Container)
+├─ Header
+│  ├─ Article Title Display
+│  ├─ Close Button (with unsaved changes warning)
+│  └─ ReviewProgressStepper (1. Parsing → 2. Proofreading → 3. Publish)
+├─ Tab Navigation
+│  ├─ Tab 1: Parsing Review (ParsingReviewPanel)
+│  ├─ Tab 2: Proofreading Review (ProofreadingReviewPanel)
+│  └─ Tab 3: Publish Preview (PublishPreviewPanel)
+├─ Tab Content Area (Scrollable, max-height: calc(100vh - 280px))
+│  └─ [Active Panel Component]
+└─ Footer (Fixed Bottom)
+   ├─ Close Button
+   ├─ Save Draft Button
+   ├─ Previous Step Button (conditional)
+   └─ Next Step / Publish Button (primary action)
+```
+
+#### 8.2.3 New Components & Hooks
+
+**Frontend Components** (`frontend/src/components/ArticleReview/`):
+- `ArticleReviewModal.tsx` - Main container (300 LOC)
+- `ReviewProgressStepper.tsx` - Visual progress indicator (50 LOC)
+- `panels/ParsingReviewPanel.tsx` - Parsing review UI (250 LOC)
+- `panels/ProofreadingReviewPanel.tsx` - Proofreading review UI (300 LOC)
+- `panels/PublishPreviewPanel.tsx` - Publish preview UI (150 LOC)
+- `hooks/useArticleReviewData.ts` - Centralized data fetching (100 LOC)
+- `hooks/useReviewWorkflow.ts` - Workflow state management (150 LOC)
+- `hooks/useKeyboardShortcuts.ts` - Keyboard navigation (80 LOC)
+
+**Backend APIs** (Minimal Changes):
+- Existing APIs reused: `/v1/worklist/:id`, `/v1/worklist/:id/confirm-parsing`, `/v1/worklist/:id/decisions`
+- No new endpoints required (all state transitions supported by existing APIs)
+
+### 8.3 Detailed User Workflow
+
+#### Old Workflow (Baseline)
+```
+1. User clicks article row in Worklist
+   └─ Opens DetailDrawer (right sidebar)
+2. User clicks "审核解析" button in Drawer
+   └─ Page jump #1: Navigate to /articles/{id}/parsing
+3. User reviews parsing results (title, author, images)
+4. User clicks "确认解析"
+   └─ AI generates optimization suggestions (20-30s wait)
+5. User clicks "下一步: 审核 SEO"
+   └─ Page jump #2: Navigate to /articles/{id}/seo-confirmation
+6. User reviews SEO metadata (keywords, tags, FAQ)
+7. User clicks "返回工作列表"
+   └─ Page jump #3: Navigate back to /worklist
+8. User clicks same article row again
+   └─ Opens DetailDrawer
+9. User clicks "审核校对" button
+   └─ Page jump #4: Navigate to /worklist/{id}/review
+10. User reviews proofreading issues (accept/reject)
+11. User clicks "完成审核"
+    └─ Page jump #5: Auto-redirect to /worklist
+12. User clicks "发布" in Drawer (no page jump)
+
+Total: 5 page jumps, 30-33 clicks, 238 seconds
+```
+
+#### New Workflow (Phase 8)
+```
+1. User clicks article row in Worklist
+   └─ ArticleReviewModal opens (full-screen)
+   └─ Auto-navigates to appropriate tab based on status:
+      - parsing_review → Tab 1 (Parsing)
+      - proofreading_review → Tab 2 (Proofreading)
+      - ready_to_publish → Tab 3 (Publish)
+2. User reviews parsing in Tab 1
+   └─ Edits title/author/images/SEO as needed
+   └─ Clicks "下一步: 校对审核"
+3. Modal switches to Tab 2 (no page reload)
+   └─ User reviews proofreading issues
+   └─ Clicks "完成审核"
+4. Modal switches to Tab 3 (no page reload)
+   └─ User previews final article
+   └─ Clicks "发布到 WordPress"
+5. Publishing task executes
+   └─ Success: Modal shows success card with article URL
+   └─ User clicks "关闭" to return to Worklist
+
+Total: 0 page jumps, 15-18 clicks, 208 seconds
+```
+
+**Improvement Metrics**:
+- **100% reduction in page jumps**: 5 → 0
+- **50% reduction in clicks**: 30-33 → 15-18
+- **13% reduction in completion time**: 238s → 208s (saved 30s from eliminated page loads & navigation)
+
+### 8.4 Technical Implementation Details
+
+#### 8.4.1 State Management Strategy
+
+**React Query Cache Strategy**:
+```typescript
+// All data pre-loaded when Modal opens
+useArticleReviewData({
+  worklistId,
+  articleId
+}) → {
+  worklistData,      // Worklist item details
+  parsingData,       // Article parsing results
+  proofreadingData,  // Proofreading issues
+  optimizationsData, // AI SEO suggestions
+  isLoading,
+  refetch
+}
+```
+
+**Benefits**:
+- Tab switching is instant (data already cached)
+- Single source of truth for all tabs
+- Automatic refetch on stale data (React Query's built-in staleness detection)
+
+#### 8.4.2 Tab Navigation Logic
+
+**Auto-Tab Selection Based on Status**:
+| Worklist Status | Initial Tab | Rationale |
+|----------------|-------------|-----------|
+| `parsing_review` | Tab 1 (Parsing) | User needs to confirm parsing |
+| `proofreading_review` | Tab 2 (Proofreading) | User needs to review issues |
+| `ready_to_publish` | Tab 3 (Publish) | User ready to publish |
+| Other statuses | Tab 1 (default) | Start from beginning |
+
+**Free Navigation**:
+- Users can switch tabs freely (not forced linear progression)
+- Unsaved changes warning when switching tabs
+- Progress stepper shows completed stages with checkmarks
+
+#### 8.4.3 Keyboard Shortcuts
+
+| Shortcut | Action | Scope |
+|----------|--------|-------|
+| `Ctrl/Cmd + S` | Save draft | All tabs |
+| `Ctrl/Cmd + Enter` | Next step / Publish | All tabs |
+| `Esc` | Close Modal (with warning) | All tabs |
+| `Ctrl/Cmd + ←` | Previous tab | Tab 2, 3 |
+| `Ctrl/Cmd + →` | Next tab | Tab 1, 2 |
+| `?` | Show keyboard shortcuts help | All tabs |
+
+**Tab 2 (Proofreading) Specific**:
+| Shortcut | Action |
+|----------|--------|
+| `A` | Accept current issue |
+| `R` | Reject current issue |
+| `↑ / ↓` | Navigate issues list |
+
+#### 8.4.4 Integration with Existing Pages
+
+**Worklist Page Changes**:
+```typescript
+// OLD: WorklistTable row click opens DetailDrawer
+<TableRow onClick={() => openDetailDrawer(item)} />
+
+// NEW: WorklistTable row click opens ArticleReviewModal
+<TableRow onClick={() => openArticleReviewModal(item)} />
+```
+
+**Component Migration**:
+- **Reuse existing logic**: Parsing, Proofreading, and Publish components refactored as panels (not new implementations)
+- **Preserve features**: All existing features (image editing, SEO suggestions, issue review) retained
+- **Remove redundancy**: Eliminate duplicate headers, navigation buttons, and page scaffolding
+
+### 8.5 Success Criteria (Phase 8 Specific)
+
+| Metric | Baseline | Target | Measurement Method |
+|--------|----------|--------|-------------------|
+| **Page Jumps per Article** | 5 | 0 | Frontend analytics tracking navigation events |
+| **Clicks per Article** | 30-33 | 15-18 | Click event tracking in ArticleReviewModal |
+| **Task Completion Time** | 238s | 208s | Timer from Modal open to publish success |
+| **User Satisfaction (CSAT)** | Not measured | ≥ 4.0/5.0 | Post-deployment user survey |
+| **Error Rate** | Not measured | < 5% | Failed operations / total operations |
+| **Modal Load Time** | N/A | < 1s | Performance API measurement |
+| **Tab Switch Time** | N/A | < 200ms | React Query cache hit latency |
+
+**Feature Completeness Checklist**:
+- [ ] ArticleReviewModal component with full-screen layout
+- [ ] ReviewProgressStepper with visual stage indicators
+- [ ] Tab 1 (Parsing) with all existing parsing features
+- [ ] Tab 2 (Proofreading) with improved 30/70 layout
+- [ ] Tab 3 (Publish) with preview and publish action
+- [ ] Keyboard shortcuts fully functional
+- [ ] Unsaved changes warning on close/tab switch
+- [ ] React Query data prefetching working
+- [ ] Worklist integration (row click opens Modal)
+- [ ] End-to-end test covering full workflow
+
+### 8.6 Implementation Timeline
+
+**Total Duration**: 8 weeks (260 hours)
+**Team**: 2 frontend engineers + 1 backend engineer (integration support)
+
+| Phase | Duration | Effort | Key Deliverables |
+|-------|----------|--------|------------------|
+| **Phase 1: Modal Framework** | 2 weeks | 48h | Modal container, Progress stepper, Data hooks, Keyboard shortcuts |
+| **Phase 2: Parsing Panel** | 2 weeks | 66h | ParsingReviewPanel, Title/Author/Image/SEO editors, 2-column layout |
+| **Phase 3: Proofreading Panel** | 2 weeks | 52h | ProofreadingReviewPanel, Issue list (30%), Article content (70%), Floating popover |
+| **Phase 4: Publish Panel & Integration** | 1 week | 48h | PublishPreviewPanel, Worklist integration, End-to-end tests |
+| **Phase 5: Optimization & Testing** | 1 week | 46h | Performance tuning, User testing, Bug fixes, Documentation |
+
+**Cost Estimate**: 260 hours × $50/hour = **$13,000**
+**ROI**: Annual time savings = 48 min/day × 250 days × $30/hour = **$6,000/year**
+**Payback Period**: 2.2 years
+
+### 8.7 Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Modal performance issues (too much content) | Medium | Medium | Use virtual scrolling (VirtualList), lazy-load tab content |
+| Data sync issues across tabs | Low | High | Use React Query as single source of truth, add validation on tab switch |
+| User confusion with new workflow | Medium | Medium | Provide onboarding tutorial, add tooltips, maintain old workflow as fallback |
+| Integration bugs with existing code | Medium | Medium | Comprehensive integration tests, gradual rollout (feature flag) |
+| React Query cache staleness | Low | Medium | Configure appropriate staleTime and refetch logic, manual refetch option |
+
+### 8.8 Rollout Strategy
+
+**Phase A: Internal Testing (Week 1)**
+- Deploy to staging environment
+- Internal team testing (5-10 users)
+- Collect feedback on usability and bugs
+
+**Phase B: Limited Beta (Week 2-3)**
+- Feature flag: `enable_article_review_modal=true` (default: false)
+- Invite 20% of active users to beta
+- Monitor error rates and performance metrics
+
+**Phase C: Full Rollout (Week 4)**
+- Enable feature flag for 100% of users
+- Monitor CSAT and error rates daily
+- Deprecate old workflow (Parsing Page, Review Page) after 2 weeks
+
+**Rollback Plan**:
+- Feature flag can be toggled off instantly
+- Old workflow pages remain functional for 1 month
+- Database schema unchanged (no migration required)
+
+### 8.9 Non-Functional Requirements (Phase 8)
+
+- **NFR-033**: ArticleReviewModal MUST load in < 1 second (95th percentile)
+- **NFR-034**: Tab switching MUST complete in < 200ms (no network requests)
+- **NFR-035**: Modal MUST support 10+ images per article without performance degradation
+- **NFR-036**: Keyboard shortcuts MUST work on all major browsers (Chrome, Firefox, Safari, Edge)
+- **NFR-037**: Modal MUST be responsive on screens ≥ 1280px width (tablet/desktop only; mobile out of scope)
+- **NFR-038**: Unsaved changes warning MUST appear 100% of the time when closing with edits
+- **NFR-039**: React Query cache MUST be invalidated after successful publish
+- **NFR-040**: Modal MUST support i18n (zh-TW, en-US) using existing translation framework
 
 ---
 

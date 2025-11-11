@@ -193,7 +193,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
         <div>
           <div className="flex items-start justify-between mb-2">
             <h2 className="text-xl font-semibold text-gray-900">{data.title}</h2>
-            <WorklistStatusBadge status={resolvedStatus} size="md" />
+            <WorklistStatusBadge status={resolvedStatus} showText={true} />
           </div>
           {description && (
             <p className="text-sm text-gray-600 line-clamp-3">{description}</p>

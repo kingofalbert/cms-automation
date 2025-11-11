@@ -258,6 +258,34 @@ Hover State:
   - Border: Primary-500
 ```
 
+**Success Button** (Positive actions)
+```
+Default State:
+  - Background: Success-500 (#22C55E)
+  - Text: White
+  - Height: 40px
+  - Padding: 0 16px
+  - Border Radius: 4px
+  - Font: Body (16px), Weight 500
+
+Hover State:
+  - Background: Success-600 (#16A34A)
+  - Shadow: Shadow-MD
+  - Transition: 200ms ease-out
+
+Active State:
+  - Background: Success-700
+  - Transform: scale(0.98)
+
+Disabled State:
+  - Background: Gray-300
+  - Text: Gray-500
+  - Cursor: not-allowed
+  - Opacity: 0.6
+
+Usage: Publish actions, approve actions, complete actions
+```
+
 **Destructive Button** (Delete actions)
 ```
 Default State:
@@ -615,61 +643,87 @@ Header:
 
 ---
 
-### 2.8 Badges & Status Indicators
+### 2.8 Worklist Status Badge ⭐
 
-**Badge (Pill Style)**:
-```
-Container:
-  - Height: 24px
-  - Padding: 0 12px
-  - Border Radius: 12px (Radius-Full)
-  - Display: Inline-Flex, Align: Center
-  - Font: Caption (12px), Weight 500
-  - Text Transform: Uppercase
+**Worklist Status Badge (with Icon)**:
 
-Variants:
-  1. Default:
-     - Background: Gray-100
-     - Text: Gray-700
+The Worklist uses a 9-state workflow system with icon-based status badges for improved visual clarity.
 
-  2. Primary:
-     - Background: Primary-100
-     - Text: Primary-700
-
-  3. Success:
-     - Background: Success-100
-     - Text: Success-700
-
-  4. Warning:
-     - Background: Warning-100
-     - Text: Warning-700
-
-  5. Error:
-     - Background: Error-100
-     - Text: Error-700
-```
-
-**Status Badge (with Dot)**:
 ```
 Container:
   - Display: Inline-Flex, Align: Center, Gap: 8px
+  - Height: 28px
+  - Padding: 0 12px
+  - Border Radius: 14px (Radius-Full)
+  - Font: Caption (12px), Weight 500
 
-Dot:
-  - Size: 8px × 8px
-  - Border Radius: 50%
-  - Colors:
-    - Pending: Gray-400
-    - Running: Info-500 (+ pulse animation)
-    - Completed: Success-500
-    - Failed: Error-500
+Icon:
+  - Size: 16px × 16px
+  - Position: Left of text
+  - Color: Matches text color
 
 Text:
   - Font: Body Small (14px)
-  - Color: Same as dot color
-
-Animation (Running state):
-  - Dot: Scale pulse (1 → 1.2 → 1), 2s infinite
+  - Color: Semantic color (matches icon)
 ```
+
+**9 Worklist Status States**:
+
+| Status | Icon | Text Color | Background | Pulse | Label (i18n key) |
+|--------|------|------------|------------|-------|------------------|
+| **pending** | Clock | Gray-700 | Gray-100 | No | worklist.status.pending |
+| **parsing** | Loader | Blue-700 | Blue-100 | Yes | worklist.status.parsing |
+| **parsing_review** | ClipboardCheck | Orange-700 | Orange-100 | No | worklist.status.parsing_review |
+| **proofreading** | Loader | Blue-700 | Blue-100 | Yes | worklist.status.proofreading |
+| **proofreading_review** | ClipboardCheck | Orange-700 | Orange-100 | No | worklist.status.proofreading_review |
+| **ready_to_publish** | ClipboardCheck | Orange-700 | Orange-100 | No | worklist.status.ready_to_publish |
+| **publishing** | Loader | Blue-700 | Blue-100 | Yes | worklist.status.publishing |
+| **published** | Check | Green-700 | Green-100 | No | worklist.status.published |
+| **failed** | X | Red-700 | Red-100 | No | worklist.status.failed |
+
+**Icon Set (from Lucide React)**:
+- Clock: `lucide-react/Clock`
+- Loader: `lucide-react/Loader` (with rotation animation)
+- ClipboardCheck: `lucide-react/ClipboardCheck`
+- Check: `lucide-react/Check`
+- X: `lucide-react/X`
+
+**Pulse Animation (for in-progress states)**:
+```css
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+```
+
+**Semantic Color Mapping**:
+- **Gray (Pending)**: Neutral state, awaiting action
+- **Blue (In Progress)**: Active processing states (parsing, proofreading, publishing)
+- **Orange (Review Required)**: User action needed (parsing_review, proofreading_review, ready_to_publish)
+- **Green (Success)**: Completed successfully (published)
+- **Red (Error)**: Failed state, requires attention (failed)
+
+**Usage in Worklist Table**:
+- Display in "Status" column
+- Icon + text on desktop (width ≥ 768px)
+- Icon only on mobile (width < 768px), with tooltip showing full text
+- Sort by status priority: failed → review required → in progress → pending → published
+
+**Accessibility**:
+- Icon must have `aria-hidden="true"` (decorative)
+- Status text must be visible or provided via `aria-label`
+- Color is not the only indicator (icon shape also differs)
+- Minimum contrast ratio 4.5:1 maintained
 
 ---
 
@@ -1159,6 +1213,261 @@ Footer: [取消] [確認提交]
 │ [Pie Chart: % of tasks by provider]                         │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+### 3.5 Worklist Page ⭐
+
+**Layout Structure** (Phase 1 Enhanced Design):
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Page Header (120px)                                          │
+│   H1: 工作清单                                               │
+│   Description: 管理文章从解析到发布的完整流程                │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Statistics Row (96px)                                        │
+│ ┌───────────┬───────────┬───────────┬───────────┬─────────┐ │
+│ │ [Icon] 9  │ [Icon] 12 │ [Icon] 45 │ [Icon] 3  │ [Icon]  │ │
+│ │ Total     │ Pending   │ Published │ Failed    │ 152 ⭐  │ │
+│ └───────────┴───────────┴───────────┴───────────┴─────────┘ │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Quick Filters Row (56px) ⭐NEW                              │
+│ [🔔 需要我处理 (3)] [⏳ 进行中 (2)] [✅ 已完成 (45)] [⚠️ 有问题 (1)] │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Filters Card (Collapsible) (80px when collapsed)            │
+│   [Status: All ▼] [Search: ________] [Clear Filters]        │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│ Worklist Table ⭐ENHANCED                                   │
+│                                                              │
+│ ┌─────┬──────────┬────────────┬──────────────┬──────────┐  │
+│ │ ID  │ Title    │ Status     │ Operations   │ Updated  │  │
+│ ├─────┼──────────┼────────────┼──────────────┼──────────┤  │
+│ │ #1  │ Article1 │ [📋 Review]│ [View] [Pub] │ 2h ago   │  │
+│ │ #2  │ Article2 │ [⏳ Parsing]│ [View]       │ 5h ago   │  │
+│ │ #3  │ Article3 │ [✅ Done]   │ [View]       │ 1d ago   │  │
+│ └─────┴──────────┴────────────┴──────────────┴──────────┘  │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Pagination (56px)                                            │
+│   ← Previous | Page 1 of 3 | Next →                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Component Specifications**:
+
+**1. Statistics Cards** (Grid: 5 columns)
+```
+Each Card:
+  - Size: Auto-width, Height 96px
+  - Padding: 16px
+  - Background: White
+  - Border: 1px solid Gray-200
+  - Border Radius: 8px
+  - Hover: Shadow-MD
+
+Content Layout:
+  - Icon: Top, 24px, Semantic color
+  - Number: H2 (30px), Weight 600, Gray-900
+  - Label: Body Small (14px), Gray-500
+  - Gap: 8px between elements
+
+Responsive:
+  - Desktop (≥1024px): 5 columns
+  - Tablet (768-1023px): 3 columns (2 rows)
+  - Mobile (<768px): 2 columns, stacked
+```
+
+**2. Quick Filters Row** ⭐NEW
+```
+Container:
+  - Height: 56px
+  - Padding: 0 24px
+  - Background: White
+  - Border: 1px solid Gray-200
+  - Border Radius: 8px
+  - Display: Flex, Gap: 12px
+  - Overflow-X: Auto (mobile)
+
+Filter Button:
+  - Height: 40px
+  - Padding: 0 16px
+  - Border Radius: 20px (Pill)
+  - Font: Body (16px), Weight 500
+  - Display: Flex, Align: Center, Gap: 8px
+  - Transition: all 200ms ease-out
+
+Button States:
+  Default:
+    - Background: Gray-100
+    - Text: Gray-700
+    - Border: 1px solid Gray-200
+
+  Hover:
+    - Background: Gray-200
+    - Border: Gray-300
+
+  Active (selected):
+    - Background: Primary-100
+    - Text: Primary-700
+    - Border: Primary-500
+
+Icon:
+  - Size: 20px
+  - Position: Left
+  - Color: Matches text
+
+Badge (count):
+  - Size: 20px × 20px
+  - Border Radius: 10px
+  - Font: Caption (12px), Weight 600
+  - Background: Semantic color
+  - Position: Right of text
+
+Filter Types:
+  1. 需要我处理 (Bell icon, Orange badge)
+     - States: parsing_review, proofreading_review, ready_to_publish
+
+  2. 进行中 (Loader icon, Blue badge)
+     - States: parsing, proofreading, publishing
+
+  3. 已完成 (Check icon, Green badge)
+     - States: published
+
+  4. 有问题 (AlertTriangle icon, Red badge)
+     - States: failed
+
+Keyboard:
+  - Tab navigation
+  - Enter/Space to activate
+  - Arrow keys to move between filters
+```
+
+**3. Enhanced Worklist Table** ⭐ENHANCED
+```
+Columns:
+  1. ID (80px):
+     - Format: #12345
+     - Font: Monospace, Gray-600
+
+  2. Title (Flex, min 200px):
+     - Font: Body (16px), Weight 500, Gray-900
+     - Max Lines: 2, Ellipsis
+     - Hover: Underline, Cursor pointer
+
+  3. Status (180px): ⭐ENHANCED
+     - Uses Worklist Status Badge (Section 2.8)
+     - Icon + text (desktop)
+     - Icon only (mobile with tooltip)
+
+  4. Operations (200px): ⭐NEW
+     - Button Group, Gap: 8px
+     - All SM size (32px height)
+
+     Buttons shown per status:
+     - parsing_review: [View] [Approve] [Reject]
+     - proofreading_review: [View] [Approve] [Reject]
+     - ready_to_publish: [View] [Publish]
+     - published: [View] [Open URL]
+     - failed: [View] [Retry]
+     - Default: [View]
+
+     Button Variants:
+     - View: Ghost, Eye icon
+     - Approve: Primary, Check icon
+     - Reject: Secondary, X icon
+     - Publish: Success, Send icon
+     - Open URL: Ghost, ExternalLink icon
+     - Retry: Primary, RotateCcw icon
+
+  5. Updated (120px):
+     - Format: Relative time (2h ago, 1d ago)
+     - Font: Body Small (14px), Gray-500
+
+Row States:
+  Default:
+    - Background: White
+    - Height: 64px
+
+  Hover:
+    - Background: Gray-50
+
+  Needs Attention (review states):
+    - Border-Left: 4px solid Orange-500
+    - Background: Orange-50 (hover)
+
+  Failed:
+    - Border-Left: 4px solid Red-500
+    - Background: Red-50 (hover)
+
+Empty State:
+  - Icon: Inbox (64px), Gray-400
+  - Title: "暂无工作清单"
+  - Description: "导入文章后，它们会出现在这里"
+  - Action: [导入文章] button (Primary)
+```
+
+**Responsive Breakpoints**:
+- Desktop (≥1024px): Full layout, all columns visible
+- Tablet (768-1023px): Hide "Updated" column, compact operations
+- Mobile (<768px): Card-based layout
+  ```
+  ┌────────────────────────────┐
+  │ #1 · Article Title         │
+  │ [Status Badge]             │
+  │ [View] [Publish]           │
+  │ Updated: 2h ago            │
+  └────────────────────────────┘
+  ```
+
+**Interaction Details**:
+
+1. **Quick Filter Click**:
+   - Filter activates (Primary style)
+   - Table updates instantly (client-side filtering if ≤100 items)
+   - URL updates: `/worklist?filter=needs_attention`
+   - Badge count updates
+   - Smooth transition (200ms)
+
+2. **Operation Button Click**:
+   - View: Opens detail drawer (right side, 480px)
+   - Publish: Shows publish confirmation modal
+   - Approve/Reject: Shows review modal with feedback form
+   - Open URL: Opens in new tab
+   - Retry: Shows retry confirmation with provider selection
+
+3. **Row Click** (outside buttons):
+   - Opens detail drawer
+   - Highlights row (Primary-50 background)
+
+4. **Status Badge Hover**:
+   - Tooltip shows full status text + description
+   - Example: "Parsing Review - AI 解析完成，请审核内容"
+
+**Performance Optimizations**:
+- Virtual scrolling for >100 rows
+- Lazy load images in detail drawer
+- Debounce search (300ms)
+- Optimistic UI updates for operations
+- Skeleton loading states
+
+**Accessibility**:
+- All buttons have aria-labels
+- Status badges use aria-live="polite" for updates
+- Table has proper ARIA table structure
+- Keyboard navigation: Tab through filters → table → operations
+- Screen reader announces filter changes
 
 ---
 

@@ -11,6 +11,8 @@ import { Card, Select, Input, Button } from '@/components/ui';
 import { WorklistTable } from '@/components/Worklist/WorklistTable';
 import { WorklistDetailDrawer } from '@/components/Worklist/WorklistDetailDrawer';
 import { WorklistStatistics } from '@/components/Worklist/WorklistStatistics';
+import { QuickFilters, QuickFilterKey } from '@/components/Worklist/QuickFilters';
+import { ArticleReviewModal } from '@/components/ArticleReview';
 import {
   WorklistItem,
   WorklistStatistics as Stats,
@@ -28,8 +30,17 @@ export default function WorklistPage() {
     status: 'all',
     search: '',
   });
+  const [quickFilter, setQuickFilter] = useState<QuickFilterKey>('all');
   const [selectedItem, setSelectedItem] = useState<WorklistItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Phase 8: ArticleReviewModal state
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewItemId, setReviewItemId] = useState<number | null>(null);
+
+  // Feature flag for Phase 8 (can be env variable later)
+  const ENABLE_ARTICLE_REVIEW_MODAL = true; // TODO: Move to env config
+
   const queryClient = useQueryClient();
 
   // Fetch worklist items
@@ -145,9 +156,43 @@ export default function WorklistPage() {
     ? (syncStatus?.errors as string[])
     : [];
 
+  // Apply quick filter to items
+  const filteredItems = (() => {
+    if (quickFilter === 'all') return items;
+
+    const filterMap: Record<QuickFilterKey, WorklistStatus[]> = {
+      all: [],
+      needsAttention: ['parsing_review', 'proofreading_review', 'ready_to_publish'],
+      inProgress: ['parsing', 'proofreading', 'publishing'],
+      completed: ['published'],
+      failed: ['failed'],
+    };
+
+    const statuses = filterMap[quickFilter];
+    return items.filter((item) => statuses.includes(item.status as WorklistStatus));
+  })();
+
   const handleItemClick = (item: WorklistItem) => {
-    setSelectedItem(item);
-    setDrawerOpen(true);
+    if (ENABLE_ARTICLE_REVIEW_MODAL) {
+      // Phase 8: Open new ArticleReviewModal
+      setReviewItemId(item.id);
+      setReviewModalOpen(true);
+    } else {
+      // Legacy: Open drawer
+      setSelectedItem(item);
+      setDrawerOpen(true);
+    }
+  };
+
+  const handleReviewModalClose = () => {
+    setReviewModalOpen(false);
+    setReviewItemId(null);
+    // Refetch worklist to reflect any changes
+    refetch();
+  };
+
+  const handleQuickFilterChange = (filter: QuickFilterKey) => {
+    setQuickFilter(filter);
   };
 
   const handleStatusChange = (
@@ -205,6 +250,13 @@ export default function WorklistPage() {
           <WorklistStatistics statistics={statistics} />
         </div>
       )}
+
+      {/* Quick Filters */}
+      <QuickFilters
+        items={items}
+        activeFilter={quickFilter}
+        onFilterChange={handleQuickFilterChange}
+      />
 
       {/* Filters */}
       <Card className="mb-6 p-6">
@@ -279,11 +331,16 @@ export default function WorklistPage() {
       {/* Worklist Table */}
       <Card>
         <WorklistTable
-          items={items}
+          items={filteredItems}
           onItemClick={handleItemClick}
           isLoading={isLoading}
           onSync={handleSync}
           isSyncing={syncStatus?.is_syncing || syncMutation.isPending}
+          onPublish={(item) => handlePublish(item.id)}
+          onRetry={(item) => {
+            // TODO: Implement retry logic
+            console.log('Retry:', item);
+          }}
         />
       </Card>
 
@@ -311,6 +368,15 @@ export default function WorklistPage() {
             )}
           </ul>
         </div>
+      )}
+
+      {/* Phase 8: ArticleReviewModal */}
+      {ENABLE_ARTICLE_REVIEW_MODAL && reviewItemId && (
+        <ArticleReviewModal
+          isOpen={reviewModalOpen}
+          onClose={handleReviewModalClose}
+          worklistItemId={reviewItemId}
+        />
       )}
     </main>
   );

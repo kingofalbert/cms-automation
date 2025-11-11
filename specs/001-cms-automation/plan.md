@@ -1,13 +1,13 @@
 # Implementation Plan: SEO Optimization & Multi-Provider Computer Use Publishing
 
 **Date**: 2025-10-26
-**Last Updated**: 2025-11-08 🆕
+**Last Updated**: 2025-11-10 🆕
 **Feature ID**: 001-cms-automation
-**Version**: 4.0.0 (Article Structured Parsing Added)
-**Status**: Implementation Complete (Phase 1-3, 6) | Partial (Phase 4-5) | Design (Phase 7)
-**Overall Completion**: ~85% (existing) + Phase 7 in design
-**Original Timeline**: 8-10 weeks (52-65 days)
-**Current Phase**: Production Monitoring & UI Enhancement
+**Version**: 5.0.0 (Phase 8: Workflow Simplification Added)
+**Status**: Implementation Complete (Phase 1-3, 6, 7) | Partial (Phase 4-5) | Design (Phase 8)
+**Overall Completion**: ~85% (existing) + Phase 8 planned
+**Original Timeline**: 8-10 weeks (52-65 days) → **Extended to 29 weeks** (with Phases 6, 7, 8)
+**Current Phase**: Phase 8 Design & Planning
 
 ---
 
@@ -36,10 +36,12 @@ This plan outlines the implementation of an automated content management system 
 | **Phase 4** | Frontend & API Integration | 6 weeks | 🟡 **Partial** | 60% (Backend 100%, UI 60%) |
 | **Phase 5** | Testing, Optimization & Deployment | 2 weeks | 🟡 **Partial** | 80% |
 | **Phase 6** | 🆕 Google Drive Automation & Worklist | 5 weeks | ✅ **Complete** | 100% |
+| **Phase 7** | 🆕 Article Structured Parsing | 6 weeks | ✅ **Complete** | 100% |
+| **Phase 8** | 🆕 Workflow Simplification | 8 weeks | 📋 **Planned** | 0% (Design) |
 
-**Planned Duration**: 15.5 weeks (~77 business days)
-**Actual Progress**: Phase 1-3, 6 完成 | Phase 4-5 进行中
-**Overall Completion**: ~85%
+**Planned Duration**: 29.5 weeks (~147 business days) - extended from 15.5 weeks
+**Actual Progress**: Phase 1-3, 6, 7 完成 | Phase 4-5 进行中 | Phase 8 规划中
+**Overall Completion**: ~85% (existing system) + Phase 8 in design phase
 
 ---
 
@@ -1643,9 +1645,513 @@ This phase adds intelligent document parsing to separate mixed content into clea
 
 ---
 
+## 8. Phase 8 – Workflow Simplification (8 weeks) 🆕
+
+**Status**: 🆕 New Phase Added (2025-11-10)
+**Reference**: See [Simplified Workflow Design](../../tmp/simplified-workflow-design.md) and spec.md Phase 8
+**Duration**: Week 22-29 (8 weeks)
+**Priority**: P0 (Critical - Blocks user experience improvements)
+**Goal**: Eliminate all page jumps and reduce clicks by 50% through ArticleReviewModal consolidation
+
+### 8.1 Overview
+
+This phase addresses critical usability pain points identified in Phase 7. The current workflow requires **5 page transitions** and **30-33 clicks** per article, causing context loss, excessive loading time, and user frustration. Phase 8 consolidates all review operations into a single full-screen Modal with zero page jumps.
+
+**Key Problems Solved**:
+- ❌ **5 page jumps** → ✅ **0 page jumps** (100% reduction)
+- ❌ **30-33 clicks** → ✅ **15-18 clicks** (50% reduction)
+- ❌ **238 seconds** → ✅ **208 seconds** (13% time savings, 30s/article)
+- ❌ **Context loss** across pages → ✅ **Preserved context** in Modal
+- ❌ **Fragmented experience** → ✅ **Unified workflow**
+
+**User Value**:
+- 🚀 **Zero page jumps**: All operations in ArticleReviewModal
+- 🎯 **Streamlined workflow**: 3 tabs (Parsing → Proofreading → Publish)
+- ⚡ **Faster task completion**: 30 seconds saved per article
+- 🧠 **Reduced cognitive load**: Single consistent UI pattern
+- ⌨️ **Keyboard shortcuts**: Power user efficiency
+
+### 8.2 Architecture Changes
+
+#### New Components
+
+```
+ArticleReviewModal (Full-Screen Container)
+├── Header
+│   ├── Article Title Display
+│   ├── Close Button (with unsaved changes warning)
+│   └── ReviewProgressStepper (1. Parsing → 2. Proofreading → 3. Publish)
+├── Tab Navigation
+│   ├── Tab 1: Parsing Review (ParsingReviewPanel)
+│   ├── Tab 2: Proofreading Review (ProofreadingReviewPanel)
+│   └── Tab 3: Publish Preview (PublishPreviewPanel)
+├── Tab Content Area (Scrollable, max-height: calc(100vh - 280px))
+│   └── [Active Panel Component]
+└── Footer (Fixed Bottom)
+    ├── Close Button
+    ├── Save Draft Button
+    ├── Previous Step Button (conditional)
+    └── Next Step / Publish Button (primary action)
+```
+
+#### Component File Structure
+
+```
+frontend/src/components/ArticleReview/
+├── ArticleReviewModal.tsx              # Main container (300 LOC)
+├── ReviewProgressStepper.tsx           # Visual progress indicator (50 LOC)
+├── panels/
+│   ├── ParsingReviewPanel.tsx          # Tab 1: 解析审核 (250 LOC)
+│   ├── ProofreadingReviewPanel.tsx     # Tab 2: 校对审核 (300 LOC)
+│   └── PublishPreviewPanel.tsx         # Tab 3: 发布预览 (150 LOC)
+├── components/
+│   ├── TitleEditor.tsx                 # Title editing (80 LOC)
+│   ├── AuthorEditor.tsx                # Author editing (60 LOC)
+│   ├── ImageGalleryEditor.tsx          # Image management (120 LOC)
+│   ├── SEOEditor.tsx                   # SEO metadata (150 LOC)
+│   ├── FAQEditor.tsx                   # FAQ editing (100 LOC)
+│   ├── IssueListPanel.tsx              # Issue list (reused)
+│   ├── ArticleContentViewer.tsx        # Content viewer (reused)
+│   └── IssueDetailPopover.tsx          # Floating issue details (80 LOC)
+└── hooks/
+    ├── useArticleReviewData.ts         # Data aggregation (100 LOC)
+    ├── useReviewWorkflow.ts            # Workflow state management (150 LOC)
+    └── useKeyboardShortcuts.ts         # Keyboard navigation (80 LOC)
+```
+
+#### Data Flow
+
+**React Query Cache Strategy**:
+```typescript
+useArticleReviewData({
+  worklistId,
+  articleId
+}) → {
+  worklistData,      // Worklist item details
+  parsingData,       // Article parsing results
+  proofreadingData,  // Proofreading issues
+  optimizationsData, // AI SEO suggestions
+  isLoading,
+  refetch
+}
+```
+
+**Benefits**:
+- Tab switching is instant (data already cached)
+- Single source of truth for all tabs
+- Automatic refetch on stale data
+
+### 8.3 Week-by-Week Plan
+
+#### Week 22-23: Phase 8.1 - Modal Framework and Data Layer (2 weeks, 48h)
+
+**Goal**: Build ArticleReviewModal foundation with data hooks and keyboard shortcuts
+
+**T-WF-1.1** [P0] Create ArticleReviewModal Container Component (8h)
+- Full-screen Modal with Header, Tab Navigation, Content Area, Footer
+- Props interface: `isOpen`, `onClose`, `worklistId`, `articleId`, `initialTab`
+- Internal state: `activeTab`, `hasUnsavedChanges`, `isSaving`, `isPublishing`
+- Close handler with unsaved changes warning
+- **Deliverable**: `ArticleReviewModal.tsx` + PropTypes
+
+**T-WF-1.2** [P0] Implement ReviewProgressStepper Component (4h)
+- 3-step visual indicator (Parsing → Proofreading → Publish)
+- Completed steps show checkmarks, current step highlighted
+- Color-coded: completed (green), current (primary blue), pending (gray)
+- **Deliverable**: `ReviewProgressStepper.tsx`
+
+**T-WF-1.3** [P0] Build useArticleReviewData Hook (8h)
+- React Query integration for `worklistData`, `parsingData`, `proofreadingData`, `optimizationsData`
+- Data pre-loading on Modal open
+- Query key management and cache invalidation
+- Refetch function for manual refresh
+- **Deliverable**: `useArticleReviewData.ts` + unit tests
+
+**T-WF-1.4** [P0] Build useReviewWorkflow Hook (12h)
+- Workflow state: `currentTab`, `currentStep`, `canProceed`
+- Navigation: `goToNextStep()`, `goToPreviousStep()`
+- Save/Publish mutations: `saveChanges()`, `publishArticle()`
+- Tab auto-selection based on worklist status
+- **Deliverable**: `useReviewWorkflow.ts` + unit tests
+
+**T-WF-1.5** [P1] Build useKeyboardShortcuts Hook (6h)
+- Global shortcuts: `Ctrl+S` (save), `Ctrl+Enter` (next/publish), `Esc` (close)
+- Tab navigation: `Ctrl+←` (previous), `Ctrl+→` (next)
+- Proofreading shortcuts: `A` (accept), `R` (reject), `↑/↓` (navigate issues)
+- Help modal: `?` shows keyboard shortcuts reference
+- **Deliverable**: `useKeyboardShortcuts.ts` + shortcut help modal
+
+**T-WF-1.6** [P1] Unit Tests for Hooks (10h)
+- Test `useArticleReviewData` with mock React Query client
+- Test `useReviewWorkflow` state transitions
+- Test `useKeyboardShortcuts` event handlers
+- Coverage target: ≥85%
+- **Deliverable**: `__tests__/hooks/` test suite
+
+**Phase 8.1 Success Criteria**:
+- [ ] Modal opens and closes correctly
+- [ ] Tab switching works without data loss
+- [ ] Progress stepper updates on tab change
+- [ ] Keyboard shortcuts functional
+- [ ] Data pre-loading working (React Query cache)
+
+---
+
+#### Week 24-25: Phase 8.2 - Parsing Review Panel Migration (2 weeks, 66h)
+
+**Goal**: Migrate existing ArticleParsingPage functionality into ParsingReviewPanel
+
+**T-WF-2.1** [P0] Create ParsingReviewPanel Container (4h)
+- 2-column layout: Basic Info (60%) + SEO Optimization (40%)
+- Integrate all child editors
+- Form state management with React Hook Form
+- **Deliverable**: `ParsingReviewPanel.tsx` skeleton
+
+**T-WF-2.2** [P0] Migrate TitleEditor Component (6h)
+- Editable fields: `title_prefix`, `title_main`, `title_suffix`
+- Character counters and validation
+- Display AI title optimization suggestions as radio buttons
+- Apply suggestion on selection
+- **Deliverable**: `TitleEditor.tsx` + integration
+
+**T-WF-2.3** [P0] Migrate AuthorEditor Component (4h)
+- Display `author_line` (raw, read-only)
+- Editable `author_name` field
+- **Deliverable**: `AuthorEditor.tsx` + integration
+
+**T-WF-2.4** [P0] Migrate ImageGalleryEditor Component (10h)
+- Grid of image previews (3 columns)
+- Display: caption, source link, specs table (width, height, size, MIME)
+- Actions: edit caption, replace source, remove image
+- Highlight out-of-range specs (width <800 or >3000px)
+- **Deliverable**: `ImageGalleryEditor.tsx` + integration
+
+**T-WF-2.5** [P0] Migrate SEOEditor Component (12h)
+- Editable fields: `meta_description` (160 char limit), `seo_keywords[]`, `tags[]`
+- Tag input components for keywords and tags
+- Character counter for meta description (color-coded: green <150, yellow 150-160, red >160)
+- **Deliverable**: `SEOEditor.tsx` + integration
+
+**T-WF-2.6** [P0] Migrate FAQEditor Component (8h)
+- Display existing FAQ items (question + answer pairs)
+- Add/edit/delete FAQ entries
+- Drag-to-reorder functionality (optional)
+- **Deliverable**: `FAQEditor.tsx` + integration
+
+**T-WF-2.7** [P0] Integrate Title Optimization Suggestions (6h)
+- Fetch optimization suggestions via `useArticleReviewData` hook
+- Display as radio button list with AI-generated alternatives
+- Apply selected suggestion to `title_main` field
+- **Deliverable**: Optimization suggestion UI integrated
+
+**T-WF-2.8** [P0] Adjust Layout to 2-Column Grid (4h)
+- CSS Grid: 60% (Basic Info) + 40% (SEO Optimization)
+- Responsive adjustments for smaller screens
+- Scrollable content areas
+- **Deliverable**: Responsive 2-column layout
+
+**T-WF-2.9** [P1] Integration Tests for ParsingReviewPanel (12h)
+- Test data loading and display
+- Test field editing and validation
+- Test optimization suggestion application
+- Test save functionality
+- **Deliverable**: `__tests__/panels/ParsingReviewPanel.test.tsx`
+
+**Phase 8.2 Success Criteria**:
+- [ ] ParsingReviewPanel displays all parsing data correctly
+- [ ] All fields editable with instant validation
+- [ ] Title optimization suggestions apply correctly
+- [ ] Save button persists changes via API
+- [ ] 2-column layout responsive and visually correct
+
+---
+
+#### Week 26-27: Phase 8.3 - Proofreading Review Panel Migration (2 weeks, 52h)
+
+**Goal**: Migrate ProofreadingReviewPage into ProofreadingReviewPanel with optimized 30/70 layout
+
+**T-WF-3.1** [P0] Create ProofreadingReviewPanel Container (4h)
+- 2-column layout: Issue List (30%) + Article Content (70%)
+- Reuse existing `ProofreadingIssueList` and `ProofreadingArticleContent` components
+- Remove redundant headers and "返回" buttons
+- **Deliverable**: `ProofreadingReviewPanel.tsx` skeleton
+
+**T-WF-3.2** [P0] Migrate Issue List Panel (2h)
+- Display all proofreading issues in 30% left panel
+- Issue cards show: rule ID, severity, original/suggested text
+- Highlight current issue on selection
+- **Deliverable**: Issue list integrated (reused component)
+
+**T-WF-3.3** [P0] Migrate Article Content Viewer (2h)
+- Display article body HTML in 70% right panel
+- Highlight issue locations in content
+- Scroll to issue on selection
+- **Deliverable**: Content viewer integrated (reused component)
+
+**T-WF-3.4** [P0] Adjust Layout to 30/70 Split (6h)
+- CSS Grid: 30% (Issue List) + 70% (Article Content)
+- Fixed height, scrollable panels
+- Sticky issue detail popover
+- **Deliverable**: Optimized 30/70 layout
+
+**T-WF-3.5** [P0] Implement Floating Issue Detail Popover (8h)
+- Popover component triggered on issue selection
+- Display: original text, suggested text, explanation, confidence score
+- Actions: Accept (A), Reject (R), Modify (manual edit)
+- Position: attached to selected issue in content viewer
+- **Deliverable**: `IssueDetailPopover.tsx` + integration
+
+**T-WF-3.6** [P0] Implement Batch Operations (10h)
+- Checkbox selection for multiple issues
+- Batch actions: Accept All, Reject All, Accept Selected, Reject Selected
+- Confirmation dialog before batch operations
+- **Deliverable**: Batch operation UI + backend integration
+
+**T-WF-3.7** [P1] Optimize Keyboard Shortcuts (6h)
+- `A` accepts current issue, `R` rejects current issue
+- `↑/↓` navigates issue list
+- Update `useKeyboardShortcuts` hook for proofreading context
+- **Deliverable**: Enhanced keyboard navigation
+
+**T-WF-3.8** [P2] Add Keyboard Shortcuts Help Tooltip (4h)
+- Floating tooltip showing available shortcuts
+- Toggle with `?` key
+- Context-aware (different shortcuts per tab)
+- **Deliverable**: Shortcut help tooltip component
+
+**T-WF-3.9** [P1] Integration Tests for ProofreadingReviewPanel (10h)
+- Test issue display and selection
+- Test accept/reject actions
+- Test batch operations
+- Test keyboard shortcuts
+- **Deliverable**: `__tests__/panels/ProofreadingReviewPanel.test.tsx`
+
+**Phase 8.3 Success Criteria**:
+- [ ] ProofreadingReviewPanel displays all issues correctly
+- [ ] 30/70 layout optimized for readability
+- [ ] Floating issue detail popover functional
+- [ ] Batch operations work correctly
+- [ ] Keyboard shortcuts (A, R, ↑, ↓) working
+- [ ] Integration tests passing
+
+---
+
+#### Week 28: Phase 8.4 - Publish Preview and Worklist Integration (1 week, 48h)
+
+**Goal**: Complete PublishPreviewPanel and integrate Modal into Worklist page
+
+**T-WF-4.1** [P0] Create PublishPreviewPanel Component (12h)
+- Single-column centered layout
+- Display final article content (title, author, body, images)
+- Display SEO metadata preview (meta title, meta description, keywords, tags)
+- Display FAQ preview
+- Confirmation checklist: "✓ Parsing confirmed", "✓ Proofreading complete", "✓ SEO optimized"
+- **Deliverable**: `PublishPreviewPanel.tsx`
+
+**T-WF-4.2** [P0] Implement Final Article Content Preview (6h)
+- Render article with WordPress-like styling
+- Display: title (prefix + main + suffix), author, publish date, featured image, body HTML
+- Display SEO meta info card
+- Display FAQ section
+- **Deliverable**: Article preview rendering
+
+**T-WF-4.3** [P0] Update WorklistPage to Open Modal (4h)
+- Modify `WorklistTable` row click handler
+- Change from `openDetailDrawer(item)` to `openArticleReviewModal(item)`
+- Set `selectedItem` state, open Modal
+- Pass `worklistId` and `articleId` to Modal
+- **Deliverable**: Updated `WorklistPage.tsx`
+
+**T-WF-4.4** [P0] Update WorklistTable Click Behavior (2h)
+- Remove DetailDrawer trigger on row click
+- Add `onClick` handler to open ArticleReviewModal
+- Highlight selected row
+- **Deliverable**: Updated `WorklistTable.tsx`
+
+**T-WF-4.5** [P0] Remove Old DetailDrawer Navigation Buttons (2h)
+- Remove "审核解析" and "审核校对" buttons from DetailDrawer
+- Keep basic info display only in Drawer (if Drawer is retained)
+- **Deliverable**: Simplified DetailDrawer (or removal)
+
+**T-WF-4.6** [P0] Implement Modal Data Caching (6h)
+- React Query cache management
+- Pre-fetch data on Modal open
+- Invalidate cache on Modal close (if changes saved)
+- Optimistic updates on save actions
+- **Deliverable**: Cache strategy implementation
+
+**T-WF-4.7** [P0] Handle Modal Close and State Cleanup (4h)
+- Unsaved changes warning on close
+- Clear selected item state on close
+- Reset Modal internal state
+- Return to Worklist with updated data
+- **Deliverable**: Close handlers + state cleanup
+
+**T-WF-4.8** [P1] End-to-End Integration Test (12h)
+- Test full workflow: Worklist → Open Modal → Tab 1 → Tab 2 → Tab 3 → Publish → Close
+- Verify data persistence across tabs
+- Verify status updates reflected in Worklist
+- Verify no page jumps occur
+- **Deliverable**: E2E test suite (`e2e/article-review-modal.spec.ts`)
+
+**Phase 8.4 Success Criteria**:
+- [ ] PublishPreviewPanel displays final article correctly
+- [ ] Worklist row click opens ArticleReviewModal
+- [ ] No page jumps during entire workflow
+- [ ] Modal data caching working
+- [ ] E2E test covering full workflow passing
+
+---
+
+#### Week 29: Phase 8.5 - Testing and Optimization (1 week, 46h)
+
+**Goal**: Performance tuning, user testing, bug fixes, and documentation
+
+**T-WF-5.1** [P0] Performance Optimization (6h)
+- Optimize React Query cache configuration (`staleTime`, `cacheTime`)
+- Implement virtual scrolling for long issue lists (if needed)
+- Lazy load tab content (defer loading until tab active)
+- Measure Modal load time: target <1 second
+- **Deliverable**: Performance benchmark results
+
+**T-WF-5.2** [P1] Optimize Modal Scrolling Experience (4h)
+- Smooth scrolling in tab content areas
+- Fixed header and footer during scroll
+- Scroll to top on tab change
+- **Deliverable**: Improved scroll UX
+
+**T-WF-5.3** [P1] Add Loading States and Skeleton Screens (6h)
+- Skeleton screens for data loading
+- Loading spinners for save/publish actions
+- Progress indicators for async operations
+- **Deliverable**: Skeleton components + loading states
+
+**T-WF-5.4** [P1] Optimize Error Handling and User Feedback (6h)
+- Toast notifications for success/error (using existing toast system)
+- Inline error messages for validation failures
+- Global error panel for critical errors (network failures)
+- User-friendly error messages
+- **Deliverable**: Enhanced error handling
+
+**T-WF-5.5** [P0] User Testing and Feedback Collection (8h)
+- Conduct user testing with 5-10 internal users
+- Collect feedback on usability, clarity, and performance
+- Measure: clicks per article, time to complete, satisfaction (CSAT)
+- Identify pain points and edge cases
+- **Deliverable**: User testing report + feedback summary
+
+**T-WF-5.6** [P0] Bug Fixes and UX Refinements (12h)
+- Address bugs identified in user testing
+- UI polish: spacing, alignment, colors, icons
+- Accessibility improvements (keyboard navigation, ARIA labels)
+- Cross-browser testing (Chrome, Firefox, Safari, Edge)
+- **Deliverable**: Bug fix log + refined UI
+
+**T-WF-5.7** [P2] Write User Documentation (4h)
+- User guide: How to use ArticleReviewModal
+- Keyboard shortcuts reference card
+- FAQ: Common questions and troubleshooting
+- Video walkthrough (optional)
+- **Deliverable**: User documentation (Markdown or Notion)
+
+**Phase 8.5 Success Criteria**:
+- [ ] Modal loads in <1 second (95th percentile)
+- [ ] Tab switching completes in <200ms
+- [ ] User satisfaction (CSAT) ≥ 4.0/5.0
+- [ ] All P0 and P1 bugs fixed
+- [ ] Documentation complete
+- [ ] Cross-browser compatibility verified
+
+---
+
+### 8.4 Success Metrics
+
+| Metric | Baseline (Phase 7) | Target (Phase 8) | Measurement Method |
+|--------|-------------------|------------------|-------------------|
+| **Page Jumps per Article** | 5 | 0 | Frontend analytics: navigation event tracking |
+| **Clicks per Article** | 30-33 | 15-18 | Click event tracking in ArticleReviewModal |
+| **Task Completion Time** | 238s | 208s | Timer from Modal open to publish success |
+| **User Satisfaction (CSAT)** | Not measured | ≥ 4.0/5.0 | Post-deployment user survey (5-point scale) |
+| **Error Rate** | Not measured | < 5% | Failed operations / total operations in Modal |
+| **Modal Load Time** | N/A | < 1s | Performance API: `DOMContentLoaded` to first render |
+| **Tab Switch Time** | N/A | < 200ms | React Query cache hit latency |
+
+### 8.5 Risk Assessment
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| **Modal performance issues** (too much content) | Medium | Medium | Use virtual scrolling for issue lists; lazy-load tab content; implement pagination for images |
+| **Data sync issues** (inconsistency across tabs) | Low | High | Use React Query as single source of truth; add validation on tab switch; comprehensive unit tests |
+| **User adaptation difficulty** | Medium | Medium | Provide onboarding tutorial; add tooltips; show keyboard shortcuts help modal; maintain old workflow as fallback (1 month) |
+| **Integration bugs** with existing code | Medium | Medium | Comprehensive integration tests; gradual rollout with feature flag; code review by 2+ engineers |
+| **React Query cache staleness** | Low | Medium | Configure appropriate `staleTime` and `refetchInterval`; manual refetch option; monitor cache behavior |
+
+### 8.6 Rollout Strategy
+
+**Phase A: Internal Testing (Week 1 after completion)**
+- Deploy to staging environment
+- Internal team testing (5-10 users)
+- Collect feedback on usability and bugs
+- **Gate**: Zero P0 bugs before proceeding
+
+**Phase B: Limited Beta (Week 2-3)**
+- Feature flag: `enable_article_review_modal=true` (default: `false`)
+- Invite 20% of active users to beta
+- Monitor error rates, performance metrics, user feedback
+- **Gate**: Error rate <5%, CSAT ≥3.5/5.0 before proceeding
+
+**Phase C: Full Rollout (Week 4)**
+- Enable feature flag for 100% of users
+- Monitor CSAT, error rates, and performance daily
+- Hotfix any critical issues within 24 hours
+- **Gate**: Maintain error rate <5%, CSAT ≥4.0/5.0 for 1 week
+
+**Phase D: Deprecation of Old Workflow (Week 5-8)**
+- Announce deprecation of old workflow (ArticleParsingPage, ProofreadingReviewPage)
+- Maintain old pages as read-only for 2 weeks
+- Remove old pages entirely after 1 month
+- Update all documentation and tutorials
+
+**Rollback Plan**:
+- Feature flag can be toggled off instantly (zero deployment time)
+- Old workflow pages remain functional for 1 month (fallback available)
+- Database schema unchanged (no migration required, safe to rollback)
+- Monitor error logs for 48 hours after each rollout phase
+
+### 8.7 Non-Functional Requirements (Phase 8 Specific)
+
+- **NFR-033**: ArticleReviewModal MUST load in <1 second (95th percentile)
+- **NFR-034**: Tab switching MUST complete in <200ms (no network requests triggered)
+- **NFR-035**: Modal MUST support 10+ images per article without performance degradation
+- **NFR-036**: Keyboard shortcuts MUST work on all major browsers (Chrome, Firefox, Safari, Edge)
+- **NFR-037**: Modal MUST be responsive on screens ≥1280px width (tablet/desktop only; mobile out of scope)
+- **NFR-038**: Unsaved changes warning MUST appear 100% of the time when closing with edits
+- **NFR-039**: React Query cache MUST be invalidated after successful publish
+- **NFR-040**: Modal MUST support i18n (zh-TW, en-US) using existing translation framework
+
+### 8.8 Dependencies
+
+**Prerequisites**:
+- Phase 7 (Article Structured Parsing) completed
+- Worklist UI operational
+- Existing ProofreadingReviewPage and ArticleParsingPage functional
+
+**Backend APIs Required** (already exist):
+- `GET /v1/worklist/:id` (returns worklist details + parsing data)
+- `GET /v1/articles/:id/parsing` (returns parsing results)
+- `POST /v1/articles/:id/parsing/confirm` (confirms parsing)
+- `GET /v1/articles/:id/optimizations` (returns AI optimization suggestions)
+- `POST /v1/worklist/:id/decisions` (submits proofreading decisions)
+- `POST /v1/worklist/:id/publish` (triggers publishing)
+
+**Blockers**:
+- None (all dependencies are existing features)
+
+---
+
 ## 9. Risk Management
 
-### 7.1 Risk Register
+### 9.1 Risk Register
 
 | Risk ID | Risk | Likelihood | Impact | Mitigation | Owner |
 |---------|------|-----------|--------|------------|-------|
@@ -1728,54 +2234,78 @@ This phase adds intelligent document parsing to separate mixed content into clea
 
 ---
 
-## 9. Timeline & Milestones
+## 10. Timeline & Milestones
 
-### 9.1 Gantt Chart
+### 10.1 Gantt Chart
 
 ```
 Week 1-2: Phase 1 - Database & Import
 ├─ Week 1: Schema design, migrations, models
 └─ Week 2: Import service, API endpoints, tests
-   MILESTONE 1: Article import working ✓
+   MILESTONE 1: Article import working ✅
 
 Week 3-3.5: Phase 2 - SEO Analysis
 ├─ Week 3: Keyword extraction, SEO analyzer, API
 └─ Week 3.5: Testing, validation, optimization
-   MILESTONE 2: SEO analysis working ✓
+   MILESTONE 2: SEO analysis working ✅
 
 Week 4-6: Phase 3 - Computer Use Framework
 ├─ Week 4: Provider interface, Anthropic provider
 ├─ Week 5: Playwright provider, Factory, CMS publisher
 └─ Week 6: Testing, fallback logic, Celery tasks
-   MILESTONE 3: Multi-provider publishing working ✓
+   MILESTONE 3: Multi-provider publishing working ✅
 
 Week 7-8: Phase 4 - Frontend
 ├─ Week 7: Import UI, SEO UI, Article pages
 └─ Week 8: Publish UI, Monitoring, Dashboard
-   MILESTONE 4: End-to-end UI complete ✓
+   MILESTONE 4: End-to-end UI complete (Partial ⚠️)
 
 Week 9-10: Phase 5 - Testing & Deployment
 ├─ Week 9: Unit/Integration/E2E tests, Security
 └─ Week 10: Performance optimization, Production deployment
-   MILESTONE 5: Production launch ✓
+   MILESTONE 5: Production launch (Partial ⚠️)
+
+Week 11-15: Phase 6 - Google Drive Automation & Worklist
+├─ Week 11-12: Google Drive integration
+├─ Week 13-14: Worklist UI
+└─ Week 15: Integration & testing
+   MILESTONE 6: Automated ingestion working ✅
+
+Week 16-21: Phase 7 - Article Structured Parsing
+├─ Week 16: Database schema & migrations
+├─ Week 17-18: Backend parsing engine
+├─ Week 19: API & integration
+└─ Week 20-21: Frontend Step 1 UI
+   MILESTONE 7: Parsing confirmation working ✅
+
+Week 22-29: Phase 8 - Workflow Simplification 🆕
+├─ Week 22-23: Modal framework and data layer
+├─ Week 24-25: Parsing review panel migration
+├─ Week 26-27: Proofreading review panel migration
+├─ Week 28: Publish preview and Worklist integration
+└─ Week 29: Testing and optimization
+   MILESTONE 8: Zero-jump workflow complete 📋 Planned
 ```
 
-### 9.2 Key Milestones
+### 10.2 Key Milestones
 
-| Milestone | Date | Deliverables | Dependencies |
-|-----------|------|--------------|--------------|
-| M0: Project Kickoff | Week 0 | Project plan approved, team onboarded | None |
-| M1: Article Import Complete | End of Week 2 | 100 articles imported via CSV, DB schema ready | Database access |
-| M2: SEO Analysis Complete | End of Week 3.5 | SEO metadata generated with 85%+ accuracy | M1 |
-| M3: Computer Use Working | End of Week 6 | Article published to test WordPress with screenshots | M2 |
-| M4: Frontend Complete | End of Week 8 | All UI pages functional, real-time updates | M3 |
-| M5: Production Launch | End of Week 10 | System live in production, monitoring active | M4 |
+| Milestone | Date | Deliverables | Status | Dependencies |
+|-----------|------|--------------|--------|--------------|
+| M0: Project Kickoff | Week 0 | Project plan approved, team onboarded | ✅ Complete | None |
+| M1: Article Import Complete | End of Week 2 | 100 articles imported via CSV, DB schema ready | ✅ Complete | Database access |
+| M2: SEO Analysis Complete | End of Week 3.5 | SEO metadata generated with 85%+ accuracy | ✅ Complete | M1 |
+| M3: Computer Use Working | End of Week 6 | Article published to test WordPress with screenshots | ✅ Complete | M2 |
+| M4: Frontend Complete | End of Week 8 | All UI pages functional, real-time updates | 🟡 Partial | M3 |
+| M5: Production Launch | End of Week 10 | System live in production, monitoring active | 🟡 Partial | M4 |
+| M6: Google Drive Automation | End of Week 15 | Automated document ingestion and worklist UI | ✅ Complete | M5 |
+| M7: Article Parsing | End of Week 21 | Structured parsing with Step 1 confirmation UI | ✅ Complete | M6 |
+| M8: Workflow Simplification 🆕 | End of Week 29 | Zero page jumps, 50% fewer clicks, ArticleReviewModal | 📋 Planned | M7 |
 
 ---
 
-## 10. Team & Responsibilities
+## 11. Team & Responsibilities
 
-### 10.1 Core Team
+### 11.1 Core Team
 
 | Role | Name | Responsibilities | Allocation |
 |------|------|-----------------|-----------|
@@ -1787,7 +2317,7 @@ Week 9-10: Phase 5 - Testing & Deployment
 | **QA Engineer** | TBD | Test strategy, E2E tests, security testing | 100% |
 | **Security Lead** | TBD | Security reviews, vulnerability management | 25% |
 
-### 10.2 RACI Matrix
+### 11.2 RACI Matrix
 
 | Task | PM | Backend Lead | Backend Eng | Frontend Lead | DevOps | QA | Security |
 |------|----|--------------| ------------|---------------|--------|----| ---------|
@@ -1805,16 +2335,16 @@ Week 9-10: Phase 5 - Testing & Deployment
 
 ---
 
-## 11. Communication Plan
+## 12. Communication Plan
 
-### 11.1 Meetings
+### 12.1 Meetings
 
 - **Daily Standup** (15 min, 9:00 AM): Yesterday's progress, today's plan, blockers
 - **Weekly Planning** (1 hour, Monday): Review tasks, assign work for the week
 - **Sprint Demo** (1 hour, Friday): Demonstrate completed features to stakeholders
 - **Retrospective** (1 hour, bi-weekly): What went well, what to improve
 
-### 11.2 Communication Channels
+### 12.2 Communication Channels
 
 - **Slack**:
   - `#cms-automation` - General discussion
@@ -1833,9 +2363,9 @@ Week 9-10: Phase 5 - Testing & Deployment
 
 ---
 
-## 12. Appendix
+## 13. Appendix
 
-### 12.1 Technology Stack Summary
+### 13.1 Technology Stack Summary
 
 **Backend**:
 - Python 3.13+
@@ -1864,7 +2394,7 @@ Week 9-10: Phase 5 - Testing & Deployment
 - Prometheus + Grafana (monitoring)
 - Sentry (error tracking)
 
-### 12.2 Estimated Costs
+### 13.2 Estimated Costs
 
 **Development Phase** (10 weeks):
 - Team salaries: 6 people × 10 weeks × average rate
@@ -1894,7 +2424,7 @@ Week 9-10: Phase 5 - Testing & Deployment
 - Compress screenshots to reduce S3 storage costs
 - **Expected ROI**: 67-80% cost reduction vs pure Anthropic approach
 
-### 12.3 References
+### 13.3 References
 
 - **Anthropic Computer Use Docs**: https://docs.anthropic.com/claude/docs/computer-use
 - **Gemini AI Docs**: https://ai.google.dev/docs
@@ -1908,9 +2438,11 @@ Week 9-10: Phase 5 - Testing & Deployment
 
 **Document Owner**: Engineering Team
 **Approvers**: CTO, Product Lead, Security Lead
-**Next Review**: After Phase 1 completion (Week 2)
+**Next Review**: After Phase 8 completion (Week 29)
 **Version History**:
 - v1.0 (2025-10-25): Initial AI generation architecture
 - v2.0 (2025-10-25): Fusion architecture (AI + Import + SEO)
 - v3.0 (2025-10-26): Multi-provider refactor
-- v4.0 (2025-10-27): **Google Drive automation & Worklist** (current)
+- v4.0 (2025-10-27): Google Drive automation & Worklist
+- v4.5 (2025-11-08): Article Structured Parsing (Phase 7)
+- v5.0 (2025-11-10): **Workflow Simplification (Phase 8)** (current)

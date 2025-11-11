@@ -5751,11 +5751,253 @@ Step 4: Publishing → WordPress
 
 ---
 
-## Phase 8: Proofreading Feedback & Tuning Loop (2 weeks) ⭐新增
+## Phase 7.5: Worklist UI Enhancement (Phase 1) ⭐新增
 
-**Goal**: Capture用户决策、收集反馈、沉淀反馈数据用于脚本/Prompt 调优、支撑模型/脚本持续迭代  
-**Duration**: 2 weeks (Week 16-17)  
-**Estimated Hours**: 58 hours  
+**Goal**: Improve Worklist UI usability by adding action buttons directly in the table, quick filter buttons, and enhanced status badges with icons
+**Duration**: 1-2 days (7-13 hours development + 3-5 hours testing)
+**Estimated Hours**: 16 hours total
+**Status**: Not Started ⏳
+**Dependencies**: Phase 6 (Worklist UI exists), Phase 7 (9-state workflow defined)
+**Reference**: See `docs/ui-improvements/phase1-worklist-ui-enhancement.md`, `docs/ui-improvements/README.md`
+
+**Key Deliverables**:
+- ✅ Action buttons in WorklistTable operations column
+- ✅ Quick filter buttons (4 filters: needs attention, in progress, completed, failed)
+- ✅ Enhanced status badges with icons (Clock, Loader, ClipboardCheck, Check, X)
+- ✅ Internationalization (zh-TW and en-US)
+- ✅ Responsive design (desktop, tablet, mobile)
+- ✅ 100% test coverage for new components
+
+**Expected Impact**:
+- **Operation Efficiency**: 60-80% improvement (3-4 steps → 1 step)
+- **Filtering Speed**: 80% faster (10s → 2s)
+- **User Onboarding**: 50% reduction in learning time
+
+---
+
+### Week 1: Development (7-13 hours)
+
+#### T7.5.1 [P0] Implement Action Buttons in WorklistTable
+
+**Description**: Modify WorklistTable component to display action buttons (View, Approve, Reject, Publish, Retry) directly in the Operations column, replacing the current click-to-detail workflow.
+
+**Dependencies**: None
+
+**Estimated Hours**: 3 hours
+
+**Deliverables**:
+- Updated `WorklistTable.tsx` with Operations column
+- Button component variants: Ghost (View), Primary (Approve/Publish), Secondary (Reject), Success (Publish)
+- Button visibility logic based on status:
+  - parsing_review: View, Approve, Reject
+  - proofreading_review: View, Approve, Reject
+  - ready_to_publish: View, Publish
+  - published: View, Open URL
+  - failed: View, Retry
+- Click handlers for all button actions
+- Loading states during operations
+
+**Acceptance Criteria**:
+- [ ] Operations column displays buttons instead of requiring row click
+- [ ] Button variants match design system (Section 2.1 of UI_DESIGN_SPECIFICATIONS.md)
+- [ ] All buttons have proper icons (Eye, Check, X, Send, ExternalLink, RotateCcw)
+- [ ] Button visibility matches status-specific logic
+- [ ] Loading states show spinner and disable other buttons
+- [ ] Buttons are keyboard accessible (Tab navigation, Enter/Space to activate)
+- [ ] Mobile responsive (buttons stack vertically on <768px)
+
+**File Paths**:
+- `frontend/src/components/Worklist/WorklistTable.tsx` (modified)
+- `frontend/src/components/Worklist/WorklistTable.test.tsx` (modified)
+
+---
+
+#### T7.5.2 [P0] Implement Quick Filter Buttons
+
+**Description**: Add 4 quick filter buttons above the worklist table for instant access to common views: needs attention, in progress, completed, failed.
+
+**Dependencies**: None
+
+**Estimated Hours**: 4 hours
+
+**Deliverables**:
+- New `QuickFilters.tsx` component
+- Filter button component with icon, label, and count badge
+- Filter state management (active filter, counts)
+- URL synchronization (/worklist?filter=needs_attention)
+- Filter logic mapping:
+  - needs_attention: parsing_review, proofreading_review, ready_to_publish
+  - in_progress: parsing, proofreading, publishing
+  - completed: published
+  - failed: failed
+- Animation for filter activation (200ms ease-out)
+
+**Acceptance Criteria**:
+- [ ] 4 filter buttons display above table with correct icons (Bell, Loader, Check, AlertTriangle)
+- [ ] Each button shows real-time count of matching items
+- [ ] Active filter has Primary-100 background and Primary-700 text
+- [ ] Clicking filter updates table instantly (client-side if ≤100 items)
+- [ ] URL updates with filter parameter
+- [ ] Filter state persists across page reloads
+- [ ] "Clear filters" functionality returns to "All" view
+- [ ] Keyboard navigation works (Tab, Arrow keys, Enter/Space)
+- [ ] Mobile: horizontal scroll with overflow-x-auto
+
+**File Paths**:
+- `frontend/src/components/Worklist/QuickFilters.tsx` (new)
+- `frontend/src/components/Worklist/QuickFilters.test.tsx` (new)
+- `frontend/src/pages/WorklistPage.tsx` (modified)
+
+---
+
+#### T7.5.3 [P0] Optimize Status Badges with Icons
+
+**Description**: Enhance WorklistStatusBadge component to display icons alongside text, with pulse animation for in-progress states, following the 9-state workflow design.
+
+**Dependencies**: None
+
+**Estimated Hours**: 3 hours
+
+**Deliverables**:
+- Updated `WorklistStatusBadge.tsx` with icon support
+- STATUS_CONFIG object defining all 9 states:
+  - Icon component (Clock, Loader, ClipboardCheck, Check, X from lucide-react)
+  - Colors (text and background)
+  - Pulse animation flag
+  - i18n label key
+- Pulse CSS animation for parsing, proofreading, publishing states
+- Tooltip showing full status description on hover
+- Mobile optimization (icon only with tooltip on <768px)
+
+**Acceptance Criteria**:
+- [ ] All 9 statuses display with correct icon and color
+- [ ] In-progress states (parsing, proofreading, publishing) have pulse animation
+- [ ] Colors match semantic meaning (Gray=pending, Blue=in-progress, Orange=review, Green=success, Red=error)
+- [ ] Hover tooltip shows full status text and description
+- [ ] Icons have proper aria-hidden="true" (decorative)
+- [ ] Status text uses i18n keys (worklist.status.*)
+- [ ] Mobile shows icon only with tooltip
+- [ ] WCAG 2.1 AA contrast ratios maintained (4.5:1 minimum)
+
+**File Paths**:
+- `frontend/src/components/Worklist/WorklistStatusBadge.tsx` (modified)
+- `frontend/src/components/Worklist/WorklistStatusBadge.test.tsx` (modified)
+- `frontend/src/styles/animations.css` (new or modified)
+
+---
+
+#### T7.5.4 [P0] Add Internationalization Texts
+
+**Description**: Add all required translation keys for quick filters, status labels, and action buttons to zh-TW.json and en-US.json i18n files.
+
+**Dependencies**: T7.5.1, T7.5.2, T7.5.3
+
+**Estimated Hours**: 1 hour
+
+**Deliverables**:
+- Updated `zh-TW.json` with 15+ new translation keys
+- Updated `en-US.json` with 15+ new translation keys
+- Translation keys for:
+  - quickFilters object (4 filters: needs_attention, in_progress, completed, failed)
+  - table.actions object (5 actions: view, approve, reject, publish, retry, open_url)
+  - status descriptions (9 states with hover tooltips)
+- Translation validation (no missing keys, proper formatting)
+
+**Acceptance Criteria**:
+- [ ] All quick filter labels translated (needs_attention, in_progress, completed, failed)
+- [ ] All action button labels translated (view, approve, reject, publish, retry)
+- [ ] All status labels translated (pending, parsing, parsing_review, etc.)
+- [ ] Status hover tooltips translated with descriptions
+- [ ] Translations reviewed by native speakers (or approved by product)
+- [ ] No hardcoded strings remain in components
+- [ ] Language switching works correctly in dev environment
+
+**File Paths**:
+- `frontend/src/i18n/locales/zh-TW.json` (modified)
+- `frontend/src/i18n/locales/en-US.json` (modified)
+
+---
+
+#### T7.5.5 [P0] Responsive Design & Accessibility
+
+**Description**: Ensure all Phase 1 UI enhancements work seamlessly across desktop, tablet, and mobile devices, and meet WCAG 2.1 AA accessibility standards.
+
+**Dependencies**: T7.5.1, T7.5.2, T7.5.3
+
+**Estimated Hours**: 2 hours
+
+**Deliverables**:
+- Responsive breakpoint testing:
+  - Desktop (≥1024px): Full layout with all columns
+  - Tablet (768-1023px): Hide "Updated" column, compact operations
+  - Mobile (<768px): Card-based layout with stacked buttons
+- Accessibility improvements:
+  - All buttons have aria-labels
+  - Status badges use aria-live="polite" for updates
+  - Keyboard navigation fully functional
+  - Screen reader compatibility verified
+  - Focus indicators visible (2px Primary-500 outline)
+- Cross-browser testing (Chrome, Firefox, Safari, Edge)
+
+**Acceptance Criteria**:
+- [ ] Desktop layout shows all 5 table columns
+- [ ] Tablet layout hides "Updated" column, buttons remain visible
+- [ ] Mobile shows card-based layout with vertically stacked buttons
+- [ ] Quick filters scroll horizontally on mobile with overflow-x-auto
+- [ ] All interactive elements keyboard accessible (Tab, Enter, Space)
+- [ ] Screen reader announces status changes and filter activations
+- [ ] Focus indicators meet WCAG visibility requirements
+- [ ] Tested on Chrome, Firefox, Safari, Edge (latest versions)
+- [ ] No visual regressions on any breakpoint
+
+**File Paths**:
+- `frontend/src/components/Worklist/WorklistTable.tsx` (responsive styles)
+- `frontend/src/components/Worklist/QuickFilters.tsx` (mobile scroll)
+- `frontend/src/pages/WorklistPage.tsx` (responsive layout)
+
+---
+
+### Week 2: Testing & Deployment (3-5 hours)
+
+**Testing Tasks** (covered in detail in `docs/ui-improvements/phase1-testing-guide.md`):
+
+1. **Functional Testing** (1-2 hours): Test all 20 test cases
+2. **Visual Testing** (30-60 min): Verify design system compliance
+3. **Responsive Testing** (30 min): Test all breakpoints
+4. **Accessibility Testing** (30 min): WCAG 2.1 AA compliance
+5. **Performance Testing** (30 min): Verify no regressions
+
+**Deployment Tasks** (30-60 min):
+1. Code review and approval
+2. Build production bundle
+3. Deploy to staging environment
+4. Smoke test on staging
+5. Deploy to production
+6. Post-deployment monitoring
+
+---
+
+**Phase 7.5 Summary**:
+- **Duration**: 1-2 days
+- **Estimated Hours**: 16 hours (11h dev + 5h testing)
+- **User Impact**: 60-80% efficiency improvement
+- **Key Deliverables**:
+  - ✅ Action buttons (3 button types, 5 operations)
+  - ✅ Quick filters (4 filters, real-time counts)
+  - ✅ Enhanced status badges (9 states, icons, pulse animation)
+  - ✅ Full i18n support (zh-TW, en-US)
+  - ✅ Responsive design (3 breakpoints)
+  - ✅ WCAG 2.1 AA compliant
+
+**Phase 7.5 Checkpoint**: ✅ Worklist UI enhanced with direct action buttons, quick filters operational, status badges optimized with icons, full internationalization, responsive across all devices, accessibility compliant, ready for user testing
+
+---
+
+## Phase 7.6: Proofreading Feedback & Tuning Loop (2 weeks) ⭐新增
+
+**Goal**: Capture用户决策、收集反馈、沉淀反馈数据用于脚本/Prompt 调优、支撑模型/脚本持续迭代
+**Duration**: 2 weeks (Week 16-17)
+**Estimated Hours**: 58 hours
 **Status**: Not Started
 
 ---
@@ -5904,7 +6146,1021 @@ Step 4: Publishing → WordPress
 
 ---
 
-## Phase 8: Future Work & Post-MVP Enhancements (Planned)
+## Phase 8: Workflow Simplification (8 weeks) 🆕
+
+**Added**: 2025-11-10
+**Status**: 📋 Design Complete, Implementation Pending
+**Goal**: Eliminate all page jumps and consolidate review workflow into a single ArticleReviewModal
+**Reference**: [Simplified Workflow Design](/tmp/simplified-workflow-design.md), [spec.md Phase 8](/home/kingofalbert/projects/CMS/specs/001-cms-automation/spec.md#phase-8-workflow-simplification-p0-priority-)
+**Duration**: Week 22-29 (8 weeks, 260 hours)
+**Priority**: P0 (Critical - User Experience Blocker)
+
+### Overview
+
+This phase transforms the current fragmented multi-page workflow into a unified, zero-jump experience within ArticleReviewModal.
+
+**Key Metrics**:
+- Page Jumps: 5 → 0 (100% reduction)
+- Clicks per Article: 30-33 → 15-18 (50% reduction)
+- Task Completion Time: 238s → 208s (13% faster, 30s saved)
+- User Satisfaction Target: ≥ 4.0/5.0 CSAT
+
+**Architecture**:
+```
+ArticleReviewModal (Full-Screen)
+├── Header (Title + Progress Stepper)
+├── Tabs (Parsing | Proofreading | Publish)
+├── Tab Content (Scrollable Panels)
+└── Footer (Action Buttons)
+```
+
+---
+
+### Phase 8.1: Modal Framework and Data Layer (Week 22-23, 48 hours)
+
+**Goal**: Build ArticleReviewModal foundation with data hooks and keyboard shortcuts
+
+#### T8.1.1: Create ArticleReviewModal Component
+
+- **Description**: Create the main modal container component with tab navigation
+- **File**: `frontend/src/components/ArticleReview/ArticleReviewModal.tsx`
+- **Acceptance Criteria**:
+  - [ ] Modal opens/closes with animation
+  - [ ] Full-screen layout with responsive design
+  - [ ] Tab navigation between Parsing, Proofreading, Publish
+  - [ ] Auto-selects tab based on article status (parsing_review → Tab 1, proofreading_review → Tab 2, ready_to_publish → Tab 3)
+  - [ ] Keyboard shortcut Esc to close (with unsaved changes warning)
+  - [ ] Props interface: `isOpen`, `onClose`, `worklistId`, `articleId`, `initialTab`
+- **Estimate**: 8 hours
+- **Priority**: P0
+- **Dependencies**: None
+- **Testing**: Unit tests for tab switching logic and auto-selection
+
+**Deliverable**: `ArticleReviewModal.tsx` + PropTypes definition
+
+---
+
+#### T8.1.2: Implement useArticleReviewData Hook
+
+- **Description**: Create custom hook to aggregate all review data from React Query
+- **File**: `frontend/src/components/ArticleReview/hooks/useArticleReviewData.ts`
+- **Acceptance Criteria**:
+  - [ ] Fetches `worklistData` (worklist details)
+  - [ ] Fetches `parsingData` (article parsing results)
+  - [ ] Fetches `proofreadingData` (proofreading issues)
+  - [ ] Fetches `optimizationsData` (AI SEO suggestions)
+  - [ ] Implements data prefetching strategy (on Modal open)
+  - [ ] Returns loading/error states for all queries
+  - [ ] Caches data in React Query with appropriate `staleTime` and `cacheTime`
+  - [ ] Exposes `refetch()` function for manual refresh
+- **Estimate**: 12 hours
+- **Priority**: P0
+- **Dependencies**: T8.1.1
+- **Testing**: Unit tests for data fetching and caching behavior
+
+**Deliverable**: `useArticleReviewData.ts` + unit tests
+
+---
+
+#### T8.1.3: Implement useReviewWorkflow Hook
+
+- **Description**: Create workflow state management hook for tab navigation and status transitions
+- **File**: `frontend/src/components/ArticleReview/hooks/useReviewWorkflow.ts`
+- **Acceptance Criteria**:
+  - [ ] Tracks `currentTab`, `currentStep` (1-3), `canProceed` states
+  - [ ] Implements `goToNextStep()`, `goToPreviousStep()` navigation
+  - [ ] Implements `saveChanges()` mutation for draft saving
+  - [ ] Implements `publishArticle()` mutation for final publish
+  - [ ] Auto-determines initial tab based on worklist status
+  - [ ] Handles unsaved changes warning on tab switch
+  - [ ] Returns `isSaving`, `isPublishing` loading states
+- **Estimate**: 12 hours
+- **Priority**: P0
+- **Dependencies**: T8.1.2
+- **Testing**: Unit tests for workflow state transitions and save/publish mutations
+
+**Deliverable**: `useReviewWorkflow.ts` + unit tests
+
+---
+
+#### T8.1.4: Implement ReviewProgressStepper Component
+
+- **Description**: Create visual progress indicator showing 3 steps (Parsing → Proofreading → Publish)
+- **File**: `frontend/src/components/ArticleReview/ReviewProgressStepper.tsx`
+- **Acceptance Criteria**:
+  - [ ] Shows 3 steps with labels: "解析审核", "校对审核", "发布"
+  - [ ] Highlights current step with primary color
+  - [ ] Shows completed steps with checkmark icon and green color
+  - [ ] Shows pending steps with gray color
+  - [ ] Connector lines between steps (green for completed, gray for pending)
+  - [ ] Responsive on mobile (icon only, hide labels)
+- **Estimate**: 6 hours
+- **Priority**: P1
+- **Dependencies**: None
+- **Testing**: Visual regression tests, responsive layout tests
+
+**Deliverable**: `ReviewProgressStepper.tsx` + Storybook story
+
+---
+
+#### T8.1.5: Build useKeyboardShortcuts Hook
+
+- **Description**: Implement keyboard shortcuts for power user efficiency
+- **File**: `frontend/src/components/ArticleReview/hooks/useKeyboardShortcuts.ts`
+- **Acceptance Criteria**:
+  - [ ] Global shortcuts: `Ctrl/Cmd+S` (save), `Ctrl/Cmd+Enter` (next/publish), `Esc` (close)
+  - [ ] Tab navigation: `Ctrl/Cmd+←` (previous tab), `Ctrl/Cmd+→` (next tab)
+  - [ ] Proofreading shortcuts: `A` (accept issue), `R` (reject issue), `↑/↓` (navigate issues)
+  - [ ] Help modal: `?` shows keyboard shortcuts reference
+  - [ ] Context-aware (different shortcuts per tab)
+  - [ ] Cross-browser compatibility (Chrome, Firefox, Safari, Edge)
+- **Estimate**: 6 hours
+- **Priority**: P1
+- **Dependencies**: T8.1.3
+- **Testing**: E2E tests for keyboard shortcuts, cross-browser compatibility tests
+
+**Deliverable**: `useKeyboardShortcuts.ts` + keyboard help modal component
+
+---
+
+#### T8.1.6: Unit Tests for Phase 8.1 Hooks
+
+- **Description**: Comprehensive unit tests for all custom hooks
+- **Files**: `frontend/src/components/ArticleReview/hooks/__tests__/`
+- **Acceptance Criteria**:
+  - [ ] Test `useArticleReviewData` with mock React Query client
+  - [ ] Test `useReviewWorkflow` state transitions and mutations
+  - [ ] Test `useKeyboardShortcuts` event handlers
+  - [ ] Test error scenarios (network failures, API errors)
+  - [ ] Coverage target: ≥85%
+- **Estimate**: 10 hours
+- **Priority**: P1
+- **Dependencies**: T8.1.2, T8.1.3, T8.1.5
+- **Testing**: Jest + React Testing Library
+
+**Deliverable**: Complete test suite for hooks with ≥85% coverage
+
+---
+
+**Phase 8.1 Success Criteria**:
+- [ ] Modal opens and closes correctly with animation
+- [ ] Tab switching works without data loss
+- [ ] Progress stepper updates on tab change
+- [ ] Keyboard shortcuts functional across all browsers
+- [ ] Data pre-loading working (React Query cache strategy)
+- [ ] All unit tests passing with ≥85% coverage
+
+**Phase 8.1 Total**: 48 hours
+
+---
+
+### Phase 8.2: Parsing Review Panel (Week 24-25, 66 hours)
+
+**Goal**: Migrate ArticleParsingPage functionality into ParsingReviewPanel with 2-column layout
+
+#### T8.2.1: Create ParsingReviewPanel Container
+
+- **Description**: Create the main container for Parsing Review tab with 2-column grid layout
+- **File**: `frontend/src/components/ArticleReview/panels/ParsingReviewPanel.tsx`
+- **Acceptance Criteria**:
+  - [ ] 2-column layout: Basic Info (60%) + SEO Optimization (40%)
+  - [ ] Integrates all child editor components
+  - [ ] Form state management with React Hook Form
+  - [ ] Validation on field blur and form submit
+  - [ ] Loading skeleton while data fetching
+- **Estimate**: 4 hours
+- **Priority**: P0
+- **Dependencies**: T8.1.1, T8.1.2
+- **Testing**: Integration tests for layout and data flow
+
+**Deliverable**: `ParsingReviewPanel.tsx` skeleton with layout
+
+---
+
+#### T8.2.2: Migrate TitleEditor Component
+
+- **Description**: Extract and enhance title editing functionality from ArticleParsingPage
+- **File**: `frontend/src/components/ArticleReview/components/TitleEditor.tsx`
+- **Acceptance Criteria**:
+  - [ ] Editable fields: `title_prefix`, `title_main`, `title_suffix`
+  - [ ] Character counters for each field
+  - [ ] Validation: `title_main` required (min 10 chars)
+  - [ ] Displays AI title optimization suggestions as radio buttons
+  - [ ] Apply suggestion on selection (updates `title_main` field)
+  - [ ] Visual feedback on selection
+- **Estimate**: 6 hours
+- **Priority**: P0
+- **Dependencies**: T8.2.1
+- **Testing**: Unit tests for field validation and suggestion application
+
+**Deliverable**: `TitleEditor.tsx` + integration in ParsingReviewPanel
+
+---
+
+#### T8.2.3: Migrate AuthorEditor Component
+
+- **Description**: Extract author editing functionality
+- **File**: `frontend/src/components/ArticleReview/components/AuthorEditor.tsx`
+- **Acceptance Criteria**:
+  - [ ] Display `author_line` (raw, read-only, gray text)
+  - [ ] Editable `author_name` field
+  - [ ] Validation: max 100 chars
+- **Estimate**: 4 hours
+- **Priority**: P0
+- **Dependencies**: T8.2.1
+- **Testing**: Unit tests for field validation
+
+**Deliverable**: `AuthorEditor.tsx` + integration
+
+---
+
+#### T8.2.4: Migrate ImageGalleryEditor Component
+
+- **Description**: Create comprehensive image management component
+- **File**: `frontend/src/components/ArticleReview/components/ImageGalleryEditor.tsx`
+- **Acceptance Criteria**:
+  - [ ] Grid of image previews (3 columns, responsive to 2 on tablet, 1 on mobile)
+  - [ ] For each image:
+    - [ ] Preview thumbnail with caption
+    - [ ] Source link ("原圖/點此下載" button)
+    - [ ] Specs table: width, height, aspect ratio, file size, MIME type, EXIF date
+    - [ ] Highlight out-of-range specs (width <800px or >3000px) in red
+  - [ ] Actions: Edit caption (inline), Replace source (URL input), Remove image (confirm dialog)
+  - [ ] Drag-to-reorder functionality (optional)
+- **Estimate**: 10 hours
+- **Priority**: P0
+- **Dependencies**: T8.2.1
+- **Testing**: Integration tests for image actions and spec validation
+
+**Deliverable**: `ImageGalleryEditor.tsx` + integration
+
+---
+
+#### T8.2.5: Migrate SEOEditor Component
+
+- **Description**: Create SEO metadata editing component
+- **File**: `frontend/src/components/ArticleReview/components/SEOEditor.tsx`
+- **Acceptance Criteria**:
+  - [ ] Editable `meta_description` field (textarea, 160 char limit)
+  - [ ] Character counter with color coding:
+    - Green: < 150 chars
+    - Yellow: 150-160 chars
+    - Red: > 160 chars
+  - [ ] Editable `seo_keywords[]` (tag input component)
+  - [ ] Editable `tags[]` (tag input component)
+  - [ ] Add/remove tags by clicking or pressing Enter
+  - [ ] Tag validation (no duplicates, max 20 tags)
+- **Estimate**: 12 hours
+- **Priority**: P0
+- **Dependencies**: T8.2.1
+- **Testing**: Unit tests for tag input and character counter logic
+
+**Deliverable**: `SEOEditor.tsx` + integration
+
+---
+
+#### T8.2.6: Migrate FAQEditor Component
+
+- **Description**: Create FAQ editing component
+- **File**: `frontend/src/components/ArticleReview/components/FAQEditor.tsx`
+- **Acceptance Criteria**:
+  - [ ] Display existing FAQ items (question + answer pairs)
+  - [ ] Add new FAQ entry (+ button)
+  - [ ] Edit FAQ question and answer (inline editing)
+  - [ ] Delete FAQ entry (confirm dialog)
+  - [ ] Drag-to-reorder FAQ items (optional, using react-beautiful-dnd)
+  - [ ] Validation: question and answer required (min 10 chars each)
+- **Estimate**: 8 hours
+- **Priority**: P0
+- **Dependencies**: T8.2.1
+- **Testing**: Integration tests for CRUD operations
+
+**Deliverable**: `FAQEditor.tsx` + integration
+
+---
+
+#### T8.2.7: Integrate Title Optimization Suggestions
+
+- **Description**: Fetch and display AI-generated title optimization suggestions
+- **File**: Integration in `TitleEditor.tsx`
+- **Acceptance Criteria**:
+  - [ ] Fetch optimization suggestions via `useArticleReviewData` hook (from `optimizationsData`)
+  - [ ] Display as radio button list with AI-generated alternatives
+  - [ ] Apply selected suggestion to `title_main` field
+  - [ ] Show loading state while fetching suggestions
+  - [ ] Handle error state (no suggestions available)
+- **Estimate**: 6 hours
+- **Priority**: P0
+- **Dependencies**: T8.2.2, T8.1.2
+- **Testing**: Integration tests for suggestion fetching and application
+
+**Deliverable**: Title optimization UI integrated in TitleEditor
+
+---
+
+#### T8.2.8: Adjust Layout to 2-Column Grid
+
+- **Description**: Implement responsive 2-column grid layout for ParsingReviewPanel
+- **File**: `ParsingReviewPanel.tsx` styling
+- **Acceptance Criteria**:
+  - [ ] CSS Grid: 60% (Basic Info) + 40% (SEO Optimization) on desktop (≥1280px)
+  - [ ] Responsive: Single column on tablet (<1280px)
+  - [ ] Scrollable content areas (max-height: calc(100vh - 280px))
+  - [ ] Proper spacing and alignment
+  - [ ] Visual separation between columns (border or background color)
+- **Estimate**: 4 hours
+- **Priority**: P1
+- **Dependencies**: T8.2.1, T8.2.2, T8.2.3, T8.2.4, T8.2.5, T8.2.6
+- **Testing**: Visual regression tests, responsive layout tests
+
+**Deliverable**: Responsive 2-column layout implementation
+
+---
+
+#### T8.2.9: Integration Tests for ParsingReviewPanel
+
+- **Description**: Comprehensive integration tests for parsing panel
+- **Files**: `__tests__/panels/ParsingReviewPanel.test.tsx`
+- **Acceptance Criteria**:
+  - [ ] Test data loading and display
+  - [ ] Test field editing and validation
+  - [ ] Test optimization suggestion application
+  - [ ] Test image actions (edit caption, remove)
+  - [ ] Test save functionality
+  - [ ] Test error scenarios
+  - [ ] Coverage target: ≥80%
+- **Estimate**: 12 hours
+- **Priority**: P1
+- **Dependencies**: T8.2.1 through T8.2.8
+- **Testing**: Jest + React Testing Library + React Query Testing
+
+**Deliverable**: Complete integration test suite for ParsingReviewPanel
+
+---
+
+**Phase 8.2 Success Criteria**:
+- [ ] ParsingReviewPanel displays all parsing data correctly
+- [ ] All fields editable with instant validation
+- [ ] Title optimization suggestions apply correctly
+- [ ] Image gallery displays specs and supports edit/remove
+- [ ] SEO editor supports tag input with validation
+- [ ] FAQ editor supports CRUD operations
+- [ ] Save button persists changes via API
+- [ ] 2-column layout responsive and visually correct
+- [ ] Integration tests passing with ≥80% coverage
+
+**Phase 8.2 Total**: 66 hours
+
+---
+
+### Phase 8.3: Proofreading Review Panel (Week 26-27, 52 hours)
+
+**Goal**: Migrate ProofreadingReviewPage into ProofreadingReviewPanel with optimized 30/70 layout
+
+#### T8.3.1: Create ProofreadingReviewPanel Container
+
+- **Description**: Create main container for Proofreading Review tab with 30/70 split layout
+- **File**: `frontend/src/components/ArticleReview/panels/ProofreadingReviewPanel.tsx`
+- **Acceptance Criteria**:
+  - [ ] 2-column layout: Issue List (30%) + Article Content (70%)
+  - [ ] Reuses existing `ProofreadingIssueList` and `ProofreadingArticleContent` components
+  - [ ] Removes redundant headers and "返回" buttons from reused components
+  - [ ] Fixed height panels with independent scrolling
+- **Estimate**: 4 hours
+- **Priority**: P0
+- **Dependencies**: T8.1.1, T8.1.2
+- **Testing**: Integration tests for layout
+
+**Deliverable**: `ProofreadingReviewPanel.tsx` skeleton
+
+---
+
+#### T8.3.2: Migrate Issue List Panel
+
+- **Description**: Integrate existing ProofreadingIssueList component into 30% left panel
+- **File**: Integration in `ProofreadingReviewPanel.tsx`
+- **Acceptance Criteria**:
+  - [ ] Display all proofreading issues in scrollable list
+  - [ ] Issue cards show: rule ID, severity badge, original/suggested text preview
+  - [ ] Highlight current issue on selection (blue border)
+  - [ ] Show issue count: Total, Pending, Accepted, Rejected
+  - [ ] Support checkbox selection for batch operations
+- **Estimate**: 2 hours
+- **Priority**: P0
+- **Dependencies**: T8.3.1
+- **Testing**: Visual tests for issue list rendering
+
+**Deliverable**: Issue list integrated (reused component with minor adjustments)
+
+---
+
+#### T8.3.3: Migrate Article Content Viewer
+
+- **Description**: Integrate existing ProofreadingArticleContent component into 70% right panel
+- **File**: Integration in `ProofreadingReviewPanel.tsx`
+- **Acceptance Criteria**:
+  - [ ] Display article body HTML in scrollable content viewer
+  - [ ] Highlight issue locations in content (yellow background)
+  - [ ] Scroll to issue position on issue selection
+  - [ ] Synchronize scroll position with issue list selection
+- **Estimate**: 2 hours
+- **Priority**: P0
+- **Dependencies**: T8.3.1
+- **Testing**: Integration tests for scroll synchronization
+
+**Deliverable**: Content viewer integrated (reused component)
+
+---
+
+#### T8.3.4: Adjust Layout to 30/70 Split
+
+- **Description**: Implement optimized 30/70 split layout for better readability
+- **File**: `ProofreadingReviewPanel.tsx` styling
+- **Acceptance Criteria**:
+  - [ ] CSS Grid: 30% (Issue List) + 70% (Article Content) on desktop
+  - [ ] Fixed height: calc(100vh - 280px)
+  - [ ] Independent scrolling for each panel
+  - [ ] Sticky issue detail popover positioning
+  - [ ] Visual separator between panels (vertical border)
+- **Estimate**: 6 hours
+- **Priority**: P0
+- **Dependencies**: T8.3.2, T8.3.3
+- **Testing**: Visual regression tests, scroll behavior tests
+
+**Deliverable**: Optimized 30/70 layout implementation
+
+---
+
+#### T8.3.5: Implement Floating Issue Detail Popover
+
+- **Description**: Create floating popover for detailed issue review
+- **File**: `frontend/src/components/ArticleReview/components/IssueDetailPopover.tsx`
+- **Acceptance Criteria**:
+  - [ ] Popover triggered on issue selection
+  - [ ] Display: original text, suggested text, AI explanation, confidence score, rule ID
+  - [ ] Actions: Accept (A), Reject (R), Modify (manual edit input)
+  - [ ] Position: attached to selected issue in content viewer (smart positioning to avoid overflow)
+  - [ ] Close on: clicking outside, pressing Esc, selecting another issue
+  - [ ] Keyboard navigation: Tab through action buttons
+- **Estimate**: 8 hours
+- **Priority**: P0
+- **Dependencies**: T8.3.4
+- **Testing**: Unit tests for popover positioning and actions
+
+**Deliverable**: `IssueDetailPopover.tsx` + integration
+
+---
+
+#### T8.3.6: Implement Batch Operations
+
+- **Description**: Add batch operations for efficient issue handling
+- **File**: Integration in `ProofreadingReviewPanel.tsx`
+- **Acceptance Criteria**:
+  - [ ] Checkbox selection for multiple issues
+  - [ ] Batch action buttons: "Accept All", "Reject All", "Accept Selected", "Reject Selected"
+  - [ ] Confirmation dialog before batch operations (show count and preview)
+  - [ ] Progress indicator during batch operation
+  - [ ] Success/error toast notifications
+  - [ ] Undo functionality (optional)
+- **Estimate**: 10 hours
+- **Priority**: P0
+- **Dependencies**: T8.3.5
+- **Testing**: Integration tests for batch operations and API calls
+
+**Deliverable**: Batch operation UI + backend integration
+
+---
+
+#### T8.3.7: Optimize Keyboard Shortcuts
+
+- **Description**: Enhance keyboard shortcuts for proofreading context
+- **File**: Update `useKeyboardShortcuts.ts`
+- **Acceptance Criteria**:
+  - [ ] `A` key accepts current issue (with visual feedback)
+  - [ ] `R` key rejects current issue
+  - [ ] `↑/↓` arrow keys navigate issue list
+  - [ ] `Enter` opens issue detail popover
+  - [ ] Shortcuts disabled when typing in input fields
+  - [ ] Visual hint showing available shortcuts (tooltip or inline text)
+- **Estimate**: 6 hours
+- **Priority**: P1
+- **Dependencies**: T8.3.6, T8.1.5
+- **Testing**: E2E tests for keyboard navigation
+
+**Deliverable**: Enhanced keyboard navigation for proofreading tab
+
+---
+
+#### T8.3.8: Add Keyboard Shortcuts Help Tooltip
+
+- **Description**: Create context-aware keyboard shortcuts help
+- **File**: `frontend/src/components/ArticleReview/components/KeyboardShortcutsHelp.tsx`
+- **Acceptance Criteria**:
+  - [ ] Floating tooltip showing available shortcuts
+  - [ ] Toggle with `?` key
+  - [ ] Context-aware (different shortcuts per tab)
+  - [ ] Shortcuts grouped by category: Navigation, Actions, Global
+  - [ ] Visual keyboard key styling (like `<kbd>` tag)
+  - [ ] Close on Esc or clicking outside
+- **Estimate**: 4 hours
+- **Priority**: P2
+- **Dependencies**: T8.3.7
+- **Testing**: Visual tests for tooltip rendering
+
+**Deliverable**: Keyboard shortcuts help tooltip component
+
+---
+
+#### T8.3.9: Integration Tests for ProofreadingReviewPanel
+
+- **Description**: Comprehensive integration tests for proofreading panel
+- **Files**: `__tests__/panels/ProofreadingReviewPanel.test.tsx`
+- **Acceptance Criteria**:
+  - [ ] Test issue display and selection
+  - [ ] Test accept/reject actions
+  - [ ] Test batch operations (accept all, reject selected)
+  - [ ] Test keyboard shortcuts (A, R, ↑, ↓)
+  - [ ] Test floating popover display and actions
+  - [ ] Test scroll synchronization
+  - [ ] Coverage target: ≥80%
+- **Estimate**: 10 hours
+- **Priority**: P1
+- **Dependencies**: T8.3.1 through T8.3.8
+- **Testing**: Jest + React Testing Library + MSW for API mocking
+
+**Deliverable**: Complete integration test suite for ProofreadingReviewPanel
+
+---
+
+**Phase 8.3 Success Criteria**:
+- [ ] ProofreadingReviewPanel displays all issues correctly
+- [ ] 30/70 layout optimized for readability
+- [ ] Floating issue detail popover functional with smart positioning
+- [ ] Batch operations work correctly with confirmation
+- [ ] Keyboard shortcuts (A, R, ↑, ↓) working smoothly
+- [ ] Scroll synchronization between issue list and content viewer
+- [ ] Integration tests passing with ≥80% coverage
+
+**Phase 8.3 Total**: 52 hours
+
+---
+
+### Phase 8.4: Publish Preview and Worklist Integration (Week 28, 48 hours)
+
+**Goal**: Complete PublishPreviewPanel and integrate ArticleReviewModal into Worklist page
+
+#### T8.4.1: Create PublishPreviewPanel Component
+
+- **Description**: Create final article preview before publishing
+- **File**: `frontend/src/components/ArticleReview/panels/PublishPreviewPanel.tsx`
+- **Acceptance Criteria**:
+  - [ ] Single-column centered layout (max-width: 800px)
+  - [ ] Display final article content: title (prefix + main + suffix), author, publish date, featured image, body HTML
+  - [ ] Display SEO metadata preview: meta title, meta description, keywords, tags
+  - [ ] Display FAQ preview (if exists)
+  - [ ] Display categories and tags
+  - [ ] Confirmation checklist: "✓ Parsing confirmed", "✓ Proofreading complete", "✓ SEO optimized"
+  - [ ] WordPress-like styling (mimics published article appearance)
+- **Estimate**: 12 hours
+- **Priority**: P0
+- **Dependencies**: T8.1.1, T8.1.2
+- **Testing**: Visual regression tests
+
+**Deliverable**: `PublishPreviewPanel.tsx` with complete preview
+
+---
+
+#### T8.4.2: Implement Final Article Content Preview
+
+- **Description**: Render article with WordPress-like styling
+- **File**: Integration in `PublishPreviewPanel.tsx`
+- **Acceptance Criteria**:
+  - [ ] Render title with proper hierarchy (prefix in smaller font, main in H1, suffix in subtitle)
+  - [ ] Display author line and publish date (current date preview)
+  - [ ] Display featured image with caption
+  - [ ] Render body HTML with sanitized styling
+  - [ ] Display inline images at correct positions (using `position` field)
+  - [ ] Responsive layout (mobile-friendly)
+- **Estimate**: 6 hours
+- **Priority**: P0
+- **Dependencies**: T8.4.1
+- **Testing**: Visual regression tests for article rendering
+
+**Deliverable**: Article preview rendering with WordPress-like styling
+
+---
+
+#### T8.4.3: Update WorklistPage to Open Modal
+
+- **Description**: Modify WorklistPage to open ArticleReviewModal on row click
+- **File**: `frontend/src/pages/WorklistPage.tsx`
+- **Acceptance Criteria**:
+  - [ ] Add state: `reviewModalOpen`, `selectedItem`
+  - [ ] Modify `handleItemClick` to open ArticleReviewModal instead of DetailDrawer
+  - [ ] Pass `worklistId` and `articleId` to Modal
+  - [ ] Set initial tab based on worklist status
+  - [ ] Handle Modal close and refresh Worklist data
+- **Estimate**: 4 hours
+- **Priority**: P0
+- **Dependencies**: T8.4.1, T8.1.1
+- **Testing**: Integration tests for Modal open/close
+
+**Deliverable**: Updated `WorklistPage.tsx` with Modal integration
+
+---
+
+#### T8.4.4: Update WorklistTable Click Behavior
+
+- **Description**: Change WorklistTable row click to trigger Modal
+- **File**: `frontend/src/components/Worklist/WorklistTable.tsx`
+- **Acceptance Criteria**:
+  - [ ] Remove DetailDrawer trigger on row click
+  - [ ] Add `onClick` handler to open ArticleReviewModal (via callback prop)
+  - [ ] Highlight selected row (blue background)
+  - [ ] Cursor pointer on hover
+- **Estimate**: 2 hours
+- **Priority**: P0
+- **Dependencies**: T8.4.3
+- **Testing**: Unit tests for click handler
+
+**Deliverable**: Updated `WorklistTable.tsx` with Modal trigger
+
+---
+
+#### T8.4.5: Remove Old DetailDrawer Navigation Buttons
+
+- **Description**: Simplify DetailDrawer by removing redundant navigation buttons
+- **File**: `frontend/src/components/Worklist/WorklistDetailDrawer.tsx`
+- **Acceptance Criteria**:
+  - [ ] Remove "审核解析" button
+  - [ ] Remove "审核校对" button
+  - [ ] Keep basic info display only (title, status, created date, etc.)
+  - [ ] Optionally: Remove DetailDrawer entirely and rely solely on Modal
+- **Estimate**: 2 hours
+- **Priority**: P0
+- **Dependencies**: T8.4.4
+- **Testing**: Visual regression tests
+
+**Deliverable**: Simplified or removed DetailDrawer
+
+---
+
+#### T8.4.6: Implement Modal Data Caching Strategy
+
+- **Description**: Optimize React Query cache for Modal data
+- **File**: Configuration in `useArticleReviewData.ts`
+- **Acceptance Criteria**:
+  - [ ] Pre-fetch data on Modal open (prefetchQuery)
+  - [ ] Set appropriate `staleTime` (5 minutes) and `cacheTime` (10 minutes)
+  - [ ] Invalidate cache on Modal close (if changes saved)
+  - [ ] Optimistic updates on save actions (update cache before API response)
+  - [ ] Refetch on focus (optional, configurable)
+- **Estimate**: 6 hours
+- **Priority**: P0
+- **Dependencies**: T8.1.2, T8.4.3
+- **Testing**: Integration tests for cache behavior
+
+**Deliverable**: Optimized cache strategy implementation
+
+---
+
+#### T8.4.7: Handle Modal Close and State Cleanup
+
+- **Description**: Implement proper cleanup on Modal close
+- **File**: `ArticleReviewModal.tsx` close handlers
+- **Acceptance Criteria**:
+  - [ ] Unsaved changes warning on close (confirm dialog)
+  - [ ] Clear `selectedItem` state on close
+  - [ ] Reset Modal internal state (`activeTab`, `hasUnsavedChanges`, etc.)
+  - [ ] Invalidate Worklist cache to show updated data
+  - [ ] Return to Worklist page (no navigation, Modal unmounts)
+  - [ ] Handle Esc key close with same behavior
+- **Estimate**: 4 hours
+- **Priority**: P0
+- **Dependencies**: T8.4.3
+- **Testing**: E2E tests for close behavior
+
+**Deliverable**: Close handlers + state cleanup logic
+
+---
+
+#### T8.4.8: End-to-End Integration Test
+
+- **Description**: Comprehensive E2E test covering full workflow
+- **File**: `frontend/e2e/article-review-modal.spec.ts`
+- **Acceptance Criteria**:
+  - [ ] Test full workflow: Worklist → Open Modal → Tab 1 (edit title) → Tab 2 (accept issue) → Tab 3 (preview) → Publish → Close
+  - [ ] Verify data persistence across tabs (title changes reflect in preview)
+  - [ ] Verify status updates reflected in Worklist after publish
+  - [ ] Verify no page jumps occur during entire workflow
+  - [ ] Verify keyboard shortcuts work (Ctrl+S, Ctrl+Enter, Esc, A, R)
+  - [ ] Test error scenarios (network failure, validation errors)
+- **Estimate**: 12 hours
+- **Priority**: P0
+- **Dependencies**: T8.4.1 through T8.4.7, T8.2.9, T8.3.9
+- **Testing**: Playwright or Cypress E2E tests
+
+**Deliverable**: Complete E2E test suite (`article-review-modal.spec.ts`)
+
+---
+
+**Phase 8.4 Success Criteria**:
+- [ ] PublishPreviewPanel displays final article correctly with WordPress-like styling
+- [ ] Worklist row click opens ArticleReviewModal (not DetailDrawer)
+- [ ] No page jumps during entire workflow (Worklist → Modal → Tabs → Publish → Worklist)
+- [ ] Modal data caching working (fast tab switching)
+- [ ] Unsaved changes warning on close
+- [ ] E2E test covering full workflow passing
+- [ ] Worklist refreshes after Modal close
+
+**Phase 8.4 Total**: 48 hours
+
+---
+
+### Phase 8.5: Testing and Optimization (Week 29, 46 hours)
+
+**Goal**: Performance tuning, user testing, bug fixes, and documentation
+
+#### T8.5.1: Performance Optimization
+
+- **Description**: Optimize Modal performance for production
+- **Files**: Multiple components
+- **Acceptance Criteria**:
+  - [ ] Optimize React Query cache configuration (`staleTime: 5 * 60 * 1000`, `cacheTime: 10 * 60 * 1000`)
+  - [ ] Implement virtual scrolling for long issue lists (>50 issues) using `react-window`
+  - [ ] Lazy load tab content (defer loading until tab active using React.lazy)
+  - [ ] Measure Modal load time: target <1 second (95th percentile)
+  - [ ] Measure tab switch time: target <200ms
+  - [ ] Use React DevTools Profiler to identify bottlenecks
+  - [ ] Memoize expensive computations with useMemo/useCallback
+- **Estimate**: 6 hours
+- **Priority**: P0
+- **Dependencies**: All previous tasks
+- **Testing**: Performance benchmarks using Lighthouse and React DevTools
+
+**Deliverable**: Performance benchmark results + optimization report
+
+---
+
+#### T8.5.2: Optimize Modal Scrolling Experience
+
+- **Description**: Improve scroll UX within Modal
+- **Files**: `ArticleReviewModal.tsx`, panel components
+- **Acceptance Criteria**:
+  - [ ] Smooth scrolling in tab content areas (CSS `scroll-behavior: smooth`)
+  - [ ] Fixed header and footer during scroll (sticky positioning)
+  - [ ] Scroll to top on tab change
+  - [ ] Scroll to issue location on issue selection (smooth, with offset for header)
+  - [ ] Prevent body scroll when Modal open (CSS overflow hidden)
+- **Estimate**: 4 hours
+- **Priority**: P1
+- **Dependencies**: All panel components
+- **Testing**: Manual testing on different browsers
+
+**Deliverable**: Improved scroll UX implementation
+
+---
+
+#### T8.5.3: Add Loading States and Skeleton Screens
+
+- **Description**: Improve perceived performance with loading states
+- **Files**: All panel components
+- **Acceptance Criteria**:
+  - [ ] Skeleton screens for data loading (using Shadcn Skeleton component)
+  - [ ] Loading spinners for save/publish actions (inline in buttons)
+  - [ ] Progress indicators for async operations (toast or progress bar)
+  - [ ] Disable buttons during loading (prevent double-click)
+  - [ ] Show "Saving..." / "Publishing..." text in buttons
+- **Estimate**: 6 hours
+- **Priority**: P1
+- **Dependencies**: T8.5.1
+- **Testing**: Visual tests for loading states
+
+**Deliverable**: Skeleton components + loading state implementations
+
+---
+
+#### T8.5.4: Optimize Error Handling and User Feedback
+
+- **Description**: Enhance error handling and user-friendly feedback
+- **Files**: All components, API error handling
+- **Acceptance Criteria**:
+  - [ ] Toast notifications for success/error (using existing toast system)
+  - [ ] Inline error messages for validation failures (red text under fields)
+  - [ ] Global error panel for critical errors (network failures, 500 errors)
+  - [ ] User-friendly error messages (avoid technical jargon)
+  - [ ] Retry button for failed API calls
+  - [ ] Error logging to Sentry or equivalent
+- **Estimate**: 6 hours
+- **Priority**: P1
+- **Dependencies**: T8.5.3
+- **Testing**: Integration tests for error scenarios
+
+**Deliverable**: Enhanced error handling + user feedback
+
+---
+
+#### T8.5.5: User Testing and Feedback Collection
+
+- **Description**: Conduct user testing with internal team
+- **Files**: N/A (user research)
+- **Acceptance Criteria**:
+  - [ ] Recruit 5-10 internal users (content reviewers, editors)
+  - [ ] Prepare test scenarios: Import article → Parsing review → Proofreading → Publish
+  - [ ] Collect metrics: clicks per article, time to complete, errors encountered
+  - [ ] Conduct post-test survey: CSAT (1-5 scale), usability feedback, feature requests
+  - [ ] Identify pain points and edge cases
+  - [ ] Document findings in user testing report
+- **Estimate**: 8 hours
+- **Priority**: P0
+- **Dependencies**: T8.5.4
+- **Testing**: User testing sessions + survey analysis
+
+**Deliverable**: User testing report + feedback summary
+
+---
+
+#### T8.5.6: Bug Fixes and UX Refinements
+
+- **Description**: Address bugs and polish UX based on user testing
+- **Files**: Multiple components
+- **Acceptance Criteria**:
+  - [ ] Fix all P0 bugs identified in user testing
+  - [ ] Fix all P1 bugs (if time permits)
+  - [ ] UI polish: consistent spacing, alignment, colors, icons
+  - [ ] Accessibility improvements:
+    - [ ] Keyboard navigation for all interactive elements
+    - [ ] ARIA labels for screen readers
+    - [ ] Focus indicators for all focusable elements
+    - [ ] Color contrast ratio ≥4.5:1 (WCAG AA)
+  - [ ] Cross-browser testing (Chrome, Firefox, Safari, Edge)
+- **Estimate**: 12 hours
+- **Priority**: P0
+- **Dependencies**: T8.5.5
+- **Testing**: Manual testing + automated accessibility tests (axe-core)
+
+**Deliverable**: Bug fixes + UX polish implementation
+
+---
+
+#### T8.5.7: Write User Documentation
+
+- **Description**: Create user-facing documentation and tutorials
+- **Files**: `docs/ARTICLE_REVIEW_MODAL_USER_GUIDE.md`, `docs/KEYBOARD_SHORTCUTS_REFERENCE.md`
+- **Acceptance Criteria**:
+  - [ ] User guide with screenshots:
+    - Opening Modal from Worklist
+    - Navigating tabs
+    - Editing parsing results
+    - Reviewing proofreading issues
+    - Publishing article
+  - [ ] Keyboard shortcuts reference card (printable)
+  - [ ] FAQ section for common questions
+  - [ ] Video tutorial (optional, 5-10 minutes)
+- **Estimate**: 4 hours
+- **Priority**: P2
+- **Dependencies**: T8.5.6
+- **Testing**: User feedback on documentation clarity
+
+**Deliverable**: Complete user documentation + keyboard shortcuts reference
+
+---
+
+**Phase 8.5 Success Criteria**:
+- [ ] Modal load time <1 second (95th percentile)
+- [ ] Tab switch time <200ms (no network requests)
+- [ ] User satisfaction (CSAT) ≥ 4.0/5.0
+- [ ] Error rate < 5% (failed operations / total operations)
+- [ ] All P0 bugs fixed
+- [ ] Accessibility audit passing (axe-core)
+- [ ] User documentation complete
+
+**Phase 8.5 Total**: 46 hours
+
+---
+
+## Phase 8 Summary
+
+### Task Count by Sub-Phase
+
+| Sub-Phase | Tasks | Hours | Priority |
+|-----------|-------|-------|----------|
+| **8.1: Modal Framework** | 6 | 48 | P0 |
+| **8.2: Parsing Review Panel** | 9 | 66 | P0 |
+| **8.3: Proofreading Review Panel** | 9 | 52 | P0 |
+| **8.4: Publish Preview & Integration** | 8 | 48 | P0 |
+| **8.5: Testing & Optimization** | 7 | 46 | P0 |
+| **Total** | **39** | **260** | **P0** |
+
+### Implementation Checklist
+
+**Pre-implementation**:
+- [ ] Review simplified-workflow-design.md (/tmp/simplified-workflow-design.md)
+- [ ] Set up feature flag: `ENABLE_ARTICLE_REVIEW_MODAL` (default: false)
+- [ ] Create new branch: `feature/phase-8-workflow-simplification`
+- [ ] Align with team on timeline and resources (2 frontend engineers × 8 weeks)
+
+**Phase 8.1: Modal Framework (Week 22-23)**:
+- [ ] T8.1.1: ArticleReviewModal component
+- [ ] T8.1.2: useArticleReviewData hook
+- [ ] T8.1.3: useReviewWorkflow hook
+- [ ] T8.1.4: ReviewProgressStepper component
+- [ ] T8.1.5: useKeyboardShortcuts hook
+- [ ] T8.1.6: Unit tests for hooks
+- [ ] **Demo**: Modal opens with tabs, progress stepper, keyboard shortcuts
+
+**Phase 8.2: Parsing Review Panel (Week 24-25)**:
+- [ ] T8.2.1: ParsingReviewPanel container
+- [ ] T8.2.2: TitleEditor component
+- [ ] T8.2.3: AuthorEditor component
+- [ ] T8.2.4: ImageGalleryEditor component
+- [ ] T8.2.5: SEOEditor component
+- [ ] T8.2.6: FAQEditor component
+- [ ] T8.2.7: Title optimization suggestions
+- [ ] T8.2.8: 2-column layout
+- [ ] T8.2.9: Integration tests
+- [ ] **Demo**: Parsing review panel fully functional
+
+**Phase 8.3: Proofreading Review Panel (Week 26-27)**:
+- [ ] T8.3.1: ProofreadingReviewPanel container
+- [ ] T8.3.2: Issue list panel
+- [ ] T8.3.3: Article content viewer
+- [ ] T8.3.4: 30/70 layout
+- [ ] T8.3.5: Floating issue detail popover
+- [ ] T8.3.6: Batch operations
+- [ ] T8.3.7: Keyboard shortcuts optimization
+- [ ] T8.3.8: Keyboard shortcuts help tooltip
+- [ ] T8.3.9: Integration tests
+- [ ] **Demo**: Proofreading review panel fully functional with batch ops
+
+**Phase 8.4: Publish Preview & Integration (Week 28)**:
+- [ ] T8.4.1: PublishPreviewPanel component
+- [ ] T8.4.2: Article content preview
+- [ ] T8.4.3: Update WorklistPage to open Modal
+- [ ] T8.4.4: Update WorklistTable click behavior
+- [ ] T8.4.5: Remove old DetailDrawer navigation buttons
+- [ ] T8.4.6: Modal data caching strategy
+- [ ] T8.4.7: Modal close and state cleanup
+- [ ] T8.4.8: E2E integration test
+- [ ] **Demo**: Full workflow from Worklist to Publish with zero page jumps
+
+**Phase 8.5: Testing & Optimization (Week 29)**:
+- [ ] T8.5.1: Performance optimization
+- [ ] T8.5.2: Scroll experience optimization
+- [ ] T8.5.3: Loading states and skeleton screens
+- [ ] T8.5.4: Error handling and user feedback
+- [ ] T8.5.5: User testing and feedback collection
+- [ ] T8.5.6: Bug fixes and UX refinements
+- [ ] T8.5.7: User documentation
+- [ ] **Gate**: CSAT ≥ 4.0/5.0, error rate < 5%, performance targets met
+
+**Post-implementation**:
+- [ ] Full regression test suite passes
+- [ ] Performance benchmarks meet targets (<1s load, <200ms tab switch)
+- [ ] Documentation updated (user guide, keyboard shortcuts)
+- [ ] User training materials created (video tutorial optional)
+- [ ] Feature flag enabled for beta users (20%)
+- [ ] Monitor metrics for 1 week
+- [ ] Feature flag enabled for all users (100%)
+- [ ] Deprecate old workflow (ArticleParsingPage, ProofreadingReviewPage) after 1 month
+
+### Success Metrics (Phase 8)
+
+| Metric | Baseline | Target | Measurement Method |
+|--------|----------|--------|-------------------|
+| **Page Jumps per Article** | 5 | 0 | Frontend analytics tracking navigation events |
+| **Clicks per Article** | 30-33 | 15-18 | Click event tracking in ArticleReviewModal |
+| **Task Completion Time** | 238s | 208s | Timer from Modal open to publish success |
+| **User Satisfaction (CSAT)** | Not measured | ≥ 4.0/5.0 | Post-deployment user survey (1-5 scale) |
+| **Error Rate** | Not measured | < 5% | Failed operations / total operations |
+| **Modal Load Time** | N/A | < 1s | Performance API measurement (95th percentile) |
+| **Tab Switch Time** | N/A | < 200ms | React Query cache hit latency |
+
+### Rollout Plan
+
+**Phase A: Internal Testing (Week 30)**:
+- Deploy to staging environment
+- Internal team testing (5-10 users)
+- Collect feedback on usability and bugs
+
+**Phase B: Limited Beta (Week 31-32)**:
+- Feature flag: `enable_article_review_modal=true` (default: false)
+- Invite 20% of active users to beta
+- Monitor error rates and performance metrics
+
+**Phase C: Full Rollout (Week 33)**:
+- Enable feature flag for 100% of users
+- Monitor CSAT and error rates daily
+- Deprecate old workflow (Parsing Page, Review Page) after 2 weeks
+
+**Rollback Plan**:
+- Feature flag can be toggled off instantly
+- Old workflow pages remain functional for 1 month
+- Database schema unchanged (no migration required)
+
+---
+
+## Phase 9: Future Work & Post-MVP Enhancements (Planned)
 
 **Goal**: Long-term improvements and feature expansions planned for future iterations
 **Status**: 📋 Planning Phase
@@ -5929,7 +7185,7 @@ catalog.json (Management) ← Complete rule manifest with implementation status
 rule_specs.py (Implementation) ← Deterministic rule code
 ```
 
-#### T8.1 [P1] Rule Audit & Complete Catalog Rebuild
+#### T9.1 [P1] Rule Audit & Complete Catalog Rebuild
 
 **Description**: Extract all rules from 《大纪元、新唐人总部写作风格指南》and rebuild catalog.json with complete 400-450 rule list.
 
@@ -5958,11 +7214,11 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - backend/scripts/analyze_rule_coverage.py
 - backend/docs/RULE_COVERAGE_REPORT.json
 
-#### T8.2 [P1] Rule Counting Standards Documentation
+#### T9.2 [P1] Rule Counting Standards Documentation
 
 **Description**: Define and document unified rule counting standards to eliminate confusion.
 
-**Dependencies**: T8.1
+**Dependencies**: T9.1
 
 **Estimated Hours**: 16 hours (1 week)
 
@@ -5980,11 +7236,11 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - backend/docs/RULE_COUNTING_STANDARDS.md
 - backend/src/services/proofreading/README.md
 
-#### T8.3 [P1] Refactor rule_specs.py with Catalog Mapping
+#### T9.3 [P1] Refactor rule_specs.py with Catalog Mapping
 
 **Description**: Add `catalog_rule_id` field to all rule objects for explicit mapping to catalog.json.
 
-**Dependencies**: T8.1, T8.2
+**Dependencies**: T9.1, T9.2
 
 **Estimated Hours**: 24 hours (1 week)
 
@@ -6003,11 +7259,11 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - backend/scripts/migrate_rule_mappings.py
 - backend/tests/services/proofreading/test_rule_mapping.py
 
-#### T8.4 [P2] Implement Missing High-Priority Rules
+#### T9.4 [P2] Implement Missing High-Priority Rules
 
 **Description**: Implement B (Punctuation), C (Numbers), and remaining A-class rules.
 
-**Dependencies**: T8.3
+**Dependencies**: T9.3
 
 **Estimated Hours**: 160-240 hours (4-6 weeks)
 
@@ -6040,11 +7296,11 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - backend/tests/services/proofreading/test_new_rules.py
 - backend/docs/RULE_COVERAGE_REPORT.json
 
-#### T8.5 [P3] Rule Management Backend & UI
+#### T9.5 [P3] Rule Management Backend & UI
 
 **Description**: Build admin interface for rule management, coverage tracking, and testing.
 
-**Dependencies**: T8.4
+**Dependencies**: T9.4
 
 **Estimated Hours**: 120-160 hours (3-4 weeks)
 
@@ -6068,7 +7324,7 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - frontend/src/pages/admin/RuleManagement.tsx
 - backend/docs/RULE_MANAGEMENT_API.md
 
-**Total Phase 8 (Proofreading Rules) Estimated Hours**: 400-520 hours (10-13 weeks)
+**Total Phase 9 (Proofreading Rules) Estimated Hours**: 400-520 hours (10-13 weeks)
 
 ### 🟡 Medium Priority: Other Future Enhancements
 
@@ -6110,9 +7366,9 @@ rule_specs.py (Implementation) ← Deterministic rule code
 
 ## Summary
 
-**Total Tasks**: 89 tasks (48 core + 10 governance/deployment + 20 Google Drive automation + 6 feedback/调优闭环 + 5 future work)
-**Total Duration**: 17.5 weeks (~87 business days) + 10-13 weeks future work
-**Total Estimated Hours**: ~558 hours (current phases) + 400-520 hours (Phase 8 planned)
+**Total Tasks**: 128 tasks (48 core + 10 governance/deployment + 20 Google Drive automation + 6 feedback/tuning loop + 39 workflow simplification + 5 future work)
+**Total Duration**: 29 weeks (~145 business days) + 10-13 weeks future work
+**Total Estimated Hours**: ~818 hours (current phases including Phase 8) + 400-520 hours (Phase 9 planned)
 
 ### By Phase:
 - **Phase 0**: Governance (continuous)
@@ -6122,8 +7378,9 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - **Phase 4**: Frontend (2 weeks, 10 tasks, 80 hours) ⏳
 - **Phase 5**: Testing & Deployment (2 weeks, 12 tasks, 72 hours) ⏳
 - **Phase 6**: 🆕 Google Drive & Worklist (5 weeks, 20 tasks, 200 hours) ✅
-- **Phase 7**: 🆕 Proofreading Feedback & Tuning Loop (2 weeks, 6 tasks, 58 hours)
-- **Phase 8**: 🔮 Future Work (10-13 weeks, 5 tasks, 400-520 hours) 📋 Planned
+- **Phase 7**: 🆕 Proofreading Feedback & Tuning Loop (2 weeks, 6 tasks, 58 hours) ✅
+- **Phase 8**: 🆕 Workflow Simplification (8 weeks, 39 tasks, 260 hours) 📋 Planned
+- **Phase 9**: 🔮 Future Work (10-13 weeks, 5 tasks, 400-520 hours) 📋 Planned
 
 ### By User Story:
 - **US1** (Article Import): T1.5-T1.10 (6 tasks)
@@ -6142,10 +7399,14 @@ rule_specs.py (Implementation) ← Deterministic rule code
 5. Integration tests (T5.1-T5.5) → Blocks production deployment
 6. 🆕 Google Drive integration (T6.1-T6.7) → Blocks Worklist backend
 7. 🆕 Worklist backend APIs (T6.14) → Blocks Worklist UI real-time updates
-8. 🆕 Proofreading decisions (T7.1-T7.5) → Blocks 调优闭环与 Prompt/规则迭代
-9. 🔮 **Phase 8 (Future)**: Rule audit (T8.1) → Blocks all Phase 8 work
-10. 🔮 **Phase 8 (Future)**: Rule realignment (T8.1-T8.3) → Blocks rule expansion (T8.4)
-11. 🔮 **Phase 8 (Future)**: Rule implementation (T8.4) → Blocks rule management UI (T8.5)
+8. 🆕 Proofreading decisions (T7.1-T7.5) → Blocks tuning loop and Prompt/rule iteration
+9. 🆕 **Phase 8**: Modal framework (T8.1.1-T8.1.6) → Blocks all panel implementations
+10. 🆕 **Phase 8**: Parsing panel (T8.2.1-T8.2.9) → Required for parsing workflow
+11. 🆕 **Phase 8**: Proofreading panel (T8.3.1-T8.3.9) → Required for proofreading workflow
+12. 🆕 **Phase 8**: Worklist integration (T8.4.3-T8.4.7) → Blocks zero-jump workflow
+13. 🔮 **Phase 9 (Future)**: Rule audit (T9.1) → Blocks all Phase 9 work
+14. 🔮 **Phase 9 (Future)**: Rule realignment (T9.1-T9.3) → Blocks rule expansion (T9.4)
+15. 🔮 **Phase 9 (Future)**: Rule implementation (T9.4) → Blocks rule management UI (T9.5)
 
 ### Parallel Work Opportunities:
 - Frontend (Phase 4) can start once Phase 3 APIs are defined
@@ -6154,7 +7415,9 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - 🆕 Google Drive backend (T6.1-T6.7) can develop in parallel with Worklist UI skeleton (T6.8-T6.10)
 - 🆕 Worklist frontend (T6.8-T6.13) can start once backend APIs are defined
 - 🆕 Proofreading feedback export (T7.5) can run alongside Phase 7 frontend (T7.4)
-- All [P] marked tasks have no blocking dependencies
+- 🆕 **Phase 8**: Parsing panel (T8.2.x) and Proofreading panel (T8.3.x) can develop in parallel once Modal framework (T8.1.x) is complete
+- 🆕 **Phase 8**: Component development (TitleEditor, AuthorEditor, etc.) can be split across multiple developers
+- All [P1], [P2] marked tasks have flexible dependencies and can be parallelized
 
 ### Phase 6 Highlights:
 - **Automated Document Ingestion**: Google Drive monitoring every 5 minutes
@@ -6164,7 +7427,16 @@ rule_specs.py (Implementation) ← Deterministic rule code
 - **Batch Operations**: Delete/retry/mark multiple documents at once
 - **Proofreading Feedback Loop**: 用户反馈沉淀为调优素材，支撑规则与 Prompt 快速迭代
 
-### Phase 8 (Future Work) Highlights:
+### Phase 8 (Workflow Simplification) Highlights:
+- **Zero Page Jumps**: ArticleReviewModal consolidates all review operations (from 5 jumps to 0)
+- **50% Click Reduction**: Streamlined workflow (from 30-33 clicks to 15-18 clicks)
+- **13% Time Savings**: Faster task completion (from 238s to 208s per article)
+- **Unified UX**: Single full-screen Modal with 3 tabs (Parsing, Proofreading, Publish)
+- **Keyboard Shortcuts**: Power user efficiency (Ctrl+S, Ctrl+Enter, A/R for issues, etc.)
+- **React Query Caching**: Instant tab switching with data prefetching
+- **See**: `/tmp/simplified-workflow-design.md` for complete design
+
+### Phase 9 (Future Work) Highlights:
 - **Complete Rule Alignment**: Three-layer alignment of requirements, catalog, and implementation
 - **Unified Counting Standards**: Clear distinction between rule objects, detection points, and business functions
 - **Expanded Coverage**: Target 50-60% rule coverage (from current ~25%)

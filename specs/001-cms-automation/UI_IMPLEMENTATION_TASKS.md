@@ -1160,6 +1160,277 @@ async def get_monthly_costs() -> MonthlyCostsResponse:
 
 #### Task Group 4.1: Worklist Core UI - 48 hours
 
+##### T-UI-4.1.0 [P0] Phase 1 Worklist UI Enhancement ⭐新增
+
+**Priority**: 🔴 Critical
+**Estimated Hours**: 16 hours (11h dev + 5h testing)
+**Dependencies**: T-UI-4.1.1 (WorklistPage exists), T-UI-4.1.2 (StatusBadge exists)
+
+**Description**:
+实现 Phase 1 Worklist UI 增强功能：操作按钮前置、快速筛选按钮、状态徽章图标优化
+
+**Reference**:
+- `docs/ui-improvements/phase1-worklist-ui-enhancement.md`
+- `docs/ui-improvements/README.md`
+- `specs/001-cms-automation/tasks.md` (Phase 7.5)
+- `specs/001-cms-automation/UI_DESIGN_SPECIFICATIONS.md` (Section 2.8, 3.5)
+
+**3 Core Improvements**:
+
+1. **操作按钮前置** (3 hours)
+   - 在表格中直接显示操作按钮（View, Approve, Reject, Publish, Retry）
+   - 根据状态显示不同按钮组合
+   - 减少 66% 操作步骤（3-4步 → 1步）
+
+2. **快速筛选按钮** (4 hours)
+   - 4个快速筛选：需要我处理、进行中、已完成、有问题
+   - 实时显示每个筛选的数量徽章
+   - URL同步 (/worklist?filter=needs_attention)
+   - 减少 80% 筛选时间
+
+3. **状态徽章图标优化** (3 hours)
+   - 为9个状态添加图标（Clock, Loader, ClipboardCheck, Check, X）
+   - 进行中状态添加脉冲动画
+   - 悬停显示完整状态描述
+   - 移动端仅显示图标+工具提示
+
+**Deliverables**:
+- Updated `frontend/src/components/Worklist/WorklistTable.tsx` (Operations column)
+- New `frontend/src/components/Worklist/QuickFilters.tsx`
+- Updated `frontend/src/components/Worklist/WorklistStatusBadge.tsx` (icons + animations)
+- Updated `frontend/src/i18n/locales/zh-TW.json` (quickFilters, statusDescriptions, table.actions)
+- Updated `frontend/src/i18n/locales/en-US.json` (quickFilters, statusDescriptions, table.actions)
+- New `frontend/src/styles/animations.css` (pulse animation)
+- Test files for all modified components
+
+**Acceptance Criteria**:
+
+**Improvement 1: Action Buttons**
+- [ ] Operations column shows buttons directly in table
+- [ ] Button variants: Ghost (View), Primary (Approve), Secondary (Reject), Success (Publish)
+- [ ] Status-specific buttons:
+  - parsing_review: View, Approve, Reject
+  - proofreading_review: View, Approve, Reject
+  - ready_to_publish: View, Publish
+  - published: View, Open URL
+  - failed: View, Retry
+- [ ] Loading states (spinner + disable other buttons)
+- [ ] Mobile: buttons stack vertically on <768px
+
+**Improvement 2: Quick Filters**
+- [ ] 4 filter buttons above table: 需要我处理, 进行中, 已完成, 有问题
+- [ ] Each button shows real-time count badge
+- [ ] Active filter: Primary-100 background, Primary-700 text
+- [ ] Filter logic:
+  - needs_attention: parsing_review, proofreading_review, ready_to_publish
+  - in_progress: parsing, proofreading, publishing
+  - completed: published
+  - failed: failed
+- [ ] URL sync: /worklist?filter=needs_attention
+- [ ] Filter state persists across reloads
+- [ ] Keyboard navigation (Tab, Arrow keys, Enter/Space)
+
+**Improvement 3: Status Badge Icons**
+- [ ] All 9 statuses show correct icon:
+  - pending: Clock
+  - parsing: Loader (pulse)
+  - parsing_review: ClipboardCheck
+  - proofreading: Loader (pulse)
+  - proofreading_review: ClipboardCheck
+  - ready_to_publish: ClipboardCheck
+  - publishing: Loader (pulse)
+  - published: Check
+  - failed: X
+- [ ] Colors match semantic meaning:
+  - Gray: pending
+  - Blue: in-progress (parsing, proofreading, publishing)
+  - Orange: review required (parsing_review, proofreading_review, ready_to_publish)
+  - Green: success (published)
+  - Red: error (failed)
+- [ ] Pulse animation for parsing, proofreading, publishing
+- [ ] Hover tooltip shows full status + description
+- [ ] Mobile: icon only with tooltip on <768px
+
+**Internationalization**:
+- [ ] zh-TW.json: quickFilters (5 keys), statusDescriptions (9 keys), table.actions (7 keys)
+- [ ] en-US.json: quickFilters (5 keys), statusDescriptions (9 keys), table.actions (7 keys)
+- [ ] No hardcoded strings in components
+- [ ] Language switching works correctly
+
+**Responsive & Accessibility**:
+- [ ] Desktop (≥1024px): Full layout, all columns visible
+- [ ] Tablet (768-1023px): Hide "Updated" column, compact operations
+- [ ] Mobile (<768px): Card-based layout, stacked buttons
+- [ ] Quick filters: horizontal scroll on mobile
+- [ ] All buttons have aria-labels
+- [ ] Status badges use aria-live="polite"
+- [ ] Keyboard navigation: Tab → filters → table → operations
+- [ ] Screen reader announces status changes
+- [ ] Focus indicators: 2px Primary-500 outline
+- [ ] WCAG 2.1 AA contrast ratios (4.5:1 minimum)
+
+**Testing** (5 hours):
+- [ ] Functional: 20 test cases from phase1-testing-guide.md
+- [ ] Visual: Design system compliance
+- [ ] Responsive: All 3 breakpoints tested
+- [ ] Accessibility: WCAG 2.1 AA compliance
+- [ ] Performance: No regressions (<1s render, <200ms filter)
+- [ ] Cross-browser: Chrome, Firefox, Safari, Edge
+
+**Code Example - Quick Filters**:
+```typescript
+// frontend/src/components/Worklist/QuickFilters.tsx
+
+import { Bell, Loader, Check, AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+interface QuickFilter {
+  key: string;
+  icon: React.ComponentType;
+  label: string;
+  statuses: WorklistStatus[];
+}
+
+const QUICK_FILTERS: QuickFilter[] = [
+  {
+    key: 'needsAttention',
+    icon: Bell,
+    statuses: ['parsing_review', 'proofreading_review', 'ready_to_publish'],
+    color: 'orange'
+  },
+  {
+    key: 'inProgress',
+    icon: Loader,
+    statuses: ['parsing', 'proofreading', 'publishing'],
+    color: 'blue'
+  },
+  {
+    key: 'completed',
+    icon: Check,
+    statuses: ['published'],
+    color: 'green'
+  },
+  {
+    key: 'failed',
+    icon: AlertTriangle,
+    statuses: ['failed'],
+    color: 'red'
+  }
+];
+
+export function QuickFilters({ items, activeFilter, onFilterChange }) {
+  const { t } = useTranslation();
+
+  const getCount = (statuses: WorklistStatus[]) =>
+    items.filter(item => statuses.includes(item.status)).length;
+
+  return (
+    <div className="flex gap-3 mb-6 overflow-x-auto">
+      {QUICK_FILTERS.map(filter => {
+        const Icon = filter.icon;
+        const count = getCount(filter.statuses);
+        const isActive = activeFilter === filter.key;
+
+        return (
+          <button
+            key={filter.key}
+            onClick={() => onFilterChange(filter.key)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-full transition-all',
+              'border text-sm font-medium whitespace-nowrap',
+              isActive
+                ? 'bg-primary-100 text-primary-700 border-primary-500'
+                : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+            )}
+          >
+            <Icon className="w-5 h-5" />
+            {t(`worklist.quickFilters.${filter.key}`)}
+            <span className={cn(
+              'px-2 py-0.5 rounded-full text-xs font-semibold',
+              `bg-${filter.color}-500 text-white`
+            )}>
+              {count}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+```
+
+**Code Example - Status Badge with Icons**:
+```typescript
+// frontend/src/components/Worklist/WorklistStatusBadge.tsx
+
+import { Clock, Loader, ClipboardCheck, Check, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+const STATUS_CONFIG: Record<WorklistStatus, {
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bgColor: string;
+  label: string;
+  pulse: boolean;
+}> = {
+  pending: {
+    icon: Clock,
+    color: 'text-gray-700',
+    bgColor: 'bg-gray-100',
+    label: 'worklist.status.pending',
+    pulse: false,
+  },
+  parsing: {
+    icon: Loader,
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-100',
+    label: 'worklist.status.parsing',
+    pulse: true,
+  },
+  parsing_review: {
+    icon: ClipboardCheck,
+    color: 'text-orange-700',
+    bgColor: 'bg-orange-100',
+    label: 'worklist.status.parsing_review',
+    pulse: false,
+  },
+  // ... 6 more statuses
+};
+
+export function WorklistStatusBadge({ status }: { status: WorklistStatus }) {
+  const { t } = useTranslation();
+  const config = STATUS_CONFIG[status];
+  const Icon = config.icon;
+
+  return (
+    <Tooltip content={t(`worklist.statusDescriptions.${status}`)}>
+      <span className={cn(
+        'inline-flex items-center gap-2 px-3 py-1 rounded-full',
+        'text-sm font-medium transition-all',
+        config.bgColor,
+        config.color,
+        config.pulse && 'animate-pulse'
+      )}>
+        <Icon className="w-4 h-4" aria-hidden="true" />
+        <span className="hidden md:inline">{t(config.label)}</span>
+      </span>
+    </Tooltip>
+  );
+}
+```
+
+**Performance Target**:
+- Initial render: < 1s
+- Quick filter response: < 200ms
+- No regressions in existing functionality
+
+**User Impact**:
+- Operation efficiency: 60-80% improvement (3-4 steps → 1 step)
+- Filtering speed: 80% faster (10s → 2s)
+- User onboarding: 50% reduction in learning time
+
+---
+
 ##### T-UI-4.1.1 [P0] WorklistPage Component
 
 **Priority**: 🔴 Critical

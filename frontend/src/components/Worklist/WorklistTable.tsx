@@ -7,7 +7,19 @@ import { useNavigate } from 'react-router-dom';
 import { WorklistItem, WorklistStatus, LEGACY_STATUS_MAP } from '@/types/worklist';
 import { WorklistStatusBadge } from './WorklistStatusBadge';
 import { format } from 'date-fns';
-import { FileText, User, Calendar, RefreshCw, ClipboardCheck } from 'lucide-react';
+import {
+  FileText,
+  User,
+  Calendar,
+  RefreshCw,
+  ClipboardCheck,
+  Eye,
+  Check,
+  X,
+  Send,
+  ExternalLink,
+  RotateCcw
+} from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useTranslation } from 'react-i18next';
 
@@ -17,6 +29,8 @@ export interface WorklistTableProps {
   isLoading?: boolean;
   onSync?: () => void;
   isSyncing?: boolean;
+  onPublish?: (item: WorklistItem) => void;
+  onRetry?: (item: WorklistItem) => void;
 }
 
 export const WorklistTable: React.FC<WorklistTableProps> = ({
@@ -25,6 +39,8 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
   isLoading,
   onSync,
   isSyncing,
+  onPublish,
+  onRetry,
 }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -249,36 +265,127 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {/* Parsing Review - Review article parsing results (title, author, SEO, images) */}
-                    {resolveStatus(item.status) === 'parsing_review' && item.article_id && (
+                    <div className="flex items-center gap-2">
+                      {/* View button - always visible */}
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="ghost"
                         onClick={(e) => {
                           e.stopPropagation();
-                          navigate(`/articles/${item.article_id}/parsing`);
+                          onItemClick(item);
                         }}
+                        aria-label={t('worklist.table.actions.view')}
                       >
-                        <ClipboardCheck className="mr-2 h-4 w-4" />
-                        {t('worklist.table.actions.reviewParsing')}
+                        <Eye className="h-4 w-4" />
                       </Button>
-                    )}
 
-                    {/* Proofreading Review - Review proofreading issues (includes backward compat for legacy 'under_review') */}
-                    {(resolveStatus(item.status) === 'proofreading_review' ||
-                      item.status === 'under_review') && item.article_id && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/worklist/${item.id}/review`);
-                        }}
-                      >
-                        <ClipboardCheck className="mr-2 h-4 w-4" />
-                        {t('worklist.table.actions.reviewProofreading')}
-                      </Button>
-                    )}
+                      {/* Parsing Review - Approve/Reject */}
+                      {resolveStatus(item.status) === 'parsing_review' && item.article_id && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/articles/${item.article_id}/parsing`);
+                            }}
+                            aria-label={t('worklist.table.actions.approve')}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // TODO: Implement reject action
+                            }}
+                            aria-label={t('worklist.table.actions.reject')}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Proofreading Review - Approve/Reject */}
+                      {(resolveStatus(item.status) === 'proofreading_review' ||
+                        item.status === 'under_review') && item.article_id && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/worklist/${item.id}/review`);
+                            }}
+                            aria-label={t('worklist.table.actions.approve')}
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // TODO: Implement reject action
+                            }}
+                            aria-label={t('worklist.table.actions.reject')}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Ready to Publish - Publish button */}
+                      {resolveStatus(item.status) === 'ready_to_publish' && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPublish?.(item);
+                          }}
+                          aria-label={t('worklist.table.actions.publish')}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* Published - Open URL button */}
+                      {resolveStatus(item.status) === 'published' &&
+                       item.metadata &&
+                       typeof item.metadata === 'object' &&
+                       'published_url' in item.metadata &&
+                       typeof item.metadata.published_url === 'string' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(item.metadata.published_url as string, '_blank');
+                          }}
+                          aria-label={t('worklist.table.actions.openUrl')}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* Failed - Retry button */}
+                      {resolveStatus(item.status) === 'failed' && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRetry?.(item);
+                          }}
+                          aria-label={t('worklist.table.actions.retry')}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );

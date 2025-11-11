@@ -30,6 +30,13 @@
       "author": "依作者篩選...",
       "reset": "重設篩選"
     },
+    "quickFilters": {
+      "needsAttention": "需要我處理",
+      "inProgress": "進行中",
+      "completed": "已完成",
+      "failed": "有問題",
+      "all": "全部"
+    },
     "statistics": {
       "total": "總文章數",
       "pending": "待處理",
@@ -49,12 +56,25 @@
       "published": "已發布",
       "failed": "需處理"
     },
+    "statusDescriptions": {
+      "pending": "文章已匯入，等待開始解析",
+      "parsing": "AI 正在提取和結構化內容",
+      "parsing_review": "AI 解析完成，請審核內容準確性",
+      "proofreading": "AI 和腳本正在分析內容問題",
+      "proofreading_review": "校對完成，請審核並接受/拒絕建議",
+      "ready_to_publish": "所有檢查通過，可以發布到 WordPress",
+      "publishing": "正在發布到 WordPress，請稍候",
+      "published": "成功發布到 WordPress",
+      "failed": "處理過程中發生錯誤，請查看錯誤日誌"
+    },
     "actions": {
       "view": "查看詳情",
       "edit": "編輯",
       "approve": "核准",
       "reject": "拒絕",
-      "publish": "發布"
+      "publish": "發布到 WordPress",
+      "retry": "重試",
+      "openUrl": "開啟文章"
     },
     "messages": {
       "syncStarted": "Google Drive 同步已開始",
@@ -109,7 +129,13 @@
       "actions": {
         "review": "審核",
         "reviewParsing": "審核解析",
-        "reviewProofreading": "審核校對"
+        "reviewProofreading": "審核校對",
+        "view": "查看",
+        "approve": "核准",
+        "reject": "拒絕",
+        "publish": "發布",
+        "retry": "重試",
+        "openUrl": "開啟"
       }
     },
     "statisticsCards": {
