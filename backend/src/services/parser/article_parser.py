@@ -132,6 +132,8 @@ class ArticleParserService:
         Returns:
             ParsingResult with AI-parsed data
         """
+        import json
+
         logger.info("Starting AI-based parsing with Claude")
 
         if not self.anthropic_api_key:
@@ -172,8 +174,6 @@ class ArticleParserService:
             response_text = message.content[0].text
 
             # Parse Claude's JSON response
-            import json
-
             parsed_data = json.loads(response_text)
 
             # Construct ParsedArticle from AI response
