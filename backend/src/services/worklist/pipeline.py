@@ -21,6 +21,7 @@ from src.services.proofreading import (
     ProofreadingAnalysisService,
     ProofreadingResult,
 )
+from src.services.parser import ArticleParserService
 
 logger = get_logger(__name__)
 
@@ -33,14 +34,24 @@ class WorklistPipelineService:
         session: AsyncSession,
         *,
         proofreading_service: ProofreadingAnalysisService | None = None,
+        parser_service: ArticleParserService | None = None,
     ) -> None:
         self.session = session
         self.settings = get_settings()
         self.proofreading_service = proofreading_service or ProofreadingAnalysisService()
+        self.parser_service = parser_service or ArticleParserService(
+            use_ai=True,
+            anthropic_api_key=self.settings.ANTHROPIC_API_KEY,
+        )
 
     async def process_new_item(self, item: WorklistItem) -> None:
-        """Ensure article exists for the worklist item and trigger proofreading."""
+        """Ensure article exists for the worklist item, run parsing, then proofreading."""
         article = await self._ensure_article(item)
+
+        # Step 1: Parse document to extract author, images, SEO, etc.
+        await self._run_parsing(item)
+
+        # Step 2: Run proofreading
         await self._run_proofreading(item, article)
 
     async def _ensure_article(self, item: WorklistItem) -> Article:
@@ -79,6 +90,123 @@ class WorklistPipelineService:
             metadata={"worklist_id": item.id},
         )
         return article
+
+    async def _run_parsing(self, item: WorklistItem) -> None:
+        """Parse document content to extract structured data (author, images, SEO, etc.)."""
+        try:
+            # Get the raw HTML content from the worklist item
+            raw_html = item.content
+
+            # Call ArticleParserService to parse the document
+            logger.info(
+                "worklist_parsing_started",
+                worklist_id=item.id,
+                content_length=len(raw_html),
+            )
+
+            # Parse with AI (will fallback to heuristics if AI fails)
+            parsing_result = self.parser_service.parse_document(raw_html)
+
+            if not parsing_result.success:
+                # Parsing failed
+                error_messages = [e.error_message for e in parsing_result.errors]
+                logger.error(
+                    "worklist_parsing_failed",
+                    worklist_id=item.id,
+                    errors=error_messages,
+                )
+                item.mark_status(WorklistStatus.PARSING)  # Stay in parsing status
+                item.add_note(
+                    {
+                        "message": "AI解析失败，需要手动审核",
+                        "level": "error",
+                        "details": "; ".join(error_messages),
+                    }
+                )
+                self.session.add(item)
+                return
+
+            # Parsing succeeded - extract data from ParsedArticle
+            parsed_article = parsing_result.parsed_article
+
+            # Update worklist item with parsed data
+            item.author = parsed_article.author_name
+            item.meta_description = parsed_article.meta_description
+            item.seo_keywords = parsed_article.seo_keywords or []
+            item.tags = parsed_article.tags or []
+
+            # Store parsed images and other metadata in drive_metadata
+            metadata = dict(item.drive_metadata or {})
+
+            if parsed_article.images:
+                metadata["images"] = [
+                    {
+                        "position": img.position,
+                        "source_url": img.source_url,
+                        "caption": img.caption,
+                        "alt_text": img.alt_text,
+                    }
+                    for img in parsed_article.images
+                ]
+                # Set featured image from first image if available
+                if parsed_article.images:
+                    metadata["featured_image_path"] = parsed_article.images[0].source_url
+
+            # Store title components
+            metadata["title_prefix"] = parsed_article.title_prefix
+            metadata["title_main"] = parsed_article.title_main
+            metadata["title_suffix"] = parsed_article.title_suffix
+            metadata["author_line"] = parsed_article.author_line
+
+            # Store parsing metadata
+            metadata["parsing"] = {
+                "method": parsed_article.parsing_method,
+                "confidence": parsed_article.parsing_confidence,
+                "parsed_at": datetime.utcnow().isoformat(),
+            }
+
+            item.drive_metadata = metadata
+
+            # Update status to PARSING_REVIEW
+            item.mark_status(WorklistStatus.PARSING_REVIEW)
+            item.add_note(
+                {
+                    "message": "AI解析完成，等待人工审核解析结果",
+                    "level": "info",
+                    "metadata": {
+                        "author": parsed_article.author_name,
+                        "images_count": len(parsed_article.images) if parsed_article.images else 0,
+                        "parsing_method": parsed_article.parsing_method,
+                    },
+                }
+            )
+
+            self.session.add(item)
+
+            logger.info(
+                "worklist_parsing_completed",
+                worklist_id=item.id,
+                author=parsed_article.author_name,
+                images_count=len(parsed_article.images) if parsed_article.images else 0,
+                parsing_method=parsed_article.parsing_method,
+            )
+
+        except Exception as exc:
+            logger.error(
+                "worklist_parsing_exception",
+                worklist_id=item.id,
+                error=str(exc),
+                exc_info=True,
+            )
+            item.mark_status(WorklistStatus.PARSING)
+            item.add_note(
+                {
+                    "message": "解析过程异常，需要重试",
+                    "level": "error",
+                    "details": str(exc),
+                }
+            )
+            self.session.add(item)
 
     async def _run_proofreading(self, item: WorklistItem, article: Article) -> None:
         """Invoke AI + deterministic proofreading and persist the results."""
