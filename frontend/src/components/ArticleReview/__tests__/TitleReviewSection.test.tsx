@@ -2,16 +2,9 @@
  * Tests for TitleReviewSection component
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TitleReviewSection } from '../TitleReviewSection';
-
-// Mock i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
 
 describe('TitleReviewSection', () => {
   const mockOnApprove = vi.fn();
@@ -38,14 +31,14 @@ describe('TitleReviewSection', () => {
   it('should show section header', () => {
     render(<TitleReviewSection {...defaultProps} />);
 
-    expect(screen.getByText('articleReview.parsing.title')).toBeInTheDocument();
+    expect(screen.getByText(/标题|Title/)).toBeInTheDocument();
   });
 
   it('should show approve button', () => {
     render(<TitleReviewSection {...defaultProps} />);
 
     const approveButton = screen.getByRole('button', {
-      name: /approve|articleReview.actions.approve/i,
+      name: /approve|批准/i,
     });
     expect(approveButton).toBeInTheDocument();
   });

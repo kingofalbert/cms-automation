@@ -6,13 +6,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ReviewProgressStepper } from '../ReviewProgressStepper';
 
-// Mock i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}));
-
 describe('ReviewProgressStepper', () => {
   const mockOnStepClick = vi.fn();
 
@@ -25,16 +18,16 @@ describe('ReviewProgressStepper', () => {
   it('should render all three steps', () => {
     render(<ReviewProgressStepper {...defaultProps} />);
 
-    expect(screen.getByText('articleReview.steps.parsing')).toBeInTheDocument();
-    expect(screen.getByText('articleReview.steps.proofreading')).toBeInTheDocument();
-    expect(screen.getByText('articleReview.steps.publish')).toBeInTheDocument();
+    expect(screen.getByText(/解析审核|Parsing Review/)).toBeInTheDocument();
+    expect(screen.getByText(/校对审核|Proofreading Review/)).toBeInTheDocument();
+    expect(screen.getByText(/发布预览|Publish Preview/)).toBeInTheDocument();
   });
 
   it('should highlight current step', () => {
     const { rerender } = render(<ReviewProgressStepper {...defaultProps} />);
 
     // Check parsing_review is active
-    let activeStep = screen.getByText('articleReview.steps.parsing').closest('button');
+    let activeStep = screen.getByText(/解析审核|Parsing Review/).closest('button');
     expect(activeStep).toHaveClass('border-blue-500');
 
     // Change to proofreading_review
@@ -45,7 +38,7 @@ describe('ReviewProgressStepper', () => {
       />
     );
 
-    activeStep = screen.getByText('articleReview.steps.proofreading').closest('button');
+    activeStep = screen.getByText(/校对审核|Proofreading Review/).closest('button');
     expect(activeStep).toHaveClass('border-blue-500');
   });
 
@@ -58,14 +51,14 @@ describe('ReviewProgressStepper', () => {
       />
     );
 
-    const completedStep = screen.getByText('articleReview.steps.parsing').closest('button');
+    const completedStep = screen.getByText(/解析审核|Parsing Review/).closest('button');
     expect(completedStep).toHaveClass('border-green-500');
   });
 
   it('should call onStepClick when clicking a step', () => {
     render(<ReviewProgressStepper {...defaultProps} />);
 
-    const proofreadingStep = screen.getByText('articleReview.steps.proofreading');
+    const proofreadingStep = screen.getByText(/校对审核|Proofreading Review/);
     proofreadingStep.click();
 
     expect(mockOnStepClick).toHaveBeenCalledWith('proofreading_review');
@@ -80,7 +73,7 @@ describe('ReviewProgressStepper', () => {
       />
     );
 
-    const parsingStep = screen.getByText('articleReview.steps.parsing');
+    const parsingStep = screen.getByText(/解析审核|Parsing Review/);
     parsingStep.click();
 
     expect(mockOnStepClick).toHaveBeenCalledWith('parsing_review');
