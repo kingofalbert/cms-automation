@@ -36,7 +36,7 @@ export default function WorklistPage() {
 
   // Phase 8: ArticleReviewModal state
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
-  const [reviewItemId, setReviewItemId] = useState<number | null>(null);
+  const [reviewContext, setReviewContext] = useState<{ worklistId: number; articleId: number } | null>(null);
 
   // Feature flag for Phase 8 (can be env variable later)
   const ENABLE_ARTICLE_REVIEW_MODAL = true; // TODO: Move to env config
@@ -174,11 +174,13 @@ export default function WorklistPage() {
 
   const handleItemClick = (item: WorklistItem) => {
     if (ENABLE_ARTICLE_REVIEW_MODAL) {
-      // Phase 8: Open new ArticleReviewModal
-      setReviewItemId(item.id);
+      if (!item.article_id) {
+        alert('该工作项尚未关联文章，无法打开审核。');
+        return;
+      }
+      setReviewContext({ worklistId: item.id, articleId: item.article_id });
       setReviewModalOpen(true);
     } else {
-      // Legacy: Open drawer
       setSelectedItem(item);
       setDrawerOpen(true);
     }
@@ -186,8 +188,7 @@ export default function WorklistPage() {
 
   const handleReviewModalClose = () => {
     setReviewModalOpen(false);
-    setReviewItemId(null);
-    // Refetch worklist to reflect any changes
+    setReviewContext(null);
     refetch();
   };
 
@@ -371,11 +372,12 @@ export default function WorklistPage() {
       )}
 
       {/* Phase 8: ArticleReviewModal */}
-      {ENABLE_ARTICLE_REVIEW_MODAL && reviewItemId && (
+      {ENABLE_ARTICLE_REVIEW_MODAL && reviewModalOpen && reviewContext && (
         <ArticleReviewModal
           isOpen={reviewModalOpen}
           onClose={handleReviewModalClose}
-          worklistItemId={reviewItemId}
+          worklistItemId={reviewContext.worklistId}
+          articleId={reviewContext.articleId}
         />
       )}
     </main>

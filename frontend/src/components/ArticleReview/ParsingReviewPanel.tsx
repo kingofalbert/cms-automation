@@ -22,6 +22,7 @@ import { TitleReviewSection } from './TitleReviewSection';
 import { AuthorReviewSection } from './AuthorReviewSection';
 import { ImageReviewSection } from './ImageReviewSection';
 import { SEOReviewSection } from './SEOReviewSection';
+import { SEOComparisonCard } from './SEOComparisonCard';
 import { FAQReviewSection } from './FAQReviewSection';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 
@@ -161,6 +162,14 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
 
         {/* Right column: 40% (2 out of 5 cols) */}
         <div className="lg:col-span-2 space-y-6">
+          {/* AI SEO Suggestions (if available from article review) */}
+          {(data.articleReview?.meta || data.articleReview?.seo) && (
+            <SEOComparisonCard
+              meta={data.articleReview.meta}
+              seo={data.articleReview.seo}
+            />
+          )}
+
           {/* SEO Review */}
           <Card className="p-6">
             <SEOReviewSection
@@ -176,6 +185,42 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
               }}
             />
           </Card>
+
+          {/* AI FAQ Proposals (if available from article review) */}
+          {data.articleReview?.faq_proposals && data.articleReview.faq_proposals.length > 0 && (
+            <Card className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+              <h4 className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                AI 建议：FAQ Schema ({data.articleReview.faq_proposals.length} 个提案)
+              </h4>
+              <div className="space-y-3">
+                {data.articleReview.faq_proposals.map((proposal, idx) => (
+                  <div key={idx} className="p-3 bg-white rounded border border-purple-200">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-purple-700">
+                        提案 #{idx + 1} - {proposal.schema_type}
+                      </span>
+                      {proposal.score !== null && proposal.score !== undefined && (
+                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                          评分: {Math.round(proposal.score * 100)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {proposal.questions.map((q, qIdx) => (
+                        <div key={qIdx} className="text-xs">
+                          <p className="font-medium text-gray-900">Q{qIdx + 1}: {q.question}</p>
+                          <p className="text-gray-600 ml-4 mt-1">A: {q.answer}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
 
           {/* FAQ Review */}
           <Card className="p-6">

@@ -17,40 +17,58 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { worklistAPI } from '../../services/worklist';
+import { articlesAPI } from '../../services/articles';
 import type { WorklistItemDetail } from '../../types/worklist';
+import type { ArticleReviewResponse } from '../../types/api';
 
 export interface ArticleReviewData extends WorklistItemDetail {
-  // Extended with computed properties for UI
   hasParsingData: boolean;
   hasProofreadingData: boolean;
   isReadyToPublish: boolean;
+  articleReview: ArticleReviewResponse | null;
 }
 
 /**
  * Transform worklist item detail to review data
  */
-const transformToReviewData = (item: WorklistItemDetail): ArticleReviewData => {
+const transformToReviewData = (
+  item: WorklistItemDetail,
+  review: ArticleReviewResponse | null
+): ArticleReviewData => {
+  const proofreadingIssues =
+    review?.proofreading_issues?.length ? review.proofreading_issues : item.proofreading_issues;
+
   return {
     ...item,
+    proofreading_issues: proofreadingIssues || item.proofreading_issues,
     hasParsingData: Boolean(item.title && item.content),
-    hasProofreadingData: Boolean(item.proofreading_issues && item.proofreading_issues.length > 0),
+    hasProofreadingData: Boolean(proofreadingIssues && proofreadingIssues.length > 0),
     isReadyToPublish: item.status === 'ready_to_publish' || item.status === 'publishing',
+    articleReview: review,
   };
 };
 
 /**
  * Hook: useArticleReviewData
  */
-export const useArticleReviewData = (worklistItemId: number, enabled = true) => {
+export const useArticleReviewData = (
+  worklistItemId: number,
+  articleId?: number,
+  enabled = true,
+) => {
   const queryClient = useQueryClient();
+  const queryKey = ['articleReview', worklistItemId, articleId ?? null] as const;
 
   const query = useQuery({
-    queryKey: ['articleReview', worklistItemId],
+    queryKey,
     queryFn: async (): Promise<ArticleReviewData> => {
-      const data = await worklistAPI.get(worklistItemId);
-      return transformToReviewData(data);
+      const [worklistData, articleReview] = await Promise.all([
+        worklistAPI.get(worklistItemId),
+        articleId ? articlesAPI.getReviewData(articleId) : Promise.resolve(null),
+      ]);
+      return transformToReviewData(worklistData, articleReview);
     },
-    enabled: enabled && worklistItemId > 0,
+    enabled: enabled && worklistItemId > 0 && Boolean(articleId),
     staleTime: 30 * 1000, // 30 seconds - data is fresh for 30s
     gcTime: 5 * 60 * 1000, // 5 minutes - cache for 5 minutes
     refetchOnWindowFocus: false,
@@ -60,24 +78,33 @@ export const useArticleReviewData = (worklistItemId: number, enabled = true) => 
   /**
    * Prefetch next/previous worklist items for smooth navigation
    */
-  const prefetchAdjacentItems = (nextId?: number, prevId?: number) => {
-    if (nextId) {
+  const prefetchAdjacentItems = (
+    next?: { worklistId: number; articleId?: number },
+    prev?: { worklistId: number; articleId?: number },
+  ) => {
+    if (next?.worklistId && next.articleId) {
       queryClient.prefetchQuery({
-        queryKey: ['articleReview', nextId],
+        queryKey: ['articleReview', next.worklistId, next.articleId],
         queryFn: async () => {
-          const data = await worklistAPI.get(nextId);
-          return transformToReviewData(data);
+          const [worklistData, articleReview] = await Promise.all([
+            worklistAPI.get(next.worklistId),
+            articlesAPI.getReviewData(next.articleId!),
+          ]);
+          return transformToReviewData(worklistData, articleReview);
         },
         staleTime: 30 * 1000,
       });
     }
 
-    if (prevId) {
+    if (prev?.worklistId && prev.articleId) {
       queryClient.prefetchQuery({
-        queryKey: ['articleReview', prevId],
+        queryKey: ['articleReview', prev.worklistId, prev.articleId],
         queryFn: async () => {
-          const data = await worklistAPI.get(prevId);
-          return transformToReviewData(data);
+          const [worklistData, articleReview] = await Promise.all([
+            worklistAPI.get(prev.worklistId),
+            articlesAPI.getReviewData(prev.articleId!),
+          ]);
+          return transformToReviewData(worklistData, articleReview);
         },
         staleTime: 30 * 1000,
       });
@@ -89,7 +116,7 @@ export const useArticleReviewData = (worklistItemId: number, enabled = true) => 
    */
   const invalidate = () => {
     queryClient.invalidateQueries({
-      queryKey: ['articleReview', worklistItemId],
+      queryKey,
     });
   };
 
@@ -98,7 +125,7 @@ export const useArticleReviewData = (worklistItemId: number, enabled = true) => 
    */
   const updateCachedData = (updater: (old: ArticleReviewData) => ArticleReviewData) => {
     queryClient.setQueryData<ArticleReviewData>(
-      ['articleReview', worklistItemId],
+      queryKey,
       (old) => (old ? updater(old) : old)
     );
   };

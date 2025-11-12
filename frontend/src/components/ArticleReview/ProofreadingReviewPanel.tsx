@@ -46,8 +46,20 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
   // Local state for decisions
   const [decisions, setDecisions] = useState<Map<string, DecisionPayload>>(new Map());
 
-  // Filter issues by decision status
-  const issues = data.proofreading_issues || [];
+  // Use article review issues if available (richer data with historical context)
+  // Falls back to worklist issues for backward compatibility
+  const issues = useMemo(() => {
+    if (data.articleReview?.proofreading_issues) {
+      return data.articleReview.proofreading_issues;
+    }
+    return data.proofreading_issues || [];
+  }, [data]);
+
+  // Get existing decisions from article review (historical context)
+  const existingDecisions = useMemo(() => {
+    return data.articleReview?.existing_decisions || [];
+  }, [data]);
+
   const stats = data.proofreading_stats || {
     total_issues: 0,
     critical_count: 0,
@@ -162,8 +174,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
         <div className="lg:col-span-3 space-y-6">
           <Card className="p-6">
             <DiffViewSection
-              originalContent={data.content || ''}
-              proofreadContent={(data.metadata?.proofread_content as string) || data.content || ''}
+              originalContent={data.articleReview?.content?.original || data.content || ''}
+              proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.content || ''}
             />
           </Card>
         </div>
@@ -178,6 +190,53 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
               onBatchDecision={handleBatchDecision}
             />
           </Card>
+
+          {/* Historical decisions (if available from article review) */}
+          {existingDecisions.length > 0 && (
+            <Card className="p-6 bg-blue-50 border-blue-200">
+              <h4 className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                历史审核决策 ({existingDecisions.length})
+              </h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {existingDecisions.slice(0, 5).map((decision, idx) => (
+                  <div key={idx} className="p-3 bg-white rounded border border-blue-100">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <p className="text-xs text-gray-600">问题 ID: {decision.issue_id}</p>
+                        <p className="text-sm font-medium text-gray-900 mt-1">
+                          决策: <span className={`${
+                            decision.decision_type === 'accepted' ? 'text-green-600' :
+                            decision.decision_type === 'rejected' ? 'text-red-600' :
+                            'text-blue-600'
+                          }`}>
+                            {decision.decision_type === 'accepted' ? '已接受' :
+                             decision.decision_type === 'rejected' ? '已拒绝' : '已修改'}
+                          </span>
+                        </p>
+                        {decision.rationale && (
+                          <p className="text-xs text-gray-600 mt-1">理由: {decision.rationale}</p>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(decision.decided_at).toLocaleDateString('zh-CN')}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      审核人: {decision.reviewer}
+                    </p>
+                  </div>
+                ))}
+                {existingDecisions.length > 5 && (
+                  <p className="text-xs text-blue-600 text-center py-2">
+                    还有 {existingDecisions.length - 5} 个历史决策...
+                  </p>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Issues list */}
           <Card className="p-6">

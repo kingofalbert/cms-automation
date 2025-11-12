@@ -5,6 +5,8 @@
  * 確保前端和後端之間的類型安全。
  */
 
+import type { ProofreadingIssue } from './worklist';
+
 // ============================================================================
 // 通用類型
 // ============================================================================
@@ -39,6 +41,7 @@ export interface APIError {
 
 export type ArticleStatus =
   | 'imported'
+  | 'in-review'
   | 'seo_optimized'
   | 'ready_to_publish'
   | 'publishing'
@@ -604,13 +607,18 @@ export interface MetaComparison {
 
 export interface SEOComparison {
   original_keywords: string[];
-  suggested_keywords: Record<string, unknown> | null;
+  suggested_keywords: string[] | null;
   reasoning: string | null;
   score: number | null;
 }
 
+export interface FAQQuestion {
+  question: string;
+  answer: string;
+}
+
 export interface FAQProposal {
-  questions: Record<string, unknown>[];
+  questions: FAQQuestion[];
   schema_type: string;
   score: number | null;
 }
@@ -654,7 +662,7 @@ export interface ArticleReviewResponse {
   paragraph_suggestions: ParagraphSuggestion[];
 
   // Proofreading issues
-  proofreading_issues: Record<string, unknown>[];
+  proofreading_issues: ProofreadingIssue[];
 
   // Existing decisions (hydrated from database)
   existing_decisions: ProofreadingDecisionDetail[];

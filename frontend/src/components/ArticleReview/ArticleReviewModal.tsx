@@ -33,6 +33,8 @@ export interface ArticleReviewModalProps {
   onClose: () => void;
   /** Worklist item ID to review */
   worklistItemId: number;
+  /** Linked article ID for review data */
+  articleId: number;
   /** Optional: Force specific tab on open */
   initialTab?: 'parsing' | 'proofreading' | 'publish';
 }
@@ -63,10 +65,15 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   isOpen,
   onClose,
   worklistItemId,
+  articleId,
   initialTab,
 }) => {
   // Fetch article review data
-  const { data, isLoading, error, refetch } = useArticleReviewData(worklistItemId, isOpen);
+  const { data, isLoading, error, refetch } = useArticleReviewData(
+    worklistItemId,
+    articleId,
+    isOpen
+  );
 
   // Workflow state machine (cast string to WorklistStatus if needed)
   const { currentStep, canGoPrevious, canGoNext, goToPrevious, goToNext, saveProgress } =

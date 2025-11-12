@@ -326,6 +326,12 @@ class GoogleDriveSyncService:
         # Parse content and use Drive file name as fallback title
         file_name = file_metadata.get("name")
         parsed = self._parse_document_content(content, file_name=file_name)
+
+        # Store raw HTML for parser (Issue #2 fix)
+        # Parser needs original HTML with <img> tags and structure
+        if mime_type == "application/vnd.google-apps.document":
+            parsed["raw_html"] = html_content
+
         parsed["drive_metadata"] = {
             "id": file_metadata.get("id"),
             "name": file_metadata.get("name"),

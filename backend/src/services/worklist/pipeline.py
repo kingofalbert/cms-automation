@@ -49,10 +49,18 @@ class WorklistPipelineService:
         article = await self._ensure_article(item)
 
         # Step 1: Parse document to extract author, images, SEO, etc.
-        await self._run_parsing(item)
+        parsing_success = await self._run_parsing(item)
 
-        # Step 2: Run proofreading
-        await self._run_proofreading(item, article)
+        # Step 2: Only run proofreading if parsing succeeded
+        if parsing_success:
+            await self._run_proofreading(item, article)
+        else:
+            logger.info(
+                "worklist_skipped_proofreading",
+                worklist_id=item.id,
+                reason="parsing_failed_or_needs_review",
+                status=item.status.value if item.status else None,
+            )
 
     async def _ensure_article(self, item: WorklistItem) -> Article:
         """Create an article for the worklist item if needed."""
@@ -91,17 +99,32 @@ class WorklistPipelineService:
         )
         return article
 
-    async def _run_parsing(self, item: WorklistItem) -> None:
-        """Parse document content to extract structured data (author, images, SEO, etc.)."""
+    async def _run_parsing(self, item: WorklistItem) -> bool:
+        """Parse document content to extract structured data (author, images, SEO, etc.).
+
+        Returns:
+            True if parsing succeeded and item is ready for next stage
+            False if parsing failed or needs manual review
+        """
         try:
-            # Get the raw HTML content from the worklist item
-            raw_html = item.content
+            # Get the raw HTML content from the worklist item (Issue #2 fix)
+            # Use raw_html if available (contains <img> tags and structure),
+            # fallback to cleaned content for backward compatibility
+            raw_html = item.raw_html or item.content
+
+            if not item.raw_html:
+                logger.warning(
+                    "worklist_parsing_no_raw_html",
+                    worklist_id=item.id,
+                    message="Using cleaned text as fallback (raw HTML not available)",
+                )
 
             # Call ArticleParserService to parse the document
             logger.info(
                 "worklist_parsing_started",
                 worklist_id=item.id,
                 content_length=len(raw_html),
+                has_raw_html=bool(item.raw_html),
             )
 
             # Parse with AI (will fallback to heuristics if AI fails)
@@ -124,7 +147,7 @@ class WorklistPipelineService:
                     }
                 )
                 self.session.add(item)
-                return
+                return False  # Signal failure to caller
 
             # Parsing succeeded - extract data from ParsedArticle
             parsed_article = parsing_result.parsed_article
@@ -191,6 +214,8 @@ class WorklistPipelineService:
                 parsing_method=parsed_article.parsing_method,
             )
 
+            return True  # Signal success to caller
+
         except Exception as exc:
             logger.error(
                 "worklist_parsing_exception",
@@ -207,6 +232,7 @@ class WorklistPipelineService:
                 }
             )
             self.session.add(item)
+            return False  # Signal failure to caller
 
     async def _run_proofreading(self, item: WorklistItem, article: Article) -> None:
         """Invoke AI + deterministic proofreading and persist the results."""

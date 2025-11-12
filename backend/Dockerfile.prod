@@ -1,5 +1,5 @@
 # Multi-stage production Dockerfile for FastAPI backend
-FROM python:3.13-slim as builder
+FROM python:3.11-slim as builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -15,15 +15,15 @@ RUN pip install --no-cache-dir poetry==2.2.0
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files
-COPY pyproject.toml poetry.lock ./
+# Copy dependency files and README for poetry
+COPY pyproject.toml poetry.lock README.md ./
 
-# Install dependencies (no dev dependencies)
+# Install dependencies (no dev dependencies, no root package)
 RUN poetry config virtualenvs.create false \
-    && poetry install --only main --no-interaction --no-ansi
+    && poetry install --only main --no-interaction --no-ansi --no-root
 
 # Production stage
-FROM python:3.13-slim
+FROM python:3.11-slim
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
@@ -38,7 +38,7 @@ RUN useradd -m -u 1000 appuser
 WORKDIR /app
 
 # Copy installed packages from builder
-COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
@@ -57,5 +57,14 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run application
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+# Create startup script that runs migrations then starts the app
+RUN echo '#!/bin/bash\n\
+set -e\n\
+echo "Running database migrations..."\n\
+python -m alembic upgrade head\n\
+echo "Migrations complete. Starting application..."\n\
+exec uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 4\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Run application with migrations
+CMD ["/app/start.sh"]

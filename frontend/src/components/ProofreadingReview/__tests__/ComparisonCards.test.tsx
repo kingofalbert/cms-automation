@@ -19,7 +19,7 @@ describe('ComparisonCards', () => {
 
   const mockSEO: SEOComparison = {
     original_keywords: ['keyword1', 'keyword2'],
-    suggested_keywords: { primary: ['seo1', 'seo2'] },
+    suggested_keywords: ['seo1', 'seo2'],
     reasoning: 'Better keyword targeting',
     score: 0.9,
   };

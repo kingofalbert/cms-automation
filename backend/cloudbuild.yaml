@@ -1,0 +1,30 @@
+steps:
+  # Build the Docker image with all layers
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '--no-cache',
+      '-t', 'us-east1-docker.pkg.dev/cmsupload-476323/cms-backend/cms-automation-backend:latest',
+      '-t', 'us-east1-docker.pkg.dev/cmsupload-476323/cms-backend/cms-automation-backend:parsing-fix',
+      '-f', 'Dockerfile.prod',
+      '.'
+    ]
+    timeout: '1200s'  # 20 minutes for build
+
+  # Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/cmsupload-476323/cms-backend/cms-automation-backend:latest']
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-east1-docker.pkg.dev/cmsupload-476323/cms-backend/cms-automation-backend:parsing-fix']
+
+# Use a higher performance machine for building
+options:
+  machineType: 'E2_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
+  substitutionOption: 'ALLOW_LOOSE'
+
+timeout: '1800s'  # 30 minutes total
+
+images:
+  - 'us-east1-docker.pkg.dev/cmsupload-476323/cms-backend/cms-automation-backend:latest'
+  - 'us-east1-docker.pkg.dev/cmsupload-476323/cms-backend/cms-automation-backend:parsing-fix'

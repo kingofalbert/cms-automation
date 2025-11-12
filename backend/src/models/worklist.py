@@ -71,6 +71,11 @@ class WorklistItem(Base, TimestampMixin):
         nullable=False,
         comment="Document content (Markdown/HTML)",
     )
+    raw_html: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Original HTML from Google Docs export (for parser with images)",
+    )
     author: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
