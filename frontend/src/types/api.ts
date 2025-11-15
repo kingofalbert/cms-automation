@@ -150,6 +150,64 @@ export interface SEOUpdateRequest {
 }
 
 // ============================================================================
+// SEO Title 相關類型 (Phase 9)
+// ============================================================================
+
+/**
+ * SEO Title Variant - 單個 SEO Title 建議變體
+ */
+export interface SEOTitleVariant {
+  /** Variant ID (e.g., "seo_variant_1") */
+  id: string;
+  /** SEO Title 內容 (~30 字) */
+  seo_title: string;
+  /** AI 生成原因說明 */
+  reasoning: string;
+  /** 此變體強調的關鍵詞 */
+  keywords_focus: string[];
+  /** 字符數 */
+  character_count: number;
+}
+
+/**
+ * SEO Title Suggestions Data - SEO Title 建議數據
+ */
+export interface SEOTitleSuggestionsData {
+  /** 2-3 個 SEO Title 變體 */
+  variants: SEOTitleVariant[];
+  /** 原文提取的 SEO Title (如果有) */
+  original_seo_title: string | null;
+  /** 優化建議說明 */
+  notes: string[];
+}
+
+/**
+ * SEO Title 選擇請求
+ */
+export interface SelectSEOTitleRequest {
+  /** 選擇的變體 ID (e.g., "seo_variant_1")，null 表示自定義 */
+  variant_id?: string | null;
+  /** 自定義 SEO Title (如果 variant_id 為 null) */
+  custom_seo_title?: string | null;
+}
+
+/**
+ * SEO Title 選擇回應
+ */
+export interface SelectSEOTitleResponse {
+  /** 文章 ID */
+  article_id: number;
+  /** 應用的 SEO Title */
+  seo_title: string;
+  /** SEO Title 來源: extracted/ai_generated/user_input */
+  seo_title_source: string;
+  /** 之前的 SEO Title (如果有) */
+  previous_seo_title: string | null;
+  /** 更新時間 */
+  updated_at: string;
+}
+
+// ============================================================================
 // 發布任務相關類型
 // ============================================================================
 

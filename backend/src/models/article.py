@@ -258,6 +258,26 @@ class Article(Base, TimestampMixin):
         comment="Array of SEO keywords extracted from content",
     )
 
+    # Phase 9: SEO Title (separate from H1 title)
+    seo_title: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        comment='SEO Title Tag (30字左右，用於<title>標籤和搜尋結果顯示)',
+    )
+
+    seo_title_extracted: Mapped[bool] = mapped_column(
+        nullable=False,
+        default=False,
+        server_default="false",
+        comment='是否從原文中提取了標記的 SEO Title',
+    )
+
+    seo_title_source: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment='SEO Title 來源：extracted/ai_generated/user_input/migrated',
+    )
+
     # Parsing confirmation workflow
     parsing_confirmed: Mapped[bool] = mapped_column(
         nullable=False,

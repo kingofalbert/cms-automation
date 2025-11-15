@@ -181,6 +181,9 @@ class ArticleParserService:
                 title_prefix=parsed_data.get("title_prefix"),
                 title_main=parsed_data["title_main"],
                 title_suffix=parsed_data.get("title_suffix"),
+                seo_title=parsed_data.get("seo_title"),
+                seo_title_extracted=parsed_data.get("seo_title_extracted", False),
+                seo_title_source="extracted" if parsed_data.get("seo_title_extracted") else None,
                 author_line=parsed_data.get("author_line"),
                 author_name=parsed_data.get("author_name"),
                 body_html=parsed_data["body_html"],
@@ -263,12 +266,13 @@ Parse the following Google Doc HTML and extract structured information.
 
 **Instructions**:
 1. **Title**: Split into prefix (optional, e.g., "【專題】"), main title (required), and suffix (optional subtitle)
-2. **Author**: Extract from "文／" or "作者：" patterns. Provide both raw line and cleaned name.
-3. **Body**: Remove header metadata, navigation elements, and images. Keep only article paragraphs.
-4. **Meta Description**: Create a 150-160 character SEO description summarizing the article.
-5. **SEO Keywords**: Extract 5-10 relevant keywords for SEO.
-6. **Tags**: Extract 3-6 content tags/categories.
-7. **Images**: Extract all images with their position (paragraph index), URL, and caption.
+2. **SEO Title**: Look for text marked with "這是 SEO title" or similar markers. If found, extract it as seo_title and set seo_title_extracted=true. If not found, leave seo_title=null and seo_title_extracted=false.
+3. **Author**: Extract from "文／" or "作者：" patterns. Provide both raw line and cleaned name.
+4. **Body**: Remove header metadata, navigation elements, and images. Keep only article paragraphs.
+5. **Meta Description**: Create a 150-160 character SEO description summarizing the article.
+6. **SEO Keywords**: Extract 5-10 relevant keywords for SEO.
+7. **Tags**: Extract 3-6 content tags/categories.
+8. **Images**: Extract all images with their position (paragraph index), URL, and caption.
 
 **Output Format** (JSON):
 ```json
@@ -276,6 +280,8 @@ Parse the following Google Doc HTML and extract structured information.
   "title_prefix": "【專題報導】",  // Optional
   "title_main": "2024年醫療保健創新趨勢",  // Required
   "title_suffix": "從AI診斷到遠距醫療",  // Optional
+  "seo_title": "2024年AI醫療創新趨勢",  // Extracted SEO Title (if marked in doc), null otherwise
+  "seo_title_extracted": true,  // true if SEO title was found in doc, false otherwise
   "author_line": "文／張三｜編輯／李四",  // Raw author line
   "author_name": "張三",  // Cleaned author name
   "body_html": "<p>正文內容...</p>",  // Sanitized HTML
@@ -345,6 +351,7 @@ Parse and respond with JSON:"""
 
             # Extract components
             title_data = self._extract_title(soup)
+            seo_title_data = self._extract_seo_title(soup)
             author_data = self._extract_author(soup)
             body_html = self._extract_body(soup)
             seo_data = self._extract_seo_metadata(soup)
@@ -355,6 +362,9 @@ Parse and respond with JSON:"""
                 title_prefix=title_data.get("prefix"),
                 title_main=title_data.get("main") or "Untitled",
                 title_suffix=title_data.get("suffix"),
+                seo_title=seo_title_data.get("seo_title"),
+                seo_title_extracted=seo_title_data.get("extracted", False),
+                seo_title_source="extracted" if seo_title_data.get("extracted") else None,
                 author_line=author_data.get("raw_line"),
                 author_name=author_data.get("name"),
                 body_html=body_html,
@@ -438,6 +448,44 @@ Parse and respond with JSON:"""
             suffix = None
 
         return {"prefix": prefix, "main": main or title_text, "suffix": suffix}
+
+    def _extract_seo_title(self, soup: BeautifulSoup) -> dict[str, str | bool | None]:
+        """Extract SEO Title from HTML if marked.
+
+        Args:
+            soup: BeautifulSoup parsed HTML
+
+        Returns:
+            Dict with 'seo_title' and 'extracted' keys
+        """
+        logger.debug("Extracting SEO Title using heuristics")
+
+        import re
+
+        # Common SEO title markers in Chinese
+        seo_title_markers = [
+            r"這是\s*SEO\s*title[:：]?\s*(.+)",
+            r"SEO\s*title[:：]?\s*(.+)",
+            r"SEO\s*標題[:：]?\s*(.+)",
+            r"\[SEO\s*title\][:：]?\s*(.+)",
+            r"【SEO\s*title】[:：]?\s*(.+)",
+        ]
+
+        # Search first 20 paragraphs for SEO title marker
+        for p in soup.find_all(["p", "div", "span"], limit=20):
+            text = p.get_text(strip=True)
+
+            # Try each pattern
+            for pattern in seo_title_markers:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    seo_title = match.group(1).strip()
+                    logger.debug(f"Found SEO Title: {seo_title}")
+                    return {"seo_title": seo_title, "extracted": True}
+
+        # No SEO title marker found
+        logger.debug("No SEO Title marker found")
+        return {"seo_title": None, "extracted": False}
 
     def _extract_author(self, soup: BeautifulSoup) -> dict[str, str | None]:
         """Extract author information from HTML.

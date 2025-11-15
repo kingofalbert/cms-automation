@@ -263,9 +263,46 @@ class UnifiedOptimizationService:
       "character_count": {{"prefix": 4, "main": 18, "suffix": 4, "total": 30}}
     }}
   ],
-  "optimization_notes": ["建议在标题中突出具体数据以增强可信度", "保持标题简洁，避免超过50字符"]
+  "optimization_notes": ["建议在标题中突出具体数据以增强可信度", "保持标题简洁，避免超过50字符"],
+  "seo_title_suggestions": {{
+    "variants": [
+      {{
+        "id": "seo_variant_1",
+        "seo_title": "2024年AI醫療創新趨勢",
+        "reasoning": "聚焦核心關鍵字「AI醫療」和「創新」，30字內，包含時效性",
+        "keywords_focus": ["AI醫療", "創新", "2024"],
+        "character_count": 12
+      }},
+      {{
+        "id": "seo_variant_2",
+        "seo_title": "AI醫療診斷技術全面解析",
+        "reasoning": "突出「診斷技術」和「全面解析」，吸引深度閱讀者",
+        "keywords_focus": ["AI醫療", "診斷技術", "解析"],
+        "character_count": 12
+      }}
+    ],
+    "original_seo_title": null,
+    "notes": [
+      "SEO Title 建議保持在 30 字以內",
+      "包含核心關鍵字以提升搜尋排名",
+      "與 H1 標題主題一致但更精簡"
+    ]
+  }}
 }}
 ```
+
+**注意**: `seo_title_suggestions` 是新增欄位，用於生成 SEO Title（`<title>` 標籤）建議，與 H1 標題分開。
+
+**SEO Title vs H1 的區別**:
+- **H1 標題**: 頁面內容的主標題，較長（25-50字），給用戶閱讀
+- **SEO Title**: 搜尋引擎結果顯示的標題，較短（30字左右），給搜尋引擎看
+
+**SEO Title 要求**:
+1. 生成 2-3 個精簡變體
+2. 長度: **30字左右**（最多40字）
+3. 必須包含主關鍵詞
+4. 可加入年份、數據等提升點擊率
+5. 與 H1 主題一致但更精簡
 
 ---
 
@@ -580,7 +617,7 @@ class UnifiedOptimizationService:
     async def _save_title_suggestions(
         self, article_id: int, article: Article, data: dict
     ) -> None:
-        """存储标题建议."""
+        """存储标题建议（包含 H1 和 SEO Title）."""
         # Check if already exists
         from sqlalchemy import select
 
@@ -588,10 +625,19 @@ class UnifiedOptimizationService:
         result = await self.db.execute(stmt)
         existing = result.scalar_one_or_none()
 
+        # Prepare SEO title suggestions data
+        seo_title_suggestions = data.get("seo_title_suggestions", {})
+
+        # Update original_seo_title in suggestions if article has extracted seo_title
+        if article.seo_title and article.seo_title_extracted:
+            if "original_seo_title" not in seo_title_suggestions or not seo_title_suggestions["original_seo_title"]:
+                seo_title_suggestions["original_seo_title"] = article.seo_title
+
         if existing:
             # Update existing
             existing.suggested_title_sets = data.get("suggested_title_sets", [])
             existing.optimization_notes = data.get("optimization_notes", [])
+            existing.suggested_seo_titles = seo_title_suggestions if seo_title_suggestions else None
             existing.generated_at = datetime.now()
         else:
             # Create new
@@ -602,10 +648,11 @@ class UnifiedOptimizationService:
                 original_title_suffix=article.title_suffix,
                 suggested_title_sets=data.get("suggested_title_sets", []),
                 optimization_notes=data.get("optimization_notes", []),
+                suggested_seo_titles=seo_title_suggestions if seo_title_suggestions else None,
             )
             self.db.add(title_suggestion)
 
-        logger.info(f"Saved title suggestions for article {article_id}")
+        logger.info(f"Saved title suggestions (H1 + SEO) for article {article_id}")
 
     async def _save_seo_suggestions(
         self,
@@ -719,6 +766,7 @@ class UnifiedOptimizationService:
             "title_suggestions": {
                 "suggested_title_sets": title_suggestion.suggested_title_sets if title_suggestion else [],
                 "optimization_notes": title_suggestion.optimization_notes if title_suggestion else [],
+                "seo_title_suggestions": title_suggestion.suggested_seo_titles if title_suggestion else {},
             },
             "seo_suggestions": {
                 "seo_keywords": {

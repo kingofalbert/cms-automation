@@ -160,6 +160,15 @@ class PublishingOrchestrator:
                 article.published_at = None
                 article.published_url = None
 
+            # Phase 9: Validate SEO Title before publishing
+            if not article.seo_title:
+                logger.warning(
+                    "seo_title_missing_before_publish",
+                    article_id=article.id,
+                    title=article.title,
+                    message="Article has no SEO Title. Will fallback to H1 title for SEO.",
+                )
+
             session.add(task)
             session.add(article)
             await session.commit()
@@ -366,7 +375,10 @@ class PublishingOrchestrator:
         return max(0, min(progress, 99))
 
     def _build_seo_metadata(self, article: Article) -> SEOMetadata:
-        """Construct SEO metadata, falling back to sensible defaults on validation errors."""
+        """Construct SEO metadata, falling back to sensible defaults on validation errors.
+
+        Phase 9: Prioritizes article.seo_title over article.title for SEO optimization.
+        """
         metadata: dict[str, Any] = dict(article.article_metadata or {})
         seo_raw = metadata.get("seo") or {}
 
@@ -378,26 +390,42 @@ class PublishingOrchestrator:
                 article_id=article.id,
             )
 
-        title = (article.title or "Published Article").strip()
-        if len(title) < 50:
-            title = (title + " ") * ((50 // max(len(title), 1)) + 1)
-            title = title[:60]
+        # Phase 9: Use seo_title if available, fallback to title
+        # seo_title is optimized for search engines (~30 chars)
+        # title (H1) is for page content (25-50 chars)
+        seo_title = (article.seo_title or article.title or "Published Article").strip()
+        h1_title = (article.title or "Published Article").strip()
 
-        description_source = (article.body or title).strip()
+        # Ensure meta_title meets minimum SEO requirements (50 chars)
+        if len(seo_title) < 50:
+            # Pad seo_title to meet minimum requirement
+            padded_title = (seo_title + " ") * ((50 // max(len(seo_title), 1)) + 1)
+            seo_title = padded_title[:60]
+
+        description_source = (article.body or h1_title).strip()
         description = description_source[:160]
         while len(description) < 120:
-            description += f" {title}"
+            description += f" {h1_title}"
             if len(description) >= 160:
                 break
         description = description[:160]
 
+        # Log if using extracted/AI-generated SEO Title
+        if article.seo_title:
+            logger.info(
+                "using_optimized_seo_title",
+                article_id=article.id,
+                seo_title=article.seo_title,
+                seo_title_source=article.seo_title_source,
+            )
+
         fallback = {
-            "meta_title": title,
+            "meta_title": seo_title,
             "meta_description": description,
-            "focus_keyword": title.split()[0] if title.split() else "article",
-            "keywords": [title.split()[0]] if title.split() else ["article"],
+            "focus_keyword": h1_title.split()[0] if h1_title.split() else "article",
+            "keywords": [h1_title.split()[0]] if h1_title.split() else ["article"],
             "canonical_url": None,
-            "og_title": title[:70],
+            "og_title": seo_title[:70],
             "og_description": description[:200],
             "og_image": None,
             "schema_type": "Article",

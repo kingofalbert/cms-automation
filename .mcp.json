@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "chrome-devtools": {
-      "command": "/home/kingofalbert/.nvm/versions/node/v20.19.5/bin/npx",
+      "command": "/Users/albertking/.nvm/versions/node/v22.19.0/bin/npx",
       "args": ["--yes", "chrome-devtools-mcp@latest"],
       "env": {}
     }

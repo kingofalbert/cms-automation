@@ -23,6 +23,9 @@ export type { ParsingReviewPanelProps, ParsingData } from './ParsingReviewPanel'
 export { TitleReviewSection } from './TitleReviewSection';
 export type { TitleReviewSectionProps } from './TitleReviewSection';
 
+export { SEOTitleSelectionCard } from './SEOTitleSelectionCard';
+export type { SEOTitleSelectionCardProps } from './SEOTitleSelectionCard';
+
 export { AuthorReviewSection } from './AuthorReviewSection';
 export type { AuthorReviewSectionProps } from './AuthorReviewSection';
 

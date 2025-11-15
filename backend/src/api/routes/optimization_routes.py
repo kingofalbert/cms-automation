@@ -24,6 +24,8 @@ from src.api.schemas.optimization import (
     OptimizationError,
     OptimizationStatusResponse,
     OptimizationsResponse,
+    SelectSEOTitleRequest,
+    SelectSEOTitleResponse,
 )
 from src.config.settings import get_settings
 from src.models.article import Article
@@ -103,6 +105,7 @@ async def _build_optimizations_response(
         "title_suggestions": {
             "suggested_title_sets": title_suggestion.suggested_title_sets if title_suggestion else [],
             "optimization_notes": title_suggestion.optimization_notes if title_suggestion else [],
+            "seo_title_suggestions": title_suggestion.suggested_seo_titles if title_suggestion else None,
         },
         "seo_suggestions": {
             "seo_keywords": {
@@ -404,3 +407,120 @@ async def delete_optimizations(
     await db.commit()
 
     logger.info(f"Successfully deleted optimizations for article {article_id}")
+
+
+# ============================================================================
+# SEO Title Selection (Phase 9)
+# ============================================================================
+
+
+@router.post(
+    "/articles/{article_id}/select-seo-title",
+    response_model=SelectSEOTitleResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Select and apply SEO Title for article",
+    description="""Select an SEO Title from AI-generated variants or provide a custom one.
+
+    This endpoint allows the user to:
+    1. Select one of the AI-generated SEO Title variants (by variant_id)
+    2. Provide a custom SEO Title (by custom_seo_title)
+
+    The selected SEO Title will be applied to the article's seo_title field.
+    """,
+)
+async def select_seo_title(
+    article_id: int,
+    request: SelectSEOTitleRequest,
+    db: AsyncSession = Depends(get_db),
+) -> SelectSEOTitleResponse:
+    """Select and apply an SEO Title for an article.
+
+    Args:
+        article_id: ID of article
+        request: Selection request with variant_id or custom_seo_title
+        db: Database session
+
+    Returns:
+        Response with applied SEO Title
+
+    Raises:
+        404: Article not found or title_suggestions not found
+        400: Invalid request (both variant_id and custom_seo_title provided, or neither)
+        422: Selected variant_id not found in suggestions
+    """
+    from datetime import datetime
+
+    logger.info(f"POST /articles/{article_id}/select-seo-title")
+
+    # Validate request
+    if request.variant_id and request.custom_seo_title:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot provide both variant_id and custom_seo_title. Please choose one.",
+        )
+
+    if not request.variant_id and not request.custom_seo_title:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must provide either variant_id or custom_seo_title.",
+        )
+
+    # Get article
+    article = await _get_article_or_404(article_id, db)
+
+    # Store previous SEO Title
+    previous_seo_title = article.seo_title
+
+    # Determine SEO Title and source
+    if request.variant_id:
+        # User selected an AI-generated variant
+        # Load title suggestions to find the variant
+        stmt = select(TitleSuggestion).where(TitleSuggestion.article_id == article_id)
+        result = await db.execute(stmt)
+        title_suggestion = result.scalar_one_or_none()
+
+        if not title_suggestion or not title_suggestion.suggested_seo_titles:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No SEO Title suggestions found for article {article_id}. "
+                "Please generate optimizations first.",
+            )
+
+        # Find the selected variant
+        suggested_seo_titles = title_suggestion.suggested_seo_titles
+        variants = suggested_seo_titles.get("variants", [])
+        selected_variant = next((v for v in variants if v.get("id") == request.variant_id), None)
+
+        if not selected_variant:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Variant ID '{request.variant_id}' not found in SEO Title suggestions.",
+            )
+
+        seo_title = selected_variant.get("seo_title")
+        seo_title_source = "ai_generated"
+
+    else:
+        # User provided custom SEO Title
+        seo_title = request.custom_seo_title
+        seo_title_source = "user_input"
+
+    # Update article
+    article.seo_title = seo_title
+    article.seo_title_source = seo_title_source
+    article.updated_at = datetime.utcnow()
+
+    await db.commit()
+
+    logger.info(
+        f"Successfully applied SEO Title for article {article_id}: "
+        f"'{seo_title}' (source: {seo_title_source})"
+    )
+
+    return SelectSEOTitleResponse(
+        article_id=article_id,
+        seo_title=seo_title,
+        seo_title_source=seo_title_source,
+        previous_seo_title=previous_seo_title,
+        updated_at=article.updated_at,
+    )

@@ -96,6 +96,21 @@ class ParsedArticle(BaseModel):
         description="Content tags/categories",
     )
 
+    # Phase 9: SEO Title (separate from H1 title)
+    seo_title: str | None = Field(
+        None,
+        max_length=200,
+        description='SEO Title Tag (30字左右，用於<title>標籤)',
+    )
+    seo_title_extracted: bool = Field(
+        default=False,
+        description='是否從原文中提取了標記的 SEO Title',
+    )
+    seo_title_source: str | None = Field(
+        None,
+        description='SEO Title 來源：extracted/ai_generated/migrated',
+    )
+
     # Images
     images: list[ParsedImage] = Field(
         default_factory=list,

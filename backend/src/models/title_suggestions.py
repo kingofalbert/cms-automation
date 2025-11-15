@@ -60,7 +60,7 @@ class TitleSuggestion(Base):
         comment='Original title suffix (if exists), e.g., "权威指南"',
     )
 
-    # AI-generated suggestions (JSONB for flexibility)
+    # AI-generated H1 title suggestions (JSONB for flexibility)
     # Format:
     # [
     #   {
@@ -85,7 +85,7 @@ class TitleSuggestion(Base):
     suggested_title_sets: Mapped[dict] = mapped_column(
         JSONB,
         nullable=False,
-        comment="Array of 2-3 title optimization options with scores and types",
+        comment="AI生成的 H1 標題建議 (prefix + main + suffix 組合，用於頁面內容)",
     )
 
     # Optimization notes from AI
@@ -94,6 +94,32 @@ class TitleSuggestion(Base):
         ARRAY(Text),
         nullable=True,
         comment="General optimization notes from AI",
+    )
+
+    # Phase 9: SEO Title Suggestions (separate from H1 title suggestions)
+    # Format:
+    # {
+    #   "variants": [
+    #     {
+    #       "id": "seo_variant_1",
+    #       "seo_title": "2024年AI醫療創新趨勢",
+    #       "reasoning": "聚焦核心關鍵字「AI醫療」和「創新」，30字內",
+    #       "keywords_focus": ["AI醫療", "創新", "2024"],
+    #       "character_count": 12
+    #     },
+    #     ...  # 1-2 more variants
+    #   ],
+    #   "original_seo_title": "2024年醫療保健創新趨勢",
+    #   "notes": [
+    #     "SEO Title 建議保持在 30 字以內",
+    #     "包含核心關鍵字以提升搜尋排名",
+    #     "與 H1 標題主題一致但更精簡"
+    #   ]
+    # }
+    suggested_seo_titles: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment='AI生成的 SEO Title 建議 (2-3 個選項，30字左右，用於<title>標籤)',
     )
 
     # Metadata

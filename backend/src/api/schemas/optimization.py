@@ -69,14 +69,41 @@ class TitleOptionData(BaseSchema):
     character_count: TitleCharacterCount
 
 
+class SEOTitleVariant(BaseSchema):
+    """Single SEO Title suggestion variant."""
+
+    id: str = Field(..., description="Variant identifier (e.g., 'seo_variant_1')")
+    seo_title: str = Field(..., max_length=200, description="SEO Title suggestion (~30 chars)")
+    reasoning: str = Field(..., description="Why this SEO Title was suggested")
+    keywords_focus: list[str] = Field(
+        default_factory=list, description="Keywords emphasized in this variant"
+    )
+    character_count: int = Field(..., description="Character count of SEO Title")
+
+
+class SEOTitleSuggestionsData(BaseSchema):
+    """SEO Title suggestions (for <title> tag, separate from H1)."""
+
+    variants: list[SEOTitleVariant] = Field(
+        default_factory=list, description="2-3 SEO Title variants"
+    )
+    original_seo_title: str | None = Field(
+        None, description="Original SEO Title if extracted from document"
+    )
+    notes: list[str] = Field(default_factory=list, description="Notes about SEO Title optimization")
+
+
 class TitleSuggestionsData(BaseSchema):
-    """Title optimization suggestions response."""
+    """Title optimization suggestions response (H1 + SEO Title)."""
 
     suggested_title_sets: list[TitleOptionData] = Field(
-        ..., description="2-3 title optimization options"
+        ..., description="2-3 H1 title optimization options"
     )
     optimization_notes: list[str] = Field(
-        default_factory=list, description="General optimization notes"
+        default_factory=list, description="General H1 title optimization notes"
+    )
+    seo_title_suggestions: SEOTitleSuggestionsData | None = Field(
+        None, description="SEO Title suggestions (for <title> tag)"
     )
 
 
@@ -232,3 +259,35 @@ class OptimizationError(BaseSchema):
     error: str = Field(..., description="Error type")
     message: str = Field(..., description="Error message")
     details: dict | None = Field(None, description="Additional error details")
+
+
+# ============================================================================
+# SEO Title Selection Schemas (Phase 9)
+# ============================================================================
+
+
+class SelectSEOTitleRequest(BaseSchema):
+    """Request to select and apply an SEO Title for an article."""
+
+    variant_id: str | None = Field(
+        None,
+        description="ID of the selected SEO Title variant (e.g., 'seo_variant_1'). Null for custom.",
+    )
+    custom_seo_title: str | None = Field(
+        None,
+        max_length=200,
+        description="Custom SEO Title provided by user (if variant_id is None)",
+    )
+
+
+class SelectSEOTitleResponse(BaseSchema):
+    """Response after selecting and applying SEO Title."""
+
+    article_id: int = Field(..., description="Article ID")
+    seo_title: str = Field(..., description="SEO Title that was applied")
+    seo_title_source: str = Field(
+        ...,
+        description="Source of SEO Title: extracted/ai_generated/user_input",
+    )
+    previous_seo_title: str | None = Field(None, description="Previous SEO Title (if any)")
+    updated_at: datetime = Field(..., description="When the update occurred")

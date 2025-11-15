@@ -15,16 +15,18 @@
  * └────────────────────────────────┴──────────────────┘
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
 import { TitleReviewSection } from './TitleReviewSection';
+import { SEOTitleSelectionCard } from './SEOTitleSelectionCard';
 import { AuthorReviewSection } from './AuthorReviewSection';
 import { ImageReviewSection } from './ImageReviewSection';
 import { SEOReviewSection } from './SEOReviewSection';
 import { SEOComparisonCard } from './SEOComparisonCard';
 import { FAQReviewSection } from './FAQReviewSection';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
+import type { SEOTitleSuggestionsData, SelectSEOTitleResponse } from '../../types/api';
 
 export interface ParsingReviewPanelProps {
   /** Article review data */
@@ -76,8 +78,55 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     (data.metadata?.faq_suggestions as Array<{ question: string; answer: string }>) || []
   );
 
+  // Phase 9: SEO Title state
+  const [seoTitleSuggestions, setSeoTitleSuggestions] = useState<SEOTitleSuggestionsData | null>(null);
+  const [currentSeoTitle, setCurrentSeoTitle] = useState<string | null>(null);
+  const [seoTitleSource, setSeoTitleSource] = useState<string | null>(null);
+  const [isLoadingSeoTitle, setIsLoadingSeoTitle] = useState(false);
+
   // Track if data has been modified
   const [isDirty, setIsDirty] = useState(false);
+
+  // Fetch SEO Title suggestions when component mounts (if articleId exists)
+  useEffect(() => {
+    const fetchSeoTitleSuggestions = async () => {
+      if (!data.article_id) {
+        return;
+      }
+
+      setIsLoadingSeoTitle(true);
+      try {
+        // Fetch optimizations (which includes SEO Title suggestions)
+        const response = await fetch(`/api/v1/optimization/articles/${data.article_id}/optimizations`);
+
+        if (response.ok) {
+          const optimizationsData = await response.json();
+
+          // Extract SEO Title suggestions
+          if (optimizationsData.title_suggestions?.seo_title_suggestions) {
+            setSeoTitleSuggestions(optimizationsData.title_suggestions.seo_title_suggestions);
+          }
+        } else if (response.status !== 404) {
+          // 404 is expected if optimizations haven't been generated yet
+          console.error('Failed to fetch SEO Title suggestions:', response.statusText);
+        }
+
+        // Fetch current article data to get current SEO Title
+        const articleResponse = await fetch(`/api/v1/articles/${data.article_id}`);
+        if (articleResponse.ok) {
+          const articleData = await articleResponse.json();
+          setCurrentSeoTitle(articleData.seo_title);
+          setSeoTitleSource(articleData.seo_title_source);
+        }
+      } catch (error) {
+        console.error('Error fetching SEO Title data:', error);
+      } finally {
+        setIsLoadingSeoTitle(false);
+      }
+    };
+
+    fetchSeoTitleSuggestions();
+  }, [data.article_id]);
 
   const handleSave = async () => {
     const parsingData: ParsingData = {
@@ -100,6 +149,20 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     if (!isDirty) {
       setIsDirty(true);
     }
+  };
+
+  // Handle SEO Title selection success
+  const handleSeoTitleSelectionSuccess = (response: SelectSEOTitleResponse) => {
+    setCurrentSeoTitle(response.seo_title);
+    setSeoTitleSource(response.seo_title_source);
+    // TODO: Show success toast notification
+    console.log('SEO Title selected successfully:', response);
+  };
+
+  // Handle SEO Title selection error
+  const handleSeoTitleSelectionError = (error: Error) => {
+    // TODO: Show error toast notification
+    console.error('Failed to select SEO Title:', error);
   };
 
   return (
@@ -129,6 +192,19 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
               }}
             />
           </Card>
+
+          {/* Phase 9: SEO Title Selection */}
+          {data.article_id && (
+            <SEOTitleSelectionCard
+              articleId={data.article_id}
+              currentSeoTitle={currentSeoTitle}
+              seoTitleSource={seoTitleSource}
+              suggestions={seoTitleSuggestions}
+              isLoading={isLoadingSeoTitle}
+              onSelectionSuccess={handleSeoTitleSelectionSuccess}
+              onError={handleSeoTitleSelectionError}
+            />
+          )}
 
           {/* Author Review */}
           <Card className="p-6">

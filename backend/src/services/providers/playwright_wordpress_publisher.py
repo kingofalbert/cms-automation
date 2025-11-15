@@ -111,6 +111,7 @@ class PlaywrightWordPressPublisher:
             },
             "seo": {
                 "panel": "#wpseo-metabox-root",
+                "seo_title_field": "input[name='yoast_wpseo_title']",
                 "focus_keyword_field": "input[name='yoast_wpseo_focuskw']",
                 "meta_description_field": "textarea[name='yoast_wpseo_metadesc']",
             },
@@ -411,6 +412,8 @@ class PlaywrightWordPressPublisher:
     async def _step_configure_seo(self, seo_data: SEOMetadata) -> None:
         """Step 6: Configure SEO metadata.
 
+        Phase 9: Includes SEO Title configuration for WordPress SEO plugins.
+
         Args:
             seo_data: SEO metadata
         """
@@ -424,6 +427,17 @@ class PlaywrightWordPressPublisher:
             # Wait for SEO panel
             seo_panel = self.config["seo"]["panel"]
             await self.page.wait_for_selector(seo_panel, timeout=5000)
+
+            # Phase 9: Set SEO Title (for <title> tag)
+            if seo_data.meta_title:
+                seo_title_field = self.config["seo"].get("seo_title_field")
+                if seo_title_field:
+                    await self.page.fill(seo_title_field, seo_data.meta_title)
+                    await asyncio.sleep(0.5)
+                    logger.info(
+                        "seo_title_configured",
+                        seo_title=seo_data.meta_title,
+                    )
 
             # Set focus keyword
             if seo_data.focus_keyword:
