@@ -3,7 +3,7 @@
  * Displays error message after failed publishing.
  */
 
-import { Card } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui';
 import { PublishTask } from '@/types/publishing';
 
 export interface PublishErrorCardProps {
@@ -57,8 +57,9 @@ export const PublishErrorCard: React.FC<PublishErrorCardProps> = ({
   const suggestions = getSuggestions(task.error_message);
 
   return (
-    <Card className={className} padding="lg">
-      <div className="space-y-4">
+    <Card className={className}>
+      <CardContent padding="p-6">
+        <div className="space-y-4">
         {/* Error Icon */}
         <div className="flex justify-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
@@ -159,7 +160,8 @@ export const PublishErrorCard: React.FC<PublishErrorCardProps> = ({
             提示：查看执行截图可帮助诊断问题（共 {task.screenshots.length} 张）
           </p>
         )}
-      </div>
+        </div>
+      </CardContent>
     </Card>
   );
 };

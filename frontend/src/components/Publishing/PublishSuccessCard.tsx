@@ -3,7 +3,7 @@
  * Displays success message after publishing.
  */
 
-import { Card } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui';
 import { PublishTask } from '@/types/publishing';
 import { format } from 'date-fns';
 
@@ -27,8 +27,9 @@ export const PublishSuccessCard: React.FC<PublishSuccessCardProps> = ({
     : '未知';
 
   return (
-    <Card className={className} padding="lg">
-      <div className="text-center space-y-4">
+    <Card className={className}>
+      <CardContent padding="p-6">
+        <div className="text-center space-y-4">
         {/* Success Icon */}
         <div className="flex justify-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
@@ -129,7 +130,8 @@ export const PublishSuccessCard: React.FC<PublishSuccessCardProps> = ({
             共生成 {task.screenshots.length} 张执行截图
           </p>
         )}
-      </div>
+        </div>
+      </CardContent>
     </Card>
   );
 };
