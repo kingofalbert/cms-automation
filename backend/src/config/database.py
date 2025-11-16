@@ -38,12 +38,6 @@ class DatabaseConfig:
             if db_url.startswith("postgresql://"):
                 db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-            # Add statement_cache_size=0 to URL for pgbouncer compatibility
-            # This is required when using Supabase pooler or pgbouncer in transaction mode
-            if "statement_cache_size" not in db_url:
-                separator = "&" if "?" in db_url else "?"
-                db_url = f"{db_url}{separator}statement_cache_size=0&prepared_statement_cache_size=0"
-
             # For async engines, only use NullPool in test mode
             # Default async pool will be used in non-test environments
             engine_kwargs = {
@@ -53,6 +47,16 @@ class DatabaseConfig:
                 "pool_timeout": self.settings.DATABASE_POOL_TIMEOUT,
                 "pool_recycle": self.settings.DATABASE_POOL_RECYCLE,
                 "pool_pre_ping": True,  # Verify connections before using
+                # Disable prepared statements for pgbouncer compatibility
+                # Must use server_settings for asyncpg, not connect_args
+                "connect_args": {
+                    "server_settings": {
+                        "jit": "off",  # Disable JIT for better compatibility
+                    },
+                    # These must be set at create_async_engine level for asyncpg
+                    "statement_cache_size": 0,
+                    "prepared_statement_cache_size": 0,
+                },
             }
 
             if self.settings.ENVIRONMENT == "test":
