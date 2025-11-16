@@ -13,6 +13,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   closeOnOverlayClick?: boolean;
   children: ReactNode;
+  customContent?: boolean; // When true, skip default body wrapper
 }
 
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
@@ -25,6 +26,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       closeOnOverlayClick = true,
       className,
       children,
+      customContent = false,
       ...props
     },
     ref
@@ -117,7 +119,11 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
           )}
 
           {/* Body */}
-          <div className="px-6 py-4">{children}</div>
+          {customContent ? (
+            children
+          ) : (
+            <div className="px-6 py-4">{children}</div>
+          )}
         </div>
       </div>
     );

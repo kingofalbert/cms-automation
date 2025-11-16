@@ -262,6 +262,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       onClose={handleClose}
       size="full"
       closeOnOverlayClick={false}
+      customContent={true}
       className="h-screen max-h-screen flex flex-col min-h-0"
     >
       {/* Header */}
