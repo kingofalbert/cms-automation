@@ -267,12 +267,21 @@ Parse the following Google Doc HTML and extract structured information.
 **Instructions**:
 1. **Title**: Split into prefix (optional, e.g., "【專題】"), main title (required), and suffix (optional subtitle)
 2. **SEO Title**: Look for text marked with "這是 SEO title" or similar markers. If found, extract it as seo_title and set seo_title_extracted=true. If not found, leave seo_title=null and seo_title_extracted=false.
-3. **Author**: Extract from "文／" or "作者：" patterns. Provide both raw line and cleaned name.
+3. **Author**: Extract from author patterns like:
+   - "文 / 作者名" or "文／作者名" (with or without spaces)
+   - "作者：作者名" or "撰文：作者名"
+   - "編譯 / 作者名" or "By: Author Name"
+   - IMPORTANT: Clean up the name - remove "編譯", "撰文", "作者" suffixes
+   - Example: "文 / Leo Babauta 編譯 / 黃襄" → extract "Leo Babauta"
 4. **Body**: Remove header metadata, navigation elements, and images. Keep only article paragraphs.
 5. **Meta Description**: Create a 150-160 character SEO description summarizing the article.
 6. **SEO Keywords**: Extract 5-10 relevant keywords for SEO.
 7. **Tags**: Extract 3-6 content tags/categories.
-8. **Images**: Extract all images with their position (paragraph index), URL, and caption.
+8. **Images**: Extract all images including:
+   - <img> tags with src attribute
+   - Plain text image URLs (e.g., https://example.com/image.jpg)
+   - Google Docs redirect URLs (extract the actual image URL from the redirect)
+   - Find nearby "圖說:" markers for captions
 
 **Output Format** (JSON):
 ```json
