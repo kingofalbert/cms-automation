@@ -502,14 +502,15 @@ Parse and respond with JSON:"""
 
         # Common Chinese author patterns
         author_patterns = [
-            r"文[／/]([^｜|\n]+)",  # 文／張三
-            r"作者[：:]([^｜|\n]+)",  # 作者：張三
-            r"撰文[：:]([^｜|\n]+)",  # 撰文：張三
+            r"文[／/\s]+([^｜|\n]+)",  # 文／張三 or 文 / 張三 (with spaces)
+            r"作者[：:\s]+([^｜|\n]+)",  # 作者：張三 or 作者: 張三
+            r"撰文[：:\s]+([^｜|\n]+)",  # 撰文：張三
             r"By[：:\s]+([^｜|\n]+)",  # By: John Doe
-            r"記者[：:]([^｜|\n]+)",  # 記者：張三
+            r"記者[：:\s]+([^｜|\n]+)",  # 記者：張三
+            r"編譯[／/\s]+([^｜|\n]+)",  # 編譯／張三
         ]
 
-        # Search first 10 paragraphs for author info
+        # Strategy 1: Search in <p> tags first (HTML structure)
         for p in soup.find_all("p", limit=10):
             text = p.get_text(strip=True)
 
@@ -520,10 +521,33 @@ Parse and respond with JSON:"""
                     raw_line = text
                     author_name = match.group(1).strip()
 
-                    # Clean up author name (remove trailing info after ｜ or |)
-                    author_name = re.split(r"[｜|]", author_name)[0].strip()
+                    # Clean up author name (remove trailing info after ｜ or | or 編譯)
+                    # Split by ｜, |, or 編譯/撰文/作者 markers
+                    author_name = re.split(r"[｜|]|編譯|撰文|作者", author_name)[0].strip()
 
-                    logger.debug(f"Found author: {author_name}")
+                    logger.debug(f"Found author in <p> tag: {author_name}")
+                    return {"raw_line": raw_line, "name": author_name}
+
+        # Strategy 2: If no <p> tags, search in raw text (plain text content)
+        full_text = soup.get_text()
+        text_lines = full_text.split("\n")
+
+        for line in text_lines[:20]:  # Check first 20 lines
+            line = line.strip()
+            if not line:
+                continue
+
+            # Try each pattern on raw text lines
+            for pattern in author_patterns:
+                match = re.search(pattern, line, re.IGNORECASE)
+                if match:
+                    raw_line = line
+                    author_name = match.group(1).strip()
+
+                    # Clean up author name
+                    author_name = re.split(r"[｜|]|編譯|撰文|作者", author_name)[0].strip()
+
+                    logger.debug(f"Found author in raw text: {author_name}")
                     return {"raw_line": raw_line, "name": author_name}
 
         # No author found
@@ -731,11 +755,7 @@ Parse and respond with JSON:"""
         images = []
         paragraph_index = 0
 
-        # Strategy:
-        # 1. Find all <img> tags and <figure> elements
-        # 2. Calculate position based on paragraph index
-        # 3. Extract src URL and caption (from alt, title, or figcaption)
-
+        # Strategy 1: Find all <img> tags and <figure> elements (HTML structure)
         # Process all top-level elements to track paragraph positions
         for element in soup.find_all(["p", "figure", "img"]):
             if element.name == "p":
@@ -765,7 +785,7 @@ Parse and respond with JSON:"""
                             caption=caption,
                         )
                     )
-                    logger.debug(f"Found image at position {paragraph_index}: {source_url}")
+                    logger.debug(f"Found image in <figure> at position {paragraph_index}: {source_url}")
 
             elif element.name == "img":
                 # Standalone image tag (not in a figure)
@@ -780,7 +800,67 @@ Parse and respond with JSON:"""
                             caption=caption,
                         )
                     )
-                    logger.debug(f"Found image at position {paragraph_index}: {source_url}")
+                    logger.debug(f"Found <img> tag at position {paragraph_index}: {source_url}")
+
+        # Strategy 2: If no images found in HTML tags, search for image URLs in plain text
+        if not images:
+            import re
+
+            full_text = soup.get_text()
+
+            # Common image URL patterns
+            image_url_pattern = r'https?://[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s\)]*)?'
+
+            # Also look for Google Docs image redirects
+            google_docs_image_pattern = r'https://www\.google\.com/url\?q=(https?://[^&]+\.(?:jpg|jpeg|png|gif|webp|svg)[^&]*)'
+
+            # Find all image URLs
+            matches = list(re.finditer(image_url_pattern, full_text, re.IGNORECASE))
+            google_matches = list(re.finditer(google_docs_image_pattern, full_text, re.IGNORECASE))
+
+            # Process direct image URLs
+            for match in matches:
+                source_url = match.group(0)
+                # Try to find caption nearby (text before "圖說" or similar markers)
+                start_pos = max(0, match.start() - 200)
+                context = full_text[start_pos:match.start()]
+
+                caption = None
+                caption_match = re.search(r'圖說[：:]\s*([^\n]+)', context)
+                if caption_match:
+                    caption = caption_match.group(1).strip()
+
+                images.append(
+                    ParsedImage(
+                        position=0,  # Place at beginning since we don't have paragraph context
+                        source_url=source_url,
+                        caption=caption,
+                    )
+                )
+                logger.debug(f"Found image URL in text: {source_url}")
+
+            # Process Google Docs redirected image URLs
+            for match in google_matches:
+                import urllib.parse
+                source_url = urllib.parse.unquote(match.group(1))
+
+                # Try to find caption
+                start_pos = max(0, match.start() - 200)
+                context = full_text[start_pos:match.start()]
+
+                caption = None
+                caption_match = re.search(r'圖說[：:]\s*([^\n]+)', context)
+                if caption_match:
+                    caption = caption_match.group(1).strip()
+
+                images.append(
+                    ParsedImage(
+                        position=0,
+                        source_url=source_url,
+                        caption=caption,
+                    )
+                )
+                logger.debug(f"Found Google Docs image URL in text: {source_url}")
 
         logger.debug(f"Extracted {len(images)} images total")
         return images
