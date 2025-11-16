@@ -37,7 +37,7 @@ class ArticleParserService:
         self,
         use_ai: bool = True,
         anthropic_api_key: str | None = None,
-        model: str = "claude-sonnet-4-5-20250929",
+        model: str = "claude-sonnet-4-5",
     ):
         """Initialize the article parser service.
 
