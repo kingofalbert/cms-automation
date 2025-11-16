@@ -300,7 +300,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
 
       {/* Tabs Navigation */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-        <Tabs defaultValue="parsing" value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col min-h-0">
+        <Tabs defaultValue="parsing" value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0">
           {/* Tab Headers */}
           <div className="px-6 pt-4 border-b bg-white flex-shrink-0">
             <TabsList className="w-full justify-start">
