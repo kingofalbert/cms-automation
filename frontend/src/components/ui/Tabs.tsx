@@ -133,7 +133,7 @@ export const TabsContent = forwardRef<HTMLDivElement, TabsContentProps>(
       <div
         ref={ref}
         role="tabpanel"
-        className={clsx('mt-4 ring-offset-white focus-visible:outline-none', className)}
+        className={clsx('ring-offset-white focus-visible:outline-none', className)}
         {...props}
       >
         {children}

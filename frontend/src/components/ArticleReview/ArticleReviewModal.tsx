@@ -318,7 +318,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
 
           {/* Tab Content - Scrollable container */}
           <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-            <TabsContent value="parsing" className="p-6 min-h-0">
+            <TabsContent value="parsing" className="p-6 mt-0">
               {/* Phase 8.2: ParsingReviewPanel */}
               <ParsingReviewPanel
                 data={data}
@@ -327,7 +327,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
               />
             </TabsContent>
 
-            <TabsContent value="proofreading" className="p-6 min-h-0">
+            <TabsContent value="proofreading" className="p-6 mt-0">
               {/* Phase 8.3: ProofreadingReviewPanel */}
               <ProofreadingReviewPanel
                 data={data}
@@ -336,7 +336,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
               />
             </TabsContent>
 
-            <TabsContent value="publish" className="p-6 min-h-0">
+            <TabsContent value="publish" className="p-6 mt-0">
               {/* Phase 8.4: PublishPreviewPanel */}
               <PublishPreviewPanel
                 data={data}
