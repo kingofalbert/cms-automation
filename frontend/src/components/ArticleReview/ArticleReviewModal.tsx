@@ -262,7 +262,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       onClose={handleClose}
       size="full"
       closeOnOverlayClick={false}
-      className="h-screen max-h-screen flex flex-col"
+      className="h-screen max-h-screen flex flex-col min-h-0"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
@@ -298,8 +298,8 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Tabs defaultValue="parsing" value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+        <Tabs defaultValue="parsing" value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col min-h-0">
           {/* Tab Headers */}
           <div className="px-6 pt-4 border-b bg-white flex-shrink-0">
             <TabsList className="w-full justify-start">
@@ -316,7 +316,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
           </div>
 
           {/* Tab Content - Scrollable container */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
             <TabsContent value="parsing" className="p-6 min-h-0">
               {/* Phase 8.2: ParsingReviewPanel */}
               <ParsingReviewPanel
