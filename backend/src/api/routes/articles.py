@@ -101,6 +101,103 @@ async def proofread_article(
     return ProofreadingResponse.model_validate(result.model_dump())
 
 
+@router.post("/{article_id}/reparse", response_model=ArticleResponse)
+async def reparse_article(
+    article_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> Article:
+    """Re-parse an article from Google Drive using the latest parser."""
+    from src.config.settings import get_settings
+    from src.services.drive import GoogleDriveService
+    from src.services.parser.article_parser import ArticleParserService
+
+    article = await _fetch_article(session, article_id)
+    settings = get_settings()
+
+    # Get Google Drive file ID from metadata
+    metadata = article.article_metadata or {}
+    file_id = metadata.get("id") or metadata.get("google_drive", {}).get("file_id")
+
+    if not file_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Article does not have Google Drive file ID in metadata",
+        )
+
+    logger.info(f"Re-parsing article {article_id} from Drive file {file_id}")
+
+    try:
+        # Download content from Google Drive
+        drive_service = GoogleDriveService(settings.GOOGLE_DRIVE_CREDENTIALS)
+        raw_html = await drive_service.export_as_html(file_id)
+
+        # Parse with latest parser (Claude Sonnet 4.5)
+        parser = ArticleParserService(
+            use_ai=True,
+            anthropic_api_key=settings.ANTHROPIC_API_KEY,
+        )
+        result = parser.parse_document(raw_html)
+
+        if not result.success:
+            error_msg = "; ".join([e.error_message for e in result.errors])
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Parsing failed: {error_msg}",
+            )
+
+        # Update article with new parsing results
+        parsed = result.parsed_article
+        article.title_prefix = parsed.title_prefix
+        article.title_main = parsed.title_main
+        article.title_suffix = parsed.title_suffix
+        article.seo_title = parsed.seo_title
+        article.seo_title_extracted = parsed.seo_title_extracted
+        article.seo_title_source = parsed.seo_title_source
+        article.author_line = parsed.author_line
+        article.author_name = parsed.author_name
+        article.body = parsed.body_html
+        article.meta_description = parsed.meta_description
+        article.seo_keywords = parsed.seo_keywords
+        article.tags = parsed.tags
+
+        # Update metadata with new parsing info
+        article.article_metadata = article.article_metadata or {}
+        article.article_metadata["parsing"] = {
+            "method": parsed.parsing_method,
+            "confidence": parsed.parsing_confidence,
+            "parsed_at": result.metadata.get("timestamp", ""),
+            "model": result.metadata.get("model", ""),
+        }
+        article.article_metadata["images"] = [
+            {
+                "position": img.position,
+                "source_url": img.source_url,
+                "caption": img.caption,
+            }
+            for img in parsed.images
+        ]
+
+        session.add(article)
+        await session.commit()
+        await session.refresh(article)
+
+        logger.info(f"Successfully re-parsed article {article_id} with {parsed.parsing_method}")
+        return article
+
+    except Exception as exc:
+        logger.error(
+            "reparse_failed",
+            article_id=article_id,
+            file_id=file_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Re-parse failed: {str(exc)}",
+        ) from exc
+
+
 async def _fetch_article(session: AsyncSession, article_id: int) -> Article:
     """Fetch article or raise 404."""
     result = await session.execute(select(Article).where(Article.id == article_id))
