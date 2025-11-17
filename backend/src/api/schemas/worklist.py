@@ -64,6 +64,15 @@ class WorklistItemDetailResponse(WorklistItemResponse):
         default=None, description="Statistics about proofreading issues"
     )
 
+    # Phase 7: Article parsing fields (HOTFIX-PARSE-004)
+    title_main: str | None = Field(default=None, description="Parsed main title")
+    title_prefix: str | None = Field(default=None, description="Parsed title prefix")
+    title_suffix: str | None = Field(default=None, description="Parsed title suffix")
+    author_name: str | None = Field(default=None, description="Parsed author name")
+    author_line: str | None = Field(default=None, description="Full author line text")
+    parsing_confirmed: bool = Field(default=False, description="Whether parsing has been confirmed")
+    parsing_confirmed_at: datetime | None = Field(default=None, description="When parsing was confirmed")
+
 
 class WorklistStatisticsResponse(BaseSchema):
     """Aggregated worklist statistics."""

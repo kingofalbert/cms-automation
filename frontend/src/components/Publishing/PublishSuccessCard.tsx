@@ -27,8 +27,8 @@ export const PublishSuccessCard: React.FC<PublishSuccessCardProps> = ({
     : '未知';
 
   return (
-    <Card className={className} padding="lg">
-      <div className="text-center space-y-4">
+    <Card className={className}>
+      <div className="text-center space-y-4 p-6">
         {/* Success Icon */}
         <div className="flex justify-center">
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">

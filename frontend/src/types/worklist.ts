@@ -75,6 +75,17 @@ export interface WorklistItemDetail extends WorklistItem {
   content: string;
   meta_description?: string | null;
   seo_keywords: string[];
+
+  // Phase 7: Parsing fields (HOTFIX-PARSE-005)
+  title_main?: string | null;
+  title_prefix?: string | null;
+  title_suffix?: string | null;
+  author_name?: string | null;
+  author_line?: string | null;
+  tags?: string[];
+  parsing_confirmed?: boolean;
+  parsing_confirmed_at?: string | null;
+
   article_status_history: WorklistStatusHistoryEntry[];
   drive_metadata: Record<string, unknown>;
   proofreading_issues?: ProofreadingIssue[];

@@ -453,6 +453,24 @@ async def _serialize_item_detail(
                 proofreading_issues
             )
 
+    # HOTFIX-PARSE-004: Extract parsing fields from linked article
+    title_main = None
+    title_prefix = None
+    title_suffix = None
+    author_name = None
+    author_line = None
+    parsing_confirmed = False
+    parsing_confirmed_at = None
+
+    if article:
+        title_main = article.title_main
+        title_prefix = article.title_prefix
+        title_suffix = article.title_suffix
+        author_name = article.author_name
+        author_line = article.author_line
+        parsing_confirmed = article.parsing_confirmed if hasattr(article, 'parsing_confirmed') else False
+        parsing_confirmed_at = article.parsing_confirmed_at if hasattr(article, 'parsing_confirmed_at') else None
+
     return WorklistItemDetailResponse(
         **base.model_dump(),
         content=item.content,
@@ -465,6 +483,14 @@ async def _serialize_item_detail(
         drive_metadata=item.drive_metadata or {},
         proofreading_issues=proofreading_issues,
         proofreading_stats=proofreading_stats,
+        # Phase 7: Parsing fields from article
+        title_main=title_main,
+        title_prefix=title_prefix,
+        title_suffix=title_suffix,
+        author_name=author_name,
+        author_line=author_line,
+        parsing_confirmed=parsing_confirmed,
+        parsing_confirmed_at=parsing_confirmed_at,
     )
 
 

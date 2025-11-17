@@ -7,7 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader } from '../ui';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui';
 import { api } from '../../services/api-client';
 
 interface TopicRequest {
@@ -144,14 +144,14 @@ export function GenerationProgress({
 
   return (
     <Card className="border-2 border-blue-200 shadow-md">
-      <CardHeader
-        title={
+      <CardHeader>
+        <CardTitle>
           <div className="flex items-center gap-2">
             <span className="text-2xl">{statusInfo.icon}</span>
             <span>Article Generation Progress</span>
           </div>
-        }
-        description={
+        </CardTitle>
+        <CardDescription>
           <div className="flex items-center gap-2 mt-1">
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}
@@ -162,8 +162,8 @@ export function GenerationProgress({
               Elapsed: {formatElapsedTime(elapsedTime)}
             </span>
           </div>
-        }
-      />
+        </CardDescription>
+      </CardHeader>
       <CardContent>
         {/* Progress bar */}
         <div className="mb-4">

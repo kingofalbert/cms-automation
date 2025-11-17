@@ -152,6 +152,40 @@ class WorklistPipelineService:
             # Parsing succeeded - extract data from ParsedArticle
             parsed_article = parsing_result.parsed_article
 
+            # HOTFIX-PARSE-003: Update Article table with parsed data
+            if item.article_id:
+                article = await self.session.get(Article, item.article_id)
+                if article:
+                    # Update article parsing fields
+                    article.title_prefix = parsed_article.title_prefix
+                    article.title_main = parsed_article.title_main
+                    article.title_suffix = parsed_article.title_suffix
+                    article.author_name = parsed_article.author_name
+                    article.author_line = parsed_article.author_line
+                    article.meta_description = parsed_article.meta_description
+                    article.seo_keywords = parsed_article.seo_keywords or []
+                    article.tags = parsed_article.tags or []
+                    article.parsing_confirmed = False  # Needs manual review
+
+                    # Update article metadata with parsing info
+                    article_metadata = dict(article.article_metadata or {})
+                    article_metadata["parsing"] = {
+                        "method": parsed_article.parsing_method,
+                        "confidence": parsed_article.parsing_confidence,
+                        "parsed_at": datetime.utcnow().isoformat(),
+                    }
+                    article.article_metadata = article_metadata
+
+                    self.session.add(article)
+
+                    logger.info(
+                        "article_parsing_fields_updated",
+                        article_id=article.id,
+                        worklist_id=item.id,
+                        title_main=parsed_article.title_main,
+                        author_name=parsed_article.author_name,
+                    )
+
             # Update worklist item with parsed data
             item.author = parsed_article.author_name
             item.meta_description = parsed_article.meta_description

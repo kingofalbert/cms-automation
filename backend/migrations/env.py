@@ -33,6 +33,12 @@ def get_url():
     # Convert async URL to sync URL for migrations
     if url.startswith("postgresql+asyncpg://"):
         url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+
+    # Fix SSL parameter for psycopg2 compatibility
+    # asyncpg uses ssl=require, psycopg2 needs sslmode=require
+    if "ssl=require" in url:
+        url = url.replace("ssl=require", "sslmode=require")
+
     return url
 
 

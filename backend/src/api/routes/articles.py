@@ -108,7 +108,7 @@ async def reparse_article(
 ) -> Article:
     """Re-parse an article from Google Drive using the latest parser."""
     from src.config.settings import get_settings
-    from src.services.drive import GoogleDriveService
+    from src.services.storage import create_google_drive_storage
     from src.services.parser.article_parser import ArticleParserService
 
     article = await _fetch_article(session, article_id)
@@ -128,8 +128,12 @@ async def reparse_article(
 
     try:
         # Download content from Google Drive
-        drive_service = GoogleDriveService(settings.GOOGLE_DRIVE_CREDENTIALS)
-        raw_html = await drive_service.export_as_html(file_id)
+        storage = await create_google_drive_storage()
+
+        # Export Google Doc as HTML (preserves structure and images)
+        request = storage.service.files().export(fileId=file_id, mimeType="text/html")
+        raw_html_bytes = request.execute()
+        raw_html = raw_html_bytes.decode("utf-8", errors="ignore") if isinstance(raw_html_bytes, bytes) else raw_html_bytes
 
         # Parse with latest parser (Claude Sonnet 4.5)
         parser = ArticleParserService(

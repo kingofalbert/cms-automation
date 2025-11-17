@@ -2,7 +2,7 @@
  * Article preview component for displaying generated articles.
  */
 
-import { Badge, Card, CardContent, CardHeader } from '../ui';
+import { Badge, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui';
 
 interface ArticlePreviewProps {
   article: {
@@ -38,9 +38,9 @@ export function ArticlePreview({ article, onView }: ArticlePreviewProps) {
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader
-        title={article.title}
-        description={
+      <CardHeader>
+        <CardTitle>{article.title}</CardTitle>
+        <CardDescription>
           <div className="flex items-center gap-2 mt-1">
             <Badge
               className={statusColors[article.status as keyof typeof statusColors] || statusColors.draft}
@@ -55,8 +55,8 @@ export function ArticlePreview({ article, onView }: ArticlePreviewProps) {
               })}
             </span>
           </div>
-        }
-      />
+        </CardDescription>
+      </CardHeader>
       <CardContent>
         <p className="text-gray-700 mb-4 line-clamp-3">{getExcerpt(article.body)}</p>
 

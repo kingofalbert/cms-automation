@@ -3,7 +3,7 @@
  */
 
 import { useForm } from 'react-hook-form';
-import { Button, Card, CardContent, CardHeader } from '../ui';
+import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui';
 
 interface TopicFormData {
   topic_description: string;
@@ -39,7 +39,10 @@ export function TopicSubmissionForm({ onSubmit, isLoading = false }: TopicSubmis
 
   return (
     <Card>
-      <CardHeader title="Generate New Article" description="Submit a topic for AI-powered article generation" />
+      <CardHeader>
+        <CardTitle>Generate New Article</CardTitle>
+        <CardDescription>Submit a topic for AI-powered article generation</CardDescription>
+      </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
           <div>

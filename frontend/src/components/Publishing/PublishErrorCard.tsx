@@ -57,8 +57,8 @@ export const PublishErrorCard: React.FC<PublishErrorCardProps> = ({
   const suggestions = getSuggestions(task.error_message);
 
   return (
-    <Card className={className} padding="lg">
-      <div className="space-y-4">
+    <Card className={className}>
+      <div className="space-y-4 p-6">
         {/* Error Icon */}
         <div className="flex justify-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
