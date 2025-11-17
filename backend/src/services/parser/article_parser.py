@@ -135,8 +135,10 @@ class ArticleParserService:
         import json
 
         logger.info("Starting AI-based parsing with Claude")
+        logger.info(f"[DEBUG] Parser config: use_ai={self.use_ai}, model={self.model}, api_key_present={bool(self.anthropic_api_key)}, api_key_length={len(self.anthropic_api_key) if self.anthropic_api_key else 0}")
 
         if not self.anthropic_api_key:
+            logger.error("[DEBUG] API key is missing or empty!")
             return ParsingResult(
                 success=False,
                 errors=[
@@ -157,7 +159,7 @@ class ArticleParserService:
             prompt = self._build_ai_parsing_prompt(raw_html)
 
             # Call Claude API
-            logger.debug(f"Calling Claude API (model={self.model})")
+            logger.info(f"[DEBUG] Calling Claude API (model={self.model})")
             message = client.messages.create(
                 model=self.model,
                 max_tokens=4096,
@@ -172,24 +174,30 @@ class ArticleParserService:
 
             # Extract response text
             response_text = message.content[0].text
+            logger.info(f"[DEBUG] Claude raw response length: {len(response_text)}, starts_with: {response_text[:50] if response_text else 'EMPTY'}")
 
             # Clean response text - remove markdown code blocks if present
             cleaned_response = response_text.strip()
             if cleaned_response.startswith("```json"):
+                logger.info("[DEBUG] Detected ```json markdown wrapper, stripping...")
                 # Remove ```json at start and ``` at end
                 cleaned_response = cleaned_response[7:]  # Remove ```json
                 if cleaned_response.endswith("```"):
                     cleaned_response = cleaned_response[:-3]  # Remove ```
                 cleaned_response = cleaned_response.strip()
             elif cleaned_response.startswith("```"):
+                logger.info("[DEBUG] Detected ``` markdown wrapper, stripping...")
                 # Remove ``` at start and end
                 cleaned_response = cleaned_response[3:]
                 if cleaned_response.endswith("```"):
                     cleaned_response = cleaned_response[:-3]
                 cleaned_response = cleaned_response.strip()
 
+            logger.info(f"[DEBUG] Cleaned response length: {len(cleaned_response)}, starts_with: {cleaned_response[:50]}")
+
             # Parse Claude's JSON response
             parsed_data = json.loads(cleaned_response)
+            logger.info(f"[DEBUG] JSON parse SUCCESS! Keys: {list(parsed_data.keys())}")
 
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
@@ -228,7 +236,8 @@ class ArticleParserService:
             )
 
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse AI response as JSON: {e}")
+            logger.error(f"[DEBUG] JSON parse FAILED: {e}")
+            logger.error(f"[DEBUG] Failed response text (first 500 chars): {cleaned_response[:500] if 'cleaned_response' in locals() else 'NOT_AVAILABLE'}")
             return ParsingResult(
                 success=False,
                 errors=[
@@ -241,7 +250,8 @@ class ArticleParserService:
             )
 
         except anthropic.APIError as e:
-            logger.error(f"Anthropic API error: {e}")
+            logger.error(f"[DEBUG] Anthropic API error: {e}")
+            logger.error(f"[DEBUG] API error type: {type(e).__name__}")
             return ParsingResult(
                 success=False,
                 errors=[
