@@ -9,6 +9,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import attributes
 
 from src.api.schemas import ProofreadingResponse
 from src.api.schemas.article import (
@@ -180,6 +181,9 @@ async def reparse_article(
             }
             for img in parsed.images
         ]
+
+        # Mark JSON field as modified so SQLAlchemy knows to update it
+        attributes.flag_modified(article, "article_metadata")
 
         session.add(article)
         await session.commit()
