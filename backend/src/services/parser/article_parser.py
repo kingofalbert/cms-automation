@@ -173,8 +173,23 @@ class ArticleParserService:
             # Extract response text
             response_text = message.content[0].text
 
+            # Clean response text - remove markdown code blocks if present
+            cleaned_response = response_text.strip()
+            if cleaned_response.startswith("```json"):
+                # Remove ```json at start and ``` at end
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+                if cleaned_response.endswith("```"):
+                    cleaned_response = cleaned_response[:-3]  # Remove ```
+                cleaned_response = cleaned_response.strip()
+            elif cleaned_response.startswith("```"):
+                # Remove ``` at start and end
+                cleaned_response = cleaned_response[3:]
+                if cleaned_response.endswith("```"):
+                    cleaned_response = cleaned_response[:-3]
+                cleaned_response = cleaned_response.strip()
+
             # Parse Claude's JSON response
-            parsed_data = json.loads(response_text)
+            parsed_data = json.loads(cleaned_response)
 
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
