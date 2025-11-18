@@ -1,11 +1,28 @@
 """Article API schemas."""
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import Field
 
 from src.api.schemas.base import BaseSchema, TimestampSchema
 from src.models import ArticleStatus
+
+
+class ArticleImageResponse(BaseSchema):
+    """Response schema for article images extracted during parsing."""
+
+    id: int = Field(..., description="Image identifier")
+    article_id: int = Field(..., description="Article this image belongs to")
+    preview_path: str | None = Field(default=None, description="Path to preview/thumbnail in storage")
+    source_path: str | None = Field(default=None, description="Path to downloaded high-res source")
+    source_url: str | None = Field(default=None, description='Original "原圖/點此下載" URL from Google Doc')
+    caption: str | None = Field(default=None, description="Image caption extracted from document")
+    position: int = Field(..., description="Paragraph index (0-based) where image appears")
+    image_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Technical metadata: dimensions, file size, format, EXIF"
+    )
 
 
 class ArticleResponse(TimestampSchema):

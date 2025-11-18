@@ -1,6 +1,7 @@
 """Article model for generated content."""
 
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING, Optional
 
@@ -323,6 +324,23 @@ class Article(Base, TimestampMixin):
         nullable=True,
         index=True,
         comment="Actual publication timestamp",
+    )
+
+    # Phase 7: Unified AI Optimization metadata
+    unified_optimization_generated: Mapped[bool] = mapped_column(
+        nullable=False,
+        default=False,
+        index=True,
+        comment="Whether unified AI optimizations have been generated",
+    )
+    unified_optimization_generated_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+        comment="When unified AI optimizations were generated",
+    )
+    unified_optimization_cost: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 6),
+        nullable=True,
+        comment="Cost in USD for generating all optimizations",
     )
 
     # Metadata
