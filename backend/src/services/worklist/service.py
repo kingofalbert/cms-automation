@@ -128,6 +128,9 @@ class WorklistService:
             .options(
                 selectinload(WorklistItem.article).selectinload(
                     Article.status_history
+                ),
+                selectinload(WorklistItem.article).selectinload(
+                    Article.article_images
                 )
             )
         )

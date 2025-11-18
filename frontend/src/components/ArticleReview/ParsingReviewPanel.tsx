@@ -66,13 +66,23 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   // Local state for parsing data (editable)
   const initialParsingState = useMemo(() => {
     const metadata = data.metadata;
+
+    // FIX: Read images from article_images array (database-backed images)
+    const articleImages = (data as any).article_images || [];
+    const imageUrls = articleImages
+      .sort((a: any, b: any) => a.position - b.position)
+      .map((img: any) => img.source_url);
+    const featuredImageUrl = imageUrls.length > 0 ? imageUrls[0] : '';
+    const additionalImageUrls = imageUrls.slice(1);
+
     return {
       // HOTFIX-PARSE-001: Use title_main from parsing, fallback to title
       title: (data as any).title_main || data.articleReview?.title?.trim() || data.title || '',
       // HOTFIX-PARSE-001: Use author_name from parsing, fallback to author
       author: (data as any).author_name || data.author || '',
-      featuredImage: (metadata?.featured_image_path as string) || '',
-      additionalImages: (metadata?.additional_images as string[]) || [],
+      // FIX: Use article_images from API response instead of metadata fields
+      featuredImage: featuredImageUrl || (metadata?.featured_image_path as string) || '',
+      additionalImages: additionalImageUrls.length > 0 ? additionalImageUrls : (metadata?.additional_images as string[]) || [],
       metaDescription:
         data.articleReview?.meta?.original?.trim() ||
         data.meta_description ||

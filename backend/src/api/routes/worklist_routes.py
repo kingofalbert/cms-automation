@@ -471,6 +471,26 @@ async def _serialize_item_detail(
         parsing_confirmed = article.parsing_confirmed if hasattr(article, 'parsing_confirmed') else False
         parsing_confirmed_at = article.parsing_confirmed_at if hasattr(article, 'parsing_confirmed_at') else None
 
+        # Extract article images
+        article_images = []
+        if hasattr(article, 'article_images'):
+            from src.api.schemas.article import ArticleImageResponse
+            for img in article.article_images:
+                article_images.append(ArticleImageResponse(
+                    id=img.id,
+                    article_id=img.article_id,
+                    preview_path=img.preview_path,
+                    source_path=img.source_path,
+                    source_url=img.source_url,
+                    caption=img.caption,
+                    position=img.position,
+                    image_metadata=img.image_metadata or {},
+                    created_at=img.created_at,
+                    updated_at=img.updated_at,
+                ))
+    else:
+        article_images = []
+
     return WorklistItemDetailResponse(
         **base.model_dump(),
         content=item.content,
@@ -491,6 +511,8 @@ async def _serialize_item_detail(
         author_line=author_line,
         parsing_confirmed=parsing_confirmed,
         parsing_confirmed_at=parsing_confirmed_at,
+        # Phase 7: Article images
+        article_images=article_images,
     )
 
 

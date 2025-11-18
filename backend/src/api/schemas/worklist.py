@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import Field
 
 from src.api.schemas.base import BaseSchema
+from src.api.schemas.article import ArticleImageResponse
 
 
 class WorklistItemResponse(BaseSchema):
@@ -72,6 +73,12 @@ class WorklistItemDetailResponse(WorklistItemResponse):
     author_line: str | None = Field(default=None, description="Full author line text")
     parsing_confirmed: bool = Field(default=False, description="Whether parsing has been confirmed")
     parsing_confirmed_at: datetime | None = Field(default=None, description="When parsing was confirmed")
+
+    # Phase 7: Article images
+    article_images: list[ArticleImageResponse] = Field(
+        default_factory=list,
+        description="Images extracted from article during parsing"
+    )
 
 
 class WorklistStatisticsResponse(BaseSchema):
