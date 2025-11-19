@@ -71,8 +71,13 @@ class WorklistItemDetailResponse(WorklistItemResponse):
     title_suffix: str | None = Field(default=None, description="Parsed title suffix")
     author_name: str | None = Field(default=None, description="Parsed author name")
     author_line: str | None = Field(default=None, description="Full author line text")
+    seo_title: str | None = Field(default=None, description="SEO title tag (30 chars)")
     parsing_confirmed: bool = Field(default=False, description="Whether parsing has been confirmed")
     parsing_confirmed_at: datetime | None = Field(default=None, description="When parsing was confirmed")
+
+    # AI Optimization Suggestions
+    suggested_meta_description: str | None = Field(default=None, description="AI-suggested meta description")
+    suggested_seo_keywords: dict | None = Field(default=None, description="AI-suggested SEO keywords")
 
     # Phase 7: Article images
     article_images: list[ArticleImageResponse] = Field(

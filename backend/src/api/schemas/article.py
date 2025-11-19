@@ -42,6 +42,22 @@ class ArticleResponse(TimestampSchema):
     tags: list[str] = Field(default_factory=list, description="WordPress post tags (3-6 categories)")
     categories: list[str] = Field(default_factory=list, description="WordPress post categories")
 
+    # Phase 7: Structured Parsing Fields
+    title_prefix: str | None = Field(default=None, description='Title prefix, e.g., "【專題報導】"')
+    title_main: str | None = Field(default=None, description='Main title')
+    title_suffix: str | None = Field(default=None, description='Title suffix/subtitle')
+    author_name: str | None = Field(default=None, description='Author name')
+    author_line: str | None = Field(default=None, description='Raw author line from document')
+
+    # SEO Fields
+    seo_title: str | None = Field(default=None, description='SEO title tag (30 chars, for <title> and search results)')
+    meta_description: str | None = Field(default=None, description='Meta description for SEO (150-160 chars)')
+    seo_keywords: list[str] | None = Field(default=None, description='SEO keywords extracted from content')
+
+    # AI Optimization Suggestions
+    suggested_meta_description: str | None = Field(default=None, description='AI-suggested meta description')
+    suggested_seo_keywords: dict | None = Field(default=None, description='AI-suggested SEO keywords')
+
 
 class ArticleListResponse(BaseSchema):
     """Schema for article list response."""

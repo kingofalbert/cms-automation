@@ -459,6 +459,9 @@ async def _serialize_item_detail(
     title_suffix = None
     author_name = None
     author_line = None
+    seo_title = None
+    suggested_meta_description = None
+    suggested_seo_keywords = None
     parsing_confirmed = False
     parsing_confirmed_at = None
 
@@ -468,6 +471,9 @@ async def _serialize_item_detail(
         title_suffix = article.title_suffix
         author_name = article.author_name
         author_line = article.author_line
+        seo_title = article.seo_title if hasattr(article, 'seo_title') else None
+        suggested_meta_description = article.suggested_meta_description if hasattr(article, 'suggested_meta_description') else None
+        suggested_seo_keywords = article.suggested_seo_keywords if hasattr(article, 'suggested_seo_keywords') else None
         parsing_confirmed = article.parsing_confirmed if hasattr(article, 'parsing_confirmed') else False
         parsing_confirmed_at = article.parsing_confirmed_at if hasattr(article, 'parsing_confirmed_at') else None
 
@@ -509,6 +515,9 @@ async def _serialize_item_detail(
         title_suffix=title_suffix,
         author_name=author_name,
         author_line=author_line,
+        seo_title=seo_title,
+        suggested_meta_description=suggested_meta_description,
+        suggested_seo_keywords=suggested_seo_keywords,
         parsing_confirmed=parsing_confirmed,
         parsing_confirmed_at=parsing_confirmed_at,
         # Phase 7: Article images
