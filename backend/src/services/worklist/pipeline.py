@@ -177,7 +177,7 @@ class WorklistPipelineService:
                     article.suggested_titles = parsed_article.suggested_titles
                     article.proofreading_issues = parsed_article.proofreading_issues or []
                     article.proofreading_stats = parsed_article.proofreading_stats
-                    article.faqs = parsed_article.faqs or []
+                    # Note: article.faqs is a relationship, not a column - skip assignment to avoid async error
 
                     # Update article metadata with parsing info
                     article_metadata = dict(article.article_metadata or {})

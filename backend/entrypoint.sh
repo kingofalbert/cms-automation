@@ -11,6 +11,9 @@ echo "Starting CMS Automation Backend - Service Type: $SERVICE_TYPE"
 
 case "$SERVICE_TYPE" in
   api)
+    echo "Running database migrations..."
+    python -m alembic upgrade head
+
     echo "Starting API Server (Uvicorn)..."
     exec uvicorn src.main:app \
       --host 0.0.0.0 \

@@ -201,6 +201,7 @@ class ArticleParserService:
             # Parse Claude's JSON response
             parsed_data = json.loads(cleaned_response)
             logger.info(f"[DEBUG] JSON parse SUCCESS! Keys: {list(parsed_data.keys())}")
+            logger.info(f"[DEBUG] suggested_titles from Claude: {parsed_data.get('suggested_titles')}")
 
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
@@ -528,6 +529,20 @@ Return ONLY valid JSON with this exact structure:
       "suffix": "智慧診斷到精準治療全面升級",
       "score": 0.95,
       "reason": "更具吸引力，包含年份和數字，突出完整性"
+    }},
+    {{
+      "prefix": "【專家解讀】",
+      "main": "醫療AI大爆發",
+      "suffix": "2024年必知的創新應用",
+      "score": 0.88,
+      "reason": "簡潔有力，強調時效性和必要性"
+    }},
+    {{
+      "prefix": null,
+      "main": "從診斷到治療：AI如何改變2024醫療產業",
+      "suffix": null,
+      "score": 0.82,
+      "reason": "直接點出核心價值，適合專業讀者"
     }}
   ],
   "suggested_seo": {{
@@ -577,11 +592,12 @@ Return ONLY valid JSON with this exact structure:
 Important Instructions:
 1. Response Format: Return ONLY the JSON object, no additional text or markdown
 2. Completeness: Every field must be present, use null for missing optional fields
-3. All Chinese content in Traditional Chinese (繁體中文)
-4. SEO meta descriptions must be compelling and include keywords naturally
-5. Proofreading must catch real errors, not style preferences
-6. FAQs must add value, not repeat article content
-7. **CRITICAL JSON FORMATTING**:
+3. **REQUIRED: suggested_titles MUST contain 2-3 title variations, NEVER null or empty**
+4. All Chinese content in Traditional Chinese (繁體中文)
+5. SEO meta descriptions must be compelling and include keywords naturally
+6. Proofreading must catch real errors, not style preferences
+7. FAQs must add value, not repeat article content
+8. **CRITICAL JSON FORMATTING**:
    - Properly escape all special characters in JSON strings
    - Use \\" for double quotes, \\\\ for backslashes
    - Ensure ALL strings are properly terminated with closing quotes
