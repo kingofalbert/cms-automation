@@ -39,9 +39,13 @@ class WorklistPipelineService:
         self.session = session
         self.settings = get_settings()
         self.proofreading_service = proofreading_service or ProofreadingAnalysisService()
+
+        # Phase 7.5: Support unified parsing (parsing + SEO + proofreading + FAQ)
+        use_unified = getattr(self.settings, 'USE_UNIFIED_PARSER', False)
         self.parser_service = parser_service or ArticleParserService(
             use_ai=True,
             anthropic_api_key=self.settings.ANTHROPIC_API_KEY,
+            use_unified_prompt=use_unified,
         )
 
     async def process_new_item(self, item: WorklistItem) -> None:
@@ -167,6 +171,14 @@ class WorklistPipelineService:
                     article.tags = parsed_article.tags or []
                     article.parsing_confirmed = False  # Needs manual review
 
+                    # Phase 7.5: Update unified AI parsing fields
+                    article.suggested_meta_description = parsed_article.suggested_meta_description
+                    article.suggested_seo_keywords = parsed_article.suggested_seo_keywords or []
+                    article.suggested_titles = parsed_article.suggested_titles
+                    article.proofreading_issues = parsed_article.proofreading_issues or []
+                    article.proofreading_stats = parsed_article.proofreading_stats
+                    article.faqs = parsed_article.faqs
+
                     # Update article metadata with parsing info
                     article_metadata = dict(article.article_metadata or {})
                     article_metadata["parsing"] = {
@@ -201,7 +213,6 @@ class WorklistPipelineService:
                         "position": img.position,
                         "source_url": img.source_url,
                         "caption": img.caption,
-                        "alt_text": img.alt_text,
                     }
                     for img in parsed_article.images
                 ]

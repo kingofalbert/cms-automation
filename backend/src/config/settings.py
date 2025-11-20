@@ -180,6 +180,12 @@ class Settings(BaseSettings):
         description="Maximum concurrent article generation tasks",
     )
 
+    # Phase 7.5: Unified Parsing
+    USE_UNIFIED_PARSER: bool = Field(
+        default=True,
+        description="Enable unified parser that combines parsing + SEO + proofreading + FAQ in one API call",
+    )
+
     # Retry Configuration
     MAX_RETRIES: int = Field(default=3, ge=0, le=10)
     RETRY_DELAY: int = Field(

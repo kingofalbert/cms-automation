@@ -127,6 +127,28 @@ async def trigger_item_proofreading(
         ) from exc
 
 
+@router.post("/{item_id}/reparse")
+async def trigger_item_reparse(
+    item_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Manually trigger re-parsing for a worklist item (useful for testing unified prompt)."""
+    service = WorklistService(session)
+    try:
+        result = await service.trigger_reparse(item_id)
+        if result["status"] == "error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["message"],
+            )
+        return result
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
 @router.get("/{item_id}", response_model=WorklistItemDetailResponse)
 async def get_worklist_item_detail(
     item_id: int,

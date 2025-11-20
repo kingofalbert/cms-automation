@@ -154,9 +154,16 @@ class Article(Base, TimestampMixin):
         comment="Meta description quality score (0-1)",
     )
 
-    # SEO keywords suggestions
-    suggested_seo_keywords: Mapped[dict | None] = mapped_column(
+    # Title suggestions (Phase 7.5: Unified parsing)
+    suggested_titles: Mapped[list[dict] | None] = mapped_column(
         JSONB,
+        nullable=True,
+        comment="AI-suggested title variations (2-3 options with scores)",
+    )
+
+    # SEO keywords suggestions
+    suggested_seo_keywords: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String),
         nullable=True,
         comment="AI-suggested SEO keywords array",
     )

@@ -36,6 +36,7 @@ class ImageMetadata(BaseModel):
         default=None, description="Image file format (jpg, png, webp...)"
     )
     caption: str | None = Field(default=None, description="Caption or alt text")
+    alt_text: str | None = Field(default=None, description="Alt text for accessibility (compatibility field)")
     source: str | None = Field(default=None, description="Credit/source line")
     photographer: str | None = Field(default=None, description="Photographer name")
     license_expiry: str | None = Field(

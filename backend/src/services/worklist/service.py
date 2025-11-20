@@ -219,6 +219,51 @@ class WorklistService:
                 "error": str(exc),
             }
 
+    async def trigger_reparse(self, item_id: int) -> dict[str, Any]:
+        """Manually trigger re-parsing for a worklist item (useful for testing unified prompt)."""
+        item = await self.session.get(WorklistItem, item_id)
+        if not item:
+            raise ValueError(f"Worklist item {item_id} not found.")
+
+        pipeline = WorklistPipelineService(self.session)
+
+        try:
+            # Only run parsing, not proofreading
+            parsing_success = await pipeline._run_parsing(item)
+            await self.session.commit()
+            await self.session.refresh(item)
+
+            logger.info(
+                "worklist_manual_reparse_triggered",
+                item_id=item_id,
+                parsing_success=parsing_success,
+                new_status=item.status.value if hasattr(item.status, "value") else item.status,
+                article_id=item.article_id,
+            )
+
+            return {
+                "status": "completed" if parsing_success else "failed",
+                "message": "Re-parsing completed successfully." if parsing_success else "Re-parsing failed.",
+                "item_id": item_id,
+                "article_id": item.article_id,
+                "parsing_success": parsing_success,
+                "new_status": item.status.value if hasattr(item.status, "value") else item.status,
+            }
+        except Exception as exc:
+            await self.session.rollback()
+            logger.error(
+                "worklist_manual_reparse_failed",
+                item_id=item_id,
+                error=str(exc),
+                exc_info=True,
+            )
+            return {
+                "status": "error",
+                "message": f"Re-parsing failed: {str(exc)}",
+                "item_id": item_id,
+                "error": str(exc),
+            }
+
     async def _sync_article_status(
         self,
         item: WorklistItem,

@@ -77,7 +77,7 @@ class WorklistItemDetailResponse(WorklistItemResponse):
 
     # AI Optimization Suggestions
     suggested_meta_description: str | None = Field(default=None, description="AI-suggested meta description")
-    suggested_seo_keywords: dict | None = Field(default=None, description="AI-suggested SEO keywords")
+    suggested_seo_keywords: list[str] | None = Field(default=None, description="AI-suggested SEO keywords (array)")
 
     # Phase 7: Article images
     article_images: list[ArticleImageResponse] = Field(

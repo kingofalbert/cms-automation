@@ -32,7 +32,19 @@ class ParsedImage(BaseModel):
     source_path: str | None = Field(None, description="Path to downloaded source")
     source_url: str | None = Field(None, description='Original "原圖" URL from doc')
     caption: str | None = Field(None, description="Image caption")
+    alt_text: str | None = Field(None, description="Alt text for accessibility (defaults to caption)")
     metadata: ImageMetadata | None = Field(default=None, description="Technical image specs")
+
+    # Compatibility attributes for proofreading engine
+    @property
+    def id(self) -> str | None:
+        """ID property for compatibility with proofreading engine."""
+        return self.source_url
+
+    @property
+    def path(self) -> str | None:
+        """Path property for compatibility with proofreading engine."""
+        return self.source_path or self.preview_path
 
     @field_validator("position")
     @classmethod
@@ -115,6 +127,36 @@ class ParsedArticle(BaseModel):
     images: list[ParsedImage] = Field(
         default_factory=list,
         description="Extracted images with positions",
+    )
+
+    # Phase 7.5: Unified AI Parsing - SEO Suggestions
+    suggested_titles: list[dict[str, Any]] | None = Field(
+        None,
+        description="AI-generated title suggestions (2-3 variations)",
+    )
+    suggested_meta_description: str | None = Field(
+        None,
+        description="AI-generated meta description suggestion",
+    )
+    suggested_seo_keywords: list[str] | None = Field(
+        None,
+        description="AI-generated SEO keyword suggestions",
+    )
+
+    # Phase 7.5: Unified AI Parsing - Proofreading
+    proofreading_issues: list[dict[str, Any]] | None = Field(
+        None,
+        description="AI-detected proofreading issues",
+    )
+    proofreading_stats: dict[str, Any] | None = Field(
+        None,
+        description="Proofreading statistics (total_issues, by severity, etc.)",
+    )
+
+    # Phase 7.5: Unified AI Parsing - FAQ Generation
+    faqs: list[dict[str, Any]] | None = Field(
+        None,
+        description="AI-generated FAQ list (6-8 questions)",
     )
 
     # Parsing metadata
