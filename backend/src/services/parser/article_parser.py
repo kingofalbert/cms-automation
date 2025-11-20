@@ -165,7 +165,7 @@ class ArticleParserService:
             logger.info(f"[DEBUG] Calling Claude API (model={self.model})")
             message = client.messages.create(
                 model=self.model,
-                max_tokens=4096,
+                max_tokens=16384,  # Increased for unified parsing with long articles
                 temperature=0.0,  # Deterministic for parsing
                 messages=[
                     {
@@ -581,6 +581,12 @@ Important Instructions:
 4. SEO meta descriptions must be compelling and include keywords naturally
 5. Proofreading must catch real errors, not style preferences
 6. FAQs must add value, not repeat article content
+7. **CRITICAL JSON FORMATTING**:
+   - Properly escape all special characters in JSON strings
+   - Use \\" for double quotes, \\\\ for backslashes
+   - Ensure ALL strings are properly terminated with closing quotes
+   - Never truncate strings - complete every field fully
+   - If text contains line breaks, use \\n escape sequence
 
 Process the above {content_type} and return the complete JSON response:"""
 
