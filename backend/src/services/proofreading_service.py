@@ -59,8 +59,8 @@ class ProofreadingService:
 
     def __init__(self, api_key: str):
         self.client = AsyncAnthropic(api_key=api_key)
-        # 使用最新 Sonnet 3.5 模型（質量優先）
-        self.model = "claude-3-5-sonnet-20241022"
+        # 使用最新 Sonnet 4.5 模型（最高質量）
+        self.model = "claude-sonnet-4-5-20250929"
 
     async def proofread_content(
         self,
