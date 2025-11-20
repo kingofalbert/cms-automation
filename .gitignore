@@ -111,3 +111,8 @@ backend/credentials/
 /tmp/test-*.html
 /tmp/reset_worklist.sql
 /tmp/cors-env.yaml
+
+# Visual test artifacts
+visual_test_*.html
+visual_test_*.png
+verify_visuals.py
