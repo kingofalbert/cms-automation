@@ -142,7 +142,7 @@ class WorklistPipelineService:
                     worklist_id=item.id,
                     errors=error_messages,
                 )
-                item.mark_status(WorklistStatus.PARSING)  # Stay in parsing status
+                item.mark_status(WorklistStatus.FAILED)
                 item.add_note(
                     {
                         "message": "AI解析失败，需要手动审核",
