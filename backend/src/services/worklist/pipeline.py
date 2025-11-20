@@ -177,7 +177,7 @@ class WorklistPipelineService:
                     article.suggested_titles = parsed_article.suggested_titles
                     article.proofreading_issues = parsed_article.proofreading_issues or []
                     article.proofreading_stats = parsed_article.proofreading_stats
-                    article.faqs = parsed_article.faqs
+                    article.faqs = parsed_article.faqs or []
 
                     # Update article metadata with parsing info
                     article_metadata = dict(article.article_metadata or {})
