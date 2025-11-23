@@ -110,8 +110,9 @@ gcloud run deploy "$SERVICE_NAME" \
     --max-instances 10 \
     --timeout 600 \
     --concurrency 100 \
-    --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=${PROJECT_ID},LOG_LEVEL=INFO,GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG" \
-    --set-secrets="SECRET_KEY=cms-automation-prod-SECRET_KEY:latest,ANTHROPIC_API_KEY=cms-automation-prod-ANTHROPIC_API_KEY:latest,DATABASE_URL=cms-automation-prod-DATABASE_URL:latest,REDIS_URL=cms-automation-prod-REDIS_URL:latest,CMS_BASE_URL=cms-automation-prod-CMS_BASE_URL:latest,CMS_USERNAME=cms-automation-prod-CMS_USERNAME:latest,CMS_APPLICATION_PASSWORD=cms-automation-prod-CMS_APPLICATION_PASSWORD:latest,CMS_HTTP_AUTH_USERNAME=cms-automation-prod-CMS_HTTP_AUTH_USERNAME:latest,CMS_HTTP_AUTH_PASSWORD=cms-automation-prod-CMS_HTTP_AUTH_PASSWORD:latest,ALLOWED_ORIGINS=ALLOWED_ORIGINS:latest,GOOGLE_SERVICE_ACCOUNT_JSON=GOOGLE_SERVICE_ACCOUNT_JSON:latest" \
+    --port 8080 \
+    --set-env-vars "ENVIRONMENT=production,GCP_PROJECT_ID=${PROJECT_ID},LOG_LEVEL=INFO,GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG,PORT=8080,ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8000,https://storage.googleapis.com,https://cms-automation-frontend-476323.storage.googleapis.com" \
+    --set-secrets="SECRET_KEY=cms-automation-prod-SECRET_KEY:latest,ANTHROPIC_API_KEY=cms-automation-prod-ANTHROPIC_API_KEY:latest,DATABASE_URL=cms-automation-prod-DATABASE_URL:latest,REDIS_URL=cms-automation-prod-REDIS_URL:latest,CMS_BASE_URL=cms-automation-prod-CMS_BASE_URL:latest,CMS_USERNAME=cms-automation-prod-CMS_USERNAME:latest,CMS_APPLICATION_PASSWORD=cms-automation-prod-CMS_APPLICATION_PASSWORD:latest,CMS_HTTP_AUTH_USERNAME=cms-automation-prod-CMS_HTTP_AUTH_USERNAME:latest,CMS_HTTP_AUTH_PASSWORD=cms-automation-prod-CMS_HTTP_AUTH_PASSWORD:latest,GOOGLE_SERVICE_ACCOUNT_JSON=GOOGLE_SERVICE_ACCOUNT_JSON:latest" \
     --allow-unauthenticated
 
 # Get service URL
