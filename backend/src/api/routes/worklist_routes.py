@@ -127,6 +127,28 @@ async def trigger_item_proofreading(
         ) from exc
 
 
+@router.post("/{item_id}/reparse")
+async def trigger_item_reparse(
+    item_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    """Manually trigger re-parsing for a worklist item (useful for testing unified prompt)."""
+    service = WorklistService(session)
+    try:
+        result = await service.trigger_reparse(item_id)
+        if result["status"] == "error":
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=result["message"],
+            )
+        return result
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+
 @router.get("/{item_id}", response_model=WorklistItemDetailResponse)
 async def get_worklist_item_detail(
     item_id: int,
@@ -453,6 +475,50 @@ async def _serialize_item_detail(
                 proofreading_issues
             )
 
+    # HOTFIX-PARSE-004: Extract parsing fields from linked article
+    title_main = None
+    title_prefix = None
+    title_suffix = None
+    author_name = None
+    author_line = None
+    seo_title = None
+    suggested_meta_description = None
+    suggested_seo_keywords = None
+    parsing_confirmed = False
+    parsing_confirmed_at = None
+
+    if article:
+        title_main = article.title_main
+        title_prefix = article.title_prefix
+        title_suffix = article.title_suffix
+        author_name = article.author_name
+        author_line = article.author_line
+        seo_title = article.seo_title if hasattr(article, 'seo_title') else None
+        suggested_meta_description = article.suggested_meta_description if hasattr(article, 'suggested_meta_description') else None
+        suggested_seo_keywords = article.suggested_seo_keywords if hasattr(article, 'suggested_seo_keywords') else None
+        parsing_confirmed = article.parsing_confirmed if hasattr(article, 'parsing_confirmed') else False
+        parsing_confirmed_at = article.parsing_confirmed_at if hasattr(article, 'parsing_confirmed_at') else None
+
+        # Extract article images
+        article_images = []
+        if hasattr(article, 'article_images'):
+            from src.api.schemas.article import ArticleImageResponse
+            for img in article.article_images:
+                article_images.append(ArticleImageResponse(
+                    id=img.id,
+                    article_id=img.article_id,
+                    preview_path=img.preview_path,
+                    source_path=img.source_path,
+                    source_url=img.source_url,
+                    caption=img.caption,
+                    position=img.position,
+                    image_metadata=img.image_metadata or {},
+                    created_at=img.created_at,
+                    updated_at=img.updated_at,
+                ))
+    else:
+        article_images = []
+
     return WorklistItemDetailResponse(
         **base.model_dump(),
         content=item.content,
@@ -465,6 +531,19 @@ async def _serialize_item_detail(
         drive_metadata=item.drive_metadata or {},
         proofreading_issues=proofreading_issues,
         proofreading_stats=proofreading_stats,
+        # Phase 7: Parsing fields from article
+        title_main=title_main,
+        title_prefix=title_prefix,
+        title_suffix=title_suffix,
+        author_name=author_name,
+        author_line=author_line,
+        seo_title=seo_title,
+        suggested_meta_description=suggested_meta_description,
+        suggested_seo_keywords=suggested_seo_keywords,
+        parsing_confirmed=parsing_confirmed,
+        parsing_confirmed_at=parsing_confirmed_at,
+        # Phase 7: Article images
+        article_images=article_images,
     )
 
 

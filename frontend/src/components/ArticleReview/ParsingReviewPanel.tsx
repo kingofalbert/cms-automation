@@ -15,7 +15,7 @@
  * └────────────────────────────────┴──────────────────┘
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
 import { TitleReviewSection } from './TitleReviewSection';
@@ -64,18 +64,47 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   isSaving = false,
 }) => {
   // Local state for parsing data (editable)
-  const [title, setTitle] = useState(data.title || '');
-  const [author, setAuthor] = useState(data.author || '');
-  const [featuredImage, setFeaturedImage] = useState((data.metadata?.featured_image_path as string) || '');
-  const [additionalImages, setAdditionalImages] = useState<string[]>(
-    (data.metadata?.additional_images as string[]) || []
-  );
-  const [metaDescription, setMetaDescription] = useState(
-    data.meta_description || ''
-  );
-  const [seoKeywords, setSeoKeywords] = useState<string[]>(data.seo_keywords || []);
+  const initialParsingState = useMemo(() => {
+    const metadata = data.metadata;
+
+    // FIX: Read images from article_images array (database-backed images)
+    const articleImages = (data as any).article_images || [];
+    const imageUrls = articleImages
+      .sort((a: any, b: any) => a.position - b.position)
+      .map((img: any) => img.source_url);
+    const featuredImageUrl = imageUrls.length > 0 ? imageUrls[0] : '';
+    const additionalImageUrls = imageUrls.slice(1);
+
+    return {
+      // HOTFIX-PARSE-001: Use title_main from parsing, fallback to title
+      title: (data as any).title_main || data.articleReview?.title?.trim() || data.title || '',
+      // HOTFIX-PARSE-001: Use author_name from parsing, fallback to author
+      author: (data as any).author_name || data.author || '',
+      // FIX: Use article_images from API response instead of metadata fields
+      featuredImage: featuredImageUrl || (metadata?.featured_image_path as string) || '',
+      additionalImages: additionalImageUrls.length > 0 ? additionalImageUrls : (metadata?.additional_images as string[]) || [],
+      metaDescription:
+        data.articleReview?.meta?.original?.trim() ||
+        data.meta_description ||
+        '',
+      seoKeywords:
+        (data.articleReview?.seo?.original_keywords &&
+          data.articleReview.seo.original_keywords.length > 0
+          ? data.articleReview.seo.original_keywords
+          : data.seo_keywords) || [],
+      faqSuggestions:
+        (metadata?.faq_suggestions as Array<{ question: string; answer: string }>) || [],
+    };
+  }, [data]);
+
+  const [title, setTitle] = useState(initialParsingState.title);
+  const [author, setAuthor] = useState(initialParsingState.author);
+  const [featuredImage, setFeaturedImage] = useState(initialParsingState.featuredImage);
+  const [additionalImages, setAdditionalImages] = useState<string[]>(initialParsingState.additionalImages);
+  const [metaDescription, setMetaDescription] = useState(initialParsingState.metaDescription);
+  const [seoKeywords, setSeoKeywords] = useState<string[]>(initialParsingState.seoKeywords);
   const [faqSuggestions, setFaqSuggestions] = useState<Array<{ question: string; answer: string }>>(
-    (data.metadata?.faq_suggestions as Array<{ question: string; answer: string }>) || []
+    initialParsingState.faqSuggestions
   );
 
   // Phase 9: SEO Title state
@@ -86,6 +115,20 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
 
   // Track if data has been modified
   const [isDirty, setIsDirty] = useState(false);
+
+  // Sync parsing data when source changes and form is pristine
+  useEffect(() => {
+    if (!isDirty) {
+      setTitle(initialParsingState.title);
+      setAuthor(initialParsingState.author);
+      setFeaturedImage(initialParsingState.featuredImage);
+      setAdditionalImages(initialParsingState.additionalImages);
+      setMetaDescription(initialParsingState.metaDescription);
+      setSeoKeywords(initialParsingState.seoKeywords);
+      setFaqSuggestions(initialParsingState.faqSuggestions);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialParsingState, isDirty]);
 
   // Fetch SEO Title suggestions when component mounts (if articleId exists)
   useEffect(() => {
@@ -177,11 +220,14 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
       )}
 
       {/* Main content: 60% + 40% grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 overflow-auto">
+      <div
+        className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 overflow-auto"
+        data-testid="parsing-review-grid"
+      >
         {/* Left column: 60% (3 out of 5 cols) */}
         <div className="lg:col-span-3 space-y-6">
           {/* Title Review */}
-          <Card className="p-6">
+          <Card className="p-6" data-testid="parsing-title-card">
             <TitleReviewSection
               title={title}
               originalTitle={data.title || ''}
@@ -207,7 +253,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           )}
 
           {/* Author Review */}
-          <Card className="p-6">
+          <Card className="p-6" data-testid="parsing-author-card">
             <AuthorReviewSection
               author={author}
               originalAuthor={data.author || ''}
@@ -219,7 +265,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           </Card>
 
           {/* Image Review */}
-          <Card className="p-6">
+          <Card className="p-6" data-testid="parsing-image-card">
             <ImageReviewSection
               featuredImage={featuredImage}
               additionalImages={additionalImages}
@@ -247,7 +293,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           )}
 
           {/* SEO Review */}
-          <Card className="p-6">
+          <Card className="p-6" data-testid="parsing-seo-card">
             <SEOReviewSection
               metaDescription={metaDescription}
               keywords={seoKeywords}
@@ -299,7 +345,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           )}
 
           {/* FAQ Review */}
-          <Card className="p-6">
+          <Card className="p-6" data-testid="parsing-faq-card">
             <FAQReviewSection
               faqs={faqSuggestions}
               onFaqsChange={(faqs) => {

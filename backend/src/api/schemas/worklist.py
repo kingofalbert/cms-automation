@@ -6,6 +6,7 @@ from typing import Any
 from pydantic import Field
 
 from src.api.schemas.base import BaseSchema
+from src.api.schemas.article import ArticleImageResponse
 
 
 class WorklistItemResponse(BaseSchema):
@@ -62,6 +63,26 @@ class WorklistItemDetailResponse(WorklistItemResponse):
     )
     proofreading_stats: dict[str, int] | None = Field(
         default=None, description="Statistics about proofreading issues"
+    )
+
+    # Phase 7: Article parsing fields (HOTFIX-PARSE-004)
+    title_main: str | None = Field(default=None, description="Parsed main title")
+    title_prefix: str | None = Field(default=None, description="Parsed title prefix")
+    title_suffix: str | None = Field(default=None, description="Parsed title suffix")
+    author_name: str | None = Field(default=None, description="Parsed author name")
+    author_line: str | None = Field(default=None, description="Full author line text")
+    seo_title: str | None = Field(default=None, description="SEO title tag (30 chars)")
+    parsing_confirmed: bool = Field(default=False, description="Whether parsing has been confirmed")
+    parsing_confirmed_at: datetime | None = Field(default=None, description="When parsing was confirmed")
+
+    # AI Optimization Suggestions
+    suggested_meta_description: str | None = Field(default=None, description="AI-suggested meta description")
+    suggested_seo_keywords: list[str] | None = Field(default=None, description="AI-suggested SEO keywords (array)")
+
+    # Phase 7: Article images
+    article_images: list[ArticleImageResponse] = Field(
+        default_factory=list,
+        description="Images extracted from article during parsing"
     )
 
 

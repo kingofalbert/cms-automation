@@ -39,9 +39,13 @@ class WorklistPipelineService:
         self.session = session
         self.settings = get_settings()
         self.proofreading_service = proofreading_service or ProofreadingAnalysisService()
+
+        # Phase 7.5: Support unified parsing (parsing + SEO + proofreading + FAQ)
+        use_unified = getattr(self.settings, 'USE_UNIFIED_PARSER', False)
         self.parser_service = parser_service or ArticleParserService(
             use_ai=True,
             anthropic_api_key=self.settings.ANTHROPIC_API_KEY,
+            use_unified_prompt=use_unified,
         )
 
     async def process_new_item(self, item: WorklistItem) -> None:
@@ -138,7 +142,7 @@ class WorklistPipelineService:
                     worklist_id=item.id,
                     errors=error_messages,
                 )
-                item.mark_status(WorklistStatus.PARSING)  # Stay in parsing status
+                item.mark_status(WorklistStatus.FAILED)
                 item.add_note(
                     {
                         "message": "AI解析失败，需要手动审核",
@@ -151,6 +155,48 @@ class WorklistPipelineService:
 
             # Parsing succeeded - extract data from ParsedArticle
             parsed_article = parsing_result.parsed_article
+
+            # HOTFIX-PARSE-003: Update Article table with parsed data
+            if item.article_id:
+                article = await self.session.get(Article, item.article_id)
+                if article:
+                    # Update article parsing fields
+                    article.title_prefix = parsed_article.title_prefix
+                    article.title_main = parsed_article.title_main
+                    article.title_suffix = parsed_article.title_suffix
+                    article.author_name = parsed_article.author_name
+                    article.author_line = parsed_article.author_line
+                    article.meta_description = parsed_article.meta_description
+                    article.seo_keywords = parsed_article.seo_keywords or []
+                    article.tags = parsed_article.tags or []
+                    article.parsing_confirmed = False  # Needs manual review
+
+                    # Phase 7.5: Update unified AI parsing fields
+                    article.suggested_meta_description = parsed_article.suggested_meta_description
+                    article.suggested_seo_keywords = parsed_article.suggested_seo_keywords or []
+                    article.suggested_titles = parsed_article.suggested_titles
+                    article.proofreading_issues = parsed_article.proofreading_issues or []
+                    article.proofreading_stats = parsed_article.proofreading_stats
+                    # Note: article.faqs is a relationship, not a column - skip assignment to avoid async error
+
+                    # Update article metadata with parsing info
+                    article_metadata = dict(article.article_metadata or {})
+                    article_metadata["parsing"] = {
+                        "method": parsed_article.parsing_method,
+                        "confidence": parsed_article.parsing_confidence,
+                        "parsed_at": datetime.utcnow().isoformat(),
+                    }
+                    article.article_metadata = article_metadata
+
+                    self.session.add(article)
+
+                    logger.info(
+                        "article_parsing_fields_updated",
+                        article_id=article.id,
+                        worklist_id=item.id,
+                        title_main=parsed_article.title_main,
+                        author_name=parsed_article.author_name,
+                    )
 
             # Update worklist item with parsed data
             item.author = parsed_article.author_name
@@ -167,7 +213,6 @@ class WorklistPipelineService:
                         "position": img.position,
                         "source_url": img.source_url,
                         "caption": img.caption,
-                        "alt_text": img.alt_text,
                     }
                     for img in parsed_article.images
                 ]

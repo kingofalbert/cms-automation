@@ -14,9 +14,11 @@ from src.api.routes import (
     optimization_routes,
     parsing_routes,
     proofreading_decisions,
+    proofreading_routes,  # Independent proofreading service (body text only)
     publish_routes,
     seo_routes,
     settings_routes,
+    title_generation_routes,
     topics,
     worklist_routes,
 )
@@ -45,6 +47,8 @@ def register_routes(app: FastAPI) -> None:
     # app.include_router(optimization_monitoring_routes.router, prefix="/v1", tags=["Optimization Monitoring"])  # Temporarily disabled
     app.include_router(analytics_routes.router, prefix="/v1", tags=["Analytics"])
     app.include_router(settings_routes.router, prefix="/v1", tags=["Settings"])
+    app.include_router(title_generation_routes.router, tags=["Title Generation"])  # Already has /v1 prefix
+    app.include_router(proofreading_routes.router, tags=["Proofreading"])  # Independent proofreading service (body text only) - Already has /v1 prefix
     app.include_router(worklist_routes.router, prefix="/v1", tags=["Worklist"])
     app.include_router(debug_routes.router, tags=["Debug"])  # Debug endpoints
 

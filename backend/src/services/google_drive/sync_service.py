@@ -524,6 +524,7 @@ class GoogleDriveSyncService:
         if existing:
             existing.title = payload["title"]
             existing.content = payload["content"]
+            existing.raw_html = payload.get("raw_html")  # FIX: Save raw HTML for parser
             existing.author = payload.get("author")
             existing.drive_metadata = metadata
             existing.tags = payload.get("tags", [])
@@ -541,6 +542,7 @@ class GoogleDriveSyncService:
             title=payload["title"],
             status=WorklistStatus.PENDING,
             content=payload["content"],
+            raw_html=payload.get("raw_html"),  # FIX: Save raw HTML for parser
             author=payload.get("author"),
             tags=payload.get("tags", []),
             categories=payload.get("categories", []),

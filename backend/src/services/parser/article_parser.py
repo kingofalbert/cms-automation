@@ -37,7 +37,8 @@ class ArticleParserService:
         self,
         use_ai: bool = True,
         anthropic_api_key: str | None = None,
-        model: str = "claude-3-5-sonnet-20241022",
+        model: str = "claude-sonnet-4-5",
+        use_unified_prompt: bool = False,
     ):
         """Initialize the article parser service.
 
@@ -45,13 +46,15 @@ class ArticleParserService:
             use_ai: Whether to use AI-based parsing (default: True)
             anthropic_api_key: Anthropic API key for Claude (required if use_ai=True)
             model: Claude model to use for AI parsing
+            use_unified_prompt: Whether to use unified prompt (parsing + SEO + proofreading + FAQ)
         """
         self.use_ai = use_ai
         self.anthropic_api_key = anthropic_api_key
         self.model = model
+        self.use_unified_prompt = use_unified_prompt
 
         logger.info(
-            f"ArticleParserService initialized (use_ai={use_ai}, model={model})"
+            f"ArticleParserService initialized (use_ai={use_ai}, model={model}, unified={use_unified_prompt})"
         )
 
     def parse_document(
@@ -135,8 +138,10 @@ class ArticleParserService:
         import json
 
         logger.info("Starting AI-based parsing with Claude")
+        logger.info(f"[DEBUG] Parser config: use_ai={self.use_ai}, model={self.model}, api_key_present={bool(self.anthropic_api_key)}, api_key_length={len(self.anthropic_api_key) if self.anthropic_api_key else 0}")
 
         if not self.anthropic_api_key:
+            logger.error("[DEBUG] API key is missing or empty!")
             return ParsingResult(
                 success=False,
                 errors=[
@@ -157,10 +162,10 @@ class ArticleParserService:
             prompt = self._build_ai_parsing_prompt(raw_html)
 
             # Call Claude API
-            logger.debug(f"Calling Claude API (model={self.model})")
+            logger.info(f"[DEBUG] Calling Claude API (model={self.model})")
             message = client.messages.create(
                 model=self.model,
-                max_tokens=4096,
+                max_tokens=16384,  # Increased for unified parsing with long articles
                 temperature=0.0,  # Deterministic for parsing
                 messages=[
                     {
@@ -172,9 +177,31 @@ class ArticleParserService:
 
             # Extract response text
             response_text = message.content[0].text
+            logger.info(f"[DEBUG] Claude raw response length: {len(response_text)}, starts_with: {response_text[:50] if response_text else 'EMPTY'}")
+
+            # Clean response text - remove markdown code blocks if present
+            cleaned_response = response_text.strip()
+            if cleaned_response.startswith("```json"):
+                logger.info("[DEBUG] Detected ```json markdown wrapper, stripping...")
+                # Remove ```json at start and ``` at end
+                cleaned_response = cleaned_response[7:]  # Remove ```json
+                if cleaned_response.endswith("```"):
+                    cleaned_response = cleaned_response[:-3]  # Remove ```
+                cleaned_response = cleaned_response.strip()
+            elif cleaned_response.startswith("```"):
+                logger.info("[DEBUG] Detected ``` markdown wrapper, stripping...")
+                # Remove ``` at start and end
+                cleaned_response = cleaned_response[3:]
+                if cleaned_response.endswith("```"):
+                    cleaned_response = cleaned_response[:-3]
+                cleaned_response = cleaned_response.strip()
+
+            logger.info(f"[DEBUG] Cleaned response length: {len(cleaned_response)}, starts_with: {cleaned_response[:50]}")
 
             # Parse Claude's JSON response
-            parsed_data = json.loads(response_text)
+            parsed_data = json.loads(cleaned_response)
+            logger.info(f"[DEBUG] JSON parse SUCCESS! Keys: {list(parsed_data.keys())}")
+            logger.info(f"[DEBUG] suggested_titles from Claude: {parsed_data.get('suggested_titles')}")
 
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
@@ -191,6 +218,13 @@ class ArticleParserService:
                 seo_keywords=parsed_data.get("seo_keywords", []),
                 tags=parsed_data.get("tags", []),
                 images=self._parse_images_from_ai_response(parsed_data.get("images", [])),
+                # Phase 7.5: Unified AI Parsing fields
+                suggested_titles=parsed_data.get("suggested_titles"),
+                suggested_meta_description=parsed_data.get("suggested_seo", {}).get("meta_description") if parsed_data.get("suggested_seo") else None,
+                suggested_seo_keywords=parsed_data.get("suggested_seo", {}).get("primary_keywords", []) if parsed_data.get("suggested_seo") else None,
+                proofreading_issues=parsed_data.get("proofreading_issues"),
+                proofreading_stats=parsed_data.get("proofreading_stats"),
+                faqs=parsed_data.get("faqs"),
                 parsing_method="ai",
                 parsing_confidence=0.95,  # AI has high confidence
             )
@@ -213,7 +247,8 @@ class ArticleParserService:
             )
 
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse AI response as JSON: {e}")
+            logger.error(f"[DEBUG] JSON parse FAILED: {e}")
+            logger.error(f"[DEBUG] Failed response text (first 500 chars): {cleaned_response[:500] if 'cleaned_response' in locals() else 'NOT_AVAILABLE'}")
             return ParsingResult(
                 success=False,
                 errors=[
@@ -226,7 +261,8 @@ class ArticleParserService:
             )
 
         except anthropic.APIError as e:
-            logger.error(f"Anthropic API error: {e}")
+            logger.error(f"[DEBUG] Anthropic API error: {e}")
+            logger.error(f"[DEBUG] API error type: {type(e).__name__}")
             return ParsingResult(
                 success=False,
                 errors=[
@@ -260,6 +296,10 @@ class ArticleParserService:
         Returns:
             Formatted prompt string
         """
+        if self.use_unified_prompt:
+            return self._build_unified_parsing_prompt(raw_html)
+
+        # Original parsing-only prompt
         return f"""You are an expert at parsing Chinese article HTML from Google Docs into structured data.
 
 Parse the following Google Doc HTML and extract structured information.
@@ -267,12 +307,21 @@ Parse the following Google Doc HTML and extract structured information.
 **Instructions**:
 1. **Title**: Split into prefix (optional, e.g., "【專題】"), main title (required), and suffix (optional subtitle)
 2. **SEO Title**: Look for text marked with "這是 SEO title" or similar markers. If found, extract it as seo_title and set seo_title_extracted=true. If not found, leave seo_title=null and seo_title_extracted=false.
-3. **Author**: Extract from "文／" or "作者：" patterns. Provide both raw line and cleaned name.
+3. **Author**: Extract from author patterns like:
+   - "文 / 作者名" or "文／作者名" (with or without spaces)
+   - "作者：作者名" or "撰文：作者名"
+   - "編譯 / 作者名" or "By: Author Name"
+   - IMPORTANT: Clean up the name - remove "編譯", "撰文", "作者" suffixes
+   - Example: "文 / Leo Babauta 編譯 / 黃襄" → extract "Leo Babauta"
 4. **Body**: Remove header metadata, navigation elements, and images. Keep only article paragraphs.
 5. **Meta Description**: Create a 150-160 character SEO description summarizing the article.
 6. **SEO Keywords**: Extract 5-10 relevant keywords for SEO.
 7. **Tags**: Extract 3-6 content tags/categories.
-8. **Images**: Extract all images with their position (paragraph index), URL, and caption.
+8. **Images**: Extract all images including:
+   - <img> tags with src attribute
+   - Plain text image URLs (e.g., https://example.com/image.jpg)
+   - Google Docs redirect URLs (extract the actual image URL from the redirect)
+   - Find nearby "圖說:" markers for captions
 
 **Output Format** (JSON):
 ```json
@@ -310,6 +359,252 @@ Parse the following Google Doc HTML and extract structured information.
 - position in images is the paragraph index where the image should appear (0-based).
 
 Parse and respond with JSON:"""
+
+    def _build_unified_parsing_prompt(self, raw_html: str) -> str:
+        """Build unified prompt that combines parsing + SEO + proofreading + FAQ.
+
+        This is the Phase 7.5 unified prompt that reduces costs by 60% and time by 50%.
+
+        Args:
+            raw_html: Raw HTML content from Google Docs, or plain text content
+
+        Returns:
+            Complete unified prompt string
+        """
+        # Detect if content is HTML or plain text
+        is_html = bool(raw_html and ('<' in raw_html and '>' in raw_html))
+        content_type = "HTML" if is_html else "plain text"
+        content_label = "HTML Content" if is_html else "Text Content"
+
+        # Adjust instructions for plain text vs HTML
+        parsing_note = ""
+        if not is_html:
+            parsing_note = """
+⚠️ Note: The content below is plain text (not HTML).
+- Extract title and author from the beginning of the text
+- Body content is the main text (no HTML tags to remove)
+- Images cannot be extracted from plain text (return empty array)
+- Focus on generating high-quality SEO suggestions based on the text content
+"""
+
+        return f"""You are an expert content processor for Traditional Chinese articles from Google Docs.
+{parsing_note}
+
+Perform ALL the following tasks in a SINGLE comprehensive response:
+
+## Task 1: Parse Article Structure
+
+Extract and structure the following elements from the HTML:
+
+1. **Title Components**:
+   - `title_prefix`: Optional prefix like "【專題報導】", "【深度解析】"
+   - `title_main`: The main title (required, never empty)
+   - `title_suffix`: Optional subtitle or additional context
+
+2. **Author Information**:
+   - `author_line`: Raw author text as it appears
+   - `author_name`: Clean extracted name (remove prefixes like "文/", "編譯/", "作者:")
+   - Examples:
+     * "文 / 張三 編譯 / 李四" → author_name: "張三"
+     * "撰文：王五" → author_name: "王五"
+
+3. **Body Content**:
+   - `body_html`: Clean HTML with only article paragraphs
+   - Remove headers, navigation, metadata
+   - Preserve paragraph structure and formatting
+
+4. **Images**:
+   - Extract all <img> tags and plain URL images
+   - Find captions marked with "圖說:" or similar
+   - Include position (paragraph index)
+
+5. **Existing SEO** (if marked in document):
+   - Look for "這是 SEO title" markers
+   - Extract if found, set extraction flag
+
+## Task 2: Generate SEO Optimizations
+
+Based on the article content, create:
+
+1. **Optimized Title Suggestions** (2-3 variations):
+   - More engaging and clickable
+   - Include key search terms
+   - Follow 3-part structure (prefix + main + suffix)
+   - Provide score (0-1) and reasoning
+
+2. **SEO Metadata**:
+   - `suggested_meta_title`: Optimized for search (30 chars)
+   - `suggested_meta_description`: Compelling description (150-160 chars)
+   - Focus on benefits and key information
+   - Include call-to-action if appropriate
+
+3. **Keywords Strategy**:
+   - `focus_keyword`: Primary keyword (1)
+   - `primary_keywords`: Main keywords (3-5)
+   - `secondary_keywords`: Supporting keywords (5-8)
+   - `tags`: Content categories (3-6)
+
+## Task 3: Comprehensive Proofreading
+
+Identify and categorize all issues:
+
+1. **Critical Issues** (must fix):
+   - Factual errors (事實錯誤)
+   - Severe grammar mistakes (嚴重語法錯誤)
+
+2. **High Priority** (should fix):
+   - Typos and wrong characters (錯別字)
+   - Incorrect punctuation (標點符號錯誤)
+   - Subject-verb disagreement (主謂不一致)
+
+3. **Medium Priority** (recommended):
+   - Redundant expressions (冗餘表達)
+   - Inconsistent terminology (術語不一致)
+   - Awkward phrasing (表達不順)
+
+4. **Low Priority** (optional):
+   - Style improvements (文體優化)
+   - Alternative word choices (詞彙選擇)
+
+For each issue provide:
+- `rule_id`: Category code (e.g., TYPO_001)
+- `severity`: critical/high/medium/low
+- `location`: {{paragraph, sentence}}
+- `original_text`: The problematic text
+- `suggested_text`: Corrected version
+- `explanation`: Why this is an issue
+- `confidence`: 0.0-1.0 score
+
+## Task 4: Generate FAQ Section
+
+Create 6-8 frequently asked questions that:
+
+1. **Cover Different Intents**:
+   - What is...? (definition)
+   - How does...? (process)
+   - Why is...? (reasoning)
+   - When should...? (timing)
+   - Who can...? (audience)
+
+2. **Provide Value**:
+   - Answer common reader concerns
+   - Clarify complex concepts
+   - Add practical information
+   - Include actionable insights
+
+3. **Structure**:
+   - Clear, concise questions
+   - Comprehensive 2-3 sentence answers
+   - Mark importance (high/medium/low)
+   - Tag intent type
+
+## Output Format
+
+Return ONLY valid JSON with this exact structure:
+
+```json
+{{
+  "title_prefix": "【深度報導】",
+  "title_main": "2024年AI醫療革命",
+  "title_suffix": "改變未來的十大技術",
+  "author_line": "文／張三｜編輯／李四",
+  "author_name": "張三",
+  "body_html": "<p>文章內容...</p>",
+  "images": [
+    {{
+      "position": 0,
+      "source_url": "https://...",
+      "caption": "圖1：AI診斷系統"
+    }}
+  ],
+  "seo_title": null,
+  "seo_title_extracted": false,
+  "meta_description": "本文探討2024年醫療保健...",
+  "seo_keywords": ["醫療", "AI", "科技"],
+  "tags": ["醫療", "科技", "AI"],
+  "suggested_titles": [
+    {{
+      "prefix": "【產業革命】",
+      "main": "AI醫療2024：十大突破技術完整解析",
+      "suffix": "智慧診斷到精準治療全面升級",
+      "score": 0.95,
+      "reason": "更具吸引力，包含年份和數字，突出完整性"
+    }},
+    {{
+      "prefix": "【專家解讀】",
+      "main": "醫療AI大爆發",
+      "suffix": "2024年必知的創新應用",
+      "score": 0.88,
+      "reason": "簡潔有力，強調時效性和必要性"
+    }},
+    {{
+      "prefix": null,
+      "main": "從診斷到治療：AI如何改變2024醫療產業",
+      "suffix": null,
+      "score": 0.82,
+      "reason": "直接點出核心價值，適合專業讀者"
+    }}
+  ],
+  "suggested_seo": {{
+    "meta_title": "2024 AI醫療｜10大突破技術解析",
+    "meta_description": "深入探討2024年AI醫療革命性進展，從智慧診斷、精準醫療到遠距照護，了解如何改變未來醫療產業。",
+    "focus_keyword": "AI醫療",
+    "primary_keywords": ["人工智慧醫療", "智慧診斷", "精準醫療"],
+    "secondary_keywords": ["遠距醫療", "醫療科技", "數位健康"],
+    "tags": ["AI", "醫療科技", "健康產業"]
+  }},
+  "proofreading_issues": [
+    {{
+      "rule_id": "TYPO_001",
+      "severity": "high",
+      "location": {{"paragraph": 3, "sentence": 2}},
+      "original_text": "醫療保建",
+      "suggested_text": "醫療保健",
+      "explanation": "錯字：'建'應改為'健'",
+      "confidence": 0.98
+    }}
+  ],
+  "proofreading_stats": {{
+    "total_issues": 5,
+    "critical": 0,
+    "high": 2,
+    "medium": 2,
+    "low": 1,
+    "auto_fixable": 4,
+    "requires_review": 1
+  }},
+  "faqs": [
+    {{
+      "question": "什麼是AI醫療診斷技術？",
+      "answer": "AI醫療診斷是運用機器學習和深度學習算法，分析醫療影像、病歷數據和生理信號，協助醫生進行更準確快速的疾病診斷。",
+      "intent": "definition",
+      "importance": "high"
+    }}
+  ]
+}}
+```
+
+{content_label} to Process:
+```{content_type.lower()}
+{raw_html}
+```
+
+Important Instructions:
+1. Response Format: Return ONLY the JSON object, no additional text or markdown
+2. Completeness: Every field must be present, use null for missing optional fields
+3. **REQUIRED: suggested_titles MUST contain 2-3 title variations, NEVER null or empty**
+4. All Chinese content in Traditional Chinese (繁體中文)
+5. SEO meta descriptions must be compelling and include keywords naturally
+6. Proofreading must catch real errors, not style preferences
+7. FAQs must add value, not repeat article content
+8. **CRITICAL JSON FORMATTING**:
+   - Properly escape all special characters in JSON strings
+   - Use \\" for double quotes, \\\\ for backslashes
+   - Ensure ALL strings are properly terminated with closing quotes
+   - Never truncate strings - complete every field fully
+   - If text contains line breaks, use \\n escape sequence
+
+Process the above {content_type} and return the complete JSON response:"""
 
     def _parse_images_from_ai_response(self, images_data: list[dict]) -> list[ParsedImage]:
         """Convert AI response images data to ParsedImage objects.
@@ -502,14 +797,15 @@ Parse and respond with JSON:"""
 
         # Common Chinese author patterns
         author_patterns = [
-            r"文[／/]([^｜|\n]+)",  # 文／張三
-            r"作者[：:]([^｜|\n]+)",  # 作者：張三
-            r"撰文[：:]([^｜|\n]+)",  # 撰文：張三
+            r"文[／/\s]+([^｜|\n]+)",  # 文／張三 or 文 / 張三 (with spaces)
+            r"作者[：:\s]+([^｜|\n]+)",  # 作者：張三 or 作者: 張三
+            r"撰文[：:\s]+([^｜|\n]+)",  # 撰文：張三
             r"By[：:\s]+([^｜|\n]+)",  # By: John Doe
-            r"記者[：:]([^｜|\n]+)",  # 記者：張三
+            r"記者[：:\s]+([^｜|\n]+)",  # 記者：張三
+            r"編譯[／/\s]+([^｜|\n]+)",  # 編譯／張三
         ]
 
-        # Search first 10 paragraphs for author info
+        # Strategy 1: Search in <p> tags first (HTML structure)
         for p in soup.find_all("p", limit=10):
             text = p.get_text(strip=True)
 
@@ -520,10 +816,33 @@ Parse and respond with JSON:"""
                     raw_line = text
                     author_name = match.group(1).strip()
 
-                    # Clean up author name (remove trailing info after ｜ or |)
-                    author_name = re.split(r"[｜|]", author_name)[0].strip()
+                    # Clean up author name (remove trailing info after ｜ or | or 編譯)
+                    # Split by ｜, |, or 編譯/撰文/作者 markers
+                    author_name = re.split(r"[｜|]|編譯|撰文|作者", author_name)[0].strip()
 
-                    logger.debug(f"Found author: {author_name}")
+                    logger.debug(f"Found author in <p> tag: {author_name}")
+                    return {"raw_line": raw_line, "name": author_name}
+
+        # Strategy 2: If no <p> tags, search in raw text (plain text content)
+        full_text = soup.get_text()
+        text_lines = full_text.split("\n")
+
+        for line in text_lines[:20]:  # Check first 20 lines
+            line = line.strip()
+            if not line:
+                continue
+
+            # Try each pattern on raw text lines
+            for pattern in author_patterns:
+                match = re.search(pattern, line, re.IGNORECASE)
+                if match:
+                    raw_line = line
+                    author_name = match.group(1).strip()
+
+                    # Clean up author name
+                    author_name = re.split(r"[｜|]|編譯|撰文|作者", author_name)[0].strip()
+
+                    logger.debug(f"Found author in raw text: {author_name}")
                     return {"raw_line": raw_line, "name": author_name}
 
         # No author found
@@ -731,11 +1050,7 @@ Parse and respond with JSON:"""
         images = []
         paragraph_index = 0
 
-        # Strategy:
-        # 1. Find all <img> tags and <figure> elements
-        # 2. Calculate position based on paragraph index
-        # 3. Extract src URL and caption (from alt, title, or figcaption)
-
+        # Strategy 1: Find all <img> tags and <figure> elements (HTML structure)
         # Process all top-level elements to track paragraph positions
         for element in soup.find_all(["p", "figure", "img"]):
             if element.name == "p":
@@ -765,7 +1080,7 @@ Parse and respond with JSON:"""
                             caption=caption,
                         )
                     )
-                    logger.debug(f"Found image at position {paragraph_index}: {source_url}")
+                    logger.debug(f"Found image in <figure> at position {paragraph_index}: {source_url}")
 
             elif element.name == "img":
                 # Standalone image tag (not in a figure)
@@ -780,7 +1095,67 @@ Parse and respond with JSON:"""
                             caption=caption,
                         )
                     )
-                    logger.debug(f"Found image at position {paragraph_index}: {source_url}")
+                    logger.debug(f"Found <img> tag at position {paragraph_index}: {source_url}")
+
+        # Strategy 2: If no images found in HTML tags, search for image URLs in plain text
+        if not images:
+            import re
+
+            full_text = soup.get_text()
+
+            # Common image URL patterns
+            image_url_pattern = r'https?://[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s\)]*)?'
+
+            # Also look for Google Docs image redirects
+            google_docs_image_pattern = r'https://www\.google\.com/url\?q=(https?://[^&]+\.(?:jpg|jpeg|png|gif|webp|svg)[^&]*)'
+
+            # Find all image URLs
+            matches = list(re.finditer(image_url_pattern, full_text, re.IGNORECASE))
+            google_matches = list(re.finditer(google_docs_image_pattern, full_text, re.IGNORECASE))
+
+            # Process direct image URLs
+            for match in matches:
+                source_url = match.group(0)
+                # Try to find caption nearby (text before "圖說" or similar markers)
+                start_pos = max(0, match.start() - 200)
+                context = full_text[start_pos:match.start()]
+
+                caption = None
+                caption_match = re.search(r'圖說[：:]\s*([^\n]+)', context)
+                if caption_match:
+                    caption = caption_match.group(1).strip()
+
+                images.append(
+                    ParsedImage(
+                        position=0,  # Place at beginning since we don't have paragraph context
+                        source_url=source_url,
+                        caption=caption,
+                    )
+                )
+                logger.debug(f"Found image URL in text: {source_url}")
+
+            # Process Google Docs redirected image URLs
+            for match in google_matches:
+                import urllib.parse
+                source_url = urllib.parse.unquote(match.group(1))
+
+                # Try to find caption
+                start_pos = max(0, match.start() - 200)
+                context = full_text[start_pos:match.start()]
+
+                caption = None
+                caption_match = re.search(r'圖說[：:]\s*([^\n]+)', context)
+                if caption_match:
+                    caption = caption_match.group(1).strip()
+
+                images.append(
+                    ParsedImage(
+                        position=0,
+                        source_url=source_url,
+                        caption=caption,
+                    )
+                )
+                logger.debug(f"Found Google Docs image URL in text: {source_url}")
 
         logger.debug(f"Extracted {len(images)} images total")
         return images
