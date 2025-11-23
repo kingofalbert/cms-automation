@@ -1,6 +1,7 @@
 # Spec-Kit / Claude
 .claude/
 .specify/
+.agent/
 .env
 logs/
 screenshots/
