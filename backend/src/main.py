@@ -50,8 +50,8 @@ def create_app() -> FastAPI:
         version=settings.API_VERSION,
         description="AI-powered CMS automation using Claude Computer Use API",
         lifespan=lifespan,
-        docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
-        redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
+        docs_url="/docs",  # Always enable docs
+        redoc_url="/redoc",  # Always enable ReDoc
     )
 
     # Add CORS middleware

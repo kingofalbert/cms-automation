@@ -36,7 +36,12 @@ class Settings(BaseSettings):
         min_length=32,
     )
     ALLOWED_ORIGINS: list[str] = Field(
-        default=["http://localhost:3000", "http://localhost:8000"],
+        default=[
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "https://storage.googleapis.com",
+            "https://cms-automation-frontend-476323.storage.googleapis.com",
+        ],
         description="CORS allowed origins",
     )
 
