@@ -104,10 +104,10 @@ USER appuser
 
 # Health check (only for API service)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health', timeout=5)" || true
+    CMD python -c "import requests; requests.get('http://localhost:8080/health', timeout=5)" || true
 
 # Expose port
-EXPOSE 8000
+EXPOSE 8080
 
 # Start application using entrypoint script
 # SERVICE_TYPE environment variable determines what to run:

@@ -12,12 +12,13 @@ echo "Starting CMS Automation Backend - Service Type: $SERVICE_TYPE"
 case "$SERVICE_TYPE" in
   api)
     echo "Running database migrations..."
-    python -m alembic upgrade head
+    python -m alembic upgrade head || echo "WARNING: Migration failed, continuing anyway"
 
     echo "Starting API Server (Uvicorn)..."
+    echo "Listening on port: ${PORT:-8080}"
     exec uvicorn src.main:app \
       --host 0.0.0.0 \
-      --port "${PORT:-8000}" \
+      --port "${PORT:-8080}" \
       --workers 1 \
       --log-level info \
       --no-access-log
