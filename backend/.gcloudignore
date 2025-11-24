@@ -27,5 +27,5 @@ docs/
 scripts/
 docker-compose*.yml
 Dockerfile.dev
-README.md
+# README.md is required by Dockerfile.prod for poetry install
 Makefile
