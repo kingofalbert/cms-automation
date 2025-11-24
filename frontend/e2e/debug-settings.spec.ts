@@ -11,7 +11,7 @@ test('Debug settings page with screenshots', async ({ page, context }) => {
   await context.clearCookies();
 
   // Navigate to the app with hard reload
-  await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/index.html', {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html', {
     waitUntil: 'networkidle',
   });
 

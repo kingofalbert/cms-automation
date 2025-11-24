@@ -22,7 +22,7 @@ test('Fresh browser test - settings page', async () => {
   });
 
   // Navigate to production site
-  await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/index.html', {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html', {
     waitUntil: 'networkidle',
   });
 

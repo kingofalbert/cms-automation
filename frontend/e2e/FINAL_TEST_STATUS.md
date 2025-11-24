@@ -200,7 +200,7 @@ ALLOWED_ORIGINS = [
 
 ### 1. ✅ Bucket 名称错误
 
-**问题**: 使用了不存在的 bucket `cms-automation-frontend-2025`
+**问题**: 使用了不存在的 bucket `cms-automation-frontend-cmsupload-476323`
 
 **解决**:
 - 确认正确 bucket: `cms-automation-frontend-cmsupload-476323`

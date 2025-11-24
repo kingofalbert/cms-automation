@@ -279,7 +279,7 @@ export TEST_LOCAL=1
 ```
 
 This switches Playwright config from:
-- Production: `https://storage.googleapis.com/cms-automation-frontend-2025/`
+- Production: `https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/`
 - Local: `http://localhost:3000/`
 
 ---

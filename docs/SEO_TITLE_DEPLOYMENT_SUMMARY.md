@@ -281,7 +281,7 @@ psql "$DATABASE_URL" -c "SELECT 1;"
 # 應返回: 1
 
 # 測試 GCS 存取
-gsutil ls gs://cms-automation-frontend-2025/ | head -5
+gsutil ls gs://cms-automation-frontend-cmsupload-476323/ | head -5
 # 應顯示: 文件列表
 ```
 
@@ -341,7 +341,7 @@ git checkout PREVIOUS_COMMIT
 # 重新構建並部署
 cd frontend
 NODE_ENV=production npm run build
-gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
+gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
 
 # 返回最新代碼
 git checkout main

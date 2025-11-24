@@ -31,7 +31,7 @@ LOCATION: US-EAST1
 STORAGE_CLASS: (default)
 ```
 
-**结论**: 项目中不存在名为 `cms-automation-frontend-2025` 的 bucket
+**结论**: 项目中不存在名为 `cms-automation-frontend-cmsupload-476323` 的 bucket
 
 ### 2. IAM 权限验证
 
@@ -107,7 +107,7 @@ last-modified: Mon, 10 Nov 2025 04:51:26 GMT
 ### 发现 1: Bucket 命名混淆
 
 **问题**:
-- 测试配置文件中引用了 `cms-automation-frontend-2025`
+- 测试配置文件中引用了 `cms-automation-frontend-cmsupload-476323`
 - 实际 bucket 名称是 `cms-automation-frontend-cmsupload-476323`
 
 **原因**:
@@ -169,7 +169,7 @@ gsutil -m cp -r dist/* gs://cms-automation-frontend-cmsupload-476323/
    - 用户需要先进入 "Buckets" 页面才能看到 bucket
 
 2. **Bucket 名称差异**:
-   - 文档或脚本可能引用了 `cms-automation-frontend-2025`
+   - 文档或脚本可能引用了 `cms-automation-frontend-cmsupload-476323`
    - 实际项目中是 `cms-automation-frontend-cmsupload-476323`
    - 这个差异导致了混淆
 
@@ -207,7 +207,7 @@ gsutil -m cp -r dist/* gs://cms-automation-frontend-cmsupload-476323/
 
 ### 之前的错误
 
-之前我在分析中提到使用 `cms-automation-frontend-2025` bucket 时遇到 403 错误，这是**正确的发现** - 因为那个 bucket 根本不存在。
+之前我在分析中提到使用 `cms-automation-frontend-cmsupload-476323` bucket 时遇到 403 错误，这是**正确的发现** - 因为那个 bucket 根本不存在。
 
 ### 当前状态
 

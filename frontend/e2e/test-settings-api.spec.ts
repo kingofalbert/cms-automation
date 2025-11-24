@@ -17,7 +17,7 @@ test('Settings page API calls', async ({ page }) => {
   });
 
   console.log('\n=== Loading app.html ===');
-  await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/app.html', {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html', {
     waitUntil: 'networkidle'
   });
 
@@ -50,7 +50,7 @@ test('Settings page API calls', async ({ page }) => {
 
   if (!clicked) {
     console.log('Trying direct navigation...');
-    await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/app.html#/settings');
+    await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html#/settings');
   }
 
   await page.waitForTimeout(5000);

@@ -16,7 +16,7 @@
 ```
 
 ### 根本原因
-`gs://cms-automation-frontend-2025/` bucket:
+`gs://cms-automation-frontend-cmsupload-476323/` bucket:
 - ❌ **不在你的任何 GCP 项目中**
 - ❌ **你没有写入权限**（仅有只读权限）
 - ❌ **无法获取 bucket 元数据**（无 storage.buckets.get 权限）
@@ -100,7 +100,7 @@ gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-dev-2025/
 4. ✅ 更新 E2E 测试配置
 
 ### 长期规划（本周）
-1. 📧 联系 `gs://cms-automation-frontend-2025/` 管理员
+1. 📧 联系 `gs://cms-automation-frontend-cmsupload-476323/` 管理员
 2. 📝 申请生产 bucket 写入权限
 3. 🤖 配置服务账号用于 CI/CD
 4. 📚 更新团队文档

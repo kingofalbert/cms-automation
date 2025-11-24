@@ -1,10 +1,10 @@
 #!/bin/bash
 # GCP Permissions Quick Fix Script
-# Purpose: Provide multiple solutions for gs://cms-automation-frontend-2025/ access issue
+# Purpose: Provide multiple solutions for gs://cms-automation-frontend-cmsupload-476323/ access issue
 
 set -e
 
-BUCKET="gs://cms-automation-frontend-2025"
+BUCKET="gs://cms-automation-frontend-cmsupload-476323"
 PROJECT_ID="cmsupload-476323"
 CURRENT_USER=$(gcloud config get-value account)
 

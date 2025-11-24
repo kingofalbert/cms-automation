@@ -23,7 +23,7 @@ test('Test Settings page without cache busting (simulating user access)', async 
   await context.clearPermissions();
 
   // Visit the production URL exactly as a user would (no timestamp parameter)
-  await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/index.html', {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html', {
     waitUntil: 'networkidle'
   });
 

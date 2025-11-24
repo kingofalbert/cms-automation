@@ -19,7 +19,7 @@ test('Test Settings page with full loading wait', async ({ page }) => {
   // Test with real production URL and cache-busting timestamp
   const timestamp = Date.now();
   console.log(`\nTesting with timestamp: ${timestamp}`);
-  await page.goto(`https://storage.googleapis.com/cms-automation-frontend-2025/index.html?t=${timestamp}`, {
+  await page.goto(`https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html?t=${timestamp}`, {
     waitUntil: 'networkidle'
   });
 

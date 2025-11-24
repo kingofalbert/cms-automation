@@ -286,7 +286,7 @@ ls -lh dist/
 **3.3 Deploy to GCS (Google Cloud Storage)**
 ```bash
 # Set bucket name
-BUCKET_NAME="cms-automation-frontend-2025"
+BUCKET_NAME="cms-automation-frontend-cmsupload-476323"
 
 # Sync build to GCS
 gsutil -m rsync -r -d dist/ "gs://$BUCKET_NAME/"

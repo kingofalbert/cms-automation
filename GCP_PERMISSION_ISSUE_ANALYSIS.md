@@ -1,7 +1,7 @@
 # GCP 权限问题分析与解决方案
 
 **问题发现日期**: 2025-11-04
-**影响范围**: Frontend 部署到 GCS bucket `gs://cms-automation-frontend-2025/`
+**影响范围**: Frontend 部署到 GCS bucket `gs://cms-automation-frontend-cmsupload-476323/`
 **严重程度**: 🔴 Critical - 阻碍生产部署
 
 ---
@@ -10,7 +10,7 @@
 
 ### Codex CLI 报告
 ```
-因为当前环境里并没有具有写入 gs://cms-automation-frontend-2025/ 权限的服务帐号或凭证，
+因为当前环境里并没有具有写入 gs://cms-automation-frontend-cmsupload-476323/ 权限的服务帐号或凭证，
 所以 gsutil rsync 一直被 403 拒绝。
 
 要执行"下一步"，必须先获取具备 storage.objects.create/storage.objects.delete 权限的
@@ -19,7 +19,7 @@ GCP 身份。
 
 ### 错误信息
 ```bash
-$ gsutil cp /tmp/test-upload.txt gs://cms-automation-frontend-2025/test-upload.txt
+$ gsutil cp /tmp/test-upload.txt gs://cms-automation-frontend-cmsupload-476323/test-upload.txt
 
 AccessDeniedException: 403 albert.king@epochtimes.nyc does not have
 storage.objects.create access to the Google Cloud Storage object.
@@ -47,7 +47,7 @@ $ echo $GOOGLE_APPLICATION_CREDENTIALS
 
 | 操作 | 结果 | 错误 |
 |-----|------|-----|
-| **列出 bucket 内容** | ✅ 成功 | `gsutil ls gs://cms-automation-frontend-2025/` 正常 |
+| **列出 bucket 内容** | ✅ 成功 | `gsutil ls gs://cms-automation-frontend-cmsupload-476323/` 正常 |
 | **读取 bucket IAM** | ❌ 失败 | `storage.buckets.getIamPolicy` 被拒绝 |
 | **写入文件到 bucket** | ❌ 失败 | `storage.objects.create` 被拒绝 |
 | **删除文件** | ❌ 失败 | `storage.objects.delete` 被拒绝（推测） |
@@ -65,7 +65,7 @@ Role: roles/owner
 
 ### 原因 1: Bucket 可能在不同项目中
 - 当前项目: `cmsupload-476323`
-- Bucket `gs://cms-automation-frontend-2025/` 的所属项目**未知**（无法读取 bucket 元数据）
+- Bucket `gs://cms-automation-frontend-cmsupload-476323/` 的所属项目**未知**（无法读取 bucket 元数据）
 - 用户在 `cmsupload-476323` 是 owner，但 bucket 可能在其他项目
 
 ### 原因 2: Bucket 级别 IAM 策略覆盖
@@ -96,13 +96,13 @@ Role: roles/owner
 **选项 1: Storage Admin (完全控制)**
 ```bash
 gsutil iam ch user:albert.king@epochtimes.nyc:roles/storage.admin \
-  gs://cms-automation-frontend-2025
+  gs://cms-automation-frontend-cmsupload-476323
 ```
 
 **选项 2: Storage Object Admin (对象级别完全控制)**
 ```bash
 gsutil iam ch user:albert.king@epochtimes.nyc:roles/storage.objectAdmin \
-  gs://cms-automation-frontend-2025
+  gs://cms-automation-frontend-cmsupload-476323
 ```
 
 **选项 3: 自定义角色 (最小权限)**
@@ -115,17 +115,17 @@ gcloud iam roles create frontendDeployer --project=<BUCKET_PROJECT_ID> \
 
 # 授予角色
 gsutil iam ch user:albert.king@epochtimes.nyc:projects/<BUCKET_PROJECT_ID>/roles/frontendDeployer \
-  gs://cms-automation-frontend-2025
+  gs://cms-automation-frontend-cmsupload-476323
 ```
 
 #### 验证权限
 ```bash
 # 测试上传
 echo "test" > /tmp/test.txt
-gsutil cp /tmp/test.txt gs://cms-automation-frontend-2025/test.txt
+gsutil cp /tmp/test.txt gs://cms-automation-frontend-cmsupload-476323/test.txt
 
 # 测试删除
-gsutil rm gs://cms-automation-frontend-2025/test.txt
+gsutil rm gs://cms-automation-frontend-cmsupload-476323/test.txt
 
 # 如果都成功，权限配置正确 ✅
 ```
@@ -148,7 +148,7 @@ gcloud iam service-accounts create frontend-deployer \
 ```bash
 # 授予 bucket 写入权限
 gsutil iam ch serviceAccount:frontend-deployer@<BUCKET_PROJECT_ID>.iam.gserviceaccount.com:roles/storage.objectAdmin \
-  gs://cms-automation-frontend-2025
+  gs://cms-automation-frontend-cmsupload-476323
 ```
 
 #### 步骤 C: 创建密钥并下载
@@ -172,7 +172,7 @@ gcloud auth application-default print-access-token
 # 测试部署
 cd frontend
 npm run build
-gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
+gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
 ```
 
 #### 步骤 E: CI/CD 配置
@@ -186,9 +186,9 @@ gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
 - name: Deploy to GCS
   run: |
     npm run build
-    gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
+    gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
     gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
-      gs://cms-automation-frontend-2025/*.html
+      gs://cms-automation-frontend-cmsupload-476323/*.html
 ```
 
 ---
@@ -251,7 +251,7 @@ echo "https://storage.googleapis.com/cms-automation-frontend-dev-2025/index.html
 ### 第一步: 确定 Bucket 所属和管理员
 ```bash
 # 联系团队/组织管理员确认：
-# 1. gs://cms-automation-frontend-2025/ 属于哪个 GCP 项目？
+# 1. gs://cms-automation-frontend-cmsupload-476323/ 属于哪个 GCP 项目？
 # 2. 谁是 bucket 管理员？
 # 3. 如何申请权限？
 ```
@@ -271,14 +271,14 @@ cd /home/kingofalbert/projects/CMS/frontend
 npm run build
 
 # 部署
-gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
+gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
 
 # 设置缓存策略
 gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
-  gs://cms-automation-frontend-2025/*.html
+  gs://cms-automation-frontend-cmsupload-476323/*.html
 
 # 访问测试
-curl -I https://storage.googleapis.com/cms-automation-frontend-2025/index.html
+curl -I https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html
 ```
 
 ### 第四步: 运行 E2E 测试
@@ -312,14 +312,14 @@ gcloud auth list
 echo $GOOGLE_APPLICATION_CREDENTIALS
 
 # 测试读取权限
-gsutil ls gs://cms-automation-frontend-2025/
+gsutil ls gs://cms-automation-frontend-cmsupload-476323/
 
 # 测试写入权限
 echo "test" > /tmp/test.txt
-gsutil cp /tmp/test.txt gs://cms-automation-frontend-2025/test.txt
+gsutil cp /tmp/test.txt gs://cms-automation-frontend-cmsupload-476323/test.txt
 
 # 测试删除权限
-gsutil rm gs://cms-automation-frontend-2025/test.txt
+gsutil rm gs://cms-automation-frontend-cmsupload-476323/test.txt
 
 # 检查项目
 gcloud config get-value project
@@ -357,7 +357,7 @@ roles/owner                # 项目所有者权限
 
 ### 联系团队管理员
 询问以下信息：
-1. Bucket `gs://cms-automation-frontend-2025/` 所属的 GCP 项目 ID
+1. Bucket `gs://cms-automation-frontend-cmsupload-476323/` 所属的 GCP 项目 ID
 2. Bucket 管理员联系方式
 3. 权限申请流程
 
@@ -373,11 +373,11 @@ roles/owner                # 项目所有者权限
 成功配置权限后，应该能够执行：
 
 ```bash
-✅ gsutil ls gs://cms-automation-frontend-2025/
-✅ gsutil cp file.txt gs://cms-automation-frontend-2025/
-✅ gsutil rm gs://cms-automation-frontend-2025/file.txt
-✅ gsutil -m rsync -r dist/ gs://cms-automation-frontend-2025/
-✅ gsutil setmeta -h "Cache-Control:no-cache" gs://cms-automation-frontend-2025/index.html
+✅ gsutil ls gs://cms-automation-frontend-cmsupload-476323/
+✅ gsutil cp file.txt gs://cms-automation-frontend-cmsupload-476323/
+✅ gsutil rm gs://cms-automation-frontend-cmsupload-476323/file.txt
+✅ gsutil -m rsync -r dist/ gs://cms-automation-frontend-cmsupload-476323/
+✅ gsutil setmeta -h "Cache-Control:no-cache" gs://cms-automation-frontend-cmsupload-476323/index.html
 ```
 
 全部成功 = 权限配置完成！🎉

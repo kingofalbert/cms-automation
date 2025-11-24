@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const BASE_URL = process.env.TEST_LOCAL === '1'
   ? 'http://localhost:3001'
-  : 'https://storage.googleapis.com/cms-automation-frontend-2025';
+  : 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323';
 
 test.describe('Navigation Component', () => {
   test.describe('Desktop Navigation', () => {

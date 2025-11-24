@@ -29,7 +29,7 @@ if [ "$MODE" = "local" ]; then
     export TEST_LOCAL=1
 elif [ "$MODE" = "prod" ]; then
     echo -e "${GREEN}Testing Environment:${NC} Production"
-    echo -e "${GREEN}Frontend:${NC} https://storage.googleapis.com/cms-automation-frontend-2025/"
+    echo -e "${GREEN}Frontend:${NC} https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/"
     echo -e "${GREEN}Backend:${NC} https://cms-automation-backend-baau2zqeqq-ue.a.run.app"
     export TEST_LOCAL=0
 else

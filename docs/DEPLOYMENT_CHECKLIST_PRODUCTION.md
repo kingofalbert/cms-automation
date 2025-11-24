@@ -337,7 +337,7 @@ cd frontend
 NODE_ENV=production npm run build
 
 # 2. 同步到 GCS
-BUCKET_NAME="cms-automation-frontend-2025"
+BUCKET_NAME="cms-automation-frontend-cmsupload-476323"
 gsutil -m rsync -r -d dist/ "gs://$BUCKET_NAME/"
 
 # 3. 設置快取標頭

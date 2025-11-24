@@ -1,6 +1,6 @@
 # 🚀 GCP 权限问题快速修复指南
 
-**问题**: 无法部署前端到 `gs://cms-automation-frontend-2025/` (403 权限被拒)
+**问题**: 无法部署前端到 `gs://cms-automation-frontend-cmsupload-476323/` (403 权限被拒)
 
 **解决时间**: 5-10 分钟
 
@@ -75,7 +75,7 @@ echo "访问: https://storage.googleapis.com/cms-automation-frontend-dev-2025/in
 {
   "scripts": {
     "deploy": "npm run build && gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-dev-2025/",
-    "deploy:prod": "npm run build && gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/"
+    "deploy:prod": "npm run build && gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/"
   }
 }
 ```
@@ -85,7 +85,7 @@ echo "访问: https://storage.googleapis.com/cms-automation-frontend-dev-2025/in
 export default defineConfig({
   use: {
     baseURL: process.env.TEST_ENV === 'prod'
-      ? 'https://storage.googleapis.com/cms-automation-frontend-2025/'
+      ? 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/'
       : 'https://storage.googleapis.com/cms-automation-frontend-dev-2025/',
   },
 });
@@ -105,7 +105,7 @@ export default defineConfig({
 ```bash
 # Bucket 不在你的项目中，需要联系组织/团队管理员
 # 询问：
-# - gs://cms-automation-frontend-2025/ 属于哪个项目？
+# - gs://cms-automation-frontend-cmsupload-476323/ 属于哪个项目？
 # - 谁是管理员？
 # - 如何申请权限？
 ```
@@ -114,17 +114,17 @@ export default defineConfig({
 管理员需要运行（替换你的邮箱）:
 ```bash
 gsutil iam ch user:albert.king@epochtimes.nyc:roles/storage.objectAdmin \
-  gs://cms-automation-frontend-2025
+  gs://cms-automation-frontend-cmsupload-476323
 ```
 
 #### 3. 验证权限
 ```bash
 # 测试上传
 echo "test" > /tmp/test.txt
-gsutil cp /tmp/test.txt gs://cms-automation-frontend-2025/test.txt
+gsutil cp /tmp/test.txt gs://cms-automation-frontend-cmsupload-476323/test.txt
 
 # 测试删除
-gsutil rm gs://cms-automation-frontend-2025/test.txt
+gsutil rm gs://cms-automation-frontend-cmsupload-476323/test.txt
 
 # ✅ 如果都成功，权限配置完成
 ```
@@ -150,7 +150,7 @@ gcloud iam service-accounts create frontend-deployer \
 ```bash
 # 管理员运行：
 gsutil iam ch serviceAccount:frontend-deployer@cmsupload-476323.iam.gserviceaccount.com:roles/storage.objectAdmin \
-  gs://cms-automation-frontend-2025
+  gs://cms-automation-frontend-cmsupload-476323
 ```
 
 #### 3. 创建密钥
@@ -197,9 +197,9 @@ jobs:
 
       - name: Deploy to GCS
         run: |
-          gsutil -m rsync -r -d frontend/dist/ gs://cms-automation-frontend-2025/
+          gsutil -m rsync -r -d frontend/dist/ gs://cms-automation-frontend-cmsupload-476323/
           gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
-            gs://cms-automation-frontend-2025/*.html
+            gs://cms-automation-frontend-cmsupload-476323/*.html
 
       - name: Run smoke tests
         run: cd frontend && npx playwright test e2e/production-smoke.spec.ts
@@ -298,7 +298,7 @@ https://storage.googleapis.com/YOUR-BUCKET/index.html
 
 1. **运行诊断脚本**: `./scripts/fix-gcp-permissions.sh`
 2. **查看详细文档**: `GCP_PERMISSION_ISSUE_ANALYSIS.md`
-3. **联系团队管理员**: 询问 `gs://cms-automation-frontend-2025/` 权限
+3. **联系团队管理员**: 询问 `gs://cms-automation-frontend-cmsupload-476323/` 权限
 
 ---
 
@@ -319,7 +319,7 @@ open https://storage.googleapis.com/cms-automation-frontend-dev-2025/index.html
 ```
 
 ### 长期方案（等待管理员批准）
-1. 联系 `gs://cms-automation-frontend-2025/` 管理员
+1. 联系 `gs://cms-automation-frontend-cmsupload-476323/` 管理员
 2. 请求 `roles/storage.objectAdmin` 权限
 3. 配置服务账号用于 CI/CD
 4. 更新生产部署流程

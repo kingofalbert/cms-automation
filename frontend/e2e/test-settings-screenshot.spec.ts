@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 
 test('Take Settings page screenshot', async ({ page }) => {
-  await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/app.html', {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html', {
     waitUntil: 'networkidle'
   });
 

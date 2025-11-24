@@ -76,7 +76,7 @@ npm run preview  # 运行在 localhost:4173
 
 **生产环境测试:**
 - 后端: `https://cms-automation-backend-baau2zqeqq-ue.a.run.app`
-- 前端: `https://storage.googleapis.com/cms-automation-frontend-2025/`
+- 前端: `https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/`
 
 ### 2. 数据库
 

@@ -286,7 +286,7 @@ cd frontend
 NODE_ENV=production npm run build
 
 # 上傳到 GCS
-gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
+gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
 
 # 返回最新代碼
 git checkout main

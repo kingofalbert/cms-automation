@@ -417,7 +417,7 @@
 // playwright.config.ts
 baseURL: process.env.TEST_LOCAL
   ? 'http://localhost:3000/'
-  : 'https://storage.googleapis.com/cms-automation-frontend-2025/'
+  : 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/'
 
 retries: process.env.CI ? 2 : 0
 workers: process.env.CI ? 1 : undefined
@@ -550,7 +550,7 @@ test('handles 100 concurrent article requests', async ({ request }) => {
 const environments = {
   dev: 'http://localhost:3000',
   staging: 'https://staging.cms-automation.com',
-  production: 'https://storage.googleapis.com/cms-automation-frontend-2025/',
+  production: 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/',
 };
 
 export default defineConfig({

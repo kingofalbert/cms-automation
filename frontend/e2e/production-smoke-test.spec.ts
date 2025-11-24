@@ -12,7 +12,7 @@ type ProdWindow = typeof window & {
   };
 };
 
-const PRODUCTION_FRONTEND = 'https://storage.googleapis.com/cms-automation-frontend-2025/app.html';
+const PRODUCTION_FRONTEND = 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html';
 const PRODUCTION_BACKEND = 'https://cms-automation-backend-ufk65ob4ea-uc.a.run.app';
 
 test.describe('Production Environment Smoke Tests', () => {

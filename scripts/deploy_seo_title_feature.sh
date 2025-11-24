@@ -239,7 +239,7 @@ fi
 DIST_SIZE=$(du -sh dist | cut -f1)
 log_info "✓ 前端構建完成: $DIST_SIZE"
 
-BUCKET_NAME="cms-automation-frontend-2025"
+BUCKET_NAME="cms-automation-frontend-cmsupload-476323"
 log_info "部署到 GCS: gs://$BUCKET_NAME/"
 
 confirm "確定要上傳到 GCS 嗎？"

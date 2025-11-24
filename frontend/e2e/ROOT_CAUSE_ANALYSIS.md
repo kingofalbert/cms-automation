@@ -27,7 +27,7 @@
 ### 错误现象
 
 ```bash
-$ gsutil -m cp -r dist/* gs://cms-automation-frontend-2025/
+$ gsutil -m cp -r dist/* gs://cms-automation-frontend-cmsupload-476323/
 
 AccessDeniedException: 403 albert.king@epochtimes.nyc does not have
 storage.objects.create access to the Google Cloud Storage bucket.
@@ -37,11 +37,11 @@ storage.objects.create access to the Google Cloud Storage bucket.
 
 #### 1. 错误的 Bucket 名称
 
-**尝试使用的 bucket**: `cms-automation-frontend-2025`
+**尝试使用的 bucket**: `cms-automation-frontend-cmsupload-476323`
 
 ```bash
 # 检查 bucket 是否存在
-$ gsutil ls gs://cms-automation-frontend-2025/
+$ gsutil ls gs://cms-automation-frontend-cmsupload-476323/
 # Result: AccessDeniedException: 403
 ```
 
@@ -88,7 +88,7 @@ Operation completed over 44 objects/6.2 MiB.
 
 可能的原因：
 
-1. **命名约定变更**: 早期可能使用过 `cms-automation-frontend-2025`，后来改用包含项目 ID 的命名规范 `cms-automation-frontend-{PROJECT_ID}`
+1. **命名约定变更**: 早期可能使用过 `cms-automation-frontend-cmsupload-476323`，后来改用包含项目 ID 的命名规范 `cms-automation-frontend-{PROJECT_ID}`
 2. **测试配置错误**: 测试配置文件可能引用了旧的/不存在的 bucket 名称
 3. **文档过期**: 部署文档或脚本可能没有更新到新的 bucket 名称
 
@@ -281,7 +281,7 @@ Failed Requests:
 ### 根本原因
 
 1. **主要问题 (已解决)**: 使用了错误的 GCS bucket 名称
-   - 错误: `cms-automation-frontend-2025`
+   - 错误: `cms-automation-frontend-cmsupload-476323`
    - 正确: `cms-automation-frontend-cmsupload-476323`
 
 2. **次要问题 (待解决)**: Backend CORS 配置不包含 GCS origin
@@ -343,7 +343,7 @@ gcloud projects get-iam-policy cmsupload-476323 --filter="albert.king@epochtimes
 # Result: roles/owner
 
 # 4. 尝试访问错误的 bucket (失败)
-gsutil iam get gs://cms-automation-frontend-2025
+gsutil iam get gs://cms-automation-frontend-cmsupload-476323
 # Result: AccessDeniedException: 403
 
 # 5. 列出项目中的 buckets (发现正确名称)
@@ -362,7 +362,7 @@ npx playwright test e2e/regression/worklist.spec.ts -g "WL-001"
 ### 相关文件修改
 
 1. **`frontend/e2e/utils/test-helpers.ts`** (line 29)
-   - Before: `cms-automation-frontend-2025`
+   - Before: `cms-automation-frontend-cmsupload-476323`
    - After: `cms-automation-frontend-cmsupload-476323`
 
 2. **`frontend/e2e/TEST_EXECUTION_REPORT.md`** (multiple lines)

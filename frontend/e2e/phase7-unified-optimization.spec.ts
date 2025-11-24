@@ -18,7 +18,7 @@ import type { APIRequestContext } from '@playwright/test';
 // Test configuration
 const BASE_URL = process.env.TEST_LOCAL
   ? 'http://localhost:4173/'
-  : 'https://storage.googleapis.com/cms-automation-frontend-2025/';
+  : 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/';
 
 const API_BASE_URL = process.env.TEST_LOCAL
   ? 'http://localhost:8000'

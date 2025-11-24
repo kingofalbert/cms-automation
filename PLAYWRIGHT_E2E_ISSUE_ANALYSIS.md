@@ -34,7 +34,7 @@ Attempted to implement Playwright E2E testing for a React + TypeScript frontend 
 ┌─────────────────────────────────────────┐
 │  Frontend (React SPA)                   │
 │  Deployed to: GCS Bucket                │
-│  gs://cms-automation-frontend-2025      │
+│  gs://cms-automation-frontend-cmsupload-476323      │
 │  URL: storage.googleapis.com/...        │
 └─────────────────────────────────────────┘
               │
@@ -81,7 +81,7 @@ npx playwright install chromium
 ```typescript
 export default defineConfig({
   testDir: './e2e',
-  baseURL: 'https://storage.googleapis.com/cms-automation-frontend-2025',
+  baseURL: 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323',
   use: {
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
@@ -129,7 +129,7 @@ export default defineConfig({
 
 **Evidence**:
 ```bash
-curl https://storage.googleapis.com/cms-automation-frontend-2025/
+curl https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/
 # Returns: XML bucket listing instead of index.html
 ```
 
@@ -166,11 +166,11 @@ await page.goto('/index.html');
 **Evidence**:
 ```bash
 # Direct GCS API call
-gsutil cat gs://cms-automation-frontend-2025/index.html
+gsutil cat gs://cms-automation-frontend-cmsupload-476323/index.html
 # Showed NEW version with relative paths
 
 # Public CDN URL
-curl https://storage.googleapis.com/cms-automation-frontend-2025/index.html
+curl https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html
 # Showed OLD version with absolute paths
 ```
 
@@ -178,7 +178,7 @@ curl https://storage.googleapis.com/cms-automation-frontend-2025/index.html
 
 **Resolution**: Waited 1+ hour for cache expiration. Verified cache cleared:
 ```bash
-curl -s "https://storage.googleapis.com/cms-automation-frontend-2025/index.html" | grep vite.svg
+curl -s "https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html" | grep vite.svg
 # Output: <link rel="icon" type="image/svg+xml" href="./vite.svg" />
 ```
 
@@ -237,20 +237,20 @@ Error: element(s) not found
 
 ### 1. Bucket Existence
 ```bash
-gsutil ls gs://cms-automation-frontend-2025/ | head -5
+gsutil ls gs://cms-automation-frontend-cmsupload-476323/ | head -5
 # Output:
-# gs://cms-automation-frontend-2025/index.html
-# gs://cms-automation-frontend-2025/assets/
+# gs://cms-automation-frontend-cmsupload-476323/index.html
+# gs://cms-automation-frontend-cmsupload-476323/assets/
 ```
 ✅ Bucket exists
 
 ### 2. File Accessibility
 ```bash
-curl -I "https://storage.googleapis.com/cms-automation-frontend-2025/index.html"
+curl -I "https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html"
 # HTTP/2 200
 # content-type: text/html
 
-curl -I "https://storage.googleapis.com/cms-automation-frontend-2025/assets/js/index-kHjtRX8F.js"
+curl -I "https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/assets/js/index-kHjtRX8F.js"
 # HTTP/2 200
 # content-type: text/javascript
 ```
@@ -259,8 +259,8 @@ curl -I "https://storage.googleapis.com/cms-automation-frontend-2025/assets/js/i
 ### 3. File Count Verification
 ```bash
 # GCS
-gsutil ls gs://cms-automation-frontend-2025/assets/css/ | wc -l  # 6
-gsutil ls gs://cms-automation-frontend-2025/assets/js/ | wc -l   # 86
+gsutil ls gs://cms-automation-frontend-cmsupload-476323/assets/css/ | wc -l  # 6
+gsutil ls gs://cms-automation-frontend-cmsupload-476323/assets/js/ | wc -l   # 86
 
 # Local build
 ls dist/assets/css/ | wc -l  # 6
@@ -271,7 +271,7 @@ ls dist/assets/js/ | wc -l   # 86
 ### 4. Content Verification
 ```bash
 # Check deployed index.html
-curl -s "https://storage.googleapis.com/cms-automation-frontend-2025/index.html"
+curl -s "https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html"
 ```
 
 **Result**: Correct content with relative paths:
@@ -298,7 +298,7 @@ curl -s "https://storage.googleapis.com/cms-automation-frontend-2025/index.html"
 
 ### 5. JavaScript Bundle Check
 ```bash
-curl -s "https://storage.googleapis.com/cms-automation-frontend-2025/assets/js/index-kHjtRX8F.js" | head -20
+curl -s "https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/assets/js/index-kHjtRX8F.js" | head -20
 ```
 
 **Result**: Valid React application code (362 KB minified). Sample:
@@ -320,7 +320,7 @@ openssl md5 -binary dist/index.html | openssl base64
 # GP1pRZmW2Q3jOcLGjwUG9Q==
 
 # GCS file metadata
-gsutil stat gs://cms-automation-frontend-2025/index.html
+gsutil stat gs://cms-automation-frontend-cmsupload-476323/index.html
 # md5Hash: 'GP1pRZmW2Q3jOcLGjwUG9Q=='
 ```
 ✅ Files match exactly
@@ -429,7 +429,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: 'https://storage.googleapis.com/cms-automation-frontend-2025',
+    baseURL: 'https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -481,7 +481,7 @@ Based on test execution and error screenshots:
 
 **Test Needed**: Check response headers for CORS headers:
 ```bash
-curl -I "https://storage.googleapis.com/cms-automation-frontend-2025/assets/js/index-kHjtRX8F.js" | grep -i "access-control"
+curl -I "https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/assets/js/index-kHjtRX8F.js" | grep -i "access-control"
 ```
 
 ### Hypothesis 2: Service Worker or Cache Issue
@@ -523,15 +523,15 @@ curl -I https://cms-automation-backend-ufk65ob4ea-uc.a.run.app/health
 **Theory**: Relative imports fail when base URL includes path components.
 
 **Evidence**:
-- Base URL: `https://storage.googleapis.com/cms-automation-frontend-2025/index.html`
+- Base URL: `https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html`
 - Relative imports: `./assets/js/...`
 - Browser may resolve to wrong path
 
 **Current Resolution**:
 ```
-Base: https://storage.googleapis.com/cms-automation-frontend-2025/index.html
+Base: https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html
 Import: ./assets/js/chunk.js
-Resolves to: https://storage.googleapis.com/cms-automation-frontend-2025/assets/js/chunk.js ✅
+Resolves to: https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/assets/js/chunk.js ✅
 ```
 
 Should be correct, but verify actual network requests.
@@ -559,7 +559,7 @@ Should be correct, but verify actual network requests.
 3. **Verify CORS Headers**
    ```bash
    curl -H "Origin: https://example.com" -I \
-     "https://storage.googleapis.com/cms-automation-frontend-2025/assets/js/index-kHjtRX8F.js"
+     "https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/assets/js/index-kHjtRX8F.js"
    ```
 
 4. **Test Backend Connectivity**

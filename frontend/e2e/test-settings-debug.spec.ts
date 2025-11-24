@@ -18,7 +18,7 @@ test('Debug Settings page errors', async ({ page }) => {
 
   // Add timestamp to bust cache
   const timestamp = Date.now();
-  await page.goto(`https://storage.googleapis.com/cms-automation-frontend-2025/app.html?t=${timestamp}`, {
+  await page.goto(`https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html?t=${timestamp}`, {
     waitUntil: 'networkidle'
   });
 

@@ -21,7 +21,7 @@ test.describe('Production app.html test', () => {
     });
     
     console.log('Loading app.html...');
-    await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/app.html', {
+    await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html', {
       waitUntil: 'networkidle',
       timeout: 30000
     });

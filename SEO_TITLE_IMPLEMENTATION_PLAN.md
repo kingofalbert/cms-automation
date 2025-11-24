@@ -1688,7 +1688,7 @@ npm run test:e2e -- seo-title-selection.spec.ts
 npm run build
 
 # 3. 部署到 GCS
-gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
+gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
 
 # 4. 驗證部署
 curl https://cms-frontend.example.com/

@@ -26,7 +26,7 @@ This document captures technical research and decision rationale for the UI mode
 
 ### Problem Statement
 
-Navigation menu text is wrapping across multiple lines, causing poor UX and visual inconsistency. The issue is most visible in production at https://storage.googleapis.com/cms-automation-frontend-2025/app.html.
+Navigation menu text is wrapping across multiple lines, causing poor UX and visual inconsistency. The issue is most visible in production at https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html.
 
 ### Current Implementation Analysis
 

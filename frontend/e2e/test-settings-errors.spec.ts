@@ -18,7 +18,7 @@ test('Check Settings page console errors', async ({ page }) => {
     errors.push(`Page error: ${error.message}`);
   });
 
-  await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/app.html', {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/app.html', {
     waitUntil: 'networkidle'
   });
 

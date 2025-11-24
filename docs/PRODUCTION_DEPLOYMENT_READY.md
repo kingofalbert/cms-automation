@@ -280,7 +280,7 @@ gcloud run services update-traffic cms-backend \
 cd frontend
 git checkout PREVIOUS_COMMIT
 NODE_ENV=production npm run build
-gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-2025/
+gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
 ```
 
 #### 4. 從備份還原
