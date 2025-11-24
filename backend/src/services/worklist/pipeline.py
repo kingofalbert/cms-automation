@@ -169,6 +169,9 @@ class WorklistPipelineService:
                     article.meta_description = parsed_article.meta_description
                     article.seo_keywords = parsed_article.seo_keywords or []
                     article.tags = parsed_article.tags or []
+                    # HOTFIX-PARSE-004: Save body_html to fix "0 字符" issue in UI
+                    article.body_html = parsed_article.body_html
+                    article.body = parsed_article.body_html  # Sync for consistency
                     article.parsing_confirmed = False  # Needs manual review
 
                     # Phase 7.5: Update unified AI parsing fields

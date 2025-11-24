@@ -161,6 +161,8 @@ async def reparse_article(
         article.author_line = parsed.author_line
         article.author_name = parsed.author_name
         article.body = parsed.body_html
+        # HOTFIX-PARSE-004: Save body_html to fix "0 字符" issue in UI
+        article.body_html = parsed.body_html
         article.meta_description = parsed.meta_description
         article.seo_keywords = parsed.seo_keywords
         article.tags = parsed.tags
