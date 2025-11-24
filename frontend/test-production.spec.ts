@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('production site loads correctly', async ({ page }) => {
   // Navigate with cache disabled
-  await page.goto('https://storage.googleapis.com/cms-automation-frontend-2025/index.html', {
+  await page.goto('https://storage.googleapis.com/cms-automation-frontend-cmsupload-476323/index.html', {
     waitUntil: 'networkidle',
   });
   
