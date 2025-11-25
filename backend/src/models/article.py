@@ -463,8 +463,16 @@ class Article(Base, TimestampMixin):
     )
 
     def __repr__(self) -> str:
-        """String representation."""
-        return f"<Article(id={self.id}, status={self.status}, title='{self.title[:50]}...')>"
+        """String representation.
+
+        Handles DetachedInstanceError gracefully when session is closed.
+        """
+        try:
+            title_preview = self.title[:50] if self.title else "N/A"
+            return f"<Article(id={self.id}, status={self.status}, title='{title_preview}...')>"
+        except Exception:
+            # Handle detached instance or other errors gracefully
+            return f"<Article(id={self.id})>"
 
     @property
     def word_count(self) -> int:

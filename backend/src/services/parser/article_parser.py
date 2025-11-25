@@ -130,6 +130,55 @@ class ArticleParserService:
                 },
             )
 
+    def _preprocess_html_for_ai(self, raw_html: str, max_chars: int = 500000) -> str:
+        """Preprocess HTML to reduce token count for AI parsing.
+
+        This function:
+        1. Removes inline styles (which Google Docs exports heavily)
+        2. Replaces base64 images with placeholders
+        3. Removes unnecessary whitespace
+        4. Truncates if still too long
+
+        Args:
+            raw_html: Raw HTML from Google Docs
+            max_chars: Maximum character count (default 500k ~= 125k tokens)
+
+        Returns:
+            Cleaned HTML string safe for AI parsing
+        """
+        import re
+
+        original_len = len(raw_html)
+
+        # 1. Remove inline styles (style="..." attributes)
+        cleaned = re.sub(r'\s*style="[^"]*"', '', raw_html)
+
+        # 2. Replace base64 images with placeholders (preserve src URL images)
+        cleaned = re.sub(
+            r'<img([^>]*?)src="data:image/[^;]+;base64,[^"]*"([^>]*)>',
+            r'<img\1src="[BASE64_IMAGE_REMOVED]"\2>',
+            cleaned
+        )
+
+        # 3. Remove excessive whitespace and newlines
+        cleaned = re.sub(r'\s+', ' ', cleaned)
+        cleaned = cleaned.strip()
+
+        # 4. Truncate if still too long
+        if len(cleaned) > max_chars:
+            logger.warning(
+                f"HTML still too long after preprocessing ({len(cleaned)} chars), "
+                f"truncating to {max_chars} chars"
+            )
+            cleaned = cleaned[:max_chars] + "... [CONTENT TRUNCATED]"
+
+        logger.info(
+            f"HTML preprocessing: {original_len} -> {len(cleaned)} chars "
+            f"({100 - len(cleaned) * 100 // original_len}% reduction)"
+        )
+
+        return cleaned
+
     def _parse_with_ai(self, raw_html: str) -> ParsingResult:
         """Parse document using AI (Claude).
 
@@ -162,8 +211,11 @@ class ArticleParserService:
 
             client = anthropic.Anthropic(api_key=self.anthropic_api_key)
 
+            # Preprocess HTML to reduce token count (remove styles, base64 images)
+            cleaned_html = self._preprocess_html_for_ai(raw_html)
+
             # Construct the parsing prompt
-            prompt = self._build_ai_parsing_prompt(raw_html)
+            prompt = self._build_ai_parsing_prompt(cleaned_html)
 
             # Call Claude API
             logger.info(f"[DEBUG] Calling Claude API (model={self.model})")
@@ -206,6 +258,9 @@ class ArticleParserService:
             parsed_data = json.loads(cleaned_response)
             logger.info(f"[DEBUG] JSON parse SUCCESS! Keys: {list(parsed_data.keys())}")
             logger.info(f"[DEBUG] suggested_titles from Claude: {parsed_data.get('suggested_titles')}")
+            # Phase 10: Debug logging for primary_category
+            logger.info(f"[DEBUG] primary_category from Claude: {parsed_data.get('primary_category')}")
+            logger.info(f"[DEBUG] suggested_seo from Claude: {parsed_data.get('suggested_seo')}")
 
             # Extract focus_keyword from suggested_seo if available
             suggested_seo = parsed_data.get("suggested_seo", {})

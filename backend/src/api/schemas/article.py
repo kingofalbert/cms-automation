@@ -58,6 +58,17 @@ class ArticleResponse(TimestampSchema):
     suggested_meta_description: str | None = Field(default=None, description='AI-suggested meta description')
     suggested_seo_keywords: dict | None = Field(default=None, description='AI-suggested SEO keywords')
 
+    # Phase 10: WordPress Taxonomy Fields
+    primary_category: str | None = Field(default=None, description='WordPress primary category (主分類，AI-classified)')
+    focus_keyword: str | None = Field(default=None, description='Yoast SEO focus keyword')
+
+    # Phase 10: Article Images (from article_images table)
+    images: list[ArticleImageResponse] = Field(
+        default_factory=list,
+        validation_alias='article_images',
+        description='Images extracted from article'
+    )
+
 
 class ArticleListResponse(BaseSchema):
     """Schema for article list response."""

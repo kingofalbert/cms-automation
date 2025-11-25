@@ -9,9 +9,9 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import attributes
+from sqlalchemy.orm import attributes, selectinload
 
 from src.api.schemas import ProofreadingResponse
 from src.api.schemas.article import (
@@ -28,6 +28,7 @@ from src.api.schemas.article import (
 from src.config.database import get_session
 from src.config.logging import get_logger
 from src.models import Article
+from src.models.article_image import ArticleImage
 from src.models.proofreading import ProofreadingDecision
 from src.services.proofreading import (
     ArticlePayload,
@@ -199,9 +200,41 @@ async def reparse_article(
         # Mark JSON field as modified so SQLAlchemy knows to update it
         attributes.flag_modified(article, "article_metadata")
 
-        session.add(article)
+        # Phase 10: Save images to article_images table
+        # First, delete existing images for this article (reparse = fresh start)
+        await session.execute(
+            delete(ArticleImage).where(ArticleImage.article_id == article_id)
+        )
+
+        # Expire the article's article_images relationship to clear references to deleted objects
+        # This is critical to avoid "Instance has been deleted" errors
+        session.expire(article, ["article_images"])
+
+        # Create new ArticleImage records for each parsed image
+        for img in parsed.images:
+            if img.source_url:  # Only save images with source URLs
+                article_image = ArticleImage(
+                    article_id=article_id,
+                    source_url=img.source_url,
+                    caption=img.caption,
+                    alt_text=img.caption,  # Use caption as alt text for accessibility
+                    position=img.position,
+                )
+                session.add(article_image)
+
+        logger.info(
+            f"Saved {len(parsed.images)} images to article_images table for article {article_id}"
+        )
+
         await session.commit()
-        await session.refresh(article)
+
+        # Reload article with images relationship for response
+        result = await session.execute(
+            select(Article)
+            .where(Article.id == article_id)
+            .options(selectinload(Article.article_images))
+        )
+        article = result.scalar_one()
 
         logger.info(f"Successfully re-parsed article {article_id} with {parsed.parsing_method}")
         return article
@@ -221,8 +254,15 @@ async def reparse_article(
 
 
 async def _fetch_article(session: AsyncSession, article_id: int) -> Article:
-    """Fetch article or raise 404."""
-    result = await session.execute(select(Article).where(Article.id == article_id))
+    """Fetch article or raise 404.
+
+    Eagerly loads article_images relationship for API responses.
+    """
+    result = await session.execute(
+        select(Article)
+        .where(Article.id == article_id)
+        .options(selectinload(Article.article_images))
+    )
     article = result.scalar_one_or_none()
     if not article:
         raise HTTPException(

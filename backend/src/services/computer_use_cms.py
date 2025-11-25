@@ -349,10 +349,26 @@ class ComputerUseCMSService:
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
         if has_images:
-            image_info = "\n**Article Images to Upload:**\n" + "\n".join(
-                f"  - {img['filename']} (local path: {img['local_path']})"
-                for img in article_images
-            )
+            # Build detailed image info with position and caption for precise insertion
+            image_lines = []
+            for idx, img in enumerate(article_images, 1):
+                position = img.get('position', 0)
+                caption = img.get('caption', 'No caption provided')
+                alt_text = img.get('alt_text', caption)  # Use caption as alt if not provided
+                filename = img.get('filename', f'image_{idx}')
+                local_path = img.get('local_path', '')
+                source_url = img.get('source_url', '')
+
+                image_lines.append(
+                    f"  Image {idx}:\n"
+                    f"    - Filename: {filename}\n"
+                    f"    - Insert after paragraph: {position} (0 = before first paragraph, 1 = after first paragraph, etc.)\n"
+                    f"    - Caption/Alt text: {caption[:100]}{'...' if len(caption) > 100 else ''}\n"
+                    f"    - Local path: {local_path}\n"
+                    f"    - Original URL: {source_url[:80]}{'...' if len(str(source_url)) > 80 else ''}"
+                )
+
+            image_info = "\n**Article Images to Upload (with exact positions):**\n" + "\n".join(image_lines)
         else:
             image_info = ""
 
@@ -443,14 +459,35 @@ class ComputerUseCMSService:
         )
 
         if has_images:
+            # Build specific insertion instructions for each image
+            image_insertion_instructions = []
+            for idx, img in enumerate(article_images, 1):
+                position = img.get('position', 0)
+                caption = img.get('caption', '')
+                filename = img.get('filename', f'image_{idx}')
+
+                if position == 0:
+                    position_desc = "at the very beginning of the article (before the first paragraph)"
+                else:
+                    position_desc = f"after paragraph {position}"
+
+                image_insertion_instructions.append(
+                    f"Image {idx} ({filename}): Insert {position_desc}"
+                    + (f" with caption: '{caption[:50]}...'" if caption else "")
+                )
+
             add_step(
-                "Upload Article Images",
+                "Upload and Insert Article Images at Correct Positions",
                 [
                     'Open the media uploader from the editor ("Add Block" → Image or "Add media")',
                     "Upload each provided file and wait for uploads to complete",
-                    "After uploads, insert the images into appropriate locations in the content",
-                    "Ensure any placeholder URLs are replaced with the new WordPress image URLs",
-                    "Take a screenshot showing the uploaded media in the library or editor",
+                    "**IMPORTANT: Insert each image at its specified position:**",
+                ]
+                + image_insertion_instructions
+                + [
+                    "For each image: Set the alt text to the provided caption",
+                    "Ensure the images appear in the exact positions specified above",
+                    "Take a screenshot showing the images inserted in the content",
                 ],
             )
 
