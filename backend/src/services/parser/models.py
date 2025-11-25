@@ -33,6 +33,7 @@ class ParsedImage(BaseModel):
     source_url: str | None = Field(None, description='Original "原圖" URL from doc')
     caption: str | None = Field(None, description="Image caption")
     alt_text: str | None = Field(None, description="Alt text for accessibility (defaults to caption)")
+    description: str | None = Field(None, description="Image description for WordPress media library")
     metadata: ImageMetadata | None = Field(default=None, description="Technical image specs")
 
     # Compatibility attributes for proofreading engine
@@ -106,6 +107,18 @@ class ParsedArticle(BaseModel):
     tags: list[str] = Field(
         default_factory=list,
         description="Content tags/categories",
+    )
+
+    # Phase 10: WordPress taxonomy
+    primary_category: str | None = Field(
+        None,
+        max_length=100,
+        description="WordPress primary category (from candidate list)",
+    )
+    focus_keyword: str | None = Field(
+        None,
+        max_length=100,
+        description="Yoast SEO focus keyword (from seo_keywords or AI recommended)",
     )
 
     # Phase 9: SEO Title (separate from H1 title)

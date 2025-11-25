@@ -161,8 +161,11 @@ class WorklistPipelineService:
                 article = await self.session.get(Article, item.article_id)
                 if article:
                     # Update article parsing fields
+                    # HOTFIX-PARSE-005: Use Google Drive title (article.title) as primary title_main
+                    # The AI parser often confuses author line with title, so we prioritize
+                    # the title from Google Drive file name which is more reliable
                     article.title_prefix = parsed_article.title_prefix
-                    article.title_main = parsed_article.title_main
+                    article.title_main = article.title or parsed_article.title_main
                     article.title_suffix = parsed_article.title_suffix
                     article.author_name = parsed_article.author_name
                     article.author_line = parsed_article.author_line
@@ -170,8 +173,13 @@ class WorklistPipelineService:
                     article.seo_keywords = parsed_article.seo_keywords or []
                     article.tags = parsed_article.tags or []
                     # HOTFIX-PARSE-004: Save body_html to fix "0 字符" issue in UI
-                    article.body_html = parsed_article.body_html
-                    article.body = parsed_article.body_html  # Sync for consistency
+                    # HOTFIX-PARSE-006: Clean body_html by removing author line if present
+                    clean_body_html = self._clean_body_html(
+                        parsed_article.body_html,
+                        parsed_article.author_line
+                    )
+                    article.body_html = clean_body_html
+                    article.body = clean_body_html  # Sync for consistency
                     article.parsing_confirmed = False  # Needs manual review
 
                     # Phase 7.5: Update unified AI parsing fields
@@ -409,3 +417,82 @@ class WorklistPipelineService:
         if isinstance(status, ArticleStatus):
             return status.value
         return status
+
+    def _clean_body_html(
+        self,
+        body_html: str | None,
+        author_line: str | None,
+    ) -> str:
+        """Clean body_html by removing author line, image metadata, and trailing keywords.
+
+        HOTFIX-PARSE-006: Ensures body_html contains only the article content,
+        without metadata that should be displayed separately.
+
+        Args:
+            body_html: Raw body HTML from parsing
+            author_line: Extracted author line to remove
+
+        Returns:
+            Cleaned body HTML
+        """
+        import re
+        from bs4 import BeautifulSoup
+
+        if not body_html:
+            return ""
+
+        soup = BeautifulSoup(body_html, "html.parser")
+        paragraphs = soup.find_all("p")
+
+        # Track which paragraphs to remove
+        paragraphs_to_remove = []
+
+        for i, p in enumerate(paragraphs):
+            text = p.get_text(strip=True)
+
+            # Remove author line paragraph (usually first paragraph)
+            if author_line and text and author_line.strip() in text:
+                paragraphs_to_remove.append(p)
+                logger.debug(f"Removing author line paragraph: {text[:50]}...")
+                continue
+
+            # Remove image metadata paragraphs (圖片, 圖片連結)
+            if text and (
+                text.startswith("圖片：") or
+                text.startswith("圖片:") or
+                text.startswith("圖片連結：") or
+                text.startswith("圖片連結:") or
+                text.startswith("圖說：") or
+                text.startswith("圖說:")
+            ):
+                paragraphs_to_remove.append(p)
+                logger.debug(f"Removing image metadata paragraph: {text[:50]}...")
+                continue
+
+            # Remove keyword/tag lines at the end (check last 5 paragraphs)
+            if i >= len(paragraphs) - 5:
+                # Detect keyword lines: comma/space separated short terms
+                # Pattern: multiple short Chinese phrases separated by , or 、
+                if text and len(text) < 300:
+                    # Check if it looks like a keyword list
+                    parts = re.split(r"[,，、\s]+", text)
+                    if len(parts) >= 5:  # At least 5 keywords
+                        # Check if all parts are short (keywords are usually < 15 chars)
+                        if all(len(part.strip()) < 15 for part in parts if part.strip()):
+                            paragraphs_to_remove.append(p)
+                            logger.debug(f"Removing keyword paragraph: {text[:50]}...")
+                            continue
+
+        # Remove marked paragraphs
+        for p in paragraphs_to_remove:
+            p.decompose()
+
+        # Return cleaned HTML
+        result = str(soup)
+        logger.info(
+            "body_html_cleaned",
+            original_length=len(body_html),
+            cleaned_length=len(result),
+            paragraphs_removed=len(paragraphs_to_remove),
+        )
+        return result

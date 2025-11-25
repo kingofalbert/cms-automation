@@ -68,6 +68,19 @@ class ArticleImage(Base, TimestampMixin):
         comment="Image caption extracted from document",
     )
 
+    # Phase 10: SEO and accessibility fields
+    alt_text: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="Image alt text for SEO and accessibility (based on caption or AI-generated)",
+    )
+
+    description: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Image description for WordPress media library",
+    )
+
     # Position in article
     position: Mapped[int] = mapped_column(
         Integer,

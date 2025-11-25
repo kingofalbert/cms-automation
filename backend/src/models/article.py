@@ -111,6 +111,14 @@ class Article(Base, TimestampMixin):
         comment="WordPress post categories (hierarchical taxonomy)",
     )
 
+    # Phase 10: WordPress primary category (single selection from candidate list)
+    primary_category: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        index=True,
+        comment="WordPress primary category (主分類，從候選列表匹配)",
+    )
+
     proofreading_issues: Mapped[list] = mapped_column(
         JSONB,
         nullable=False,
@@ -264,6 +272,13 @@ class Article(Base, TimestampMixin):
         ARRAY(String),
         nullable=True,
         comment="Array of SEO keywords extracted from content",
+    )
+
+    # Phase 10: Yoast SEO focus keyword
+    focus_keyword: Mapped[str | None] = mapped_column(
+        String(100),
+        nullable=True,
+        comment="Yoast SEO focus keyword (從 seo_keywords 中選取或 AI 推薦)",
     )
 
     # Phase 9: SEO Title (separate from H1 title)

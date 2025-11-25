@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from bs4 import BeautifulSoup
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -153,16 +155,21 @@ async def reparse_article(
         # Update article with new parsing results
         parsed = result.parsed_article
         article.title_prefix = parsed.title_prefix
-        article.title_main = parsed.title_main
+        # HOTFIX-PARSE-005: Use Google Drive title (article.title) as primary title_main
+        # The AI parser often confuses author line with title, so we prioritize
+        # the title from Google Drive file name which is more reliable
+        article.title_main = article.title or parsed.title_main
         article.title_suffix = parsed.title_suffix
         article.seo_title = parsed.seo_title
         article.seo_title_extracted = parsed.seo_title_extracted
         article.seo_title_source = parsed.seo_title_source
         article.author_line = parsed.author_line
         article.author_name = parsed.author_name
-        article.body = parsed.body_html
         # HOTFIX-PARSE-004: Save body_html to fix "0 字符" issue in UI
-        article.body_html = parsed.body_html
+        # HOTFIX-PARSE-006: Clean body_html by removing author line if present
+        clean_body_html = _clean_body_html(parsed.body_html, parsed.author_line)
+        article.body = clean_body_html
+        article.body_html = clean_body_html
         article.meta_description = parsed.meta_description
         article.seo_keywords = parsed.seo_keywords
         article.tags = parsed.tags
@@ -218,6 +225,79 @@ async def _fetch_article(session: AsyncSession, article_id: int) -> Article:
             detail=f"Article {article_id} not found",
         )
     return article
+
+
+def _clean_body_html(body_html: str | None, author_line: str | None) -> str:
+    """Clean body_html by removing author line, image metadata, and trailing keywords.
+
+    HOTFIX-PARSE-006: Ensures body_html contains only the article content,
+    without metadata that should be displayed separately.
+
+    Args:
+        body_html: Raw body HTML from parsing
+        author_line: Extracted author line to remove
+
+    Returns:
+        Cleaned body HTML
+    """
+    if not body_html:
+        return ""
+
+    soup = BeautifulSoup(body_html, "html.parser")
+    paragraphs = soup.find_all("p")
+
+    # Track which paragraphs to remove
+    paragraphs_to_remove = []
+
+    for i, p in enumerate(paragraphs):
+        text = p.get_text(strip=True)
+
+        # Remove author line paragraph (usually first paragraph)
+        if author_line and text and author_line.strip() in text:
+            paragraphs_to_remove.append(p)
+            logger.debug(f"Removing author line paragraph: {text[:50]}...")
+            continue
+
+        # Remove image metadata paragraphs (圖片, 圖片連結)
+        if text and (
+            text.startswith("圖片：") or
+            text.startswith("圖片:") or
+            text.startswith("圖片連結：") or
+            text.startswith("圖片連結:") or
+            text.startswith("圖說：") or
+            text.startswith("圖說:")
+        ):
+            paragraphs_to_remove.append(p)
+            logger.debug(f"Removing image metadata paragraph: {text[:50]}...")
+            continue
+
+        # Remove keyword/tag lines at the end (check last 5 paragraphs)
+        if i >= len(paragraphs) - 5:
+            # Detect keyword lines: comma/space separated short terms
+            # Pattern: multiple short Chinese phrases separated by , or 、
+            if text and len(text) < 300:
+                # Check if it looks like a keyword list
+                parts = re.split(r"[,，、\s]+", text)
+                if len(parts) >= 5:  # At least 5 keywords
+                    # Check if all parts are short (keywords are usually < 15 chars)
+                    if all(len(part.strip()) < 15 for part in parts if part.strip()):
+                        paragraphs_to_remove.append(p)
+                        logger.debug(f"Removing keyword paragraph: {text[:50]}...")
+                        continue
+
+    # Remove marked paragraphs
+    for p in paragraphs_to_remove:
+        p.decompose()
+
+    # Return cleaned HTML
+    result = str(soup)
+    logger.info(
+        "body_html_cleaned",
+        original_length=len(body_html),
+        cleaned_length=len(result),
+        paragraphs_removed=len(paragraphs_to_remove),
+    )
+    return result
 
 
 def _build_article_payload(article: Article) -> ArticlePayload:
