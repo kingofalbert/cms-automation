@@ -173,6 +173,9 @@ async def reparse_article(
         article.meta_description = parsed.meta_description
         article.seo_keywords = parsed.seo_keywords
         article.tags = parsed.tags
+        # Phase 10: WordPress taxonomy fields
+        article.primary_category = parsed.primary_category
+        article.focus_keyword = parsed.focus_keyword
 
         # Update metadata with new parsing info
         article.article_metadata = article.article_metadata or {}

@@ -14,6 +14,10 @@ from typing import Any
 
 from bs4 import BeautifulSoup, Tag
 
+from src.config.wordpress_taxonomy import (
+    get_category_candidates,
+    get_category_hint,
+)
 from src.services.parser.models import (
     ImageMetadata,
     ParsedArticle,
@@ -203,6 +207,14 @@ class ArticleParserService:
             logger.info(f"[DEBUG] JSON parse SUCCESS! Keys: {list(parsed_data.keys())}")
             logger.info(f"[DEBUG] suggested_titles from Claude: {parsed_data.get('suggested_titles')}")
 
+            # Extract focus_keyword from suggested_seo if available
+            suggested_seo = parsed_data.get("suggested_seo", {})
+            focus_keyword = (
+                suggested_seo.get("focus_keyword")
+                if suggested_seo
+                else None
+            )
+
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
                 title_prefix=parsed_data.get("title_prefix"),
@@ -217,11 +229,14 @@ class ArticleParserService:
                 meta_description=parsed_data.get("meta_description"),
                 seo_keywords=parsed_data.get("seo_keywords", []),
                 tags=parsed_data.get("tags", []),
+                # Phase 10: WordPress taxonomy fields
+                primary_category=parsed_data.get("primary_category"),
+                focus_keyword=focus_keyword,
                 images=self._parse_images_from_ai_response(parsed_data.get("images", [])),
                 # Phase 7.5: Unified AI Parsing fields
                 suggested_titles=parsed_data.get("suggested_titles"),
-                suggested_meta_description=parsed_data.get("suggested_seo", {}).get("meta_description") if parsed_data.get("suggested_seo") else None,
-                suggested_seo_keywords=parsed_data.get("suggested_seo", {}).get("primary_keywords", []) if parsed_data.get("suggested_seo") else None,
+                suggested_meta_description=suggested_seo.get("meta_description") if suggested_seo else None,
+                suggested_seo_keywords=suggested_seo.get("primary_keywords", []) if suggested_seo else None,
                 proofreading_issues=parsed_data.get("proofreading_issues"),
                 proofreading_stats=parsed_data.get("proofreading_stats"),
                 faqs=parsed_data.get("faqs"),
@@ -444,6 +459,19 @@ Based on the article content, create:
    - `secondary_keywords`: Supporting keywords (5-8)
    - `tags`: Content categories (3-6)
 
+## Task 2.5: Article Category Classification
+
+Based on the article content, classify the article into ONE primary category from the following candidate list:
+
+**Category Candidates**:
+{', '.join(get_category_candidates())}
+
+**Classification Rules**:
+1. Select EXACTLY ONE category that best matches the article's main topic
+2. Consider the title, first paragraphs, and key entities
+3. If the article covers multiple topics, choose the most dominant one
+4. Return the category name exactly as it appears in the candidate list
+
 ## Task 3: Comprehensive Proofreading
 
 Identify and categorize all issues:
@@ -522,6 +550,7 @@ Return ONLY valid JSON with this exact structure:
   "meta_description": "本文探討2024年醫療保健...",
   "seo_keywords": ["醫療", "AI", "科技"],
   "tags": ["醫療", "科技", "AI"],
+  "primary_category": "健康",
   "suggested_titles": [
     {{
       "prefix": "【產業革命】",

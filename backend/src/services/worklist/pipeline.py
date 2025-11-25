@@ -172,6 +172,9 @@ class WorklistPipelineService:
                     article.meta_description = parsed_article.meta_description
                     article.seo_keywords = parsed_article.seo_keywords or []
                     article.tags = parsed_article.tags or []
+                    # Phase 10: WordPress taxonomy fields
+                    article.primary_category = parsed_article.primary_category
+                    article.focus_keyword = parsed_article.focus_keyword
                     # HOTFIX-PARSE-004: Save body_html to fix "0 字符" issue in UI
                     # HOTFIX-PARSE-006: Clean body_html by removing author line if present
                     clean_body_html = self._clean_body_html(
@@ -207,6 +210,8 @@ class WorklistPipelineService:
                         worklist_id=item.id,
                         title_main=parsed_article.title_main,
                         author_name=parsed_article.author_name,
+                        primary_category=parsed_article.primary_category,
+                        focus_keyword=parsed_article.focus_keyword,
                     )
 
             # Update worklist item with parsed data
