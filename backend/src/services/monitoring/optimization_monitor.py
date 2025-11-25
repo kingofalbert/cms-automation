@@ -28,9 +28,9 @@ logger = structlog.get_logger(__name__)
 class OptimizationMonitor:
     """Monitor performance and cost of optimization operations."""
 
-    # Cost constants (Claude Sonnet 4.5)
-    INPUT_COST_PER_MILLION = 3.0  # $3 per million input tokens
-    OUTPUT_COST_PER_MILLION = 15.0  # $15 per million output tokens
+    # Cost constants (Claude Opus 4.5)
+    INPUT_COST_PER_MILLION = 5.0  # $5 per million input tokens
+    OUTPUT_COST_PER_MILLION = 25.0  # $25 per million output tokens
 
     # Performance thresholds
     SLOW_RESPONSE_THRESHOLD_MS = 35000  # 35 seconds
@@ -399,7 +399,7 @@ class OptimizationMonitor:
 def calculate_cost(
     input_tokens: int,
     output_tokens: int,
-    model: str = "claude-sonnet-4-5-20250929",
+    model: str = "claude-opus-4-5-20251101",
 ) -> float:
     """Calculate cost for token usage.
 
@@ -411,8 +411,8 @@ def calculate_cost(
     Returns:
         Cost in USD
     """
-    # Pricing for Claude Sonnet 4.5
-    if "sonnet-4-5" in model or "claude-3-5-sonnet" in model:
+    # Pricing for Claude Opus 4.5 ($5/$25 per million tokens)
+    if "opus-4-5" in model or "sonnet-4-5" in model or "claude-3-5-sonnet" in model:
         input_cost = input_tokens / 1_000_000 * OptimizationMonitor.INPUT_COST_PER_MILLION
         output_cost = output_tokens / 1_000_000 * OptimizationMonitor.OUTPUT_COST_PER_MILLION
         return input_cost + output_cost

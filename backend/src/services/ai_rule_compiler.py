@@ -183,7 +183,7 @@ class AIRuleCompiler:
 
         try:
             response = self.client.messages.create(
-                model="claude-sonnet-4-5-20250929",  # Upgraded to Sonnet 4.5
+                model="claude-opus-4-5-20251101",  # Upgraded to Opus 4.5
                 max_tokens=500,
                 temperature=0.1,
                 messages=[{"role": "user", "content": prompt}]

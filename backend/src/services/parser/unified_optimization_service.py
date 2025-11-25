@@ -49,7 +49,7 @@ class UnifiedOptimizationService:
         """
         self.client = anthropic_client
         self.db = db_session
-        self.model = "claude-sonnet-4-5-20250929"
+        self.model = "claude-opus-4-5-20251101"
         self.max_tokens = 6000  # Increased for comprehensive response
         self.temperature = 0.35  # Balanced creativity
 

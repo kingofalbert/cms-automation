@@ -94,14 +94,14 @@ class Settings(BaseSettings):
         min_length=10,
     )
     ANTHROPIC_MODEL: str = Field(
-        default="claude-sonnet-4-5-20250929",
-        description="Claude model to use for generation (upgraded to 4.5 Sonnet)",
+        default="claude-opus-4-5-20251101",
+        description="Claude model to use for generation (upgraded to Opus 4.5, Nov 2025)",
     )
     ANTHROPIC_MAX_TOKENS: int = Field(
         default=16384,
         ge=1,
         le=65536,
-        description="Maximum tokens for Claude responses (Sonnet 4.5 supports up to 64K)",
+        description="Maximum tokens for Claude responses (Opus 4.5 supports up to 64K)",
     )
 
     # Google Drive Storage Configuration

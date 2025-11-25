@@ -38,8 +38,8 @@ class ClaudeRuleCompiler:
         self.client = Anthropic(api_key=self.api_key)
         self.async_client = AsyncAnthropic(api_key=self.api_key)
 
-        # 使用 Claude Sonnet 4.5 (2025年9月29日發布的最新模型)
-        self.model = "claude-sonnet-4-5-20250929"  # 最強的編程模型
+        # 使用 Claude Opus 4.5 (2025年11月24日發布的最新模型)
+        self.model = "claude-opus-4-5-20251101"  # 最強的編程模型
 
         # 編譯緩存
         self.compilation_cache = {}

@@ -72,7 +72,7 @@ class TitleGeneratorService:
                 logger.info(f"Generating titles, attempt {attempt + 1}/{max_retries + 1}")
 
                 message = await self.client.messages.create(
-                    model="claude-sonnet-4-5-20250929",  # 使用最新 Sonnet 4.5 模型，最高質量
+                    model="claude-opus-4-5-20251101",  # 使用最新 Opus 4.5 模型，最高質量
                     max_tokens=2048,  # Much smaller than unified parser
                     temperature=0.7,  # Slightly creative for title variations
                     messages=[

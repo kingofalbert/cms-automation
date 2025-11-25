@@ -258,7 +258,7 @@ Return ONLY valid JSON with this exact structure:
 
   // === METADATA ===
   "parsing_metadata": {
-    "model": "claude-sonnet-4-5",
+    "model": "claude-opus-4-5",
     "timestamp": "2025-11-18T10:30:00Z",
     "tokens_used": 8500,
     "cost_usd": 0.095,
@@ -402,7 +402,7 @@ class UnifiedParsingResponse(BaseModel):
 class UnifiedArticleParserService:
     """Enhanced parser service with unified AI operations."""
 
-    def __init__(self, anthropic_api_key: str, model: str = "claude-sonnet-4-5"):
+    def __init__(self, anthropic_api_key: str, model: str = "claude-opus-4-5-20251101"):
         self.api_key = anthropic_api_key
         self.model = model
 
