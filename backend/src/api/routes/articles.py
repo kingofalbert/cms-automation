@@ -138,10 +138,12 @@ async def reparse_article(
         raw_html_bytes = request.execute()
         raw_html = raw_html_bytes.decode("utf-8", errors="ignore") if isinstance(raw_html_bytes, bytes) else raw_html_bytes
 
-        # Parse with latest parser (Claude Sonnet 4.5)
+        # Parse with latest parser (Claude Sonnet 4.5) using unified prompt
+        # for primary_category classification and focus_keyword extraction
         parser = ArticleParserService(
             use_ai=True,
             anthropic_api_key=settings.ANTHROPIC_API_KEY,
+            use_unified_prompt=True,
         )
         result = parser.parse_document(raw_html)
 
