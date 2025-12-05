@@ -113,7 +113,12 @@ class ParsedArticle(BaseModel):
     primary_category: str | None = Field(
         None,
         max_length=100,
-        description="WordPress primary category (from candidate list)",
+        description="WordPress primary category (主分類，決定URL結構和麵包屑導航)",
+    )
+    # Phase 11: Secondary categories for cross-listing
+    secondary_categories: list[str] = Field(
+        default_factory=list,
+        description="WordPress secondary categories (副分類，可多選，用於交叉列表)",
     )
     focus_keyword: str | None = Field(
         None,

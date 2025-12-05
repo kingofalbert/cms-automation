@@ -12,6 +12,10 @@ export interface Article {
   images?: ArticleImage[];
   tags?: string[];
   categories?: string[];
+  /** WordPress primary category (主分類，決定URL結構和麵包屑導航) */
+  primary_category?: string;
+  /** WordPress secondary categories (副分類，可多選，用於交叉列表) */
+  secondary_categories?: string[];
   created_at: string;
   updated_at: string;
 }

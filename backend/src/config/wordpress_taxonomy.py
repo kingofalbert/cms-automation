@@ -1,125 +1,189 @@
 """WordPress taxonomy configuration for category classification.
 
-This module contains the candidate list of WordPress categories
-that will be used by AI to classify articles into primary categories.
+This module contains the hierarchical category structure for WordPress:
+- PRIMARY_CATEGORIES: Main categories (主分類) that determine URL structure
+- CATEGORY_HIERARCHY: Primary -> Secondary category mapping (父子分類結構)
+- CATEGORY_CANDIDATES: Flat list of all categories for AI classification
 
 To update the category list:
 1. Export categories from WordPress: GET /wp-json/wp/v2/categories
-2. Update CATEGORY_CANDIDATES list below
+2. Update CATEGORY_HIERARCHY below
 """
 
 from typing import Final
 
-# Mock category candidates list
-# TODO: Replace with actual WordPress categories exported from production site
-CATEGORY_CANDIDATES: Final[list[str]] = [
-    # News - China
-    "中國時局",
-    "中國經濟",
-    "中國社會",
-    "中國人權",
+# DJY Health website category hierarchy (繁體中文)
+# Based on: DJY Health內容表3.0.xlsx - 網站類別 sheet
+CATEGORY_HIERARCHY: Final[dict[str, list[str]]] = {
+    # 食療養生 - Food Therapy & Health Preservation
+    "食療養生": [
+        "血糖調節",
+        "安神助眠",
+        "補氣補血",
+        "美容美顏",
+        "清肺潤喉",
+        "祛濕排毒",
+        "健腎健脾",
+        "茶 & 湯",
+        "四季養生",
+        "保健品",
+        "養肝養胃",
+        "改善記憶力",
+    ],
 
-    # News - International
-    "國際新聞",
-    "美國新聞",
-    "歐洲新聞",
-    "亞太新聞",
+    # 中醫寶典 - Traditional Chinese Medicine
+    "中醫寶典": [
+        "經絡調理",
+        "整合醫學",
+        "延緩衰老",
+        "中醫理療",
+        "中醫保健",
+        "中醫減肥",
+        "中草藥",
+    ],
 
-    # News - Regional
-    "港台新聞",
-    "香港",
-    "台灣",
+    # 心靈正念 - Mindfulness & Mental Health
+    "心靈正念": [
+        "正念冥想",
+        "正念飲食",
+        "感恩筆記",
+        "心靈療癒",
+        "正念社交",
+        "正念消費",
+    ],
 
-    # Finance & Business
-    "財經",
-    "股市",
-    "房地產",
-    "科技財經",
+    # 醫師專欄 - Doctor's Column (no subcategories listed in source)
+    "醫師專欄": [],
 
-    # Lifestyle
-    "生活",
-    "健康",
-    "美食",
-    "旅遊",
-    "時尚",
+    # 健康新聞 - Health News (no subcategories listed in source)
+    "健康新聞": [],
 
-    # Culture
-    "文化",
-    "傳統文化",
-    "藝術",
-    "歷史",
+    # 健康生活 - Healthy Living
+    "健康生活": [
+        "運動養生",
+        "居家樂活",
+        "抗老減重",
+        "人生健康站",
+    ],
 
-    # Entertainment
-    "娛樂",
-    "影視",
-    "音樂",
+    # 醫療科技 - Medical Technology (no subcategories listed in source)
+    "醫療科技": [],
 
-    # Sports
-    "體育",
+    # 精選內容 - Featured Content
+    "精選內容": [
+        "特別報導",
+        "必備指南",
+        "原創系列",
+    ],
 
-    # Science & Technology
-    "科技",
-    "科學",
+    # 診室外的醫話 - Doctor's Stories Outside the Clinic (no subcategories)
+    "診室外的醫話": [],
 
-    # Opinion & Commentary
-    "評論",
-    "社論",
+    # 每日呵護 - Daily Care (special daily content section)
+    "每日呵護": [
+        "今晚睡得好",
+        "健康小任務",
+        "一念舒心",
+        "每週一穴",
+        "今日一方",
+        "節氣與生活",
+        "每日一靜心",
+    ],
+}
 
-    # Special Reports
-    "專題",
-    "深度報導",
-]
+# Primary categories (主分類) - these determine URL structure
+PRIMARY_CATEGORIES: Final[list[str]] = list(CATEGORY_HIERARCHY.keys())
+
+# Flat list of all categories (primary + secondary) for AI classification
+CATEGORY_CANDIDATES: Final[list[str]] = []
+for primary, secondaries in CATEGORY_HIERARCHY.items():
+    CATEGORY_CANDIDATES.append(primary)
+    CATEGORY_CANDIDATES.extend(secondaries)
 
 # Keywords to category mapping for quick matching
 # Used as hints before AI classification
 KEYWORD_CATEGORY_HINTS: Final[dict[str, str]] = {
-    # China politics
-    "中共": "中國時局",
-    "習近平": "中國時局",
-    "共產黨": "中國時局",
-    "北京": "中國時局",
-    "政治": "中國時局",
+    # 食療養生 keywords
+    "血糖": "食療養生",
+    "糖尿病": "食療養生",
+    "助眠": "食療養生",
+    "失眠": "食療養生",
+    "補血": "食療養生",
+    "美容": "食療養生",
+    "潤肺": "食療養生",
+    "排毒": "食療養生",
+    "養肝": "食療養生",
+    "養胃": "食療養生",
+    "茶": "食療養生",
+    "湯": "食療養生",
+    "保健品": "食療養生",
 
-    # US News
-    "美國": "美國新聞",
-    "川普": "美國新聞",
-    "拜登": "美國新聞",
-    "白宮": "美國新聞",
-    "國會": "美國新聞",
+    # 中醫寶典 keywords
+    "中醫": "中醫寶典",
+    "經絡": "中醫寶典",
+    "穴位": "中醫寶典",
+    "針灸": "中醫寶典",
+    "中藥": "中醫寶典",
+    "草藥": "中醫寶典",
+    "艾灸": "中醫寶典",
+    "推拿": "中醫寶典",
+    "拔罐": "中醫寶典",
 
-    # Finance
-    "股市": "股市",
-    "股票": "股市",
-    "投資": "財經",
-    "經濟": "財經",
-    "房價": "房地產",
-    "房市": "房地產",
+    # 心靈正念 keywords
+    "正念": "心靈正念",
+    "冥想": "心靈正念",
+    "靜心": "心靈正念",
+    "心靈": "心靈正念",
+    "療癒": "心靈正念",
+    "感恩": "心靈正念",
+    "心理健康": "心靈正念",
 
-    # Health
-    "健康": "健康",
-    "醫療": "健康",
-    "養生": "健康",
-    "疾病": "健康",
-    "病毒": "健康",
-    "疫苗": "健康",
+    # 健康生活 keywords
+    "運動": "健康生活",
+    "減肥": "健康生活",
+    "減重": "健康生活",
+    "健身": "健康生活",
+    "居家": "健康生活",
 
-    # Technology
-    "科技": "科技",
-    "AI": "科技",
-    "人工智能": "科技",
-    "手機": "科技",
+    # 醫療科技 keywords
+    "AI醫療": "醫療科技",
+    "醫療科技": "醫療科技",
+    "基因": "醫療科技",
+    "新藥": "醫療科技",
 
-    # Hong Kong / Taiwan
-    "香港": "香港",
-    "台灣": "台灣",
-    "蔡英文": "台灣",
-    "賴清德": "台灣",
+    # 健康新聞 keywords
+    "疫情": "健康新聞",
+    "疫苗": "健康新聞",
+    "病毒": "健康新聞",
+    "研究": "健康新聞",
 }
 
 
 def get_category_candidates() -> list[str]:
-    """Get the list of category candidates for AI classification."""
+    """Get the flat list of all category candidates for AI classification."""
     return CATEGORY_CANDIDATES.copy()
+
+
+def get_primary_categories() -> list[str]:
+    """Get the list of primary categories (main categories that determine URL)."""
+    return PRIMARY_CATEGORIES.copy()
+
+
+def get_category_hierarchy() -> dict[str, list[str]]:
+    """Get the full category hierarchy (primary -> secondary mapping)."""
+    return {k: v.copy() for k, v in CATEGORY_HIERARCHY.items()}
+
+
+def get_secondary_categories(primary: str) -> list[str]:
+    """Get secondary categories for a given primary category.
+
+    Args:
+        primary: Primary category name
+
+    Returns:
+        List of secondary category names, empty list if not found
+    """
+    return CATEGORY_HIERARCHY.get(primary, []).copy()
 
 
 def get_category_hint(title: str, body: str | None = None) -> str | None:

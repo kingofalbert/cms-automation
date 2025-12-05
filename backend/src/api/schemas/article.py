@@ -60,6 +60,7 @@ class ArticleResponse(TimestampSchema):
 
     # Phase 10: WordPress Taxonomy Fields
     primary_category: str | None = Field(default=None, description='WordPress primary category (主分類，AI-classified)')
+    secondary_categories: list[str] = Field(default_factory=list, description='WordPress secondary categories (副分類，可多選)')
     focus_keyword: str | None = Field(default=None, description='Yoast SEO focus keyword')
 
     # Phase 10: Article Images (from article_images table)

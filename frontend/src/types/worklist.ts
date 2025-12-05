@@ -86,6 +86,12 @@ export interface WorklistItemDetail extends WorklistItem {
   parsing_confirmed?: boolean;
   parsing_confirmed_at?: string | null;
 
+  // Phase 11: WordPress Category Taxonomy
+  /** Primary category (主分類) - determines URL structure */
+  primary_category?: string | null;
+  /** Secondary categories (副分類) - for cross-listing */
+  secondary_categories?: string[];
+
   article_status_history: WorklistStatusHistoryEntry[];
   drive_metadata: Record<string, unknown>;
   proofreading_issues?: ProofreadingIssue[];

@@ -2,24 +2,37 @@
  * PublishSettingsSection - Publish settings configuration
  *
  * Phase 8.4: Publish Preview Panel
+ * Phase 11: Primary + Secondary category system
  * - Status: draft/publish/schedule
  * - Visibility: public/private/password
  * - Publish date/time (for scheduled)
- * - Categories and tags selection
+ * - Primary category (single selection, determines URL)
+ * - Secondary categories (multiple selection, for cross-listing)
+ * - Tags selection
  * - Featured image URL
  * - Excerpt
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '../ui';
-import { Settings, Calendar, Eye, Lock, Hash, Tag as TagIcon, Image as ImageIcon, FileText } from 'lucide-react';
+import { Settings, Calendar, Eye, Lock, Hash, Tag as TagIcon, Image as ImageIcon, FileText, Star, Folder, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  PRIMARY_CATEGORIES,
+  CATEGORY_HIERARCHY,
+  getSecondaryCategories,
+} from '../../config/wordpressTaxonomy';
 
 export interface PublishSettingsSectionProps {
   publishStatus: 'draft' | 'publish' | 'schedule';
   visibility: 'public' | 'private' | 'password';
   password: string;
   publishDate: string;
-  categories: string[];
+  /** @deprecated Use primaryCategory and secondaryCategories instead */
+  categories?: string[];
+  /** Primary category (主分類) - determines URL structure */
+  primaryCategory: string | null;
+  /** Secondary categories (副分類) - for cross-listing */
+  secondaryCategories: string[];
   tags: string[];
   featuredImage: string;
   excerpt: string;
@@ -27,7 +40,10 @@ export interface PublishSettingsSectionProps {
   onVisibilityChange: (visibility: 'public' | 'private' | 'password') => void;
   onPasswordChange: (password: string) => void;
   onPublishDateChange: (date: string) => void;
-  onCategoriesChange: (categories: string[]) => void;
+  /** @deprecated Use onPrimaryCategoryChange and onSecondaryCategoriesChange instead */
+  onCategoriesChange?: (categories: string[]) => void;
+  onPrimaryCategoryChange: (category: string | null) => void;
+  onSecondaryCategoriesChange: (categories: string[]) => void;
   onTagsChange: (tags: string[]) => void;
   onFeaturedImageChange: (url: string) => void;
   onExcerptChange: (excerpt: string) => void;
@@ -41,7 +57,8 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
   visibility,
   password,
   publishDate,
-  categories,
+  primaryCategory,
+  secondaryCategories,
   tags,
   featuredImage,
   excerpt,
@@ -49,24 +66,43 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
   onVisibilityChange,
   onPasswordChange,
   onPublishDateChange,
-  onCategoriesChange,
+  onPrimaryCategoryChange,
+  onSecondaryCategoriesChange,
   onTagsChange,
   onFeaturedImageChange,
   onExcerptChange,
 }) => {
-  const [categoryInput, setCategoryInput] = useState('');
   const [tagInput, setTagInput] = useState('');
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
-  const handleAddCategory = () => {
-    const trimmed = categoryInput.trim();
-    if (trimmed && !categories.includes(trimmed)) {
-      onCategoriesChange([...categories, trimmed]);
-      setCategoryInput('');
+  // Get available secondary categories based on selected primary
+  const availableSecondaryCategories = useMemo(() => {
+    if (!primaryCategory) return [];
+    return getSecondaryCategories(primaryCategory);
+  }, [primaryCategory]);
+
+  const handlePrimaryCategoryChange = (category: string) => {
+    onPrimaryCategoryChange(category);
+    // Clear secondary categories when primary changes (since they might not be valid anymore)
+    onSecondaryCategoriesChange([]);
+  };
+
+  const handleSecondaryToggle = (category: string) => {
+    if (secondaryCategories.includes(category)) {
+      onSecondaryCategoriesChange(secondaryCategories.filter((c) => c !== category));
+    } else {
+      onSecondaryCategoriesChange([...secondaryCategories, category]);
     }
   };
 
-  const handleRemoveCategory = (category: string) => {
-    onCategoriesChange(categories.filter((c) => c !== category));
+  const toggleCategoryExpand = (category: string) => {
+    const newExpanded = new Set(expandedCategories);
+    if (newExpanded.has(category)) {
+      newExpanded.delete(category);
+    } else {
+      newExpanded.add(category);
+    }
+    setExpandedCategories(newExpanded);
   };
 
   const handleAddTag = () => {
@@ -179,37 +215,119 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
         </div>
       )}
 
-      {/* Categories */}
+      {/* Primary Category (主分類) */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-          <Hash className="w-4 h-4" />
-          分类
+          <Star className="w-4 h-4 text-yellow-500" />
+          主分類 (Primary Category) <span className="text-red-500">*</span>
         </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={categoryInput}
-            onChange={(e) => setCategoryInput(e.target.value)}
-            onKeyPress={(e) => handleKeyPress(e, handleAddCategory)}
-            placeholder="输入分类名称"
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-          <Button size="sm" onClick={handleAddCategory}>
-            添加
-          </Button>
+        <p className="text-xs text-gray-500 mb-2">
+          決定文章URL結構和麵包屑導航
+        </p>
+        <select
+          value={primaryCategory || ''}
+          onChange={(e) => handlePrimaryCategoryChange(e.target.value || '')}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="">-- 請選擇主分類 --</option>
+          {PRIMARY_CATEGORIES.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+        {primaryCategory && (
+          <div className="mt-2 inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">
+            <Star className="w-3 h-3" />
+            {primaryCategory}
+            <span className="text-xs text-yellow-600 ml-1">(主分類)</span>
+          </div>
+        )}
+      </div>
+
+      {/* Secondary Categories (副分類) */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+          <Folder className="w-4 h-4" />
+          副分類 (Secondary Categories)
+        </label>
+        <p className="text-xs text-gray-500 mb-2">
+          讓文章同時出現在其他分類列表頁面 (可多選)
+        </p>
+
+        {/* Show subcategories of selected primary category */}
+        {primaryCategory && availableSecondaryCategories.length > 0 && (
+          <div className="border border-gray-200 rounded-md p-3 bg-gray-50">
+            <div
+              className="flex items-center gap-2 cursor-pointer mb-2"
+              onClick={() => toggleCategoryExpand(primaryCategory)}
+            >
+              {expandedCategories.has(primaryCategory) ? (
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              ) : (
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              )}
+              <span className="text-sm font-medium text-gray-700">
+                {primaryCategory} 的子分類
+              </span>
+            </div>
+            {expandedCategories.has(primaryCategory) && (
+              <div className="grid grid-cols-2 gap-2 ml-6">
+                {availableSecondaryCategories.map((subCategory) => (
+                  <label
+                    key={subCategory}
+                    className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-gray-900"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={secondaryCategories.includes(subCategory)}
+                      onChange={() => handleSecondaryToggle(subCategory)}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    {subCategory}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Show other primary categories as cross-listing options */}
+        <div className="border border-gray-200 rounded-md p-3">
+          <div className="text-sm font-medium text-gray-700 mb-2">
+            其他主分類 (交叉列表)
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {PRIMARY_CATEGORIES.filter((cat) => cat !== primaryCategory).map((category) => (
+              <label
+                key={category}
+                className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer hover:text-gray-900"
+              >
+                <input
+                  type="checkbox"
+                  checked={secondaryCategories.includes(category)}
+                  onChange={() => handleSecondaryToggle(category)}
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                {category}
+              </label>
+            ))}
+          </div>
         </div>
-        {categories.length > 0 && (
+
+        {/* Display selected secondary categories */}
+        {secondaryCategories.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-2">
-            {categories.map((category, idx) => (
+            {secondaryCategories.map((category) => (
               <span
-                key={idx}
-                className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full"
+                key={category}
+                className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full"
               >
                 {category}
                 <button
                   type="button"
-                  onClick={() => handleRemoveCategory(category)}
-                  className="ml-1 text-gray-500 hover:text-gray-700"
+                  onClick={() => handleSecondaryToggle(category)}
+                  className="ml-1 text-blue-500 hover:text-blue-700"
                 >
                   ×
                 </button>

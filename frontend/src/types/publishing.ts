@@ -50,7 +50,12 @@ export interface PublishRequest {
 
 export interface PublishOptions {
   featured_image_url?: string;
+  /** @deprecated Use primary_category and secondary_categories instead */
   categories?: string[];
+  /** WordPress primary category (主分類，決定URL結構) */
+  primary_category?: string;
+  /** WordPress secondary categories (副分類，用於交叉列表) */
+  secondary_categories?: string[];
   tags?: string[];
   publish_immediately?: boolean;
   seo_optimization?: boolean;

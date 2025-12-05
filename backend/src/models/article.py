@@ -119,6 +119,14 @@ class Article(Base, TimestampMixin):
         comment="WordPress primary category (主分類，從候選列表匹配)",
     )
 
+    # Phase 11: WordPress secondary categories (multiple selection for cross-listing)
+    secondary_categories: Mapped[list[str] | None] = mapped_column(
+        ARRAY(String(100)),
+        nullable=True,
+        default=list,
+        comment="WordPress secondary categories (副分類，可多選，用於交叉列表)",
+    )
+
     proofreading_issues: Mapped[list] = mapped_column(
         JSONB,
         nullable=False,

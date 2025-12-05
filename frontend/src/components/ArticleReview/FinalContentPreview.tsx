@@ -23,7 +23,10 @@ export interface FinalContentPreviewProps {
       metaDescription: string;
       keywords: string[];
     };
-    categories: string[];
+    /** Primary category (主分類) - determines URL structure */
+    primaryCategory?: string | null;
+    /** Secondary categories (副分類) - for cross-listing */
+    secondaryCategories?: string[];
     tags: string[];
   };
 }
@@ -86,15 +89,30 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({ data }
         </div>
       </div>
 
-      {/* Categories */}
-      {data.categories.length > 0 && (
+      {/* Primary Category */}
+      {data.primaryCategory && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-gray-700">
             <Hash className="w-4 h-4" />
-            <span className="font-medium">分类</span>
+            <span className="font-medium">主分類 (Primary)</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {data.categories.map((category, idx) => (
+            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+              {data.primaryCategory}
+            </Badge>
+          </div>
+        </div>
+      )}
+
+      {/* Secondary Categories */}
+      {data.secondaryCategories && data.secondaryCategories.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <Hash className="w-4 h-4" />
+            <span className="font-medium">副分類 (Secondary)</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {data.secondaryCategories.map((category, idx) => (
               <Badge key={idx} variant="secondary">
                 {category}
               </Badge>

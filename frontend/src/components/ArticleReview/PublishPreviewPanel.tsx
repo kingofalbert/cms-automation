@@ -39,7 +39,12 @@ export interface PublishSettings {
   visibility: 'public' | 'private' | 'password';
   password?: string;
   publish_date?: string; // ISO 8601 format
+  /** @deprecated Use primary_category and secondary_categories instead */
   categories?: string[];
+  /** Primary category (主分類) - determines URL structure */
+  primary_category?: string;
+  /** Secondary categories (副分類) - for cross-listing */
+  secondary_categories?: string[];
   tags?: string[];
   featured_image?: string;
   excerpt?: string;
@@ -58,7 +63,13 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   const [visibility, setVisibility] = useState<'public' | 'private' | 'password'>('public');
   const [password, setPassword] = useState('');
   const [publishDate, setPublishDate] = useState<string>(''); // Empty = immediate
-  const [categories, setCategories] = useState<string[]>(data.categories || []);
+  // Phase 11: Primary + Secondary category state
+  const [primaryCategory, setPrimaryCategory] = useState<string | null>(
+    data.primary_category || null
+  );
+  const [secondaryCategories, setSecondaryCategories] = useState<string[]>(
+    data.secondary_categories || []
+  );
   const [tags, setTags] = useState<string[]>(data.tags || []);
   const [featuredImage, setFeaturedImage] = useState<string>(
     (data.metadata?.featured_image_path as string) || ''
@@ -90,7 +101,9 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       visibility,
       password: visibility === 'password' ? password : undefined,
       publish_date: publishStatus === 'schedule' ? publishDate : undefined,
-      categories,
+      // Phase 11: Use primary + secondary categories
+      primary_category: primaryCategory || undefined,
+      secondary_categories: secondaryCategories.length > 0 ? secondaryCategories : undefined,
       tags,
       featured_image: featuredImage,
       excerpt,
@@ -114,7 +127,9 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       metaDescription: data.meta_description || '',
       keywords: data.seo_keywords || [],
     },
-    categories,
+    // Phase 11: Include both primary and secondary categories
+    primaryCategory,
+    secondaryCategories,
     tags,
   };
 
@@ -155,7 +170,8 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
               visibility={visibility}
               password={password}
               publishDate={publishDate}
-              categories={categories}
+              primaryCategory={primaryCategory}
+              secondaryCategories={secondaryCategories}
               tags={tags}
               featuredImage={featuredImage}
               excerpt={excerpt}
@@ -163,7 +179,8 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
               onVisibilityChange={setVisibility}
               onPasswordChange={setPassword}
               onPublishDateChange={setPublishDate}
-              onCategoriesChange={setCategories}
+              onPrimaryCategoryChange={setPrimaryCategory}
+              onSecondaryCategoriesChange={setSecondaryCategories}
               onTagsChange={setTags}
               onFeaturedImageChange={setFeaturedImage}
               onExcerptChange={setExcerpt}
@@ -213,7 +230,9 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             visibility,
             password: visibility === 'password' ? password : undefined,
             publish_date: publishStatus === 'schedule' ? publishDate : undefined,
-            categories,
+            // Phase 11: Use primary + secondary categories
+            primary_category: primaryCategory || undefined,
+            secondary_categories: secondaryCategories.length > 0 ? secondaryCategories : undefined,
             tags,
             featured_image: featuredImage,
             excerpt,

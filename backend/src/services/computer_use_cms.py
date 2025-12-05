@@ -39,6 +39,8 @@ class ComputerUseCMSService:
         cms_type: str = "wordpress",
         tags: list[str] | None = None,
         categories: list[str] | None = None,
+        primary_category: str | None = None,
+        secondary_categories: list[str] | None = None,
         article_images: list[dict[str, Any]] | None = None,
         publish_mode: str = "publish",
     ) -> dict[str, Any]:
@@ -53,7 +55,9 @@ class ComputerUseCMSService:
             cms_password: CMS password or application password
             cms_type: CMS platform type (wordpress, strapi, etc.)
             tags: List of WordPress post tags (3-6 recommended)
-            categories: List of WordPress post categories (1-3 recommended)
+            categories: List of WordPress post categories (deprecated, use primary/secondary)
+            primary_category: WordPress primary category (determines URL structure)
+            secondary_categories: WordPress secondary categories (for cross-listing)
             article_images: List of image metadata dicts with local_path for upload
             publish_mode: "publish" to make the post live, "draft" to save without publishing
 
@@ -97,6 +101,8 @@ class ComputerUseCMSService:
                 seo_data=seo_data,
                 tags=tags,
                 categories=categories,
+                primary_category=primary_category,
+                secondary_categories=secondary_categories,
                 article_images=article_images or [],
                 publish_mode=publish_mode,
             )
@@ -291,6 +297,8 @@ class ComputerUseCMSService:
         seo_data: SEOMetadata,
         tags: list[str] | None,
         categories: list[str] | None,
+        primary_category: str | None,
+        secondary_categories: list[str] | None,
         article_images: list[dict[str, Any]],
         publish_mode: str,
     ) -> str:
@@ -305,7 +313,9 @@ class ComputerUseCMSService:
             article_body: Article body
             seo_data: SEO metadata
             tags: WordPress post tags
-            categories: WordPress post categories
+            categories: WordPress post categories (deprecated)
+            primary_category: WordPress primary category (determines URL)
+            secondary_categories: WordPress secondary categories (cross-listing)
             article_images: List of image metadata with local paths
 
         Returns:
@@ -322,6 +332,8 @@ class ComputerUseCMSService:
                 article_images=article_images,
                 tags=tags,
                 categories=categories,
+                primary_category=primary_category,
+                secondary_categories=secondary_categories,
                 publish_mode=publish_mode,
             )
         else:
@@ -338,13 +350,17 @@ class ComputerUseCMSService:
         article_images: list[dict[str, Any]],
         tags: list[str] | None = None,
         categories: list[str] | None = None,
+        primary_category: str | None = None,
+        secondary_categories: list[str] | None = None,
         publish_mode: str = "publish",
     ) -> str:
         """Build WordPress-specific instructions."""
 
         tags = tags or []
         categories = categories or []
+        secondary_categories = secondary_categories or []
         has_images = bool(article_images)
+        has_categories = bool(primary_category or secondary_categories or categories)
 
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
@@ -377,12 +393,28 @@ class ComputerUseCMSService:
         else:
             tags_info = ""
 
-        if categories:
+        # Build category info with Primary + Secondary distinction
+        categories_info = ""
+        if primary_category:
+            categories_info += f"""
+**WordPress Primary Category (主分類) - CRITICAL:**
+  - Category: {primary_category}
+  - This determines the article URL structure (e.g., example.com/{primary_category}/article-slug)
+  - This determines the breadcrumb navigation
+  - You MUST click "Make Primary" or "設為主分類" after selecting this category
+"""
+        if secondary_categories:
+            categories_info += f"""
+**WordPress Secondary Categories (副分類) - For Cross-listing:**
+{chr(10).join(f'  - {cat}' for cat in secondary_categories)}
+  - These allow the article to appear in multiple category archive pages
+  - Do NOT click "Make Primary" for these categories
+"""
+        # Fallback to legacy categories if no primary/secondary specified
+        if not primary_category and not secondary_categories and categories:
             categories_info = "\n**WordPress Categories to Select/Create:**\n" + "\n".join(
                 f"  - {category}" for category in categories
             )
-        else:
-            categories_info = ""
 
         publish_summary = (
             "Save the article as a draft (do not publish to the live site)"
@@ -401,9 +433,13 @@ class ComputerUseCMSService:
                 else "Skip image upload (no images provided)"
             ),
             (
-                "Set WordPress tags and categories"
-                if tags or categories
-                else "Skip tags/categories (none provided)"
+                f"Set Primary Category ('{primary_category}') with 'Make Primary' and Secondary Categories"
+                if primary_category
+                else (
+                    "Set WordPress tags and categories"
+                    if tags or has_categories
+                    else "Skip tags/categories (none provided)"
+                )
             ),
             "Configure SEO metadata (Yoast SEO or Rank Math)",
             publish_summary,
@@ -506,7 +542,7 @@ class ComputerUseCMSService:
             ],
         )
 
-        if tags or categories:
+        if tags or has_categories:
             tag_instructions = (
                 [
                     'In the right sidebar, expand the "Tags" panel',
@@ -517,19 +553,35 @@ class ComputerUseCMSService:
                 else ["No tags provided; skip this section"]
             )
 
-            category_instructions = (
-                [
+            # Build comprehensive category instructions with Primary + Secondary
+            if primary_category:
+                category_instructions = [
+                    '**CRITICAL: In the right sidebar, expand the "Categories" panel**',
+                    f'**Step 1 - Set Primary Category:** Search for or find "{primary_category}"',
+                    f'Check the checkbox next to "{primary_category}"',
+                    '**Step 2 - Make Primary:** Look for "Make Primary" link (or "設為主分類") next to the checked category',
+                    'Click "Make Primary" to set this as the PRIMARY category',
+                    'Verify a star icon or "Primary" label appears next to this category',
+                    f'This ensures the URL will be: example.com/{primary_category}/article-slug',
+                ]
+                if secondary_categories:
+                    category_instructions.extend([
+                        f'**Step 3 - Add Secondary Categories:** Also check these categories for cross-listing:',
+                    ] + [f'  - Check "{cat}" (do NOT make primary)' for cat in secondary_categories])
+                category_instructions.append("Take a screenshot showing the category selections with Primary marked")
+            elif categories:
+                # Fallback to legacy behavior
+                category_instructions = [
                     'In the right sidebar, expand the "Categories" panel',
                     "Select existing categories or create new ones matching the list below",
                     f"Categories to apply: {', '.join(categories)}",
                     "Confirm the chosen categories are checked",
                 ]
-                if categories
-                else ["No categories provided; skip this section"]
-            )
+            else:
+                category_instructions = ["No categories provided; skip this section"]
 
             add_step(
-                "Set Tags and Categories",
+                "Set Tags and Categories (with Primary Category)",
                 tag_instructions + category_instructions + ["Capture a screenshot of the sidebar selections"],
             )
 

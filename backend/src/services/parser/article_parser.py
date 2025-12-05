@@ -17,6 +17,8 @@ from bs4 import BeautifulSoup, Tag
 from src.config.wordpress_taxonomy import (
     get_category_candidates,
     get_category_hint,
+    get_primary_categories,
+    get_category_hierarchy,
 )
 from src.services.parser.models import (
     ImageMetadata,
@@ -27,6 +29,171 @@ from src.services.parser.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _repair_json(text: str) -> str | None:
+    """Attempt to repair truncated or malformed JSON.
+
+    Common issues:
+    1. Truncated JSON (missing closing braces/brackets)
+    2. Unescaped quotes in HTML content
+    3. Control characters in strings (newlines inside strings)
+
+    Returns:
+        Repaired JSON string or None if repair failed.
+    """
+    import re
+
+    repaired = text
+
+    # Step 0: Log info about problematic characters around error position
+    # Try to parse and get error position
+    try:
+        import json
+        json.loads(repaired)
+        return repaired  # Already valid
+    except json.JSONDecodeError as e:
+        error_pos = e.pos
+        context_start = max(0, error_pos - 50)
+        context_end = min(len(repaired), error_pos + 50)
+        logger.info(f"[JSON REPAIR] Error at position {error_pos}")
+        logger.info(f"[JSON REPAIR] Context around error: {repr(repaired[context_start:context_end])}")
+        # Show the exact character at error position
+        if error_pos < len(repaired):
+            logger.info(f"[JSON REPAIR] Char at error: {repr(repaired[error_pos])}, ord={ord(repaired[error_pos])}")
+
+    # Step 1: Fix unescaped control characters inside JSON strings
+    # This is the most common issue - Claude outputs literal newlines in body_html
+    def escape_control_chars_in_strings(json_text: str) -> str:
+        """Escape control characters that appear inside JSON string values."""
+        result = []
+        in_string = False
+        i = 0
+        while i < len(json_text):
+            char = json_text[i]
+
+            # Track string boundaries (unescaped quotes)
+            if char == '"' and (i == 0 or json_text[i-1] != '\\'):
+                in_string = not in_string
+                result.append(char)
+            elif in_string:
+                # Inside a string - escape control characters
+                if char == '\n':
+                    result.append('\\n')
+                elif char == '\r':
+                    result.append('\\r')
+                elif char == '\t':
+                    result.append('\\t')
+                elif char == '\b':
+                    result.append('\\b')
+                elif char == '\f':
+                    result.append('\\f')
+                else:
+                    result.append(char)
+            else:
+                result.append(char)
+            i += 1
+        return ''.join(result)
+
+    # Apply control character escaping
+    repaired = escape_control_chars_in_strings(repaired)
+    logger.info("[JSON REPAIR] Applied control character escaping")
+
+    # Step 1.5: Fix unescaped quotes in HTML attributes within JSON strings
+    # Claude sometimes outputs: "body_html": "...<ol start="3">..."
+    # The quotes around "3" are not escaped and break JSON parsing
+    # We need to escape quotes that appear to be HTML attribute values
+    import re
+
+    def fix_html_attribute_quotes(json_text: str) -> str:
+        """Fix unescaped quotes in HTML attributes within JSON string values.
+
+        Looks for patterns like: <tag attr="value"> and escapes the quotes
+        """
+        # Pattern to find HTML attributes with unescaped quotes inside JSON strings
+        # This is tricky - we need to identify quotes that are part of HTML attributes
+
+        # Simple approach: Find all <tag...> patterns and escape quotes within them
+        result = []
+        i = 0
+        in_json_string = False
+        in_html_tag = False
+
+        while i < len(json_text):
+            char = json_text[i]
+
+            # Track JSON string boundaries
+            if char == '"' and (i == 0 or json_text[i-1] != '\\'):
+                if not in_html_tag:
+                    in_json_string = not in_json_string
+                else:
+                    # Inside HTML tag - this quote is an attribute quote, escape it
+                    result.append('\\"')
+                    i += 1
+                    continue
+
+            # Track HTML tag boundaries (only when inside JSON string)
+            if in_json_string and char == '<':
+                # Check if this starts an HTML tag
+                if i + 1 < len(json_text) and (json_text[i+1].isalpha() or json_text[i+1] == '/'):
+                    in_html_tag = True
+            elif in_html_tag and char == '>':
+                in_html_tag = False
+
+            result.append(char)
+            i += 1
+
+        return ''.join(result)
+
+    repaired = fix_html_attribute_quotes(repaired)
+    logger.info("[JSON REPAIR] Applied HTML attribute quote escaping")
+
+    # Step 2: Handle truncated JSON (missing closing braces/brackets)
+    open_braces = repaired.count('{')
+    close_braces = repaired.count('}')
+    open_brackets = repaired.count('[')
+    close_brackets = repaired.count(']')
+
+    if open_braces > close_braces or open_brackets > close_brackets:
+        logger.info(f"[JSON REPAIR] Detected truncated JSON: braces {open_braces}/{close_braces}, brackets {open_brackets}/{close_brackets}")
+
+        # Try to find where the truncation happened
+        in_string = False
+        last_valid_pos = 0
+        i = 0
+        while i < len(repaired):
+            char = repaired[i]
+            if char == '"' and (i == 0 or repaired[i-1] != '\\'):
+                in_string = not in_string
+                if not in_string:
+                    j = i + 1
+                    while j < len(repaired) and repaired[j] in ' \t\n\r':
+                        j += 1
+                    if j < len(repaired) and repaired[j] in ',}]':
+                        last_valid_pos = j + 1
+            i += 1
+
+        if in_string and last_valid_pos > 0:
+            logger.info(f"[JSON REPAIR] Truncating at position {last_valid_pos}")
+            repaired = repaired[:last_valid_pos]
+
+            open_braces = repaired.count('{')
+            close_braces = repaired.count('}')
+            open_brackets = repaired.count('[')
+            close_brackets = repaired.count(']')
+
+        # Add missing closing brackets and braces
+        missing_brackets = ']' * (open_brackets - close_brackets)
+        missing_braces = '}' * (open_braces - close_braces)
+
+        repaired = repaired.rstrip()
+        if repaired.endswith(','):
+            repaired = repaired[:-1]
+
+        repaired = repaired + missing_brackets + missing_braces
+        logger.info(f"[JSON REPAIR] Added {len(missing_brackets)} brackets and {len(missing_braces)} braces")
+
+    return repaired
 
 
 class ArticleParserService:
@@ -254,12 +421,31 @@ class ArticleParserService:
 
             logger.info(f"[DEBUG] Cleaned response length: {len(cleaned_response)}, starts_with: {cleaned_response[:50]}")
 
-            # Parse Claude's JSON response
-            parsed_data = json.loads(cleaned_response)
+            # Parse Claude's JSON response with repair fallback
+            parsed_data = None
+            try:
+                parsed_data = json.loads(cleaned_response)
+            except json.JSONDecodeError as initial_error:
+                logger.warning(f"[DEBUG] Initial JSON parse failed: {initial_error}, attempting repair...")
+                # Try to repair the JSON
+                repaired_json = _repair_json(cleaned_response)
+                if repaired_json:
+                    try:
+                        parsed_data = json.loads(repaired_json)
+                        logger.info("[DEBUG] JSON repair successful!")
+                    except json.JSONDecodeError as repair_error:
+                        logger.error(f"[DEBUG] JSON repair also failed: {repair_error}")
+                        raise initial_error  # Re-raise the original error
+                else:
+                    raise initial_error
+
+            if parsed_data is None:
+                raise json.JSONDecodeError("Failed to parse JSON", cleaned_response, 0)
             logger.info(f"[DEBUG] JSON parse SUCCESS! Keys: {list(parsed_data.keys())}")
             logger.info(f"[DEBUG] suggested_titles from Claude: {parsed_data.get('suggested_titles')}")
-            # Phase 10: Debug logging for primary_category
+            # Phase 10/11: Debug logging for category classification
             logger.info(f"[DEBUG] primary_category from Claude: {parsed_data.get('primary_category')}")
+            logger.info(f"[DEBUG] secondary_categories from Claude: {parsed_data.get('secondary_categories')}")
             logger.info(f"[DEBUG] suggested_seo from Claude: {parsed_data.get('suggested_seo')}")
 
             # Extract focus_keyword from suggested_seo if available
@@ -286,6 +472,8 @@ class ArticleParserService:
                 tags=parsed_data.get("tags", []),
                 # Phase 10: WordPress taxonomy fields
                 primary_category=parsed_data.get("primary_category"),
+                # Phase 11: Secondary categories for cross-listing
+                secondary_categories=parsed_data.get("secondary_categories", []),
                 focus_keyword=focus_keyword,
                 images=self._parse_images_from_ai_response(parsed_data.get("images", [])),
                 # Phase 7.5: Unified AI Parsing fields
@@ -356,6 +544,21 @@ class ArticleParserService:
                     )
                 ],
             )
+
+    def _format_category_hierarchy(self) -> str:
+        """Format the category hierarchy for the AI prompt.
+
+        Returns:
+            Formatted string showing primary -> secondary category relationships
+        """
+        hierarchy = get_category_hierarchy()
+        lines = []
+        for primary, secondaries in hierarchy.items():
+            if secondaries:
+                lines.append(f"- {primary}: {', '.join(secondaries)}")
+            else:
+                lines.append(f"- {primary}: (no subcategories)")
+        return "\n".join(lines)
 
     def _build_ai_parsing_prompt(self, raw_html: str) -> str:
         """Build the prompt for Claude to parse article HTML.
@@ -514,18 +717,32 @@ Based on the article content, create:
    - `secondary_keywords`: Supporting keywords (5-8)
    - `tags`: Content categories (3-6)
 
-## Task 2.5: Article Category Classification
+## Task 2.5: Article Category Classification (Primary + Secondary)
 
-Based on the article content, classify the article into ONE primary category from the following candidate list:
+Based on the article content, classify the article into categories using the **two-tier hierarchical system** used by WordPress with Yoast SEO.
 
-**Category Candidates**:
-{', '.join(get_category_candidates())}
+**Primary Categories (主分類)** - Choose ONE from this list:
+{', '.join(get_primary_categories())}
+
+**Category Hierarchy (分類層級)** - Each primary category may have secondary categories:
+{self._format_category_hierarchy()}
 
 **Classification Rules**:
-1. Select EXACTLY ONE category that best matches the article's main topic
-2. Consider the title, first paragraphs, and key entities
-3. If the article covers multiple topics, choose the most dominant one
-4. Return the category name exactly as it appears in the candidate list
+
+1. **Primary Category (主分類)** - REQUIRED, SINGLE SELECTION:
+   - Select EXACTLY ONE from the Primary Categories list above
+   - This determines the URL structure (e.g., example.com/食療養生/article-slug)
+   - This determines the breadcrumb navigation
+   - Consider the title, first paragraphs, and key entities
+   - Return the category name exactly as it appears in the list
+
+2. **Secondary Categories (副分類)** - OPTIONAL, MULTIPLE SELECTION:
+   - Select 0-3 categories from EITHER:
+     a) Other primary categories (for cross-listing across major sections)
+     b) Subcategories under the chosen primary category (for more specific classification)
+   - These allow the article to appear in multiple category archive pages
+   - Do NOT include the primary_category in secondary_categories (no duplicates)
+   - Only select if the article genuinely covers these topics
 
 ## Task 3: Comprehensive Proofreading
 
@@ -606,6 +823,7 @@ Return ONLY valid JSON with this exact structure:
   "seo_keywords": ["醫療", "AI", "科技"],
   "tags": ["醫療", "科技", "AI"],
   "primary_category": "健康",
+  "secondary_categories": ["科技", "生活"],
   "suggested_titles": [
     {{
       "prefix": "【產業革命】",
