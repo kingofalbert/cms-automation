@@ -56,7 +56,7 @@ class ArticleResponse(TimestampSchema):
 
     # AI Optimization Suggestions
     suggested_meta_description: str | None = Field(default=None, description='AI-suggested meta description')
-    suggested_seo_keywords: dict | None = Field(default=None, description='AI-suggested SEO keywords')
+    suggested_seo_keywords: list[str] | None = Field(default=None, description='AI-suggested SEO keywords')
 
     # Phase 10: WordPress Taxonomy Fields
     primary_category: str | None = Field(default=None, description='WordPress primary category (主分類，AI-classified)')
@@ -117,7 +117,7 @@ class SEOComparison(BaseSchema):
     """SEO keywords comparison."""
 
     original_keywords: list[str] = Field(default_factory=list)
-    suggested_keywords: dict | None = None
+    suggested_keywords: list[str] | None = Field(default=None, description="AI-suggested SEO keywords")
     reasoning: str | None = None
     score: float | None = Field(None, ge=0, le=1, description="Quality score 0-1")
 

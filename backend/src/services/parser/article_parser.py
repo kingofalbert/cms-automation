@@ -675,10 +675,12 @@ Extract and structure the following elements from the HTML:
    - `title_suffix`: Optional subtitle or additional context
 
 2. **Author Information**:
-   - `author_line`: Raw author text as it appears
-   - `author_name`: Clean extracted name (remove prefixes like "文/", "編譯/", "作者:")
+   - `author_line`: The COMPLETE raw author text line as it appears (e.g., "文 / Mercura Wang　編譯 / 方海冬")
+   - `author_name`: The FULL author attribution including all contributors (原作者 + 編譯者/譯者)
+   - IMPORTANT: Keep the full author line intact, don't extract just the first name
    - Examples:
-     * "文 / 張三 編譯 / 李四" → author_name: "張三"
+     * "文 / Mercura Wang　編譯 / 方海冬" → author_name: "Mercura Wang、方海冬" or "文 / Mercura Wang　編譯 / 方海冬"
+     * "文 / 張三 編譯 / 李四" → author_name: "張三、李四"
      * "撰文：王五" → author_name: "王五"
 
 3. **Body Content**:
@@ -691,9 +693,14 @@ Extract and structure the following elements from the HTML:
    - Find captions marked with "圖說:" or similar
    - Include position (paragraph index)
 
-5. **Existing SEO** (if marked in document):
-   - Look for "這是 SEO title" markers
-   - Extract if found, set extraction flag
+5. **Existing SEO** (ONLY extract if explicitly marked in document):
+   - **SEO Title**: Look for "這是 SEO title" markers. Extract if found, set seo_title_extracted=true.
+   - **Meta Description**: Look for "【Meta摘要】" or "【Meta】" or "Meta摘要：" markers.
+     * If found, extract the text IMMEDIATELY following the marker as meta_description
+     * Example: "【Meta摘要】\n萊姆病每年影響約47.6萬名美國人..." → meta_description: "萊姆病每年影響約47.6萬名美國人..."
+     * This is the author's intended meta description - use EXACTLY as written
+     * **IMPORTANT**: If NO meta description marker is found, set meta_description = null (DO NOT generate one here)
+   - AI-generated suggestions go in `suggested_seo.meta_description` (Task 2), NOT in `meta_description`
 
 ## Task 2: Generate SEO Optimizations
 
@@ -807,8 +814,8 @@ Return ONLY valid JSON with this exact structure:
   "title_prefix": "【深度報導】",
   "title_main": "2024年AI醫療革命",
   "title_suffix": "改變未來的十大技術",
-  "author_line": "文／張三｜編輯／李四",
-  "author_name": "張三",
+  "author_line": "文 / Mercura Wang　編譯 / 方海冬",
+  "author_name": "Mercura Wang、方海冬",
   "body_html": "<p>文章內容...</p>",
   "images": [
     {{
@@ -819,7 +826,7 @@ Return ONLY valid JSON with this exact structure:
   ],
   "seo_title": null,
   "seo_title_extracted": false,
-  "meta_description": "本文探討2024年醫療保健...",
+  "meta_description": null,  // null if no【Meta摘要】marker found; extracted text if marker exists
   "seo_keywords": ["醫療", "AI", "科技"],
   "tags": ["醫療", "科技", "AI"],
   "primary_category": "健康",

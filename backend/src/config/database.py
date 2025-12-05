@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -46,16 +47,19 @@ class DatabaseConfig:
                 "max_overflow": self.settings.DATABASE_MAX_OVERFLOW,
                 "pool_timeout": self.settings.DATABASE_POOL_TIMEOUT,
                 "pool_recycle": self.settings.DATABASE_POOL_RECYCLE,
-                "pool_pre_ping": True,  # Verify connections before using
-                # Disable prepared statements for pgbouncer compatibility
-                # Must use server_settings for asyncpg, not connect_args
+                # Disable pool_pre_ping with pgbouncer transaction mode (SA 2.0 issue)
+                "pool_pre_ping": False,
+                # Fix for pgbouncer transaction mode prepared statement conflicts:
+                # Use UUID-based statement names to avoid collisions between workers
+                # Reference: https://github.com/sqlalchemy/sqlalchemy/issues/6467
                 "connect_args": {
+                    "statement_cache_size": 0,  # Disable prepared statement caching
+                    "prepared_statement_cache_size": 0,  # Disable prepared statement cache
+                    # Generate unique prepared statement names with UUID to avoid conflicts
+                    "prepared_statement_name_func": lambda: f"__asyncpg_{uuid4()}__",
                     "server_settings": {
                         "jit": "off",  # Disable JIT for better compatibility
                     },
-                    # These must be set at create_async_engine level for asyncpg
-                    "statement_cache_size": 0,
-                    "prepared_statement_cache_size": 0,
                 },
             }
 

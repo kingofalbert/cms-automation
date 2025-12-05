@@ -525,14 +525,24 @@ class GoogleDriveSyncService:
             existing.title = payload["title"]
             existing.content = payload["content"]
             existing.raw_html = payload.get("raw_html")  # FIX: Save raw HTML for parser
-            existing.author = payload.get("author")
             existing.drive_metadata = metadata
-            existing.tags = payload.get("tags", [])
-            existing.categories = payload.get("categories", [])
-            existing.meta_description = payload.get("meta_description")
-            existing.seo_keywords = payload.get("seo_keywords", [])
             existing.synced_at = now
             existing.updated_at = now
+
+            # IMPORTANT: Only update these fields if they don't already have parsed values
+            # This preserves data extracted by the AI parser (author, tags, meta_description, etc.)
+            # The sync from Google Drive should NOT overwrite data that was parsed by AI
+            if not existing.author:
+                existing.author = payload.get("author")
+            if not existing.tags:
+                existing.tags = payload.get("tags", [])
+            if not existing.categories:
+                existing.categories = payload.get("categories", [])
+            if not existing.meta_description:
+                existing.meta_description = payload.get("meta_description")
+            if not existing.seo_keywords:
+                existing.seo_keywords = payload.get("seo_keywords", [])
+
             self.session.add(existing)
             await self.session.flush()
             return existing, False
