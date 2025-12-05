@@ -80,12 +80,18 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Validation: Check if all required fields are present
+  // Use articleReview content as source of truth (avoids CSS-polluted data.content)
+  const hasValidContent = Boolean(
+    data.articleReview?.content?.original ||
+    data.articleReview?.content?.suggested ||
+    data.metadata?.proofread_content
+  );
   const isReadyToPublish = useMemo(() => {
-    if (!data.title || !data.content) return false;
+    if (!data.title || !hasValidContent) return false;
     if (publishStatus === 'schedule' && !publishDate) return false;
     if (visibility === 'password' && !password) return false;
     return true;
-  }, [data.title, data.content, publishStatus, publishDate, visibility, password]);
+  }, [data.title, hasValidContent, publishStatus, publishDate, visibility, password]);
 
   const handlePublishClick = () => {
     if (!isReadyToPublish) {
@@ -118,9 +124,14 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   };
 
   // Content data for preview
+  // Priority: proofread_content > articleReview.content.suggested > articleReview.content.original
+  // Avoid using data.content directly as it may contain CSS from Google Docs export
   const contentData = {
     title: data.title || '',
-    content: (data.metadata?.proofread_content as string) || data.content || '',
+    content: (data.metadata?.proofread_content as string)
+      || data.articleReview?.content?.suggested
+      || data.articleReview?.content?.original
+      || '',
     author: data.author || '',
     featuredImage,
     seoMetadata: {

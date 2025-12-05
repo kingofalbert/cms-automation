@@ -174,8 +174,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
         <div className="lg:col-span-3 space-y-6">
           <Card className="p-6">
             <DiffViewSection
-              originalContent={data.articleReview?.content?.original || data.content || ''}
-              proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.content || ''}
+              originalContent={data.articleReview?.content?.original || ''}
+              proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.articleReview?.content?.original || ''}
             />
           </Card>
         </div>
