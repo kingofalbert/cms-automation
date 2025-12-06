@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     DECIMAL,
-    Enum,
     ForeignKey,
     Integer,
     String,
@@ -90,14 +89,15 @@ class ArticleFAQ(Base):
     # ========================================================================
     # FAQ Classification
     # ========================================================================
-    question_type: Mapped[FAQQuestionType | None] = mapped_column(
-        Enum(FAQQuestionType, name="faq_question_type", create_type=False),
+    # Note: Using String instead of Enum to match varchar(20) column in database
+    question_type: Mapped[str | None] = mapped_column(
+        String(20),
         nullable=True,
         comment="Type: factual, how_to, comparison, definition",
     )
 
-    search_intent: Mapped[FAQSearchIntent | None] = mapped_column(
-        Enum(FAQSearchIntent, name="faq_search_intent", create_type=False),
+    search_intent: Mapped[str | None] = mapped_column(
+        String(20),
         nullable=True,
         comment="Intent: informational, navigational, transactional",
     )
@@ -129,8 +129,9 @@ class ArticleFAQ(Base):
         comment="Display order (0-based index)",
     )
 
-    status: Mapped[FAQStatus] = mapped_column(
-        Enum(FAQStatus, name="faq_status", create_type=False),
+    # Note: Using String instead of Enum to match varchar(20) column in database
+    status: Mapped[str] = mapped_column(
+        String(20),
         nullable=False,
         server_default="'draft'",
         index=True,

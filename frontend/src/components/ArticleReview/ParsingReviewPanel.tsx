@@ -15,18 +15,19 @@
  * └────────────────────────────────┴──────────────────┘
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
 import { TitleReviewSection } from './TitleReviewSection';
 import { SEOTitleSelectionCard } from './SEOTitleSelectionCard';
 import { AuthorReviewSection } from './AuthorReviewSection';
 import { ImageReviewSection } from './ImageReviewSection';
-import { SEOReviewSection } from './SEOReviewSection';
-import { SEOComparisonCard } from './SEOComparisonCard';
-import { FAQReviewSection } from './FAQReviewSection';
+import { ContentComparisonCard, ContentSource } from './ContentComparisonCard';
+import { KeywordsComparisonCard, KeywordSource } from './KeywordsComparisonCard';
+import { FAQReviewSection, type AIFAQSuggestion } from './FAQReviewSection';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import type { SEOTitleSuggestionsData, SelectSEOTitleResponse } from '../../types/api';
+import { api } from '../../services/api-client';
 
 export interface ParsingReviewPanelProps {
   /** Article review data */
@@ -107,11 +108,20 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     initialParsingState.faqSuggestions
   );
 
+  // Phase 8.3: Content comparison source tracking
+  const [metaDescriptionSource, setMetaDescriptionSource] = useState<ContentSource>('extracted');
+  const [keywordsSource, setKeywordsSource] = useState<KeywordSource>('extracted');
+
   // Phase 9: SEO Title state
   const [seoTitleSuggestions, setSeoTitleSuggestions] = useState<SEOTitleSuggestionsData | null>(null);
   const [currentSeoTitle, setCurrentSeoTitle] = useState<string | null>(null);
   const [seoTitleSource, setSeoTitleSource] = useState<string | null>(null);
   const [isLoadingSeoTitle, setIsLoadingSeoTitle] = useState(false);
+
+  // Phase 9.2: AI FAQ state
+  const [aiFaqSuggestions, setAiFaqSuggestions] = useState<AIFAQSuggestion[]>([]);
+  const [isGeneratingFaqs, setIsGeneratingFaqs] = useState(false);
+  const [faqError, setFaqError] = useState<string | null>(null);
 
   // Track if data has been modified
   const [isDirty, setIsDirty] = useState(false);
@@ -130,45 +140,58 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialParsingState, isDirty]);
 
-  // Fetch SEO Title suggestions when component mounts (if articleId exists)
+  // Fetch SEO Title suggestions and AI FAQ suggestions when component mounts (if articleId exists)
   useEffect(() => {
-    const fetchSeoTitleSuggestions = async () => {
+    const fetchOptimizations = async () => {
       if (!data.article_id) {
         return;
       }
 
       setIsLoadingSeoTitle(true);
       try {
-        // Fetch optimizations (which includes SEO Title suggestions)
-        const response = await fetch(`/api/v1/optimization/articles/${data.article_id}/optimizations`);
-
-        if (response.ok) {
-          const optimizationsData = await response.json();
+        // Fetch optimizations (which includes SEO Title suggestions and FAQs)
+        try {
+          const optimizationsData = await api.get<{
+            title_suggestions?: { seo_title_suggestions?: SEOTitleSuggestionsData };
+            faqs?: AIFAQSuggestion[];
+          }>(`/v1/articles/${data.article_id}/optimizations`);
 
           // Extract SEO Title suggestions
           if (optimizationsData.title_suggestions?.seo_title_suggestions) {
             setSeoTitleSuggestions(optimizationsData.title_suggestions.seo_title_suggestions);
           }
-        } else if (response.status !== 404) {
+
+          // Extract AI FAQ suggestions (Phase 9.2)
+          if (optimizationsData.faqs && Array.isArray(optimizationsData.faqs)) {
+            setAiFaqSuggestions(optimizationsData.faqs);
+          }
+        } catch (err: unknown) {
           // 404 is expected if optimizations haven't been generated yet
-          console.error('Failed to fetch SEO Title suggestions:', response.statusText);
+          const axiosErr = err as { response?: { status?: number } };
+          if (axiosErr.response?.status !== 404) {
+            console.error('Failed to fetch optimizations:', err);
+          }
         }
 
         // Fetch current article data to get current SEO Title
-        const articleResponse = await fetch(`/api/v1/articles/${data.article_id}`);
-        if (articleResponse.ok) {
-          const articleData = await articleResponse.json();
-          setCurrentSeoTitle(articleData.seo_title);
-          setSeoTitleSource(articleData.seo_title_source);
+        try {
+          const articleData = await api.get<{
+            seo_title?: string;
+            seo_title_source?: string;
+          }>(`/v1/articles/${data.article_id}`);
+          setCurrentSeoTitle(articleData.seo_title ?? null);
+          setSeoTitleSource(articleData.seo_title_source ?? null);
+        } catch (err) {
+          console.error('Error fetching article data:', err);
         }
       } catch (error) {
-        console.error('Error fetching SEO Title data:', error);
+        console.error('Error fetching optimization data:', error);
       } finally {
         setIsLoadingSeoTitle(false);
       }
     };
 
-    fetchSeoTitleSuggestions();
+    fetchOptimizations();
   }, [data.article_id]);
 
   const handleSave = async () => {
@@ -193,6 +216,69 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
       setIsDirty(true);
     }
   };
+
+  // Phase 9.2: Generate AI FAQs
+  const handleGenerateFaqs = useCallback(async () => {
+    if (!data.article_id) {
+      setFaqError('無法生成 FAQ：缺少文章 ID');
+      return;
+    }
+
+    setIsGeneratingFaqs(true);
+    setFaqError(null);
+
+    try {
+      // Call the generate-all-optimizations endpoint using api client
+      // Use longer timeout (2 min) for AI generation which can take a while
+      const optimizationsData = await api.post<{
+        faqs?: AIFAQSuggestion[];
+      }>(
+        `/v1/articles/${data.article_id}/generate-all-optimizations`,
+        {
+          regenerate: true,
+          options: {
+            include_title: false,
+            include_seo: false,
+            include_tags: false,
+            include_faqs: true,
+            faq_target_count: 8,
+          },
+        },
+        { timeout: 120000 } // 2 minute timeout for AI generation
+      );
+
+      // Extract AI FAQ suggestions
+      if (optimizationsData.faqs && Array.isArray(optimizationsData.faqs)) {
+        setAiFaqSuggestions(optimizationsData.faqs);
+      } else {
+        setFaqError('未能獲取 FAQ 建議');
+      }
+    } catch (error: unknown) {
+      console.error('Error generating FAQs:', error);
+      const axiosErr = error as {
+        response?: { data?: { detail?: string }; status?: number };
+        code?: string;
+        message?: string;
+      };
+
+      // Provide more helpful error messages
+      let errorMessage: string;
+      if (axiosErr.code === 'ECONNABORTED' || axiosErr.message?.includes('timeout')) {
+        errorMessage = 'AI 生成超時，請稍後重試';
+      } else if (axiosErr.response?.data?.detail) {
+        errorMessage = axiosErr.response.data.detail;
+      } else if (axiosErr.response?.status === 500) {
+        errorMessage = '伺服器內部錯誤，請稍後重試或聯繫管理員';
+      } else if (axiosErr.response?.status) {
+        errorMessage = `生成失敗: ${axiosErr.response.status}`;
+      } else {
+        errorMessage = '生成 FAQ 時發生錯誤，請檢查網路連線';
+      }
+      setFaqError(errorMessage);
+    } finally {
+      setIsGeneratingFaqs(false);
+    }
+  }, [data.article_id]);
 
   // Handle SEO Title selection success
   const handleSeoTitleSelectionSuccess = (response: SelectSEOTitleResponse) => {
@@ -239,13 +325,14 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             />
           </Card>
 
-          {/* Phase 9: SEO Title Selection */}
+          {/* Phase 9: SEO Title Selection - Side-by-side comparison layout */}
           {data.article_id && (
             <SEOTitleSelectionCard
               articleId={data.article_id}
               currentSeoTitle={currentSeoTitle}
               seoTitleSource={seoTitleSource}
               suggestions={seoTitleSuggestions}
+              articleTitle={title}
               isLoading={isLoadingSeoTitle}
               onSelectionSuccess={handleSeoTitleSelectionSuccess}
               onError={handleSeoTitleSelectionError}
@@ -284,28 +371,74 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
 
         {/* Right column: 40% (2 out of 5 cols) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* AI SEO Suggestions (if available from article review) */}
-          {(data.articleReview?.meta || data.articleReview?.seo) && (
-            <SEOComparisonCard
-              meta={data.articleReview.meta}
-              seo={data.articleReview.seo}
-            />
-          )}
+          {/* Phase 8.3: Meta Description Comparison Card */}
+          <ContentComparisonCard
+            title="元描述 (Meta Description)"
+            extractedContent={metaDescription}
+            aiSuggestedContent={data.articleReview?.meta?.suggested || ''}
+            selectedSource={metaDescriptionSource}
+            customContent={metaDescriptionSource === 'custom' ? metaDescription : undefined}
+            onSourceChange={(source, content) => {
+              setMetaDescriptionSource(source);
+              setMetaDescription(content);
+              markDirty();
+            }}
+            onCustomContentChange={(content) => {
+              setMetaDescription(content);
+              markDirty();
+            }}
+            optimalLength={[120, 160]}
+            aiReasoning={data.articleReview?.meta?.reasoning || undefined}
+            testId="meta-description-comparison"
+          />
 
-          {/* SEO Review */}
-          <Card className="p-6" data-testid="parsing-seo-card">
-            <SEOReviewSection
-              metaDescription={metaDescription}
-              keywords={seoKeywords}
-              onMetaDescriptionChange={(desc) => {
-                setMetaDescription(desc);
-                markDirty();
-              }}
-              onKeywordsChange={(kw) => {
-                setSeoKeywords(kw);
-                markDirty();
-              }}
-            />
+          {/* Phase 8.3: Keywords Comparison Card */}
+          <KeywordsComparisonCard
+            extractedKeywords={seoKeywords}
+            aiSuggestedKeywords={data.articleReview?.seo?.suggested_keywords || undefined}
+            selectedSource={keywordsSource}
+            activeKeywords={seoKeywords}
+            onKeywordsChange={(source, keywords) => {
+              setKeywordsSource(source);
+              setSeoKeywords(keywords);
+              markDirty();
+            }}
+            optimalCount={[5, 10]}
+            aiReasoning={data.articleReview?.seo?.reasoning || undefined}
+            testId="keywords-comparison"
+          />
+
+          {/* SEO Score Summary - Simplified */}
+          <Card className="p-4 bg-gradient-to-br from-slate-50 to-blue-50 border-slate-200" data-testid="seo-score-summary">
+            <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              SEO 评分概览
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-2 bg-white rounded border">
+                <div className={`text-lg font-bold ${metaDescription.length >= 120 && metaDescription.length <= 160 ? 'text-green-600' : 'text-amber-600'}`}>
+                  {metaDescription.length >= 120 && metaDescription.length <= 160 ? '✓' : '⚠'}
+                </div>
+                <div className="text-xs text-slate-600">元描述</div>
+                <div className="text-xs text-slate-400">{metaDescription.length}/120-160</div>
+              </div>
+              <div className="text-center p-2 bg-white rounded border">
+                <div className={`text-lg font-bold ${seoKeywords.length >= 5 && seoKeywords.length <= 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                  {seoKeywords.length >= 5 && seoKeywords.length <= 10 ? '✓' : '⚠'}
+                </div>
+                <div className="text-xs text-slate-600">关键词</div>
+                <div className="text-xs text-slate-400">{seoKeywords.length}/5-10个</div>
+              </div>
+              <div className="text-center p-2 bg-white rounded border">
+                <div className="text-lg font-bold text-blue-600">
+                  {Math.round(((metaDescription.length >= 120 ? 50 : metaDescription.length / 2.4) + (seoKeywords.length >= 5 ? 50 : seoKeywords.length * 10)))}
+                </div>
+                <div className="text-xs text-slate-600">总分</div>
+                <div className="text-xs text-slate-400">/100</div>
+              </div>
+            </div>
           </Card>
 
           {/* AI FAQ Proposals (if available from article review) */}
@@ -344,14 +477,19 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             </Card>
           )}
 
-          {/* FAQ Review */}
+          {/* FAQ Review - Phase 9.2: AI-powered FAQ generation */}
           <Card className="p-6" data-testid="parsing-faq-card">
             <FAQReviewSection
+              articleId={data.article_id}
               faqs={faqSuggestions}
+              aiSuggestions={aiFaqSuggestions}
+              isGenerating={isGeneratingFaqs}
+              error={faqError}
               onFaqsChange={(faqs) => {
                 setFaqSuggestions(faqs);
                 markDirty();
               }}
+              onGenerateFaqs={handleGenerateFaqs}
             />
           </Card>
         </div>

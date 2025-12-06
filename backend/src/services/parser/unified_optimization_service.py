@@ -20,7 +20,7 @@ from anthropic import AsyncAnthropic
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.article import Article
-from src.models.article_faq import ArticleFAQ, FAQQuestionType, FAQSearchIntent, FAQStatus
+from src.models.article_faq import ArticleFAQ
 from src.models.seo_suggestions import SEOSuggestion
 from src.models.title_suggestions import TitleSuggestion
 
@@ -714,19 +714,14 @@ class UnifiedOptimizationService:
 
         # Create new FAQs
         for position, faq_data in enumerate(faqs):
-            # Map question_type string to enum
-            q_type_str = faq_data.get("question_type", "factual")
-            try:
-                question_type = FAQQuestionType(q_type_str)
-            except ValueError:
-                question_type = FAQQuestionType.FACTUAL
+            # Use string values directly (matching varchar columns in database)
+            question_type = faq_data.get("question_type", "factual")
+            if question_type not in ("factual", "how_to", "comparison", "definition"):
+                question_type = "factual"
 
-            # Map search_intent string to enum
-            intent_str = faq_data.get("search_intent", "informational")
-            try:
-                search_intent = FAQSearchIntent(intent_str)
-            except ValueError:
-                search_intent = FAQSearchIntent.INFORMATIONAL
+            search_intent = faq_data.get("search_intent", "informational")
+            if search_intent not in ("informational", "navigational", "transactional"):
+                search_intent = "informational"
 
             faq = ArticleFAQ(
                 article_id=article_id,
@@ -737,7 +732,7 @@ class UnifiedOptimizationService:
                 keywords_covered=faq_data.get("keywords_covered", []),
                 confidence=faq_data.get("confidence"),
                 position=position,
-                status=FAQStatus.DRAFT,
+                status="draft",  # String value instead of enum
             )
             self.db.add(faq)
 
@@ -789,8 +784,8 @@ class UnifiedOptimizationService:
                 {
                     "question": faq.question,
                     "answer": faq.answer,
-                    "question_type": faq.question_type.value if faq.question_type else None,
-                    "search_intent": faq.search_intent.value if faq.search_intent else None,
+                    "question_type": faq.question_type,  # Already a string
+                    "search_intent": faq.search_intent,  # Already a string
                     "keywords_covered": faq.keywords_covered or [],
                     "confidence": float(faq.confidence) if faq.confidence else None,
                 }

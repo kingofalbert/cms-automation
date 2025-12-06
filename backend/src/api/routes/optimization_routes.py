@@ -140,8 +140,8 @@ async def _build_optimizations_response(
             {
                 "question": faq.question,
                 "answer": faq.answer,
-                "question_type": faq.question_type.value if faq.question_type else None,
-                "search_intent": faq.search_intent.value if faq.search_intent else None,
+                "question_type": faq.question_type,  # Already a string
+                "search_intent": faq.search_intent,  # Already a string
                 "keywords_covered": faq.keywords_covered or [],
                 "confidence": float(faq.confidence) if faq.confidence else None,
             }
@@ -230,7 +230,21 @@ async def generate_all_optimizations(
             f"Successfully generated optimizations for article {article_id}: "
             f"{result['generation_metadata'].get('total_cost_usd', 0):.4f} USD"
         )
-        return OptimizationsResponse(**result)
+        # Validate response structure before returning
+        try:
+            return OptimizationsResponse(**result)
+        except Exception as validation_error:
+            logger.error(
+                f"Response validation failed for article {article_id}: {validation_error}. "
+                f"Result keys: {result.keys()}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Response validation failed: {str(validation_error)}",
+            )
+
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions as-is
 
     except ValueError as e:
         logger.error(f"Validation error generating optimizations for article {article_id}: {e}")
@@ -244,10 +258,12 @@ async def generate_all_optimizations(
         )
 
     except Exception as e:
-        logger.exception(f"Unexpected error generating optimizations for article {article_id}: {e}")
+        # Include actual error message for debugging
+        error_message = f"{type(e).__name__}: {str(e)}"
+        logger.exception(f"Unexpected error generating optimizations for article {article_id}: {error_message}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while generating optimizations",
+            detail=f"Optimization generation failed: {error_message}",
         )
 
 

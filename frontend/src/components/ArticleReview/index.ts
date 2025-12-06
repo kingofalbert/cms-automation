@@ -61,3 +61,13 @@ export type { PublishSettingsSectionProps } from './PublishSettingsSection';
 
 export { PublishConfirmation } from './PublishConfirmation';
 export type { PublishConfirmationProps } from './PublishConfirmation';
+
+// Phase 8.3: Content Comparison Components
+export { ContentComparisonCard } from './ContentComparisonCard';
+export type { ContentComparisonCardProps, ContentSource } from './ContentComparisonCard';
+
+export { KeywordsComparisonCard } from './KeywordsComparisonCard';
+export type { KeywordsComparisonCardProps, KeywordSource } from './KeywordsComparisonCard';
+
+export { SEOComparisonCard } from './SEOComparisonCard';
+export type { SEOComparisonCardProps } from './SEOComparisonCard';
