@@ -1,21 +1,25 @@
 /**
  * ArticleReviewModal - Full-screen modal for article review workflow
  *
- * Phase 8.1: Modal Framework
+ * Phase 8.1: Modal Framework (Updated 2025-12-06)
  * - Provides unified interface for parsing, proofreading, and publishing review
- * - Eliminates page jumps with tab-based navigation
- * - Auto-selects appropriate tab based on article status
+ * - **Removed redundant Tabs** - Stepper serves as both progress indicator AND navigation
+ * - Auto-selects appropriate step based on article status
  *
  * Architecture:
  * - Header: Title + Close button
- * - ReviewProgressStepper: Visual workflow progress
- * - Tabs: Parsing | Proofreading | Publish
+ * - ReviewProgressStepper: Visual workflow progress + clickable navigation
+ * - Content: Direct panel rendering based on current step
  * - Footer: Navigation buttons (Previous, Save Draft, Next/Publish)
+ *
+ * UX Improvement (2025-12-06):
+ * - Removed duplicate navigation (Tabs were redundant with Stepper)
+ * - Users can click Stepper circles OR use bottom buttons to navigate
+ * - Cleaner visual hierarchy, more content space
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { Modal, ModalFooter } from '../ui/Modal';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/Tabs';
 import { Button } from '../ui';
 import { ReviewProgressStepper } from './ReviewProgressStepper';
 import { ParsingReviewPanel, ParsingData } from './ParsingReviewPanel';
@@ -40,21 +44,37 @@ export interface ArticleReviewModalProps {
 }
 
 /**
- * Map worklist status to appropriate review tab
+ * Map worklist status to appropriate step index (0-2)
  */
-const getTabFromStatus = (status: WorklistStatus): 'parsing' | 'proofreading' | 'publish' => {
+const getStepFromStatus = (status: WorklistStatus): number => {
   switch (status) {
     case 'parsing':
     case 'parsing_review':
-      return 'parsing';
+      return 0; // Step 0: 解析审核
     case 'proofreading':
     case 'proofreading_review':
-      return 'proofreading';
+      return 1; // Step 1: 校对审核
     case 'ready_to_publish':
     case 'publishing':
-      return 'publish';
+      return 2; // Step 2: 发布预览
     default:
-      return 'parsing';
+      return 0;
+  }
+};
+
+/**
+ * Map initial tab prop to step index
+ */
+const getStepFromTab = (tab: 'parsing' | 'proofreading' | 'publish'): number => {
+  switch (tab) {
+    case 'parsing':
+      return 0;
+    case 'proofreading':
+      return 1;
+    case 'publish':
+      return 2;
+    default:
+      return 0;
   }
 };
 
@@ -76,20 +96,41 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   );
 
   // Workflow state machine (cast string to WorklistStatus if needed)
-  const { currentStep, canGoPrevious, canGoNext, goToPrevious, goToNext, saveProgress } =
+  const { canGoPrevious, canGoNext, saveProgress } =
     useReviewWorkflow(data?.status as WorklistStatus | undefined);
 
-  // Determine active tab
-  const [activeTab, setActiveTab] = useState<'parsing' | 'proofreading' | 'publish'>(
-    initialTab || (data?.status ? getTabFromStatus(data.status as WorklistStatus) : 'parsing')
+  // Determine active step (0-2) - replaces activeTab
+  const [activeStep, setActiveStep] = useState<number>(
+    initialTab
+      ? getStepFromTab(initialTab)
+      : data?.status
+        ? getStepFromStatus(data.status as WorklistStatus)
+        : 0
   );
 
-  // Update active tab when status changes
+  // Update active step when status changes
   useEffect(() => {
     if (data?.status && !initialTab) {
-      setActiveTab(getTabFromStatus(data.status as WorklistStatus));
+      setActiveStep(getStepFromStatus(data.status as WorklistStatus));
     }
   }, [data?.status, initialTab]);
+
+  // Navigation handlers for stepper and buttons
+  const goToPreviousStep = useCallback(() => {
+    if (activeStep > 0) {
+      setActiveStep(activeStep - 1);
+    }
+  }, [activeStep]);
+
+  const goToNextStep = useCallback(() => {
+    if (activeStep < 2) {
+      setActiveStep(activeStep + 1);
+    }
+  }, [activeStep]);
+
+  const handleStepClick = useCallback((stepId: number) => {
+    setActiveStep(stepId);
+  }, []);
 
   // Track save state
   const [isSaving, setIsSaving] = useState(false);
@@ -187,14 +228,9 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
     enabled: isOpen,
     onSave: handleSaveDraft,
     onClose: handleClose,
-    onNext: canGoNext ? goToNext : undefined,
-    onPrevious: canGoPrevious ? goToPrevious : undefined,
+    onNext: activeStep < 2 ? goToNextStep : undefined,
+    onPrevious: activeStep > 0 ? goToPreviousStep : undefined,
   });
-
-  // Handle tab change
-  const handleTabChange = (value: string) => {
-    setActiveTab(value as 'parsing' | 'proofreading' | 'publish');
-  };
 
   // Loading state
   if (isLoading) {
@@ -293,59 +329,44 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         </button>
       </div>
 
-      {/* Progress Stepper */}
+      {/* Progress Stepper - Now clickable for navigation */}
       <div className="px-6 py-4 bg-gray-50 border-b">
-        <ReviewProgressStepper currentStep={currentStep} />
+        <ReviewProgressStepper
+          currentStep={activeStep}
+          onStepClick={handleStepClick}
+        />
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-        <Tabs defaultValue="parsing" value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0">
-          {/* Tab Headers */}
-          <div className="px-6 pt-4 border-b bg-white flex-shrink-0">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="parsing" className="flex-1 max-w-xs">
-                解析审核
-              </TabsTrigger>
-              <TabsTrigger value="proofreading" className="flex-1 max-w-xs">
-                校对审核
-              </TabsTrigger>
-              <TabsTrigger value="publish" className="flex-1 max-w-xs">
-                发布预览
-              </TabsTrigger>
-            </TabsList>
-          </div>
+      {/* Step Content - Direct rendering based on activeStep (no redundant Tabs) */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+        <div className="p-6">
+          {/* Step 0: 解析审核 (Parsing Review) */}
+          {activeStep === 0 && (
+            <ParsingReviewPanel
+              data={data}
+              onSave={handleSaveParsingData}
+              isSaving={isSaving}
+            />
+          )}
 
-          {/* Tab Content - Scrollable container */}
-          <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
-            <TabsContent value="parsing" className="p-6 mt-0">
-              {/* Phase 8.2: ParsingReviewPanel */}
-              <ParsingReviewPanel
-                data={data}
-                onSave={handleSaveParsingData}
-                isSaving={isSaving}
-              />
-            </TabsContent>
+          {/* Step 1: 校对审核 (Proofreading Review) */}
+          {activeStep === 1 && (
+            <ProofreadingReviewPanel
+              data={data}
+              onSubmitDecisions={handleSubmitProofreadingDecisions}
+              isSubmitting={isSubmitting}
+            />
+          )}
 
-            <TabsContent value="proofreading" className="p-6 mt-0">
-              {/* Phase 8.3: ProofreadingReviewPanel */}
-              <ProofreadingReviewPanel
-                data={data}
-                onSubmitDecisions={handleSubmitProofreadingDecisions}
-                isSubmitting={isSubmitting}
-              />
-            </TabsContent>
-
-            <TabsContent value="publish" className="p-6 mt-0">
-              {/* Phase 8.4: PublishPreviewPanel */}
-              <PublishPreviewPanel
-                data={data}
-                onPublish={handlePublish}
-                isPublishing={isPublishing}
-              />
-            </TabsContent>
-          </div>
-        </Tabs>
+          {/* Step 2: 发布预览 (Publish Preview) */}
+          {activeStep === 2 && (
+            <PublishPreviewPanel
+              data={data}
+              onPublish={handlePublish}
+              isPublishing={isPublishing}
+            />
+          )}
+        </div>
       </div>
 
       {/* Footer */}
@@ -353,8 +374,8 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         <div className="flex items-center justify-between w-full">
           <Button
             variant="outline"
-            onClick={goToPrevious}
-            disabled={!canGoPrevious}
+            onClick={goToPreviousStep}
+            disabled={activeStep === 0}
           >
             上一步
           </Button>
@@ -368,11 +389,11 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
             </Button>
 
             <Button
-              onClick={goToNext}
-              disabled={!canGoNext}
+              onClick={goToNextStep}
+              disabled={activeStep === 2}
               className="min-w-32"
             >
-              {currentStep === 2 ? '发布' : '下一步'}
+              {activeStep === 2 ? '发布' : '下一步'}
             </Button>
           </div>
         </div>

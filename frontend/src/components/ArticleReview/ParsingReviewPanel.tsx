@@ -1,21 +1,27 @@
 /**
  * ParsingReviewPanel - Parsing review interface for article metadata
  *
- * Phase 8.2: Parsing Review Panel
- * - 60% + 40% grid layout
- * - Left: Title, Author, Images
- * - Right: SEO, FAQ
- * - All parsing data in one view (no page jumps)
+ * Phase 11: Three-column Layout Redesign (2025-12-06)
+ * - Balanced 33% + 34% + 33% grid layout
+ * - Left: Content basics (Title, SEO Title, Author)
+ * - Center: SEO Optimization (Meta Description, Keywords, SEO Score)
+ * - Right: Categories & Tags (Primary Category with AI, Secondary, Tags, Excerpt)
+ * - Bottom: Image Review + FAQ (spans full width)
  *
  * Layout:
- * ┌────────────────────────────────┬──────────────────┐
- * │ Title Review (60%)             │ SEO Review (40%) │
- * │ Author Review                  │ FAQ Review       │
- * │ Image Review                   │                  │
- * └────────────────────────────────┴──────────────────┘
+ * ┌─────────────────────┬─────────────────────┬─────────────────────┐
+ * │    左栏 (33%)       │     中栏 (34%)      │    右栏 (33%)       │
+ * ├─────────────────────┼─────────────────────┼─────────────────────┤
+ * │ 1. 标题审核         │ 4. 元描述比较       │ 7. 主分类 (AI推荐)  │
+ * │ 2. SEO Title 选择   │ 5. SEO 关键词       │ 8. 副分类选择       │
+ * │ 3. 作者审核         │ 6. SEO 评分概览     │ 9. 内部标签 (Tags)  │
+ * │                     │                     │ 10. 文章摘要        │
+ * ├─────────────────────┼─────────────────────┴─────────────────────┤
+ * │ 图片审核            │           FAQ 建议 (跨两栏)               │
+ * └─────────────────────┴───────────────────────────────────────────┘
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
 import { TitleReviewSection } from './TitleReviewSection';
@@ -24,7 +30,11 @@ import { AuthorReviewSection } from './AuthorReviewSection';
 import { ImageReviewSection } from './ImageReviewSection';
 import { ContentComparisonCard, ContentSource } from './ContentComparisonCard';
 import { KeywordsComparisonCard, KeywordSource } from './KeywordsComparisonCard';
+import { TagsComparisonCard, TagSource } from './TagsComparisonCard';
 import { FAQReviewSection, type AIFAQSuggestion } from './FAQReviewSection';
+import { CategorySelectionCard, type AICategoryRecommendation } from './CategorySelectionCard';
+import { ExcerptReviewSection } from './ExcerptReviewSection';
+import type { SuggestedTag } from '../../types/api';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import type { SEOTitleSuggestionsData, SelectSEOTitleResponse } from '../../types/api';
 import { api } from '../../services/api-client';
@@ -93,10 +103,50 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           data.articleReview.seo.original_keywords.length > 0
           ? data.articleReview.seo.original_keywords
           : data.seo_keywords) || [],
+      // Tags: WordPress internal navigation labels
+      tags:
+        (data.articleReview?.tags?.original_tags &&
+          data.articleReview.tags.original_tags.length > 0
+          ? data.articleReview.tags.original_tags
+          : (data as any).tags) || [],
       faqSuggestions:
         (metadata?.faq_suggestions as Array<{ question: string; answer: string }>) || [],
     };
   }, [data]);
+
+  // BUGFIX: Use useRef to capture the FIRST NON-EMPTY extracted values
+  // This prevents the "switch content corruption" bug
+  // Key insight: We only lock in the values when meta_description has actual content
+  const originalExtractedRef = useRef<{
+    metaDescription: string;
+    seoKeywords: string[];
+    tags: string[];
+    isLocked: boolean;
+  }>({
+    metaDescription: '',
+    seoKeywords: [],
+    tags: [],
+    isLocked: false,
+  });
+
+  // Lock in values when we have real data (non-empty meta_description)
+  // Once locked, these values NEVER change
+  if (!originalExtractedRef.current.isLocked && data.meta_description) {
+    originalExtractedRef.current = {
+      metaDescription: data.meta_description,
+      seoKeywords: data.seo_keywords || [],
+      tags: (data as any).tags || [],
+      isLocked: true, // Mark as locked - will never update again
+    };
+    console.log('[ParsingReviewPanel] LOCKED originalExtracted:', {
+      metaDescription: data.meta_description.slice(0, 50),
+      seoKeywordsCount: originalExtractedRef.current.seoKeywords.length,
+      tagsCount: originalExtractedRef.current.tags.length,
+    });
+  }
+
+  // Provide access to the locked values (or empty defaults if not yet locked)
+  const originalExtracted = originalExtractedRef.current;
 
   const [title, setTitle] = useState(initialParsingState.title);
   const [author, setAuthor] = useState(initialParsingState.author);
@@ -104,6 +154,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   const [additionalImages, setAdditionalImages] = useState<string[]>(initialParsingState.additionalImages);
   const [metaDescription, setMetaDescription] = useState(initialParsingState.metaDescription);
   const [seoKeywords, setSeoKeywords] = useState<string[]>(initialParsingState.seoKeywords);
+  const [tags, setTags] = useState<string[]>(initialParsingState.tags);
   const [faqSuggestions, setFaqSuggestions] = useState<Array<{ question: string; answer: string }>>(
     initialParsingState.faqSuggestions
   );
@@ -111,6 +162,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   // Phase 8.3: Content comparison source tracking
   const [metaDescriptionSource, setMetaDescriptionSource] = useState<ContentSource>('extracted');
   const [keywordsSource, setKeywordsSource] = useState<KeywordSource>('extracted');
+  const [tagsSource, setTagsSource] = useState<TagSource>('extracted');
 
   // Phase 9: SEO Title state
   const [seoTitleSuggestions, setSeoTitleSuggestions] = useState<SEOTitleSuggestionsData | null>(null);
@@ -122,6 +174,21 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   const [aiFaqSuggestions, setAiFaqSuggestions] = useState<AIFAQSuggestion[]>([]);
   const [isGeneratingFaqs, setIsGeneratingFaqs] = useState(false);
   const [faqError, setFaqError] = useState<string | null>(null);
+
+  // Phase 11: Category state (moved from PublishPreviewPanel)
+  const [primaryCategory, setPrimaryCategory] = useState<string | null>(
+    (data as any).primary_category || null
+  );
+  const [secondaryCategories, setSecondaryCategories] = useState<string[]>(
+    (data as any).secondary_categories || []
+  );
+  const [aiCategoryRecommendation, setAiCategoryRecommendation] = useState<AICategoryRecommendation | null>(null);
+  const [isLoadingCategoryRecommendation, setIsLoadingCategoryRecommendation] = useState(false);
+
+  // Phase 11: Excerpt state (moved from PublishPreviewPanel)
+  const [excerpt, setExcerpt] = useState<string>(
+    (data.metadata?.excerpt as string) || ''
+  );
 
   // Track if data has been modified
   const [isDirty, setIsDirty] = useState(false);
@@ -135,6 +202,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
       setAdditionalImages(initialParsingState.additionalImages);
       setMetaDescription(initialParsingState.metaDescription);
       setSeoKeywords(initialParsingState.seoKeywords);
+      setTags(initialParsingState.tags);
       setFaqSuggestions(initialParsingState.faqSuggestions);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,6 +252,36 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
         } catch (err) {
           console.error('Error fetching article data:', err);
         }
+
+        // Phase 11: Fetch AI category recommendation
+        if (!primaryCategory) {
+          setIsLoadingCategoryRecommendation(true);
+          try {
+            const categoryData = await api.post<{
+              primary_category: string;
+              confidence: number;
+              reasoning: string;
+              alternative_categories?: Array<{ category: string; confidence: number; reason: string }>;
+              content_analysis?: string;
+              cached?: boolean;
+            }>(`/v1/articles/${data.article_id}/recommend-category`, {});
+
+            setAiCategoryRecommendation({
+              category: categoryData.primary_category,
+              confidence: categoryData.confidence,
+              reasoning: categoryData.reasoning,
+            });
+
+            console.log('AI Category recommendation:', categoryData);
+          } catch (err: unknown) {
+            const axiosErr = err as { response?: { status?: number } };
+            if (axiosErr.response?.status !== 404) {
+              console.error('Error fetching category recommendation:', err);
+            }
+          } finally {
+            setIsLoadingCategoryRecommendation(false);
+          }
+        }
       } catch (error) {
         console.error('Error fetching optimization data:', error);
       } finally {
@@ -192,7 +290,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     };
 
     fetchOptimizations();
-  }, [data.article_id]);
+  }, [data.article_id, primaryCategory]);
 
   const handleSave = async () => {
     const parsingData: ParsingData = {
@@ -305,15 +403,15 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
         </div>
       )}
 
-      {/* Main content: 60% + 40% grid */}
+      {/* Main content: 3-column grid (33% + 34% + 33%) */}
       <div
-        className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 overflow-auto"
+        className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-auto"
         data-testid="parsing-review-grid"
       >
-        {/* Left column: 60% (3 out of 5 cols) */}
-        <div className="lg:col-span-3 space-y-6">
+        {/* Left column: 33% (4 out of 12 cols) - Title, SEO Title, Author */}
+        <div className="lg:col-span-4 space-y-4">
           {/* Title Review */}
-          <Card className="p-6" data-testid="parsing-title-card">
+          <Card className="p-4" data-testid="parsing-title-card">
             <TitleReviewSection
               title={title}
               originalTitle={data.title || ''}
@@ -325,7 +423,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             />
           </Card>
 
-          {/* Phase 9: SEO Title Selection - Side-by-side comparison layout */}
+          {/* Phase 9: SEO Title Selection */}
           {data.article_id && (
             <SEOTitleSelectionCard
               articleId={data.article_id}
@@ -340,7 +438,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           )}
 
           {/* Author Review */}
-          <Card className="p-6" data-testid="parsing-author-card">
+          <Card className="p-4" data-testid="parsing-author-card">
             <AuthorReviewSection
               author={author}
               originalAuthor={data.author || ''}
@@ -352,7 +450,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           </Card>
 
           {/* Image Review */}
-          <Card className="p-6" data-testid="parsing-image-card">
+          <Card className="p-4" data-testid="parsing-image-card">
             <ImageReviewSection
               featuredImage={featuredImage}
               additionalImages={additionalImages}
@@ -369,12 +467,12 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           </Card>
         </div>
 
-        {/* Right column: 40% (2 out of 5 cols) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Phase 8.3: Meta Description Comparison Card */}
+        {/* Center column: 34% (4 out of 12 cols) - SEO Optimization */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Meta Description Comparison */}
           <ContentComparisonCard
             title="元描述 (Meta Description)"
-            extractedContent={metaDescription}
+            extractedContent={originalExtracted.metaDescription}
             aiSuggestedContent={data.articleReview?.meta?.suggested || ''}
             selectedSource={metaDescriptionSource}
             customContent={metaDescriptionSource === 'custom' ? metaDescription : undefined}
@@ -392,9 +490,9 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             testId="meta-description-comparison"
           />
 
-          {/* Phase 8.3: Keywords Comparison Card */}
+          {/* Keywords Comparison */}
           <KeywordsComparisonCard
-            extractedKeywords={seoKeywords}
+            extractedKeywords={originalExtracted.seoKeywords}
             aiSuggestedKeywords={data.articleReview?.seo?.suggested_keywords || undefined}
             selectedSource={keywordsSource}
             activeKeywords={seoKeywords}
@@ -408,39 +506,97 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             testId="keywords-comparison"
           />
 
-          {/* SEO Score Summary - Simplified */}
-          <Card className="p-4 bg-gradient-to-br from-slate-50 to-blue-50 border-slate-200" data-testid="seo-score-summary">
-            <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+          {/* SEO Score Summary */}
+          <Card className="p-3 bg-gradient-to-br from-slate-50 to-blue-50 border-slate-200" data-testid="seo-score-summary">
+            <h4 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               SEO 评分概览
             </h4>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-2 bg-white rounded border">
-                <div className={`text-lg font-bold ${metaDescription.length >= 120 && metaDescription.length <= 160 ? 'text-green-600' : 'text-amber-600'}`}>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="text-center p-1.5 bg-white rounded border">
+                <div className={`text-base font-bold ${metaDescription.length >= 120 && metaDescription.length <= 160 ? 'text-green-600' : 'text-amber-600'}`}>
                   {metaDescription.length >= 120 && metaDescription.length <= 160 ? '✓' : '⚠'}
                 </div>
-                <div className="text-xs text-slate-600">元描述</div>
-                <div className="text-xs text-slate-400">{metaDescription.length}/120-160</div>
+                <div className="text-[10px] text-slate-600">元描述</div>
               </div>
-              <div className="text-center p-2 bg-white rounded border">
-                <div className={`text-lg font-bold ${seoKeywords.length >= 5 && seoKeywords.length <= 10 ? 'text-green-600' : 'text-amber-600'}`}>
+              <div className="text-center p-1.5 bg-white rounded border">
+                <div className={`text-base font-bold ${seoKeywords.length >= 5 && seoKeywords.length <= 10 ? 'text-green-600' : 'text-amber-600'}`}>
                   {seoKeywords.length >= 5 && seoKeywords.length <= 10 ? '✓' : '⚠'}
                 </div>
-                <div className="text-xs text-slate-600">关键词</div>
-                <div className="text-xs text-slate-400">{seoKeywords.length}/5-10个</div>
+                <div className="text-[10px] text-slate-600">关键词</div>
               </div>
-              <div className="text-center p-2 bg-white rounded border">
-                <div className="text-lg font-bold text-blue-600">
-                  {Math.round(((metaDescription.length >= 120 ? 50 : metaDescription.length / 2.4) + (seoKeywords.length >= 5 ? 50 : seoKeywords.length * 10)))}
+              <div className="text-center p-1.5 bg-white rounded border">
+                <div className={`text-base font-bold ${tags.length >= 3 && tags.length <= 6 ? 'text-green-600' : 'text-amber-600'}`}>
+                  {tags.length >= 3 && tags.length <= 6 ? '✓' : '⚠'}
                 </div>
-                <div className="text-xs text-slate-600">总分</div>
-                <div className="text-xs text-slate-400">/100</div>
+                <div className="text-[10px] text-slate-600">标签</div>
+              </div>
+              <div className="text-center p-1.5 bg-white rounded border">
+                <div className="text-base font-bold text-blue-600">
+                  {Math.round(
+                    ((metaDescription.length >= 120 ? 33 : metaDescription.length / 3.6) +
+                    (seoKeywords.length >= 5 ? 33 : seoKeywords.length * 6.6) +
+                    (tags.length >= 3 ? 34 : tags.length * 11.3))
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-600">总分</div>
               </div>
             </div>
           </Card>
+        </div>
 
+        {/* Right column: 33% (4 out of 12 cols) - Categories & Tags */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Category Selection with AI Recommendation */}
+          <CategorySelectionCard
+            aiRecommendation={aiCategoryRecommendation || undefined}
+            primaryCategory={primaryCategory}
+            secondaryCategories={secondaryCategories}
+            onPrimaryCategoryChange={(cat) => {
+              setPrimaryCategory(cat);
+              markDirty();
+            }}
+            onSecondaryCategoriesChange={(cats) => {
+              setSecondaryCategories(cats);
+              markDirty();
+            }}
+            isLoading={isLoadingCategoryRecommendation}
+            testId="category-selection"
+          />
+
+          {/* Tags Comparison */}
+          <TagsComparisonCard
+            extractedTags={originalExtracted.tags}
+            aiSuggestedTags={data.articleReview?.tags?.suggested_tags || undefined}
+            selectedSource={tagsSource}
+            activeTags={tags}
+            onTagsChange={(source, newTags) => {
+              setTagsSource(source);
+              setTags(newTags);
+              markDirty();
+            }}
+            optimalCount={[3, 6]}
+            aiStrategy={data.articleReview?.tags?.tag_strategy || undefined}
+            testId="tags-comparison"
+          />
+
+          {/* Excerpt Review */}
+          <ExcerptReviewSection
+            excerpt={excerpt}
+            articleBody={data.articleReview?.content?.original || ''}
+            onExcerptChange={(newExcerpt) => {
+              setExcerpt(newExcerpt);
+              markDirty();
+            }}
+            optimalLength={[100, 200]}
+            testId="excerpt-review"
+          />
+        </div>
+
+        {/* Bottom row: FAQ (full width) */}
+        <div className="lg:col-span-12 space-y-4">
           {/* AI FAQ Proposals (if available from article review) */}
           {data.articleReview?.faq_proposals && data.articleReview.faq_proposals.length > 0 && (
             <Card className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
@@ -450,7 +606,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
                 </svg>
                 AI 建议：FAQ Schema ({data.articleReview.faq_proposals.length} 个提案)
               </h4>
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {data.articleReview.faq_proposals.map((proposal, idx) => (
                   <div key={idx} className="p-3 bg-white rounded border border-purple-200">
                     <div className="flex items-center justify-between mb-2">
@@ -477,8 +633,8 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             </Card>
           )}
 
-          {/* FAQ Review - Phase 9.2: AI-powered FAQ generation */}
-          <Card className="p-6" data-testid="parsing-faq-card">
+          {/* FAQ Review - AI-powered FAQ generation */}
+          <Card className="p-4" data-testid="parsing-faq-card">
             <FAQReviewSection
               articleId={data.article_id}
               faqs={faqSuggestions}

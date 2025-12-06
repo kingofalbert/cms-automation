@@ -20,6 +20,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.database import get_session as get_db
 from src.api.schemas.optimization import (
+    ApplyCategoryRequest,
+    CategoryRecommendationRequest,
+    CategoryRecommendationResponse,
     GenerateOptimizationsRequest,
     OptimizationError,
     OptimizationStatusResponse,
@@ -540,3 +543,305 @@ async def select_seo_title(
         previous_seo_title=previous_seo_title,
         updated_at=article.updated_at,
     )
+
+
+# ============================================================================
+# Category Recommendation (Phase 11)
+# ============================================================================
+
+# WordPress category mapping (Chinese name -> slug)
+WORDPRESS_CATEGORIES = {
+    "食療養生": "food-therapy",
+    "中醫寶典": "tcm",
+    "心靈正念": "mindfulness",
+    "醫師專欄": "doctor-column",
+    "健康新聞": "health-news",
+    "健康生活": "healthy-living",
+    "醫療科技": "medical-tech",
+    "精選內容": "featured",
+    "診室外的醫話": "doctor-stories",
+    "每日呵護": "daily-care",
+}
+
+# Category descriptions for AI context
+CATEGORY_DESCRIPTIONS = {
+    "食療養生": "食物療法、營養補充、養生食譜、飲食調理",
+    "中醫寶典": "傳統中醫知識、穴位按摩、中藥材介紹、經絡理論",
+    "心靈正念": "心理健康、冥想打坐、情緒管理、壓力調適",
+    "醫師專欄": "醫生撰寫的專業文章、臨床經驗分享、醫療見解",
+    "健康新聞": "最新醫療研究、健康趨勢、疾病報導、公共衛生新聞",
+    "健康生活": "日常保健、運動健身、睡眠品質、生活習慣改善",
+    "醫療科技": "醫療創新、新藥研發、醫療設備、數位醫療",
+    "精選內容": "編輯推薦的優質文章、熱門話題、深度報導",
+    "診室外的醫話": "醫生的人文關懷、醫患故事、行醫感悟",
+    "每日呵護": "日常小貼士、簡單養生方法、即時可用的健康建議",
+}
+
+
+@router.post(
+    "/articles/{article_id}/recommend-category",
+    response_model=CategoryRecommendationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get AI category recommendation",
+    description="""Analyze article content and recommend the best WordPress category.
+
+    Returns:
+    - Recommended primary category (Chinese name)
+    - AI confidence score (0-1)
+    - Reasoning for the recommendation
+    - Alternative categories with their scores
+    """,
+)
+async def recommend_category(
+    article_id: int,
+    request: CategoryRecommendationRequest = CategoryRecommendationRequest(),
+    db: AsyncSession = Depends(get_db),
+    anthropic_client: AsyncAnthropic = Depends(get_anthropic_client),
+) -> CategoryRecommendationResponse:
+    """Get AI-powered category recommendation for an article.
+
+    Args:
+        article_id: ID of article to analyze
+        request: Request options (force_regenerate)
+        db: Database session
+        anthropic_client: Anthropic API client
+
+    Returns:
+        Category recommendation with confidence and reasoning
+
+    Raises:
+        404: Article not found
+        400: Article has no content to analyze
+        500: AI API error
+    """
+    import json
+    from datetime import datetime
+
+    logger.info(f"POST /articles/{article_id}/recommend-category")
+
+    # Get article
+    article = await _get_article_or_404(article_id, db)
+
+    # Check if we have cached recommendation (stored in article_metadata)
+    cached_recommendation = article.article_metadata.get("category_recommendation")
+    if cached_recommendation and not request.force_regenerate:
+        logger.info(f"Returning cached category recommendation for article {article_id}")
+        return CategoryRecommendationResponse(
+            article_id=article_id,
+            primary_category=cached_recommendation["primary_category"],
+            confidence=cached_recommendation["confidence"],
+            reasoning=cached_recommendation["reasoning"],
+            alternative_categories=cached_recommendation.get("alternative_categories"),
+            content_analysis=cached_recommendation.get("content_analysis"),
+            cached=True,
+        )
+
+    # Validate article has content
+    content = article.body_html or article.body
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Article has no content to analyze. Please ensure article has body content.",
+        )
+
+    # Prepare content for analysis (truncate if too long)
+    title = article.title_main or article.title
+    content_preview = content[:3000] if len(content) > 3000 else content
+    keywords = article.seo_keywords or []
+    tags = article.tags or []
+
+    # Build category options string
+    category_options = "\n".join(
+        [f"- {name}: {desc}" for name, desc in CATEGORY_DESCRIPTIONS.items()]
+    )
+
+    # Call Claude API for category recommendation
+    prompt = f"""你是一位專業的健康醫療內容編輯，需要為以下文章選擇最適合的 WordPress 主分類。
+
+## 文章信息
+**標題**: {title}
+**關鍵詞**: {', '.join(keywords) if keywords else '無'}
+**標籤**: {', '.join(tags) if tags else '無'}
+
+**內容摘要**:
+{content_preview}
+
+## 可選分類
+{category_options}
+
+## 任務
+請分析文章內容，選擇最匹配的主分類。
+
+## 輸出格式（JSON）
+```json
+{{
+  "primary_category": "分類名稱（中文）",
+  "confidence": 0.95,
+  "reasoning": "選擇這個分類的原因（50-100字）",
+  "content_analysis": "文章內容簡析（30-50字）",
+  "alternative_categories": [
+    {{"category": "備選分類1", "confidence": 0.7, "reason": "原因"}},
+    {{"category": "備選分類2", "confidence": 0.5, "reason": "原因"}}
+  ]
+}}
+```
+
+請直接返回 JSON，不要包含其他文字。"""
+
+    try:
+        response = await anthropic_client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        # Parse response
+        response_text = response.content[0].text.strip()
+
+        # Extract JSON from response (handle markdown code blocks)
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+
+        result = json.loads(response_text)
+
+        # Validate primary_category is in our list
+        primary_cat = result.get("primary_category", "")
+        if primary_cat not in WORDPRESS_CATEGORIES:
+            # Try to find closest match
+            logger.warning(f"AI returned invalid category '{primary_cat}', defaulting to '健康新聞'")
+            primary_cat = "健康新聞"
+            result["primary_category"] = primary_cat
+            result["confidence"] = max(0.5, result.get("confidence", 0.5) - 0.2)
+
+        # Cache the recommendation in article metadata
+        category_recommendation = {
+            "primary_category": result["primary_category"],
+            "confidence": result.get("confidence", 0.8),
+            "reasoning": result.get("reasoning", "AI 分析推薦"),
+            "content_analysis": result.get("content_analysis"),
+            "alternative_categories": result.get("alternative_categories"),
+            "generated_at": datetime.utcnow().isoformat(),
+        }
+
+        # Update article metadata with recommendation
+        updated_metadata = dict(article.article_metadata)
+        updated_metadata["category_recommendation"] = category_recommendation
+        article.article_metadata = updated_metadata
+        article.updated_at = datetime.utcnow()
+        await db.commit()
+
+        logger.info(
+            f"Generated category recommendation for article {article_id}: "
+            f"{result['primary_category']} (confidence: {result.get('confidence', 0.8):.2f})"
+        )
+
+        return CategoryRecommendationResponse(
+            article_id=article_id,
+            primary_category=result["primary_category"],
+            confidence=result.get("confidence", 0.8),
+            reasoning=result.get("reasoning", "AI 分析推薦"),
+            alternative_categories=result.get("alternative_categories"),
+            content_analysis=result.get("content_analysis"),
+            cached=False,
+        )
+
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse AI response for article {article_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to parse AI category recommendation: {str(e)}",
+        )
+
+    except Exception as e:
+        logger.exception(f"Error generating category recommendation for article {article_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate category recommendation: {str(e)}",
+        )
+
+
+@router.post(
+    "/articles/{article_id}/apply-category",
+    status_code=status.HTTP_200_OK,
+    summary="Apply category selection to article",
+    description="Apply primary and secondary categories to an article.",
+)
+async def apply_category(
+    article_id: int,
+    request: ApplyCategoryRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Apply category selection to an article.
+
+    Args:
+        article_id: ID of article
+        request: Category selection request
+        db: Database session
+
+    Returns:
+        Success response with applied categories
+
+    Raises:
+        404: Article not found
+        400: Invalid category
+    """
+    from datetime import datetime
+
+    logger.info(f"POST /articles/{article_id}/apply-category")
+
+    # Get article
+    article = await _get_article_or_404(article_id, db)
+
+    # Validate primary category
+    if request.primary_category not in WORDPRESS_CATEGORIES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid primary category: {request.primary_category}. "
+            f"Valid categories: {', '.join(WORDPRESS_CATEGORIES.keys())}",
+        )
+
+    # Validate secondary categories
+    if request.secondary_categories:
+        if len(request.secondary_categories) > 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Maximum 3 secondary categories allowed.",
+            )
+        for cat in request.secondary_categories:
+            if cat not in WORDPRESS_CATEGORIES:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid secondary category: {cat}",
+                )
+            if cat == request.primary_category:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Secondary category cannot be the same as primary category.",
+                )
+
+    # Apply categories
+    previous_primary = article.primary_category
+    previous_secondary = article.secondary_categories
+
+    article.primary_category = request.primary_category
+    article.secondary_categories = request.secondary_categories or []
+    article.updated_at = datetime.utcnow()
+
+    await db.commit()
+
+    logger.info(
+        f"Applied categories for article {article_id}: "
+        f"primary={request.primary_category}, secondary={request.secondary_categories}"
+    )
+
+    return {
+        "article_id": article_id,
+        "primary_category": article.primary_category,
+        "secondary_categories": article.secondary_categories,
+        "previous_primary_category": previous_primary,
+        "previous_secondary_categories": previous_secondary,
+        "source": request.source,
+        "updated_at": article.updated_at.isoformat(),
+    }

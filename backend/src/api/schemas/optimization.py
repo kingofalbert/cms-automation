@@ -291,3 +291,46 @@ class SelectSEOTitleResponse(BaseSchema):
     )
     previous_seo_title: str | None = Field(None, description="Previous SEO Title (if any)")
     updated_at: datetime = Field(..., description="When the update occurred")
+
+
+# ============================================================================
+# Category Recommendation Schemas (Phase 11)
+# ============================================================================
+
+
+class CategoryRecommendationRequest(BaseSchema):
+    """Request for AI category recommendation."""
+
+    force_regenerate: bool = Field(
+        False, description="Force regeneration even if recommendation already exists"
+    )
+
+
+class CategoryRecommendationResponse(BaseSchema):
+    """AI-powered category recommendation response."""
+
+    article_id: int = Field(..., description="Article ID")
+    primary_category: str = Field(..., description="Recommended primary category (Chinese name)")
+    confidence: float = Field(..., ge=0, le=1, description="AI confidence score (0-1)")
+    reasoning: str = Field(..., description="AI reasoning for the recommendation")
+    alternative_categories: list[dict] | None = Field(
+        None,
+        description="Alternative categories with confidence scores",
+    )
+    content_analysis: str | None = Field(
+        None, description="Brief analysis of the article content"
+    )
+    cached: bool = Field(False, description="Whether result was loaded from cache")
+
+
+class ApplyCategoryRequest(BaseSchema):
+    """Request to apply category recommendation to article."""
+
+    primary_category: str = Field(..., description="Primary category to apply (Chinese name)")
+    secondary_categories: list[str] | None = Field(
+        None, max_length=3, description="Secondary categories (max 3)"
+    )
+    source: str = Field(
+        "ai_recommended",
+        description="Source: ai_recommended, user_selected",
+    )

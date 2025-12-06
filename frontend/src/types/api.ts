@@ -670,6 +670,27 @@ export interface SEOComparison {
   score: number | null;
 }
 
+/**
+ * Tags comparison for parsing review
+ * Tags are WordPress internal navigation labels (different from SEO keywords)
+ */
+export interface TagsComparison {
+  /** Tags extracted from original document */
+  original_tags: string[];
+  /** AI suggested tags with metadata */
+  suggested_tags: SuggestedTag[] | null;
+  /** AI strategy explanation for tag recommendations */
+  tag_strategy: string | null;
+}
+
+export interface SuggestedTag {
+  tag: string;
+  relevance: number; // 0-1
+  type: 'primary' | 'secondary' | 'trending';
+  existing?: boolean; // Whether tag already exists in system
+  article_count?: number; // Number of articles using this tag
+}
+
 export interface FAQQuestion {
   question: string;
   answer: string;
@@ -712,6 +733,9 @@ export interface ArticleReviewResponse {
 
   // SEO comparison
   seo: SEOComparison;
+
+  // Tags comparison (WordPress internal navigation)
+  tags?: TagsComparison;
 
   // FAQ proposals
   faq_proposals: FAQProposal[];

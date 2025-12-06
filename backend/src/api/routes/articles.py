@@ -21,6 +21,8 @@ from src.api.schemas.article import (
     ContentComparison,
     MetaComparison,
     SEOComparison,
+    TagsComparison,
+    SuggestedTag,
     FAQProposal,
     ParagraphSuggestion,
     ProofreadingDecisionDetail,
@@ -30,6 +32,7 @@ from src.config.logging import get_logger
 from src.models import Article
 from src.models.article_image import ArticleImage
 from src.models.proofreading import ProofreadingDecision
+from src.models.seo_suggestions import SEOSuggestion
 from src.services.proofreading import (
     ArticlePayload,
     ArticleSection,
@@ -630,6 +633,41 @@ async def get_article_review_data(
         for d in decisions
     ]
 
+    # Fetch SEO suggestions for tags data
+    seo_suggestion_result = await session.execute(
+        select(SEOSuggestion)
+        .where(SEOSuggestion.article_id == article_id)
+        .order_by(SEOSuggestion.generated_at.desc())
+        .limit(1)
+    )
+    seo_suggestion = seo_suggestion_result.scalar_one_or_none()
+
+    # Build tags comparison
+    tags_comparison = None
+    if article.tags or seo_suggestion:
+        suggested_tags = None
+        if seo_suggestion and seo_suggestion.suggested_tags:
+            # Convert raw suggested_tags dict to SuggestedTag objects
+            raw_tags = seo_suggestion.suggested_tags
+            if isinstance(raw_tags, list):
+                suggested_tags = [
+                    SuggestedTag(
+                        tag=t.get("tag", ""),
+                        relevance=t.get("relevance", 0.5),
+                        type=t.get("type", "secondary"),
+                        existing=t.get("existing"),
+                        article_count=t.get("article_count"),
+                    )
+                    for t in raw_tags
+                    if isinstance(t, dict)
+                ]
+
+        tags_comparison = TagsComparison(
+            original_tags=article.tags or [],
+            suggested_tags=suggested_tags,
+            tag_strategy=seo_suggestion.tag_strategy if seo_suggestion else None,
+        )
+
     return ArticleReviewResponse(
         id=article.id,
         title=article.title,
@@ -637,6 +675,7 @@ async def get_article_review_data(
         content=content,
         meta=meta,
         seo=seo,
+        tags=tags_comparison,
         faq_proposals=faq_proposals,
         paragraph_suggestions=paragraph_suggestions,
         proofreading_issues=article.proofreading_issues or [],

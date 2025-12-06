@@ -1,10 +1,11 @@
 /**
  * ReviewProgressStepper - Visual progress indicator for article review workflow
  *
- * Phase 8.1: Modal Framework
+ * Phase 8.1: Modal Framework (Updated 2025-12-06)
  * - Shows 3 steps: Parsing → Proofreading → Publish
  * - Highlights current step
  * - Shows completed steps with checkmark
+ * - **Clickable steps** for direct navigation (replaces redundant Tabs)
  *
  * Design:
  * - Step 0: 解析审核 (Parsing Review)
@@ -18,6 +19,8 @@ import { clsx } from 'clsx';
 export interface ReviewProgressStepperProps {
   /** Current step (0-2) */
   currentStep: number;
+  /** Callback when a step is clicked */
+  onStepClick?: (stepId: number) => void;
 }
 
 interface Step {
@@ -47,7 +50,10 @@ const STEPS: Step[] = [
 /**
  * ReviewProgressStepper Component
  */
-export const ReviewProgressStepper: React.FC<ReviewProgressStepperProps> = ({ currentStep }) => {
+export const ReviewProgressStepper: React.FC<ReviewProgressStepperProps> = ({
+  currentStep,
+  onStepClick,
+}) => {
   return (
     <nav aria-label="Progress" className="w-full max-w-4xl mx-auto">
       <ol className="flex items-center justify-between">
@@ -80,15 +86,25 @@ export const ReviewProgressStepper: React.FC<ReviewProgressStepperProps> = ({ cu
                 </div>
               )}
 
-              {/* Step indicator */}
-              <div className="relative flex flex-col items-center group">
+              {/* Step indicator - Clickable */}
+              <button
+                type="button"
+                onClick={() => onStepClick?.(step.id)}
+                className={clsx(
+                  'relative flex flex-col items-center group',
+                  onStepClick && 'cursor-pointer',
+                  !onStepClick && 'cursor-default'
+                )}
+                disabled={!onStepClick}
+              >
                 {/* Circle */}
                 <span
                   className={clsx(
-                    'flex h-9 w-9 items-center justify-center rounded-full border-2 transition-colors',
+                    'flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all',
                     isCompleted && 'bg-primary-600 border-primary-600',
-                    isCurrent && 'border-primary-600 bg-white',
-                    isUpcoming && 'border-gray-300 bg-white'
+                    isCurrent && 'border-primary-600 bg-white ring-2 ring-primary-200',
+                    isUpcoming && 'border-gray-300 bg-white',
+                    onStepClick && 'group-hover:scale-110 group-hover:shadow-md'
                   )}
                   aria-current={isCurrent ? 'step' : undefined}
                 >
@@ -122,10 +138,11 @@ export const ReviewProgressStepper: React.FC<ReviewProgressStepperProps> = ({ cu
                 <span className="mt-2 text-center">
                   <span
                     className={clsx(
-                      'block text-sm font-medium',
+                      'block text-sm font-medium transition-colors',
                       isCurrent && 'text-primary-600',
                       isCompleted && 'text-gray-900',
-                      isUpcoming && 'text-gray-500'
+                      isUpcoming && 'text-gray-500',
+                      onStepClick && 'group-hover:text-primary-600'
                     )}
                   >
                     {step.label}
@@ -134,7 +151,7 @@ export const ReviewProgressStepper: React.FC<ReviewProgressStepperProps> = ({ cu
                     {step.description}
                   </span>
                 </span>
-              </div>
+              </button>
             </li>
           );
         })}

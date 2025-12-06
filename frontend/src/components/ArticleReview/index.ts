@@ -69,5 +69,16 @@ export type { ContentComparisonCardProps, ContentSource } from './ContentCompari
 export { KeywordsComparisonCard } from './KeywordsComparisonCard';
 export type { KeywordsComparisonCardProps, KeywordSource } from './KeywordsComparisonCard';
 
+export { TagsComparisonCard } from './TagsComparisonCard';
+export type { TagsComparisonCardProps, TagSource } from './TagsComparisonCard';
+
 export { SEOComparisonCard } from './SEOComparisonCard';
 export type { SEOComparisonCardProps } from './SEOComparisonCard';
+
+// Phase 11: Category Selection with AI Recommendation
+export { CategorySelectionCard } from './CategorySelectionCard';
+export type { CategorySelectionCardProps, AICategoryRecommendation } from './CategorySelectionCard';
+
+// Phase 11: Excerpt Review (moved from PublishPreviewPanel)
+export { ExcerptReviewSection } from './ExcerptReviewSection';
+export type { ExcerptReviewSectionProps } from './ExcerptReviewSection';

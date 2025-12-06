@@ -122,6 +122,24 @@ class SEOComparison(BaseSchema):
     score: float | None = Field(None, ge=0, le=1, description="Quality score 0-1")
 
 
+class SuggestedTag(BaseSchema):
+    """AI-suggested tag with metadata."""
+
+    tag: str = Field(..., description="Tag name")
+    relevance: float = Field(..., ge=0, le=1, description="Relevance score 0-1")
+    type: str = Field(default="secondary", description="Tag type: primary/secondary/trending")
+    existing: bool | None = Field(default=None, description="Whether tag exists in WordPress")
+    article_count: int | None = Field(default=None, description="Number of articles with this tag")
+
+
+class TagsComparison(BaseSchema):
+    """Tags comparison for WordPress internal navigation."""
+
+    original_tags: list[str] = Field(default_factory=list, description="Tags extracted from document")
+    suggested_tags: list[SuggestedTag] | None = Field(default=None, description="AI-suggested tags with metadata")
+    tag_strategy: str | None = Field(default=None, description="AI explanation for tag selection")
+
+
 class FAQProposal(BaseSchema):
     """FAQ schema proposal variant."""
 
@@ -167,6 +185,9 @@ class ArticleReviewResponse(BaseSchema):
 
     # SEO comparison
     seo: SEOComparison
+
+    # Tags comparison (WordPress internal navigation)
+    tags: TagsComparison | None = None
 
     # FAQ proposals
     faq_proposals: list[FAQProposal] = Field(default_factory=list)

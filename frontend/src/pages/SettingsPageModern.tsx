@@ -177,7 +177,12 @@ const buildDefaultSettings = (settings?: AppSettings | null): SettingsFormValues
       per_task_limit:
         settings.cost_limits?.per_task_limit ?? defaults.cost_limits.per_task_limit,
       alert_threshold:
-        settings.cost_limits?.alert_threshold ?? defaults.cost_limits.alert_threshold,
+        // API returns 0-1 decimal, form uses 0-100 percentage
+        settings.cost_limits?.alert_threshold !== undefined
+          ? settings.cost_limits.alert_threshold <= 1
+            ? Math.round(settings.cost_limits.alert_threshold * 100)
+            : settings.cost_limits.alert_threshold
+          : defaults.cost_limits.alert_threshold,
       auto_pause_on_limit:
         settings.cost_limits?.auto_pause_on_limit ??
         defaults.cost_limits.auto_pause_on_limit,
@@ -333,7 +338,11 @@ export default function SettingsPageModern() {
         ...(values.cms_config.timeout && { timeout: values.cms_config.timeout }),
         ...(values.cms_config.max_retries !== undefined && { max_retries: values.cms_config.max_retries }),
       } as any,
-      cost_limits: values.cost_limits,
+      cost_limits: {
+        ...values.cost_limits,
+        // Convert percentage (0-100) back to decimal (0-1) for API
+        alert_threshold: values.cost_limits.alert_threshold / 100,
+      },
       screenshot_retention: values.screenshot_retention,
     };
 
