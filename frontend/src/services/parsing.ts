@@ -64,6 +64,9 @@ export interface ParsedArticleData {
 
   // Images
   images: ArticleImage[];
+
+  // Related articles for internal linking (Phase 12)
+  related_articles: RelatedArticle[];
 }
 
 /**
@@ -79,6 +82,20 @@ export interface ArticleImage {
   height?: number;
   format?: string;
   file_size_bytes?: number;
+}
+
+/**
+ * Related article for internal linking (Phase 12).
+ */
+export interface RelatedArticle {
+  article_id: string;
+  title: string;
+  title_main?: string;
+  url: string;
+  excerpt?: string;
+  similarity: number;
+  match_type: 'semantic' | 'content' | 'keyword';
+  ai_keywords: string[];
 }
 
 /**
@@ -491,4 +508,22 @@ export async function getOptimizationStatus(
  */
 export async function deleteOptimizations(articleId: number): Promise<void> {
   return api.delete(`/v1/articles/${articleId}/optimizations`);
+}
+
+/**
+ * Refresh related articles for an article.
+ * Calls the Supabase match-internal-links API to find related articles
+ * based on title and SEO keywords.
+ *
+ * @param articleId - Article ID
+ * @returns Updated article data with related_articles
+ *
+ * @example
+ * ```ts
+ * const article = await refreshRelatedArticles(123);
+ * console.log(`Found ${article.related_articles.length} related articles`);
+ * ```
+ */
+export async function refreshRelatedArticles(articleId: number): Promise<ParsedArticleData> {
+  return api.post<ParsedArticleData>(`/v1/articles/${articleId}/refresh-related-articles`, {});
 }

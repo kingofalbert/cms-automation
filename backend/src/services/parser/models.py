@@ -1,9 +1,60 @@
-"""Pydantic models for article parsing service (Phase 7)."""
+"""Pydantic models for article parsing service (Phase 7).
+
+Phase 12: Added RelatedArticle model for internal link recommendations.
+"""
 
 from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class RelatedArticle(BaseModel):
+    """Related article recommendation for internal linking (Phase 12).
+
+    Represents an article from the health article database that is semantically
+    related to the current article being processed.
+    """
+
+    article_id: str = Field(
+        ...,
+        description="Unique article identifier (e.g., n12345678)",
+    )
+    title: str = Field(
+        ...,
+        description="Full article title",
+    )
+    title_main: str | None = Field(
+        None,
+        description="Main title component (without prefix/suffix)",
+    )
+    url: str = Field(
+        ...,
+        description="Original article URL",
+    )
+    excerpt: str | None = Field(
+        None,
+        description="Article excerpt/summary",
+    )
+    similarity: float = Field(
+        ...,
+        ge=0,
+        le=1,
+        description="Similarity score (0-1)",
+    )
+    match_type: str = Field(
+        ...,
+        description="Match type: semantic, content, or keyword",
+    )
+    ai_keywords: list[str] = Field(
+        default_factory=list,
+        description="AI-extracted keywords from the related article",
+    )
+
+    class Config:
+        """Pydantic configuration."""
+
+        extra = "allow"  # Allow additional fields for extensibility
 
 
 class ImageMetadata(BaseModel):
@@ -175,6 +226,12 @@ class ParsedArticle(BaseModel):
     faqs: list[dict[str, Any]] | None = Field(
         None,
         description="AI-generated FAQ list (6-8 questions)",
+    )
+
+    # Phase 12: Internal Link Recommendations
+    related_articles: list[RelatedArticle] = Field(
+        default_factory=list,
+        description="AI-recommended related articles for internal linking",
     )
 
     # Parsing metadata

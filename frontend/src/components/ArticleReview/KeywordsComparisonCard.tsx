@@ -151,11 +151,12 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {/* Left: Document Extracted */}
             <div
-              className={`relative rounded-lg border-2 transition-all ${
+              className={`relative rounded-lg border-2 transition-all cursor-pointer ${
                 selectedSource === 'extracted'
                   ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-200'
                   : 'border-slate-200 bg-white hover:border-slate-300'
               }`}
+              onClick={() => handleSelectSource('extracted')}
             >
               {/* Label */}
               <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50/80">
@@ -173,10 +174,7 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
               </div>
 
               {/* Keywords */}
-              <div
-                className="p-3 min-h-[80px] cursor-pointer"
-                onClick={() => handleSelectSource('extracted')}
-              >
+              <div className="p-3 min-h-[80px]">
                 {hasExtracted ? (
                   <div className="flex flex-wrap gap-1.5">
                     {extractedKeywords.map((kw, idx) => {
@@ -212,11 +210,12 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
             {/* Right: AI Suggested */}
             {hasAi && (
               <div
-                className={`relative rounded-lg border-2 transition-all ${
+                className={`relative rounded-lg border-2 transition-all cursor-pointer ${
                   selectedSource === 'ai'
                     ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-200'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
+                onClick={() => handleSelectSource('ai')}
               >
                 {/* Label */}
                 <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
@@ -234,10 +233,7 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
                 </div>
 
                 {/* Keywords */}
-                <div
-                  className="p-3 min-h-[80px] cursor-pointer"
-                  onClick={() => handleSelectSource('ai')}
-                >
+                <div className="p-3 min-h-[80px]">
                   <div className="flex flex-wrap gap-1.5">
                     {aiSuggestedKeywords?.map((kw, idx) => {
                       const isAdded = keywordDiff.added.includes(kw);

@@ -29,7 +29,9 @@ import type {
   ImageReviewAction,
   OptimizationsResponse,
   TitleOption,
+  RelatedArticle,
 } from '../services/parsing';
+import { RefreshCw } from 'lucide-react';
 import TitleOptimizationCard from '../components/parsing/TitleOptimizationCard';
 
 export default function ArticleParsingPage() {
@@ -109,6 +111,16 @@ export default function ArticleParsingPage() {
     onSuccess: () => {
       setEditingImage(null);
       setNewCaption('');
+      queryClient.invalidateQueries({
+        queryKey: parsingAPI.parsingKeys.result(articleId),
+      });
+    },
+  });
+
+  // Mutation: Refresh related articles (Phase 12)
+  const refreshRelatedArticlesMutation = useMutation({
+    mutationFn: () => parsingAPI.refreshRelatedArticles(articleId),
+    onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: parsingAPI.parsingKeys.result(articleId),
       });
@@ -544,6 +556,106 @@ export default function ArticleParsingPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Related Articles Section (Phase 12) */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>
+                    相關文章推薦 ({parsingData.related_articles?.length || 0})
+                  </CardTitle>
+                  <CardDescription>
+                    AI 根據標題和關鍵詞自動匹配的內部鏈接文章
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refreshRelatedArticlesMutation.mutate()}
+                  disabled={refreshRelatedArticlesMutation.isPending}
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 mr-2 ${
+                      refreshRelatedArticlesMutation.isPending ? 'animate-spin' : ''
+                    }`}
+                  />
+                  {refreshRelatedArticlesMutation.isPending ? '匹配中...' : '刷新匹配'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {parsingData.related_articles && parsingData.related_articles.length > 0 ? (
+                <>
+                  <div className="space-y-3">
+                    {parsingData.related_articles.map((article, idx) => (
+                      <div
+                        key={article.article_id}
+                        className="border rounded-lg p-3 hover:bg-accent/50 transition-colors"
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex-1 min-w-0">
+                            <a
+                              href={article.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-primary hover:underline block truncate"
+                            >
+                              {article.title}
+                            </a>
+                            {article.excerpt && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {article.excerpt}
+                              </p>
+                            )}
+                            {article.ai_keywords && article.ai_keywords.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {article.ai_keywords.slice(0, 3).map((keyword, kidx) => (
+                                  <Badge key={kidx} variant="outline" className="text-xs">
+                                    {keyword}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <Badge
+                              variant={
+                                article.match_type === 'semantic'
+                                  ? 'default'
+                                  : article.match_type === 'content'
+                                  ? 'secondary'
+                                  : 'outline'
+                              }
+                            >
+                              {article.match_type === 'semantic'
+                                ? '語義匹配'
+                                : article.match_type === 'content'
+                                ? '內容匹配'
+                                : '關鍵詞匹配'}
+                            </Badge>
+                            <span className="text-sm font-medium text-green-600">
+                              {(article.similarity * 100).toFixed(0)}% 相似
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-4 text-center">
+                    💡 這些文章來自大紀元健康文章數據庫，可用於內部鏈接優化
+                  </p>
+                </>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="mb-2">尚未匹配到相關文章</p>
+                  <p className="text-sm">
+                    點擊「刷新匹配」按鈕根據文章標題和關鍵詞搜索相關內部鏈接
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Body Preview */}
           <Card>

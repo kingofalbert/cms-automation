@@ -32,7 +32,7 @@ import { ContentComparisonCard, ContentSource } from './ContentComparisonCard';
 import { KeywordsComparisonCard, KeywordSource } from './KeywordsComparisonCard';
 import { TagsComparisonCard, TagSource } from './TagsComparisonCard';
 import { FAQReviewSection, type AIFAQSuggestion } from './FAQReviewSection';
-import { CategorySelectionCard, type AICategoryRecommendation } from './CategorySelectionCard';
+import { CategorySelectionCard, type AICategoryRecommendation, type AISecondaryCategoryRecommendation } from './CategorySelectionCard';
 import { ExcerptReviewSection } from './ExcerptReviewSection';
 import type { SuggestedTag } from '../../types/api';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
@@ -89,8 +89,9 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     return {
       // HOTFIX-PARSE-001: Use title_main from parsing, fallback to title
       title: (data as any).title_main || data.articleReview?.title?.trim() || data.title || '',
-      // HOTFIX-PARSE-001: Use author_name from parsing, fallback to author
-      author: (data as any).author_name || data.author || '',
+      // HOTFIX-PARSE-002: Use author_line to preserve original format (e.g., "文 / Author　編譯 / Translator")
+      // Fallback chain: author_line -> author_name -> author
+      author: (data as any).author_line || (data as any).author_name || data.author || '',
       // FIX: Use article_images from API response instead of metadata fields
       featuredImage: featuredImageUrl || (metadata?.featured_image_path as string) || '',
       additionalImages: additionalImageUrls.length > 0 ? additionalImageUrls : (metadata?.additional_images as string[]) || [],
@@ -183,12 +184,19 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     (data as any).secondary_categories || []
   );
   const [aiCategoryRecommendation, setAiCategoryRecommendation] = useState<AICategoryRecommendation | null>(null);
+  const [aiSecondaryRecommendations, setAiSecondaryRecommendations] = useState<AISecondaryCategoryRecommendation[]>([]);
   const [isLoadingCategoryRecommendation, setIsLoadingCategoryRecommendation] = useState(false);
 
   // Phase 11: Excerpt state (moved from PublishPreviewPanel)
   const [excerpt, setExcerpt] = useState<string>(
     (data.metadata?.excerpt as string) || ''
   );
+
+  // Phase 12: AI Tags and Excerpt suggestions
+  const [aiSuggestedTags, setAiSuggestedTags] = useState<SuggestedTag[]>([]);
+  const [aiTagStrategy, setAiTagStrategy] = useState<string | null>(null);
+  const [aiSuggestedExcerpt, setAiSuggestedExcerpt] = useState<string | null>(null);
+  const [isLoadingAiOptimizations, setIsLoadingAiOptimizations] = useState(false);
 
   // Track if data has been modified
   const [isDirty, setIsDirty] = useState(false);
@@ -217,16 +225,52 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
 
       setIsLoadingSeoTitle(true);
       try {
-        // Fetch optimizations (which includes SEO Title suggestions and FAQs)
+        // Fetch optimizations (which includes SEO Title suggestions, Tags, Excerpt, and FAQs)
+        setIsLoadingAiOptimizations(true);
         try {
           const optimizationsData = await api.get<{
             title_suggestions?: { seo_title_suggestions?: SEOTitleSuggestionsData };
+            seo_suggestions?: {
+              tags?: {
+                suggested_tags?: Array<{
+                  tag: string;
+                  relevance: number;
+                  type: 'primary' | 'secondary' | 'trending';
+                }>;
+                tag_strategy?: string;
+              };
+              meta_description?: {
+                suggested_meta_description?: string;
+              };
+            };
             faqs?: AIFAQSuggestion[];
           }>(`/v1/articles/${data.article_id}/optimizations`);
 
           // Extract SEO Title suggestions
           if (optimizationsData.title_suggestions?.seo_title_suggestions) {
             setSeoTitleSuggestions(optimizationsData.title_suggestions.seo_title_suggestions);
+          }
+
+          // Phase 12: Extract AI Tags suggestions
+          if (optimizationsData.seo_suggestions?.tags?.suggested_tags) {
+            const tags = optimizationsData.seo_suggestions.tags.suggested_tags.map(t => ({
+              tag: t.tag,
+              relevance: t.relevance,
+              type: t.type,
+            }));
+            setAiSuggestedTags(tags);
+            console.log('[ParsingReviewPanel] AI Tags loaded:', tags.length);
+          }
+          if (optimizationsData.seo_suggestions?.tags?.tag_strategy) {
+            setAiTagStrategy(optimizationsData.seo_suggestions.tags.tag_strategy);
+          }
+
+          // Phase 12: Extract AI Excerpt suggestion (from meta_description optimization)
+          if (optimizationsData.seo_suggestions?.meta_description?.suggested_meta_description) {
+            // Meta description can be used as a base for excerpt
+            // For now, we'll use it directly as AI suggested excerpt
+            setAiSuggestedExcerpt(optimizationsData.seo_suggestions.meta_description.suggested_meta_description);
+            console.log('[ParsingReviewPanel] AI Excerpt loaded');
           }
 
           // Extract AI FAQ suggestions (Phase 9.2)
@@ -239,6 +283,8 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           if (axiosErr.response?.status !== 404) {
             console.error('Failed to fetch optimizations:', err);
           }
+        } finally {
+          setIsLoadingAiOptimizations(false);
         }
 
         // Fetch current article data to get current SEO Title
@@ -271,6 +317,16 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
               confidence: categoryData.confidence,
               reasoning: categoryData.reasoning,
             });
+
+            // Set secondary category recommendations from alternative_categories
+            if (categoryData.alternative_categories && categoryData.alternative_categories.length > 0) {
+              const secondaryRecs = categoryData.alternative_categories.map((alt) => ({
+                category: alt.category,
+                confidence: alt.confidence,
+                reasoning: alt.reason,
+              }));
+              setAiSecondaryRecommendations(secondaryRecs);
+            }
 
             console.log('AI Category recommendation:', categoryData);
           } catch (err: unknown) {
@@ -552,6 +608,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           {/* Category Selection with AI Recommendation */}
           <CategorySelectionCard
             aiRecommendation={aiCategoryRecommendation || undefined}
+            aiSecondaryRecommendations={aiSecondaryRecommendations.length > 0 ? aiSecondaryRecommendations : undefined}
             primaryCategory={primaryCategory}
             secondaryCategories={secondaryCategories}
             onPrimaryCategoryChange={(cat) => {
@@ -566,10 +623,14 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             testId="category-selection"
           />
 
-          {/* Tags Comparison */}
+          {/* Tags Comparison - Phase 12: Priority: aiSuggestedTags from optimizations > articleReview.tags */}
           <TagsComparisonCard
             extractedTags={originalExtracted.tags}
-            aiSuggestedTags={data.articleReview?.tags?.suggested_tags || undefined}
+            aiSuggestedTags={
+              aiSuggestedTags.length > 0
+                ? aiSuggestedTags
+                : data.articleReview?.tags?.suggested_tags || undefined
+            }
             selectedSource={tagsSource}
             activeTags={tags}
             onTagsChange={(source, newTags) => {
@@ -578,19 +639,21 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
               markDirty();
             }}
             optimalCount={[3, 6]}
-            aiStrategy={data.articleReview?.tags?.tag_strategy || undefined}
+            aiStrategy={aiTagStrategy || data.articleReview?.tags?.tag_strategy || undefined}
             testId="tags-comparison"
           />
 
-          {/* Excerpt Review */}
+          {/* Excerpt Review - Phase 12: Add AI suggested excerpt */}
           <ExcerptReviewSection
             excerpt={excerpt}
             articleBody={data.articleReview?.content?.original || ''}
+            aiSuggestedExcerpt={aiSuggestedExcerpt || undefined}
             onExcerptChange={(newExcerpt) => {
               setExcerpt(newExcerpt);
               markDirty();
             }}
             optimalLength={[100, 200]}
+            isGenerating={isLoadingAiOptimizations}
             testId="excerpt-review"
           />
         </div>
@@ -633,7 +696,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             </Card>
           )}
 
-          {/* FAQ Review - AI-powered FAQ generation */}
+          {/* FAQ Review - AI FAQs are auto-generated during parsing */}
           <Card className="p-4" data-testid="parsing-faq-card">
             <FAQReviewSection
               articleId={data.article_id}
@@ -645,7 +708,6 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
                 setFaqSuggestions(faqs);
                 markDirty();
               }}
-              onGenerateFaqs={handleGenerateFaqs}
             />
           </Card>
         </div>

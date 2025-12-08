@@ -197,11 +197,12 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {/* Left: Document Extracted */}
             <div
-              className={`relative rounded-lg border-2 transition-all ${
+              className={`relative rounded-lg border-2 transition-all cursor-pointer ${
                 selectedSource === 'extracted'
                   ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-200'
                   : 'border-slate-200 bg-white hover:border-slate-300'
               }`}
+              onClick={() => handleSelectSource('extracted')}
             >
               {/* Label */}
               <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50/80">
@@ -223,10 +224,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
               </div>
 
               {/* Content */}
-              <div
-                className="p-3 min-h-[100px] cursor-pointer"
-                onClick={() => handleSelectSource('extracted')}
-              >
+              <div className="p-3 min-h-[100px]">
                 {hasExtracted ? (
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">
                     {extractedContent}
@@ -262,11 +260,12 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
             {/* Right: AI Optimized */}
             {hasAi && (
               <div
-                className={`relative rounded-lg border-2 transition-all ${
+                className={`relative rounded-lg border-2 transition-all cursor-pointer ${
                   selectedSource === 'ai'
                     ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-200'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 }`}
+                onClick={() => handleSelectSource('ai')}
               >
                 {/* Label */}
                 <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
@@ -288,10 +287,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                 </div>
 
                 {/* Content */}
-                <div
-                  className="p-3 min-h-[100px] cursor-pointer"
-                  onClick={() => handleSelectSource('ai')}
-                >
+                <div className="p-3 min-h-[100px]">
                   <p className="text-sm text-slate-700 whitespace-pre-wrap">
                     {aiSuggestedContent}
                   </p>

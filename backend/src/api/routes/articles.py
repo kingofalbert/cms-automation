@@ -552,6 +552,87 @@ def _coerce_int(value: Any) -> int | None:
         return None
 
 
+@router.post("/{article_id}/refresh-related-articles", response_model=ArticleResponse)
+async def refresh_related_articles(
+    article_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> Article:
+    """Refresh related articles for an existing article without full re-parsing.
+
+    This endpoint calls the Supabase match-internal-links Edge Function to find
+    semantically related articles based on the article's title and SEO keywords.
+
+    Phase 12: Internal Link Integration
+    """
+    from src.services.internal_links import get_internal_link_service
+
+    article = await _fetch_article(session, article_id)
+
+    # Get title and keywords for matching
+    title = article.title_main or article.title or ""
+    keywords = article.seo_keywords or []
+
+    if not title:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Article does not have a title for matching",
+        )
+
+    logger.info(
+        f"Refreshing related articles for article {article_id}: "
+        f"title='{title[:50]}...', keywords={len(keywords)}"
+    )
+
+    try:
+        # Call internal link service
+        service = get_internal_link_service()
+        result = await service.match_related_articles(
+            title=title,
+            keywords=keywords,
+            limit=5,
+        )
+
+        if not result.success:
+            logger.warning(
+                f"Related article matching failed for article {article_id}: {result.error}"
+            )
+            # Don't fail the request, just log and continue with empty list
+            article.related_articles = []
+        else:
+            # Store matches as list of dicts
+            article.related_articles = [match.model_dump() for match in result.matches]
+            logger.info(
+                f"Found {len(result.matches)} related articles for article {article_id}"
+            )
+
+        # Mark JSON field as modified
+        attributes.flag_modified(article, "related_articles")
+
+        await session.commit()
+
+        # Reload article with images relationship
+        result_query = await session.execute(
+            select(Article)
+            .where(Article.id == article_id)
+            .options(selectinload(Article.article_images))
+        )
+        article = result_query.scalar_one()
+
+        return article
+
+    except Exception as exc:
+        logger.error(
+            "refresh_related_articles_failed",
+            article_id=article_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to refresh related articles: {str(exc)}",
+        ) from exc
+
+
 @router.get("/{article_id}/review-data", response_model=ArticleReviewResponse)
 async def get_article_review_data(
     article_id: int,

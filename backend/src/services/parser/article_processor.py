@@ -4,7 +4,8 @@ This service orchestrates the complete article processing pipeline:
 1. Parse article HTML (AI or heuristic)
 2. Download and process images
 3. Extract image metadata
-4. Save to database
+4. Match related articles for internal linking (Phase 12)
+5. Save to database
 """
 
 import logging
@@ -15,10 +16,12 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.article import Article
+from src.models.article_faq import ArticleFAQ
 from src.models.article_image import ArticleImage
+from src.services.internal_links import InternalLinkService, get_internal_link_service
 from src.services.parser.article_parser import ArticleParserService
 from src.services.parser.image_processor import ImageProcessorService
-from src.services.parser.models import ParsedArticle, ParsingResult
+from src.services.parser.models import ParsedArticle, ParsingResult, RelatedArticle
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,7 @@ class ArticleProcessingService:
         article_parser: ArticleParserService,
         image_processor: ImageProcessorService,
         storage_base_path: str = "/tmp/cms_images",
+        internal_link_service: InternalLinkService | None = None,
     ):
         """Initialize article processing service.
 
@@ -38,14 +42,17 @@ class ArticleProcessingService:
             article_parser: ArticleParserService instance
             image_processor: ImageProcessorService instance
             storage_base_path: Base path for storing downloaded images
+            internal_link_service: InternalLinkService for related article matching
         """
         self.article_parser = article_parser
         self.image_processor = image_processor
         self.storage_base_path = Path(storage_base_path)
         self.storage_base_path.mkdir(parents=True, exist_ok=True)
+        self.internal_link_service = internal_link_service or get_internal_link_service()
 
         logger.info(
-            f"ArticleProcessingService initialized (storage_path={storage_base_path})"
+            f"ArticleProcessingService initialized (storage_path={storage_base_path}, "
+            f"internal_links_enabled={self.internal_link_service.is_configured})"
         )
 
     async def process_article(
@@ -98,14 +105,27 @@ class ArticleProcessingService:
                 article_id, parsed_article.images, db_session
             )
 
-        # Step 4: Commit transaction
+        # Step 4: Match related articles for internal linking (Phase 12)
+        related_articles_count = 0
+        if self.internal_link_service.is_configured:
+            related_articles = await self._match_related_articles(parsed_article)
+            parsed_article.related_articles = related_articles
+            related_articles_count = len(related_articles)
+
+            # Save related articles to database
+            if related_articles:
+                await self._save_related_articles(
+                    article_id, related_articles, db_session
+                )
+
+        # Step 5: Commit transaction
         await db_session.commit()
 
         duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
 
         logger.info(
             f"Article {article_id} processed successfully in {duration_ms:.0f}ms: "
-            f"{len(processed_images)} images processed"
+            f"{len(processed_images)} images, {related_articles_count} related articles"
         )
 
         return {
@@ -114,6 +134,7 @@ class ArticleProcessingService:
             "parsing_method": parsed_article.parsing_method,
             "parsing_confidence": parsed_article.parsing_confidence,
             "images_processed": len(processed_images),
+            "related_articles_count": related_articles_count,
             "duration_ms": duration_ms,
             "warnings": parsing_result.warnings,
         }
@@ -153,7 +174,149 @@ class ArticleProcessingService:
         # parsing_confirmed_at and parsing_confirmed_by will be set by API endpoint
 
         logger.debug(f"Updated article {article_id} with parsed data")
+
+        # Phase 7.5: Save AI-generated FAQs to article_faqs table
+        # This allows FAQs to be displayed immediately without needing manual generation
+        if parsed_article.faqs:
+            await self._save_faqs_to_database(article_id, parsed_article.faqs, db_session)
+
         return article
+
+    async def _match_related_articles(
+        self,
+        parsed_article: ParsedArticle,
+    ) -> list[RelatedArticle]:
+        """Match related articles for internal linking (Phase 12).
+
+        Args:
+            parsed_article: Parsed article data with title and keywords
+
+        Returns:
+            List of related article matches
+        """
+        logger.info(f"Matching related articles for: {parsed_article.title_main[:50]}...")
+
+        try:
+            result = await self.internal_link_service.match_related_articles(
+                title=parsed_article.title_main,
+                keywords=parsed_article.seo_keywords or [],
+                limit=5,
+            )
+
+            if not result.success:
+                logger.warning(f"Related article matching failed: {result.error}")
+                return []
+
+            # Convert to RelatedArticle models
+            related_articles = []
+            for match in result.matches:
+                related_article = RelatedArticle(
+                    article_id=match.article_id,
+                    title=match.title,
+                    title_main=match.title_main,
+                    url=match.url,
+                    excerpt=match.excerpt,
+                    similarity=match.similarity,
+                    match_type=match.match_type,
+                    ai_keywords=match.ai_keywords,
+                )
+                related_articles.append(related_article)
+
+            logger.info(f"Found {len(related_articles)} related articles")
+            return related_articles
+
+        except Exception as e:
+            logger.error(f"Error matching related articles: {e}")
+            return []
+
+    async def _save_related_articles(
+        self,
+        article_id: int,
+        related_articles: list[RelatedArticle],
+        db_session: AsyncSession,
+    ) -> None:
+        """Save related articles to the article record.
+
+        Args:
+            article_id: Database ID of the article
+            related_articles: List of related articles to save
+            db_session: Database session
+        """
+        article = await db_session.get(Article, article_id)
+        if not article:
+            logger.warning(f"Article {article_id} not found, skipping related articles save")
+            return
+
+        # Convert to serializable format
+        article.related_articles = [
+            {
+                "article_id": ra.article_id,
+                "title": ra.title,
+                "title_main": ra.title_main,
+                "url": ra.url,
+                "excerpt": ra.excerpt,
+                "similarity": ra.similarity,
+                "match_type": ra.match_type,
+                "ai_keywords": ra.ai_keywords,
+            }
+            for ra in related_articles
+        ]
+
+        logger.info(f"Saved {len(related_articles)} related articles for article {article_id}")
+
+    async def _save_faqs_to_database(
+        self,
+        article_id: int,
+        faqs: list[dict],
+        db_session: AsyncSession,
+    ) -> None:
+        """Save AI-generated FAQs from parsing to database.
+
+        Args:
+            article_id: Database ID of the article
+            faqs: List of FAQ dictionaries from parsed article
+            db_session: Database session
+        """
+        from sqlalchemy import delete
+
+        logger.info(f"Saving {len(faqs)} FAQs for article {article_id}")
+
+        # Delete existing FAQs for this article (if re-parsing)
+        stmt = delete(ArticleFAQ).where(ArticleFAQ.article_id == article_id)
+        await db_session.execute(stmt)
+
+        # Create new FAQ records
+        for position, faq_data in enumerate(faqs):
+            # Validate question_type
+            question_type = faq_data.get("question_type", "factual")
+            if question_type not in ("factual", "how_to", "comparison", "definition"):
+                question_type = "factual"
+
+            # Validate search_intent
+            search_intent = faq_data.get("search_intent", "informational")
+            if search_intent not in ("informational", "navigational", "transactional"):
+                search_intent = "informational"
+
+            # Get intent field (some prompts use 'intent' instead of 'search_intent')
+            if not faq_data.get("search_intent") and faq_data.get("intent"):
+                intent = faq_data.get("intent", "informational")
+                if intent in ("informational", "navigational", "transactional"):
+                    search_intent = intent
+
+            faq = ArticleFAQ(
+                article_id=article_id,
+                question=faq_data.get("question", ""),
+                answer=faq_data.get("answer", ""),
+                question_type=question_type,
+                search_intent=search_intent,
+                keywords_covered=faq_data.get("keywords_covered", []),
+                confidence=faq_data.get("confidence"),
+                position=position,
+                status="draft",  # Default status for AI-generated FAQs
+            )
+            db_session.add(faq)
+
+        logger.info(f"Successfully saved {len(faqs)} FAQs for article {article_id}")
 
     async def _process_images(
         self,

@@ -20,7 +20,6 @@ import {
   Sparkles,
   Check,
   Copy,
-  RefreshCw,
   ChevronDown,
   ChevronUp,
   AlertCircle,
@@ -205,46 +204,21 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
 
       {isExpanded && (
         <div className="space-y-4">
-          {/* AI Generation Section */}
-          {onGenerateFaqs && (
+          {/* AI FAQ Info Banner - Show only when FAQs are loaded */}
+          {hasAiSuggestions && (
             <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
                   <Brain className="w-5 h-5 text-purple-600" />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-medium text-purple-900">AI 智能 FAQ 生成</h4>
+                  <h4 className="font-medium text-purple-900">AI 智能 FAQ 已生成</h4>
                   <p className="text-sm text-purple-700 mt-1">
-                    基於文章內容深度分析，生成針對 AI 搜索引擎優化的 FAQ。
-                    包含用戶最可能搜索的問題，提升 Google SGE 等 AI 搜索結果的曝光率。
+                    以下 FAQ 已基於文章內容自動生成，優化 AI 搜索引擎曝光。
+                    請審核並選擇要使用的 FAQ。
                   </p>
-                  <div className="flex items-center gap-2 mt-3">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onGenerateFaqs();
-                      }}
-                      disabled={isGenerating}
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          生成中...
-                        </>
-                      ) : hasAiSuggestions ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 mr-2" />
-                          重新生成
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4 mr-2" />
-                          生成 AI FAQ
-                        </>
-                      )}
-                    </Button>
-                    {hasAiSuggestions && unacceptedSuggestions.length > 0 && (
+                  {unacceptedSuggestions.length > 0 && (
+                    <div className="flex items-center gap-2 mt-3">
                       <Button
                         variant="outline"
                         onClick={(e) => {
@@ -256,8 +230,8 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
                         <Check className="w-4 h-4 mr-1" />
                         接受全部 ({unacceptedSuggestions.length})
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -461,29 +435,16 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
           ) : !hasAiSuggestions ? (
             <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
               <HelpCircle className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500 mb-3">暫無 FAQ 建議</p>
-              {onGenerateFaqs ? (
-                <Button
-                  onClick={onGenerateFaqs}
-                  disabled={isGenerating}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      生成中...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4 mr-1" />
-                      生成 AI FAQ
-                    </>
-                  )}
-                </Button>
-              ) : (
+              <p className="text-sm text-gray-500 mb-3">
+                {isGenerating ? '正在載入 FAQ...' : 'FAQ 將在文章解析時自動生成'}
+              </p>
+              {isGenerating && (
+                <Loader2 className="w-6 h-6 mx-auto text-purple-500 animate-spin" />
+              )}
+              {!isGenerating && (
                 <Button variant="outline" size="sm" onClick={handleAddFaq}>
                   <Plus className="w-4 h-4 mr-1" />
-                  添加第一個 FAQ
+                  手動添加 FAQ
                 </Button>
               )}
             </div>

@@ -53,9 +53,17 @@ export interface AICategoryRecommendation {
   reasoning: string;
 }
 
+export interface AISecondaryCategoryRecommendation {
+  category: string;
+  confidence: number; // 0-1
+  reasoning: string;
+}
+
 export interface CategorySelectionCardProps {
   /** AI recommended primary category */
   aiRecommendation?: AICategoryRecommendation;
+  /** AI recommended secondary categories */
+  aiSecondaryRecommendations?: AISecondaryCategoryRecommendation[];
   /** Currently selected primary category */
   primaryCategory: string | null;
   /** Currently selected secondary categories */
@@ -75,6 +83,7 @@ export interface CategorySelectionCardProps {
  */
 export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
   aiRecommendation,
+  aiSecondaryRecommendations,
   primaryCategory,
   secondaryCategories,
   onPrimaryCategoryChange,
@@ -285,17 +294,79 @@ export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
           </button>
         </div>
 
-        {/* Secondary Categories Checkboxes */}
+        {/* Secondary Categories Content */}
         {isSecondaryExpanded && (
           <div className="p-4">
             <p className="text-xs text-slate-500 mb-3">
               讓文章同時出現在其他分類列表頁面（可多選，最多3個）
             </p>
+
+            {/* AI Recommendations for Secondary Categories */}
+            {aiSecondaryRecommendations && aiSecondaryRecommendations.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-purple-600" />
+                  <span className="text-sm font-medium text-purple-700">AI 推薦副分類</span>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {aiSecondaryRecommendations
+                    .filter((rec) => rec.category !== primaryCategory)
+                    .slice(0, 3)
+                    .map((rec, idx) => {
+                      const isSelected = secondaryCategories.includes(rec.category);
+                      const isDisabled = !isSelected && secondaryCategories.length >= 3;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => !isDisabled && handleSecondaryToggle(rec.category)}
+                          disabled={isDisabled}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 transition-all ${
+                            isSelected
+                              ? 'border-purple-500 bg-purple-50 text-purple-700'
+                              : isDisabled
+                              ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed'
+                              : 'border-purple-200 bg-white hover:border-purple-400 text-slate-700 cursor-pointer'
+                          }`}
+                        >
+                          <span className="text-sm font-medium">{getCategoryName(rec.category)}</span>
+                          <span
+                            className={`text-xs px-1.5 py-0.5 rounded-full ${getConfidenceColor(
+                              rec.confidence
+                            )}`}
+                          >
+                            {Math.round(rec.confidence * 100)}%
+                          </span>
+                          {isSelected && <Check className="w-4 h-4 text-purple-600" />}
+                        </button>
+                      );
+                    })}
+                </div>
+                {aiSecondaryRecommendations.length > 0 && (
+                  <button
+                    onClick={() => {
+                      const availableRecs = aiSecondaryRecommendations
+                        .filter((rec) => rec.category !== primaryCategory)
+                        .slice(0, 3)
+                        .map((rec) => rec.category);
+                      onSecondaryCategoriesChange(availableRecs);
+                    }}
+                    className="text-xs text-purple-600 hover:text-purple-800 underline"
+                  >
+                    接受全部 AI 推薦
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Manual Selection Checkboxes */}
             <div className="grid grid-cols-2 gap-2">
               {availableSecondaryCategories.map((category) => {
                 const isSelected = secondaryCategories.includes(category.name);
                 const isDisabled =
                   !isSelected && secondaryCategories.length >= 3;
+                const isAiRecommended = aiSecondaryRecommendations?.some(
+                  (rec) => rec.category === category.name
+                );
                 return (
                   <label
                     key={category.id}
@@ -315,6 +386,9 @@ export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
                       className="w-4 h-4 text-blue-600 rounded"
                     />
                     <span className="text-sm">{category.name}</span>
+                    {isAiRecommended && !isSelected && (
+                      <Sparkles className="w-3 h-3 text-purple-400" />
+                    )}
                   </label>
                 );
               })}

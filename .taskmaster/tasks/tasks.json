@@ -1,0 +1,220 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": "1",
+        "title": "Setup Supabase Database Extensions and Configuration",
+        "description": "Enable required PostgreSQL extensions (vector, pg_cron, pg_net) and configure Supabase project settings",
+        "details": "Execute SQL commands to enable extensions: `create extension if not exists vector with schema extensions;`, `create extension if not exists pg_cron with schema extensions;`, `create extension if not exists pg_net with schema extensions;`. Configure environment variables for SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and OPENAI_API_KEY in Supabase dashboard.",
+        "testStrategy": "Verify extensions are enabled by querying pg_extension table. Test database connection with service role key. Validate environment variables are accessible.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:18.839Z"
+      },
+      {
+        "id": "2",
+        "title": "Create Health Articles Database Schema",
+        "description": "Create the main health_articles table with vector embedding support and proper indexing",
+        "details": "Execute SQL to create health_articles table with fields: id, original_url, article_id, title, original_tags, ai_keywords, title_embedding (vector 1536), publish_date, author, excerpt, status, timestamps. Create indexes: status, article_id, publish_date, and HNSW vector index for embeddings with parameters (m=16, ef_construction=64).",
+        "testStrategy": "Insert test record and verify all fields accept expected data types. Test vector index creation and query performance with sample embedding data.",
+        "priority": "high",
+        "dependencies": [
+          "1"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:18.900Z"
+      },
+      {
+        "id": "3",
+        "title": "Create Supporting Database Tables",
+        "description": "Create scrape_jobs and internal_link_suggestions tables for task tracking and caching",
+        "details": "Create scrape_jobs table for tracking scraping, keyword extraction, and embedding generation tasks. Create internal_link_suggestions table for caching article recommendations with similarity scores. Add appropriate indexes and foreign key constraints.",
+        "testStrategy": "Insert test records in both tables. Verify foreign key constraints work correctly. Test cascade delete functionality.",
+        "priority": "medium",
+        "dependencies": [
+          "2"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:19.056Z"
+      },
+      {
+        "id": "4",
+        "title": "Create Vector Similarity Search Functions",
+        "description": "Implement PostgreSQL functions for vector similarity search and keyword matching",
+        "details": "Create match_health_articles() function using cosine similarity with pgvector for semantic search. Create match_by_keywords() function for keyword-based matching using array intersection. Both functions should support exclusion of source article and configurable limits/thresholds.",
+        "testStrategy": "Test functions with sample data. Verify similarity scores are calculated correctly. Test performance with different threshold values and result limits.",
+        "priority": "high",
+        "dependencies": [
+          "2"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:19.196Z"
+      },
+      {
+        "id": "5",
+        "title": "Develop Web Scraping Edge Function",
+        "description": "Create scrape-health-articles Edge Function to crawl Epoch Times health articles",
+        "details": "Implement Deno TypeScript function using DOMParser to scrape health categories (/b5/nf2283.htm, /b5/ncid248.htm, /b5/ncid246.htm). Extract article URLs, titles, tags, publish dates, authors, and excerpts. Handle pagination and implement rate limiting (500ms delay). Include duplicate detection and error handling.",
+        "testStrategy": "Test scraping on sample pages. Verify extracted data accuracy. Test pagination handling and rate limiting. Validate duplicate detection logic.",
+        "priority": "high",
+        "dependencies": [
+          "3"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:25.920Z"
+      },
+      {
+        "id": "6",
+        "title": "Develop Keyword Extraction Edge Function",
+        "description": "Create extract-keywords Edge Function using OpenAI GPT-4o-mini for AI keyword extraction",
+        "details": "Implement batch processing (20 articles) using OpenAI GPT-4o-mini model. Create system prompt for health domain keyword extraction (3-5 keywords per article). Process titles and return structured JSON with article_id mapping. Update database status from 'pending' to 'keywords_done'.",
+        "testStrategy": "Test with sample health article titles. Verify JSON response format. Test batch processing limits. Validate keyword quality and relevance.",
+        "priority": "high",
+        "dependencies": [
+          "5"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:25.970Z"
+      },
+      {
+        "id": "7",
+        "title": "Develop Embedding Generation Edge Function",
+        "description": "Create generate-embeddings Edge Function using OpenAI text-embedding-3-small model",
+        "details": "Implement batch processing (50 articles) using OpenAI text-embedding-3-small with 1536 dimensions. Combine article title and AI keywords for embedding input. Store embeddings in title_embedding vector field. Update status from 'keywords_done' to 'ready'.",
+        "testStrategy": "Test embedding generation with sample text. Verify 1536-dimension vectors are created correctly. Test batch processing performance and error handling.",
+        "priority": "high",
+        "dependencies": [
+          "6"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:26.082Z"
+      },
+      {
+        "id": "8",
+        "title": "Develop Internal Link Matching Edge Function",
+        "description": "Create match-internal-links Edge Function for real-time article similarity matching",
+        "details": "Implement hybrid matching: primary vector similarity search using generated embeddings, secondary keyword matching for insufficient results. Accept title and keywords as input, return ranked results with similarity scores and match types (semantic/keyword). Support configurable result limits.",
+        "testStrategy": "Test with various article titles and keyword combinations. Verify similarity ranking accuracy. Test fallback to keyword matching when semantic results are insufficient.",
+        "priority": "high",
+        "dependencies": [
+          "4",
+          "7"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:26.230Z"
+      },
+      {
+        "id": "9",
+        "title": "Configure Automated Cron Jobs",
+        "description": "Set up pg_cron scheduled tasks for automated daily processing pipeline",
+        "details": "Configure three daily cron jobs: 2:00 AM for article scraping, 2:30 AM for keyword extraction, 3:00 AM for embedding generation. Use pg_net to call Edge Functions with proper authentication headers. Include error handling and job status tracking.",
+        "testStrategy": "Test manual cron job execution. Verify job scheduling and timing. Test authentication and function invocation. Monitor job execution logs.",
+        "priority": "medium",
+        "dependencies": [
+          "8"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2025-12-08T06:43:30.376Z"
+      },
+      {
+        "id": "10",
+        "title": "Implement Initial Data Population",
+        "description": "Execute initial full scrape of existing health articles (~4000 articles)",
+        "details": "Run comprehensive scraping of all health category pages to populate initial dataset. Process articles through complete pipeline: scraping → keyword extraction → embedding generation. Monitor progress and handle any errors during bulk processing.",
+        "testStrategy": "Monitor scraping progress and success rates. Verify data quality of scraped articles. Test processing pipeline with large dataset. Validate final article count and status distribution.",
+        "priority": "medium",
+        "dependencies": [
+          "9"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "11",
+        "title": "Develop Monitoring and Analytics Queries",
+        "description": "Create SQL queries and views for system monitoring and performance tracking",
+        "details": "Implement monitoring queries for: daily processing statistics, article status distribution, job success/failure rates, processing pipeline health. Create views for easy dashboard integration. Include performance metrics for vector search operations.",
+        "testStrategy": "Execute monitoring queries with sample data. Verify query performance and accuracy. Test with different date ranges and filters.",
+        "priority": "low",
+        "dependencies": [
+          "10"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "12",
+        "title": "Implement Error Handling and Logging",
+        "description": "Add comprehensive error handling and logging throughout the system",
+        "details": "Implement error codes for common failures (SCRAPE_TIMEOUT, OPENAI_RATE_LIMIT, EMBEDDING_FAILED, DB_CONNECTION_ERROR). Add structured logging to all Edge Functions. Create error recovery mechanisms and retry logic. Store error details in scrape_jobs table.",
+        "testStrategy": "Test error scenarios deliberately. Verify error logging and recovery mechanisms. Test retry logic with rate limiting and timeouts.",
+        "priority": "medium",
+        "dependencies": [
+          "8"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "13",
+        "title": "Create API Documentation and Usage Examples",
+        "description": "Document API endpoints and create usage examples for frontend integration",
+        "details": "Create comprehensive API documentation for match-internal-links endpoint. Provide TypeScript/JavaScript usage examples for frontend integration. Document request/response formats, authentication requirements, and rate limits. Include error handling examples.",
+        "testStrategy": "Test all documented examples. Verify API documentation accuracy. Test authentication and rate limiting scenarios.",
+        "priority": "low",
+        "dependencies": [
+          "8"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "14",
+        "title": "Performance Optimization and Tuning",
+        "description": "Optimize vector search performance and fine-tune similarity thresholds",
+        "details": "Analyze vector search performance with HNSW index parameters. Test different similarity thresholds (0.7 default) for optimal results. Optimize batch sizes for OpenAI API calls. Fine-tune embedding generation and keyword extraction prompts based on results quality.",
+        "testStrategy": "Benchmark vector search performance with different index parameters. A/B test similarity thresholds with sample queries. Measure API response times and optimize batch processing.",
+        "priority": "low",
+        "dependencies": [
+          "11"
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "15",
+        "title": "System Integration Testing and Deployment Validation",
+        "description": "Conduct end-to-end testing of complete system workflow and validate production deployment",
+        "details": "Test complete pipeline: scraping → keyword extraction → embedding generation → similarity matching. Validate cron job automation over multiple days. Test API integration with sample frontend code. Verify system handles expected load and error scenarios gracefully.",
+        "testStrategy": "Execute full end-to-end workflow tests. Monitor system for 48-72 hours of automated operation. Test API with concurrent requests. Validate data consistency and accuracy across pipeline stages.",
+        "priority": "high",
+        "dependencies": [
+          "12",
+          "13",
+          "14"
+        ],
+        "status": "pending",
+        "subtasks": []
+      }
+    ],
+    "metadata": {
+      "version": "1.0.0",
+      "lastModified": "2025-12-08T06:43:30.376Z",
+      "taskCount": 15,
+      "completedCount": 9,
+      "tags": [
+        "master"
+      ]
+    }
+  }
+}

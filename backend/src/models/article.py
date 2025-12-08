@@ -289,6 +289,14 @@ class Article(Base, TimestampMixin):
         comment="Yoast SEO focus keyword (從 seo_keywords 中選取或 AI 推薦)",
     )
 
+    # Phase 12: Related articles for internal linking
+    related_articles: Mapped[list[dict] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        default=list,
+        comment="AI-recommended related articles for internal linking (from Supabase health_articles)",
+    )
+
     # Phase 9: SEO Title (separate from H1 title)
     seo_title: Mapped[str | None] = mapped_column(
         String(200),

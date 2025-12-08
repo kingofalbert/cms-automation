@@ -634,9 +634,10 @@ Parse the following Google Doc HTML and extract structured information.
 Parse and respond with JSON:"""
 
     def _build_unified_parsing_prompt(self, raw_html: str) -> str:
-        """Build unified prompt that combines parsing + SEO + proofreading + FAQ.
+        """Build unified prompt that combines parsing + SEO + FAQ generation.
 
-        This is the Phase 7.5 unified prompt that reduces costs by 60% and time by 50%.
+        Note: Proofreading is handled separately by the dedicated ProofreadingAnalysisService
+        which uses a comprehensive 405-rule system for quality analysis.
 
         Args:
             raw_html: Raw HTML content from Google Docs, or plain text content
@@ -751,38 +752,7 @@ Based on the article content, classify the article into categories using the **t
    - Do NOT include the primary_category in secondary_categories (no duplicates)
    - Only select if the article genuinely covers these topics
 
-## Task 3: Comprehensive Proofreading
-
-Identify and categorize all issues:
-
-1. **Critical Issues** (must fix):
-   - Factual errors (事實錯誤)
-   - Severe grammar mistakes (嚴重語法錯誤)
-
-2. **High Priority** (should fix):
-   - Typos and wrong characters (錯別字)
-   - Incorrect punctuation (標點符號錯誤)
-   - Subject-verb disagreement (主謂不一致)
-
-3. **Medium Priority** (recommended):
-   - Redundant expressions (冗餘表達)
-   - Inconsistent terminology (術語不一致)
-   - Awkward phrasing (表達不順)
-
-4. **Low Priority** (optional):
-   - Style improvements (文體優化)
-   - Alternative word choices (詞彙選擇)
-
-For each issue provide:
-- `rule_id`: Category code (e.g., TYPO_001)
-- `severity`: critical/high/medium/low
-- `location`: {{paragraph, sentence}}
-- `original_text`: The problematic text
-- `suggested_text`: Corrected version
-- `explanation`: Why this is an issue
-- `confidence`: 0.0-1.0 score
-
-## Task 4: Generate FAQ Section
+## Task 3: Generate FAQ Section
 
 Create 6-8 frequently asked questions that:
 
@@ -862,26 +832,6 @@ Return ONLY valid JSON with this exact structure:
     "secondary_keywords": ["遠距醫療", "醫療科技", "數位健康"],
     "tags": ["AI", "醫療科技", "健康產業"]
   }},
-  "proofreading_issues": [
-    {{
-      "rule_id": "TYPO_001",
-      "severity": "high",
-      "location": {{"paragraph": 3, "sentence": 2}},
-      "original_text": "醫療保建",
-      "suggested_text": "醫療保健",
-      "explanation": "錯字：'建'應改為'健'",
-      "confidence": 0.98
-    }}
-  ],
-  "proofreading_stats": {{
-    "total_issues": 5,
-    "critical": 0,
-    "high": 2,
-    "medium": 2,
-    "low": 1,
-    "auto_fixable": 4,
-    "requires_review": 1
-  }},
   "faqs": [
     {{
       "question": "什麼是AI醫療診斷技術？",
@@ -904,9 +854,8 @@ Important Instructions:
 3. **REQUIRED: suggested_titles MUST contain 2-3 title variations, NEVER null or empty**
 4. All Chinese content in Traditional Chinese (繁體中文)
 5. SEO meta descriptions must be compelling and include keywords naturally
-6. Proofreading must catch real errors, not style preferences
-7. FAQs must add value, not repeat article content
-8. **CRITICAL JSON FORMATTING**:
+6. FAQs must add value, not repeat article content
+7. **CRITICAL JSON FORMATTING**:
    - Properly escape all special characters in JSON strings
    - Use \\" for double quotes, \\\\ for backslashes
    - Ensure ALL strings are properly terminated with closing quotes

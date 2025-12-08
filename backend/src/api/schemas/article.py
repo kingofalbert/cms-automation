@@ -9,6 +9,19 @@ from src.api.schemas.base import BaseSchema, TimestampSchema
 from src.models import ArticleStatus
 
 
+class RelatedArticleResponse(BaseSchema):
+    """Response schema for related article recommendations (Phase 12)."""
+
+    article_id: str = Field(..., description="Unique article identifier (e.g., n12345678)")
+    title: str = Field(..., description="Full article title")
+    title_main: str | None = Field(default=None, description="Main title component")
+    url: str = Field(..., description="Original article URL")
+    excerpt: str | None = Field(default=None, description="Article excerpt/summary")
+    similarity: float = Field(..., ge=0, le=1, description="Similarity score (0-1)")
+    match_type: str = Field(..., description="Match type: semantic, content, or keyword")
+    ai_keywords: list[str] = Field(default_factory=list, description="AI-extracted keywords")
+
+
 class ArticleImageResponse(BaseSchema):
     """Response schema for article images extracted during parsing."""
 
@@ -60,7 +73,7 @@ class ArticleResponse(TimestampSchema):
 
     # Phase 10: WordPress Taxonomy Fields
     primary_category: str | None = Field(default=None, description='WordPress primary category (主分類，AI-classified)')
-    secondary_categories: list[str] = Field(default_factory=list, description='WordPress secondary categories (副分類，可多選)')
+    secondary_categories: list[str] | None = Field(default=None, description='WordPress secondary categories (副分類，可多選)')
     focus_keyword: str | None = Field(default=None, description='Yoast SEO focus keyword')
 
     # Phase 10: Article Images (from article_images table)
@@ -68,6 +81,12 @@ class ArticleResponse(TimestampSchema):
         default_factory=list,
         validation_alias='article_images',
         description='Images extracted from article'
+    )
+
+    # Phase 12: Related Articles for Internal Linking
+    related_articles: list[RelatedArticleResponse] = Field(
+        default_factory=list,
+        description='AI-recommended related articles for internal linking'
     )
 
 

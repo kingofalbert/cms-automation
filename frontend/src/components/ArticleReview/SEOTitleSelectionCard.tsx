@@ -261,11 +261,12 @@ export const SEOTitleSelectionCard: React.FC<SEOTitleSelectionCardProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             {/* Left: Document Extracted */}
             <div
-              className={`relative rounded-lg border-2 transition-all ${
+              className={`relative rounded-lg border-2 transition-all cursor-pointer ${
                 selectedSource === 'extracted'
                   ? 'border-blue-500 bg-blue-50/50 ring-2 ring-blue-200'
                   : 'border-slate-200 bg-white hover:border-slate-300'
-              } ${!hasExtracted ? 'opacity-60' : ''}`}
+              } ${!hasExtracted ? 'opacity-60 cursor-not-allowed' : ''}`}
+              onClick={() => hasExtracted && handleSelectSource('extracted')}
             >
               {/* Label */}
               <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50/80">
@@ -291,10 +292,7 @@ export const SEOTitleSelectionCard: React.FC<SEOTitleSelectionCardProps> = ({
               </div>
 
               {/* Content */}
-              <div
-                className={`p-3 min-h-[80px] ${hasExtracted ? 'cursor-pointer' : ''}`}
-                onClick={() => hasExtracted && handleSelectSource('extracted')}
-              >
+              <div className="p-3 min-h-[80px]">
                 {hasExtracted ? (
                   <p className="text-sm text-slate-700 font-medium">{extractedSeoTitle}</p>
                 ) : (
@@ -325,11 +323,12 @@ export const SEOTitleSelectionCard: React.FC<SEOTitleSelectionCardProps> = ({
 
             {/* Right: AI Suggested */}
             <div
-              className={`relative rounded-lg border-2 transition-all ${
+              className={`relative rounded-lg border-2 transition-all cursor-pointer ${
                 selectedSource === 'ai'
                   ? 'border-emerald-500 bg-emerald-50/50 ring-2 ring-emerald-200'
                   : 'border-slate-200 bg-white hover:border-slate-300'
-              } ${!hasAi ? 'opacity-60' : ''}`}
+              } ${!hasAi ? 'opacity-60 cursor-not-allowed' : ''}`}
+              onClick={() => hasAi && handleSelectSource('ai')}
             >
               {/* Label */}
               <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
@@ -355,10 +354,7 @@ export const SEOTitleSelectionCard: React.FC<SEOTitleSelectionCardProps> = ({
               </div>
 
               {/* Content */}
-              <div
-                className={`p-3 min-h-[80px] ${hasAi ? 'cursor-pointer' : ''}`}
-                onClick={() => hasAi && handleSelectSource('ai')}
-              >
+              <div className="p-3 min-h-[80px]">
                 {hasAi ? (
                   <div className="space-y-2">
                     <p className="text-sm text-slate-700 font-medium">{aiSuggestedTitle}</p>

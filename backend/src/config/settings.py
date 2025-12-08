@@ -41,6 +41,7 @@ class Settings(BaseSettings):
             "http://localhost:8000",
             "https://storage.googleapis.com",
             "https://cms-automation-frontend-476323.storage.googleapis.com",
+            "https://cms-automation-frontend-2025.storage.googleapis.com",
         ],
         description="CORS allowed origins",
     )

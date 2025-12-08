@@ -1,0 +1,180 @@
+# ============================================================
+# Supabase Configuration for Internal Link System
+# Version: 2.0
+# Date: 2025-12-07
+# ============================================================
+
+# A string used to distinguish different Supabase projects on the same host
+project_id = "cms-internal-links"
+
+[api]
+enabled = true
+# Port to use for the API URL
+port = 54321
+# Schemas to expose in your API
+schemas = ["public", "graphql_public"]
+# Extra schemas to add to the search_path of every request
+extra_search_path = ["public", "extensions"]
+# The maximum number of rows returned from a view, table, or stored procedure
+max_rows = 1000
+
+[api.tls]
+enabled = false
+
+[db]
+# Port to use for the local database URL
+port = 54322
+# Port used by db diff command to initialize the shadow database
+shadow_port = 54320
+# The database major version to use
+major_version = 17
+
+[db.pooler]
+enabled = false
+# Port to use for the local connection pooler
+port = 54329
+# Specifies when a server connection can be reused by other clients
+pool_mode = "transaction"
+# How many server connections to allow per user/database pair
+default_pool_size = 20
+# Maximum number of client connections allowed
+max_client_conn = 100
+
+[realtime]
+enabled = true
+# Bind realtime via either IPv4 or IPv6
+# ip_version = "IPv6"
+# The maximum length in bytes of HTTP request headers
+# max_header_length = 4096
+
+[studio]
+enabled = true
+# Port to use for Supabase Studio
+port = 54323
+# External URL of the API server that frontend connects to
+api_url = "http://127.0.0.1"
+# OpenAI API Key to use for Supabase AI in the Supabase Studio
+# openai_api_key = "env(OPENAI_API_KEY)"
+
+# Email testing server (Inbucket)
+[inbucket]
+enabled = true
+# Port to use for the email testing server web interface
+port = 54324
+# Uncomment to expose additional ports for testing user emails via SMTP
+# smtp_port = 54325
+# pop3_port = 54326
+
+[storage]
+enabled = true
+# The maximum file size allowed (e.g. "5MB", "500KB")
+file_size_limit = "50MiB"
+
+[storage.image_transformation]
+enabled = true
+
+# Uncomment to configure local storage buckets
+# [storage.buckets.images]
+# public = false
+# file_size_limit = "50MiB"
+# allowed_mime_types = ["image/png", "image/jpeg"]
+# objects_path = "./images"
+
+[auth]
+enabled = true
+# The base URL of your website
+site_url = "http://127.0.0.1:3000"
+# A list of *exact* URLs that auth providers are permitted to redirect to
+additional_redirect_urls = ["https://127.0.0.1:3000"]
+# How long tokens are valid for (in seconds)
+jwt_expiry = 3600
+# If disabled, the refresh token will never expire
+enable_refresh_token_rotation = true
+# Allows refresh tokens to be reused after expiry, up to the specified interval
+refresh_token_reuse_interval = 10
+# Allow/disallow new user signups to your project
+enable_signup = true
+# Allow/disallow anonymous sign-ins to your project
+enable_anonymous_sign_ins = false
+# Allow/disallow testing manual linking of accounts
+enable_manual_linking = false
+
+[auth.email]
+# Allow/disallow new user signups via email
+enable_signup = true
+# If enabled, a user will be required to confirm any email change
+double_confirm_changes = true
+# If enabled, users need to confirm their email address before signing in
+enable_confirmations = false
+
+[auth.sms]
+# Allow/disallow new user signups via SMS
+enable_signup = true
+# If enabled, users need to confirm their phone number before signing in
+enable_confirmations = false
+
+# External OAuth providers (disabled by default)
+[auth.external.apple]
+enabled = false
+[auth.external.azure]
+enabled = false
+[auth.external.google]
+enabled = false
+[auth.external.facebook]
+enabled = false
+[auth.external.twitter]
+enabled = false
+[auth.external.github]
+enabled = false
+
+[analytics]
+enabled = false
+port = 54327
+vector_port = 54328
+
+# ============================================================
+# Edge Functions Configuration
+# ============================================================
+
+[edge_runtime]
+enabled = true
+# Policy for inspector mode
+# Can be "per_worker" or "per_request"
+policy = "per_worker"
+inspector_port = 8083
+
+# ============================================================
+# Local Development Settings
+# ============================================================
+
+[local]
+# Enable embedding generation during local development
+# Requires OPENAI_API_KEY in .env.local
+# enable_embeddings = true
+
+# ============================================================
+# Edge Function Specific Settings
+# ============================================================
+
+# Note: Edge functions read environment variables from:
+# - .env.local (local development)
+# - Supabase Dashboard > Edge Functions > Secrets (production)
+#
+# Required secrets for this project:
+# - OPENAI_API_KEY: For embeddings and AI parsing
+# - SUPABASE_URL: Auto-provided in production
+# - SUPABASE_SERVICE_ROLE_KEY: Auto-provided in production
+
+# ============================================================
+# Database Extensions Required
+# ============================================================
+
+# The following extensions must be enabled in the Supabase Dashboard:
+# 1. vector (pgvector) - For vector similarity search
+# 2. pg_cron - For scheduled tasks (Pro plan only)
+# 3. pg_net - For HTTP calls from PostgreSQL
+
+# To enable extensions, run in SQL Editor:
+# create extension if not exists vector with schema extensions;
+# create extension if not exists pg_cron with schema extensions;
+# create extension if not exists pg_net with schema extensions;
