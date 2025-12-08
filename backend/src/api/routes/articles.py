@@ -349,16 +349,34 @@ def _clean_body_html(body_html: str | None, author_line: str | None) -> str:
 
 
 def _build_article_payload(article: Article) -> ArticlePayload:
-    """Convert Article ORM object to Proofreading service payload."""
+    """Convert Article ORM object to Proofreading service payload.
+
+    IMPORTANT: For proofreading, we use body_html (cleaned body content) instead
+    of the raw body. This ensures:
+    1. Only the article body is proofread (not title, author, or SEO metadata)
+    2. Rules are applied to the correct content scope
+    3. Avoids false positives from title/author sections
+
+    Backward compatibility: Falls back to article.body if body_html is not available.
+    """
     metadata = dict(article.article_metadata or {})
-    sections = _extract_article_sections(metadata, article.body or "")
+
+    # Use cleaned body_html for proofreading (preferred)
+    # Falls back to article.body for backward compatibility with older articles
+    proofreading_content = article.body_html or article.body or ""
+
+    # Build sections from the cleaned content
+    sections = _extract_article_sections(metadata, proofreading_content)
     featured_image = _build_featured_image_metadata(article, metadata)
     images = _build_inline_images(article, metadata)
     keywords = _extract_keywords(metadata)
+
+    # HTML content for rendering (may include more than just body)
     html_content = (
         metadata.get("rendered_html")
         or metadata.get("html")
         or metadata.get("body_html")
+        or article.body_html
         or article.body
     )
     target_locale = (
@@ -371,7 +389,7 @@ def _build_article_payload(article: Article) -> ArticlePayload:
     return ArticlePayload(
         article_id=article.id,
         title=article.title,
-        original_content=article.body or "",
+        original_content=proofreading_content,  # Use cleaned body for proofreading
         html_content=html_content,
         sections=sections,
         metadata=metadata,

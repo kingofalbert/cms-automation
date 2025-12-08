@@ -1,9 +1,16 @@
-"""High-level service orchestrating AI + deterministic proofreading."""
+"""High-level service orchestrating AI + deterministic proofreading.
+
+Enhanced version supporting:
+- Full 405-rule catalog (catalog_full.json)
+- Multiple analysis modes (full, quick, seo-only)
+- DJY-specific "mixed characteristics" guidelines
+"""
 
 from __future__ import annotations
 
 import json
 import time
+from enum import Enum
 from hashlib import sha256
 from typing import Any
 
@@ -14,6 +21,7 @@ from src.services.proofreading.ai_prompt_builder import (
     ProofreadingPromptBuilder,
     RuleManifest,
     load_default_manifest,
+    load_full_manifest,
 )
 from src.services.proofreading.deterministic_engine import DeterministicRuleEngine
 from src.services.proofreading.merger import ProofreadingResultMerger
@@ -29,17 +37,67 @@ logger = get_logger(__name__)
 settings = get_settings()
 
 
+class AnalysisMode(str, Enum):
+    """Available analysis modes for proofreading."""
+
+    FULL = "full"  # Complete 405-rule analysis
+    QUICK = "quick"  # Focused E/F class rules only
+    SEO_ONLY = "seo_only"  # SEO metadata generation only
+    DETERMINISTIC_ONLY = "deterministic_only"  # Skip AI, run only rule engine
+
+
 class ProofreadingAnalysisService:
-    """Coordinates single-call AI analysis with deterministic rule checks."""
+    """Coordinates single-call AI analysis with deterministic rule checks.
+
+    Enhanced version supporting:
+    - Full 405-rule catalog with DJY-specific guidelines
+    - Multiple analysis modes (full, quick, seo-only, deterministic-only)
+    - Token-optimized prompt generation
+    """
+
+    # Service version for tracking
+    VERSION = "2.0.0"
 
     def __init__(
         self,
         *,
         anthropic_client: AsyncAnthropic | None = None,
         manifest: RuleManifest | None = None,
+        use_full_catalog: bool = True,
+        max_rules_in_prompt: int | None = None,
     ) -> None:
-        self.manifest = manifest or load_default_manifest()
-        self.prompt_builder = ProofreadingPromptBuilder(self.manifest)
+        """Initialize the proofreading service.
+
+        Args:
+            anthropic_client: Custom Anthropic client (optional)
+            manifest: Custom rule manifest (optional)
+            use_full_catalog: Whether to use the full 405-rule catalog
+            max_rules_in_prompt: Limit rules in prompt for token optimization
+        """
+        # Load manifest - prefer full catalog if requested
+        if manifest:
+            self.manifest = manifest
+        elif use_full_catalog:
+            try:
+                self.manifest = load_full_manifest()
+                logger.info(
+                    "proofreading_full_catalog_loaded",
+                    version=self.manifest.version,
+                    total_rules=self.manifest.total_rules,
+                )
+            except FileNotFoundError:
+                logger.warning(
+                    "proofreading_full_catalog_not_found_falling_back",
+                )
+                self.manifest = load_default_manifest()
+        else:
+            self.manifest = load_default_manifest()
+
+        self.prompt_builder = ProofreadingPromptBuilder(
+            self.manifest,
+            include_full_rules=True,
+            max_rules_in_prompt=max_rules_in_prompt,
+        )
         self.ai_client = anthropic_client or AsyncAnthropic(
             api_key=settings.ANTHROPIC_API_KEY
         )
@@ -47,15 +105,44 @@ class ProofreadingAnalysisService:
         self.rule_engine = DeterministicRuleEngine()
         self.merger = ProofreadingResultMerger()
 
-    async def analyze_article(self, payload: ArticlePayload) -> ProofreadingResult:
-        """Run full analysis pipeline returning merged result."""
-        prompt = self.prompt_builder.build_prompt(payload)
+    async def analyze_article(
+        self,
+        payload: ArticlePayload,
+        mode: AnalysisMode = AnalysisMode.FULL,
+        focus_categories: list[str] | None = None,
+    ) -> ProofreadingResult:
+        """Run analysis pipeline returning merged result.
+
+        Args:
+            payload: Article data to analyze
+            mode: Analysis mode (full, quick, seo_only, deterministic_only)
+            focus_categories: Categories to focus on for quick mode (e.g., ["E", "F"])
+
+        Returns:
+            ProofreadingResult with issues, suggestions, and metadata
+        """
+        # Handle deterministic-only mode (no AI call)
+        if mode == AnalysisMode.DETERMINISTIC_ONLY:
+            return await self._run_deterministic_only(payload)
+
+        # Build appropriate prompt based on mode
+        if mode == AnalysisMode.SEO_ONLY:
+            prompt = self.prompt_builder.build_seo_only_prompt(payload)
+        elif mode == AnalysisMode.QUICK:
+            prompt = self.prompt_builder.build_quick_check_prompt(
+                payload, focus_categories or ["E", "F"]
+            )
+        else:
+            prompt = self.prompt_builder.build_prompt(payload)
         prompt_hash = self._hash_prompt(prompt)
 
         logger.info(
             "proofreading_analysis_started",
             article_id=payload.article_id,
             model=self.model,
+            mode=mode.value,
+            manifest_version=self.manifest.version,
+            total_rules=self.manifest.total_rules,
             prompt_hash=prompt_hash,
         )
 
@@ -70,6 +157,12 @@ class ProofreadingAnalysisService:
         ai_result.processing_metadata.ai_latency_ms = latency_ms
         ai_result.processing_metadata.rule_manifest_version = self.manifest.version
 
+        # For SEO-only mode, skip deterministic checks
+        if mode == AnalysisMode.SEO_ONLY:
+            ai_result.processing_metadata.notes["analysis_mode"] = "seo_only"
+            ai_result.processing_metadata.notes["service_version"] = self.VERSION
+            return ai_result
+
         # Deterministic scripts
         script_issues = self.rule_engine.run(payload)
 
@@ -81,16 +174,100 @@ class ProofreadingAnalysisService:
         merged_result.processing_metadata.notes.setdefault(
             "script_issue_count", len(script_issues)
         )
+        merged_result.processing_metadata.notes["analysis_mode"] = mode.value
+        merged_result.processing_metadata.notes["service_version"] = self.VERSION
+        merged_result.processing_metadata.notes["catalog_total_rules"] = self.manifest.total_rules
 
         logger.info(
             "proofreading_analysis_completed",
             article_id=payload.article_id,
+            mode=mode.value,
             issues=len(merged_result.issues),
             blocking=len(merged_result.blocking_issues),
+            ai_issues=len(ai_result.issues),
+            script_issues=len(script_issues),
             latency_ms=latency_ms,
         )
 
         return merged_result
+
+    async def _run_deterministic_only(
+        self, payload: ArticlePayload
+    ) -> ProofreadingResult:
+        """Run only the deterministic rule engine without AI.
+
+        Useful for quick validation or when AI quota is limited.
+        """
+        logger.info(
+            "proofreading_deterministic_only_started",
+            article_id=payload.article_id,
+        )
+
+        start_time = time.perf_counter()
+        script_issues = self.rule_engine.run(payload)
+        latency_ms = int((time.perf_counter() - start_time) * 1000)
+
+        # Convert to ProofreadingResult
+        result = ProofreadingResult(
+            article_id=payload.article_id,
+            issues=script_issues,
+            suggested_content=None,
+            seo_metadata=None,
+        )
+        result.processing_metadata = ProcessingMetadata(
+            ai_model=None,
+            ai_latency_ms=None,
+            script_engine_version=self.rule_engine.VERSION,
+            rule_manifest_version=self.manifest.version,
+        )
+        result.processing_metadata.notes = {
+            "analysis_mode": "deterministic_only",
+            "service_version": self.VERSION,
+            "script_issue_count": len(script_issues),
+            "total_latency_ms": latency_ms,
+        }
+
+        logger.info(
+            "proofreading_deterministic_only_completed",
+            article_id=payload.article_id,
+            issues=len(script_issues),
+            blocking=len(result.blocking_issues),
+            latency_ms=latency_ms,
+        )
+
+        return result
+
+    async def quick_check(
+        self,
+        payload: ArticlePayload,
+        categories: list[str] | None = None,
+    ) -> ProofreadingResult:
+        """Convenience method for quick category-focused checks.
+
+        Args:
+            payload: Article to check
+            categories: Categories to check (default: ["E", "F"] for special/compliance)
+
+        Returns:
+            ProofreadingResult with focused issues
+        """
+        return await self.analyze_article(
+            payload,
+            mode=AnalysisMode.QUICK,
+            focus_categories=categories or ["E", "F"],
+        )
+
+    async def seo_analysis(self, payload: ArticlePayload) -> dict[str, Any]:
+        """Generate SEO metadata suggestions only.
+
+        Args:
+            payload: Article to analyze
+
+        Returns:
+            Dict with meta_title, meta_description, keywords, slug_suggestion
+        """
+        result = await self.analyze_article(payload, mode=AnalysisMode.SEO_ONLY)
+        return result.seo_metadata or {}
 
     async def _call_ai(self, prompt: dict[str, str]) -> dict[str, Any]:
         """Invoke Anthropic Messages API with the combined prompt."""

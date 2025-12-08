@@ -1,0 +1,407 @@
+{
+  "version": "2025.12.07",
+  "generated_at": "2025-12-07T00:00:00Z",
+  "source_documents": [
+    "AI 校對規則生成與應用.docx",
+    "DJY_Proofreading_Standard_20231108pages.pdf",
+    "backend/src/services/proofreading/deterministic_engine.py",
+    "backend/src/services/proofreading/rule_specs.py"
+  ],
+  "total_rule_count": 405,
+  "categories": [
+    {
+      "category": "A",
+      "description": "用字與用詞規範（統一用字、易混淆字、常見錯字、非正式用語）",
+      "rule_count": 154,
+      "subcategories": [
+        {
+          "subcategory": "A1",
+          "name": "統一用字",
+          "description": "強制統一的異體字選擇，確保風格一致",
+          "rule_count": 50,
+          "rules": [
+            {"rule_id": "A1-001", "summary": "表/錶：電表、水表、申請表用「表」；手錶、懷錶用「錶」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-002", "summary": "布/佈：公布、宣布、分布用「布」；佈道用「佈」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-003", "summary": "館/舘：使館、領館、圖書館統一用「館」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-004", "summary": "雇/僱：雇主、雇員用「雇」；僱用、僱人用「僱」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A1-005", "summary": "計畫/計劃：網站統一用「計劃」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-006", "summary": "紀錄/記錄：破紀錄、紀錄片用「紀錄」；會議記錄用「記錄」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A1-007", "summary": "家具/傢俱：統一用「家具」，例外：俱樂部保持「俱」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-008", "summary": "分/份：身分用「分」；一份、股份用「份」；例外：緣份", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A1-009", "summary": "周/週：週一、週末用「週」；周期、周年、周遭用「周」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-010", "summary": "占/佔：統一為「占」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-011", "summary": "裡/裏/里：統一用「裡」；譯名用「里」（如克里）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-012", "summary": "菸/煙：香菸、吸菸用「菸」；油煙、大煙、煙毒用「煙」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A1-013", "summary": "它/牠：動物統一用「它」，不用「牠」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-014", "summary": "你/妳：統一用「你」，不用「妳」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-015", "summary": "策畫/策劃：統一用「策劃」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-016", "summary": "規畫/規劃：統一用「規劃」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-017", "summary": "畫/劃：繪畫相關用「畫」；其他用「劃」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A1-018", "summary": "蹤/踪：統一用「蹤」（如蹤跡、失蹤）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A1-019", "summary": "濛/矇/蒙：朦朧用「濛」；矇騙用「矇」；啟蒙用「蒙」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A1-020", "summary": "鏽/銹：統一用「鏽」（如生鏽、鐵鏽）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "A2",
+          "name": "易混淆字",
+          "description": "發音相同但意義不同的字詞辨析",
+          "rule_count": 30,
+          "rules": [
+            {"rule_id": "A2-001", "summary": "複/覆/復：重複用「複」；回覆、反覆用「覆」；恢復用「復」", "severity": "info", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-002", "summary": "形/型：形象、形式用「形」；模型、典型用「型」", "severity": "info", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-003", "summary": "待/呆：待在家用「待」；發呆用「呆」", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A2-004", "summary": "的/地/得：名詞前用「的」；動詞前用「地」；補語用「得」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-005", "summary": "做/作：動作用「做」；創作、作品用「作」", "severity": "info", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-006", "summary": "即/既：即使用「即」；既然用「既」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-007", "summary": "以/已：以為用「以」；已經用「已」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-008", "summary": "在/再：正在用「在」；再次用「再」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-009", "summary": "像/象：好像用「像」；大象用「象」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A2-010", "summary": "須/需：必須用「須」；需要用「需」", "severity": "info", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "A3",
+          "name": "常見錯字",
+          "description": "常見的錯別字校正",
+          "rule_count": 44,
+          "rules": [
+            {"rule_id": "A3-004", "summary": "莫明其妙→莫名其妙", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A3-005", "summary": "按步就班→按部就班", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A3-006", "summary": "破斧沉舟→破釜沉舟", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A3-007", "summary": "一愁莫展→一籌莫展", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A3-008", "summary": "迫不急待→迫不及待", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A3-009", "summary": "委屈求全→委曲求全", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "A3-010", "summary": "川流不息→川流不息（正確）；穿流不息→錯誤", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "A4",
+          "name": "非正式用語",
+          "description": "網絡流行語、口語化表達、粗俗用語檢測",
+          "rule_count": 30,
+          "rules": [
+            {"rule_id": "A4-001", "summary": "網絡流行語：給力、不給力，正式文章不宜使用", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-002", "summary": "網絡流行語：高大上，正式文章不宜使用", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-003", "summary": "網絡用語：秒殺，正式文章不宜使用", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-004", "summary": "網絡用語：逆襲，正式文章不宜使用", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-005", "summary": "網絡用語：腦洞、腦洞大開，正式文章不宜使用", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-006", "summary": "網絡用語：吐槽，應改為調侃、揶揄", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-007", "summary": "網絡用語：點讚，正式文章不宜使用", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-008", "summary": "網絡用語：槓精，正式文章不宜使用", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-014", "summary": "粗俗用語：老公，應改為丈夫、先生（除非直接引語）", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-015", "summary": "網絡用語：顏值，應改為容貌", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-016", "summary": "網絡用語：小鮮肉，應改為年輕男性", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "A4-017", "summary": "粗俗用語：劈腿，應改為不忠、移情別戀", "severity": "warning", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        }
+      ]
+    },
+    {
+      "category": "B",
+      "description": "標點符號與排版（引號、書名號、全角半角）",
+      "rule_count": 60,
+      "subcategories": [
+        {
+          "subcategory": "B1",
+          "name": "基本標點",
+          "description": "句末標點、標點格式規範",
+          "rule_count": 14,
+          "rules": [
+            {"rule_id": "B1-001", "summary": "句末標點缺失：陳述句需要句號", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B1-002", "summary": "省略號格式：應使用六點省略號「……」", "severity": "info", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B1-003", "summary": "問號濫用：連續多個問號應改為單個", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B1-004", "summary": "感嘆號濫用：連續多個感嘆號應改為單個", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B1-005", "summary": "中英標點混用：中文段落應使用全形標點", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B1-006", "summary": "冒號格式：中文語境應使用全形冒號「：」", "severity": "info", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B1-007", "summary": "分號格式：中文語境應使用全形分號「；」", "severity": "info", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "B2",
+          "name": "逗號與頓號",
+          "description": "逗號、頓號使用規範",
+          "rule_count": 15,
+          "rules": [
+            {"rule_id": "B2-001", "summary": "逗號後空格：英文逗號後應有空格", "severity": "info", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B2-002", "summary": "中文段落禁止使用半角逗號", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B2-003", "summary": "頓號使用：短詞並列時建議使用頓號「、」", "severity": "info", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "B3",
+          "name": "引號規範",
+          "description": "引號配對、嵌套結構",
+          "rule_count": 7,
+          "rules": [
+            {"rule_id": "B3-001", "summary": "引號配對：「」和『』必須成對出現", "severity": "error", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "B3-002", "summary": "引號嵌套：外層「」，內層『』", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B3-003", "summary": "書名號配對：《》必須成對出現", "severity": "error", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "B7",
+          "name": "破折號與連字符",
+          "description": "破折號、連字符使用規範",
+          "rule_count": 9,
+          "rules": [
+            {"rule_id": "B7-001", "summary": "破折號格式：應成對使用「——」", "severity": "info", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "B7-004", "summary": "中文語句禁止使用半角短橫線", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        }
+      ]
+    },
+    {
+      "category": "C",
+      "description": "數字與計量單位（阿拉伯數字、貨幣格式）",
+      "rule_count": 24,
+      "subcategories": [
+        {
+          "subcategory": "C1",
+          "name": "數字格式",
+          "description": "阿拉伯數字、分節號規範",
+          "rule_count": 15,
+          "rules": [
+            {"rule_id": "C1-001", "summary": "統計數據使用阿拉伯數字並統一分節號", "severity": "info", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "C1-002", "summary": "千位分節號：四位數以上添加半形逗號（如10,000）", "severity": "info", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "C1-006", "summary": "阿拉伯數字必須使用半角字符", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "C2",
+          "name": "貨幣與單位",
+          "description": "貨幣格式、單位標準",
+          "rule_count": 9,
+          "rules": [
+            {"rule_id": "C2-001", "summary": "貨幣首次出現需明確幣種（如8,500萬美元）", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "C3-003", "summary": "非主流貨幣需括注換算金額", "severity": "warning", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        }
+      ]
+    },
+    {
+      "category": "D",
+      "description": "人名地名譯名與機構標準（大陸譯名優先）",
+      "rule_count": 40,
+      "core_principle": "全球新聞與重點新聞，人名地名以大陸譯名為準",
+      "subcategories": [
+        {
+          "subcategory": "D1",
+          "name": "人名譯名",
+          "description": "國際政要、名人譯名對照",
+          "rule_count": 10,
+          "translation_table": [
+            {"taiwan": "歐巴馬", "djy_standard": "奧巴馬", "note": "美國前總統"},
+            {"taiwan": "柯林頓", "djy_standard": "克林頓", "note": "美國前總統"},
+            {"taiwan": "希拉蕊", "djy_standard": "希拉里", "note": "美國前國務卿"},
+            {"taiwan": "乔治·布什", "djy_standard": "布什", "note": "美國總統"},
+            {"taiwan": "梅克爾", "djy_standard": "默克爾", "note": "德國前總理"},
+            {"taiwan": "薩科奇", "djy_standard": "薩科齊", "note": "法國前總統"},
+            {"taiwan": "馬克宏", "djy_standard": "馬克龍", "note": "法國總統"},
+            {"taiwan": "乔治亚", "djy_standard": "格魯吉亞", "note": "國家名/人名"},
+            {"taiwan": "尹錫悅", "djy_standard": "尹錫悅", "note": "韓國總統"}
+          ],
+          "rules": [
+            {"rule_id": "D1-001", "summary": "譯名遵循大陸標準（奧巴馬、意大利等）", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "D1-101", "summary": "歐巴馬→奧巴馬", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "D1-102", "summary": "柯林頓→克林頓", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "D1-103", "summary": "希拉蕊→希拉里", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "D1-104", "summary": "梅克爾→默克爾", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "D2",
+          "name": "姓氏規範",
+          "description": "中文姓氏用字規範",
+          "rule_count": 5,
+          "rules": [
+            {"rule_id": "D2-005", "summary": "姓氏『于』保持字形，不寫『於』", "severity": "warning", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "D3",
+          "name": "地名/國家譯名",
+          "description": "國際地名譯名對照",
+          "rule_count": 20,
+          "translation_table": [
+            {"taiwan": "紐西蘭", "djy_standard": "新西蘭", "note": "國家"},
+            {"taiwan": "雪梨", "djy_standard": "悉尼", "note": "城市"},
+            {"taiwan": "坎城", "djy_standard": "戛納", "note": "城市"},
+            {"taiwan": "喬治亞", "djy_standard": "格魯吉亞", "note": "國家"},
+            {"taiwan": "衣索匹亞", "djy_standard": "埃塞俄比亞", "note": "國家"},
+            {"taiwan": "乔治亚州", "djy_standard": "佐治亞州", "note": "美國州名"},
+            {"taiwan": "克羅埃西亞", "djy_standard": "克羅地亞", "note": "國家"},
+            {"taiwan": "瓜地馬拉", "djy_standard": "危地馬拉", "note": "國家"},
+            {"taiwan": "哥斯大黎加", "djy_standard": "哥斯達黎加", "note": "國家"},
+            {"taiwan": "馬爾地夫", "djy_standard": "馬爾代夫", "note": "國家"}
+          ],
+          "rules": [
+            {"rule_id": "D3-228", "summary": "紐西蘭→新西蘭", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "D3-218", "summary": "喬治亞→格魯吉亞", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "D4",
+          "name": "機構名稱",
+          "description": "國際機構名稱規範",
+          "rule_count": 5,
+          "rules": [
+            {"rule_id": "D4-002", "summary": "外國機構縮寫首次出現需注明全稱", "severity": "info", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        }
+      ]
+    },
+    {
+      "category": "E",
+      "description": "特殊規範（圖片來源、宗教術語、年代表示、品牌名稱）",
+      "rule_count": 45,
+      "subcategories": [
+        {
+          "subcategory": "E1",
+          "name": "圖片來源格式",
+          "description": "圖片來源標註規範",
+          "rule_count": 12,
+          "rules": [
+            {"rule_id": "E1-001", "summary": "圖片來源格式：全西文用半角括號，中文版權用全角", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E1-002", "summary": "圖片來源不需要「提供」字樣", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E1-003", "summary": "圖說不加「圖片來源：」或「攝影：」前綴", "severity": "warning", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "E2",
+          "name": "法輪功相關術語",
+          "description": "法輪功專用詞彙規範（重要）",
+          "rule_count": 15,
+          "important_note": "法輪功相關報導需嚴格遵循以下規範",
+          "rules": [
+            {"rule_id": "E2-001", "summary": "法輪功專用字：「煉」功（不寫「練」或「练」）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-201", "summary": "練功→煉功（法輪功功法專用）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-202", "summary": "练功→煉功（法輪功功法專用）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-203", "summary": "指代法輪功時應使用「他」而非「它」", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "E2-204", "summary": "法輪功練習者→法輪功學員", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-205", "summary": "大法徒弟→大法弟子", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-206", "summary": "三退首次出現需解釋：退黨、退團、退隊", "severity": "info", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "E2-207", "summary": "「講真相」為法輪功特定用語，應保持原樣", "severity": "info", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "E2-208", "summary": "宏法→弘法", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-209", "summary": "七二○→7·20（法輪功關鍵日期）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-210", "summary": "四二五→4·25（法輪功關鍵日期）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-211", "summary": "鎮壓法輪功→迫害法輪功", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E2-212", "summary": "法輪功邪教→禁用，法輪功不是邪教", "severity": "critical", "can_auto_fix": false, "blocks_publish": true},
+            {"rule_id": "E2-213", "summary": "體育鍛鍊用「練」（練習、練功），區別於修煉用「煉」", "severity": "info", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "E3",
+          "name": "年代與歷史事件",
+          "description": "歷史事件全稱規範",
+          "rule_count": 10,
+          "rules": [
+            {"rule_id": "E3-001", "summary": "年代需寫全稱（如1989年或民國78年）", "severity": "warning", "can_auto_fix": false, "blocks_publish": false},
+            {"rule_id": "E3-002", "summary": "公元前紀年應保留『前』字（公元前236—前183）", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E3-302", "summary": "六四事件→六四天安門事件", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E3-303", "summary": "反右→反右運動", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E3-304", "summary": "文革→文化大革命", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E3-305", "summary": "大躍進時期→大躍進運動", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E3-306", "summary": "三年困難時期/自然災害時期→三年大饑荒", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E3-307", "summary": "土改→土地改革運動", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E3-308", "summary": "鎮反→鎮反運動", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "E4",
+          "name": "品牌名稱",
+          "description": "品牌名稱大小寫規範",
+          "rule_count": 8,
+          "rules": [
+            {"rule_id": "E4-401", "summary": "covid-19→COVID-19", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E4-404", "summary": "youtube→YouTube", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E4-405", "summary": "youtuber→YouTuber", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E4-406", "summary": "facebook→Facebook", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E4-407", "summary": "instagram→Instagram", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E4-408", "summary": "whatsapp→WhatsApp", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E4-409", "summary": "tiktok→TikTok", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "E4-410", "summary": "telegram→Telegram", "severity": "warning", "can_auto_fix": true, "blocks_publish": false}
+          ]
+        }
+      ]
+    },
+    {
+      "category": "F",
+      "description": "發布合規（圖片規格、標題層級、授權、黨文化過濾）",
+      "rule_count": 42,
+      "subcategories": [
+        {
+          "subcategory": "F1",
+          "name": "圖片規格",
+          "description": "圖片尺寸、格式要求",
+          "rule_count": 10,
+          "rules": [
+            {"rule_id": "F1-001", "summary": "插圖寬度規範：橫圖600px、方/豎圖450px", "severity": "critical", "can_auto_fix": false, "blocks_publish": true},
+            {"rule_id": "F1-002", "summary": "特色圖必須為橫圖且寬高比>1.2", "severity": "critical", "can_auto_fix": false, "blocks_publish": true}
+          ]
+        },
+        {
+          "subcategory": "F2",
+          "name": "HTML標題",
+          "description": "標題層級規範",
+          "rule_count": 10,
+          "rules": [
+            {"rule_id": "F2-001", "summary": "HTML標題層級僅允許H2/H3", "severity": "error", "can_auto_fix": true, "blocks_publish": true}
+          ]
+        },
+        {
+          "subcategory": "F3",
+          "name": "授權合規",
+          "description": "媒體素材授權要求",
+          "rule_count": 10,
+          "rules": [
+            {"rule_id": "F3-001", "summary": "僅允許使用具備明確授權的媒體素材", "severity": "critical", "can_auto_fix": false, "blocks_publish": true}
+          ]
+        },
+        {
+          "subcategory": "F4",
+          "name": "黨文化詞彙過濾",
+          "description": "中共宣傳詞彙替換（強制執行）",
+          "rule_count": 12,
+          "important_note": "這是DJY的核心政治立場，必須嚴格執行",
+          "replacement_table": [
+            {"forbidden": "建國（指1949）", "replacement": "中共建政", "reason": "否定中共代表「中國」的合法性"},
+            {"forbidden": "國慶（指十一）", "replacement": "十一", "reason": "將節日中性化"},
+            {"forbidden": "解放（指1949）", "replacement": "中共奪權/易主", "reason": "還原為中性的政權更迭"},
+            {"forbidden": "春節", "replacement": "中國新年/過年", "reason": "回歸傳統「過年」"},
+            {"forbidden": "農曆/陰曆", "replacement": "黃曆", "reason": "強調傳統文化屬性"},
+            {"forbidden": "國內（指大陸）", "replacement": "中國大陸", "reason": "海外媒體不稱中國為「國內」"},
+            {"forbidden": "和諧（動詞）", "replacement": "封殺/整肅", "reason": "還原「被和諧」的真實含義"},
+            {"forbidden": "新中國", "replacement": "中共建政後", "reason": "否定中共政權的正統性"},
+            {"forbidden": "偉大領袖", "replacement": "（刪除或改為客觀稱呼）", "reason": "去除中共個人崇拜"},
+            {"forbidden": "人民政府", "replacement": "中共當局/中共政權", "reason": "還原政權本質"}
+          ],
+          "rules": [
+            {"rule_id": "F4-001", "summary": "建國（指1949）→中共建政", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "F4-002", "summary": "國慶（指十一）→十一", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "F4-003", "summary": "解放（指1949）→中共奪權", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "F4-004", "summary": "春節→中國新年/過年", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "F4-005", "summary": "農曆/陰曆→黃曆", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "F4-006", "summary": "國內（指大陸）→中國大陸", "severity": "warning", "can_auto_fix": true, "blocks_publish": false},
+            {"rule_id": "F4-007", "summary": "和諧（動詞）→封殺/整肅", "severity": "warning", "can_auto_fix": false, "blocks_publish": false}
+          ]
+        },
+        {
+          "subcategory": "F6",
+          "name": "綜合合規",
+          "description": "綜合發布阻斷規則",
+          "rule_count": 2,
+          "rules": [
+            {"rule_id": "F6-006", "summary": "綜合阻斷：若有critical問題發布必須中止", "severity": "critical", "can_auto_fix": false, "blocks_publish": true}
+          ]
+        }
+      ]
+    }
+  ],
+  "special_notes": {
+    "traditional_simplified": "不強制繁簡轉換，除非規則明確要求特定字形（如「煉功」）",
+    "translation_standard": "國際人名地名採用大陸譯名標準，但保持正體中文字形",
+    "political_stance": "執行嚴格的「去黨文化」過濾，這是DJY的核心編輯立場",
+    "falun_gong": "法輪功相關報導需特別注意E2類規則，使用正確的術語和稱呼"
+  }
+}
