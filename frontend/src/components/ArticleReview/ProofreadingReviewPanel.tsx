@@ -20,7 +20,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
-import { DiffViewSection } from './DiffViewSection';
+import { DiffViewSection, type DiffStats } from './DiffViewSection';
 import { ProofreadingIssuesSection } from './ProofreadingIssuesSection';
 import { BatchApprovalControls } from './BatchApprovalControls';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
@@ -176,6 +176,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
             <DiffViewSection
               originalContent={data.articleReview?.content?.original || ''}
               proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.articleReview?.content?.original || ''}
+              diffStats={data.articleReview?.content?.changes?.stats as DiffStats | undefined}
+              hasDiffData={!!data.articleReview?.content?.changes}
             />
           </Card>
         </div>

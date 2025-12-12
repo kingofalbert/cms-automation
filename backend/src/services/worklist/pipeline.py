@@ -22,6 +22,7 @@ from src.services.proofreading import (
     ProofreadingResult,
 )
 from src.services.parser import ArticleParserService
+from src.services.worklist.diff_generator import generate_content_diff, generate_word_diff
 
 logger = get_logger(__name__)
 
@@ -384,12 +385,34 @@ class WorklistPipelineService:
         article: Article,
         result: ProofreadingResult,
     ) -> None:
-        """Persist proofreading output on the article record."""
+        """Persist proofreading output on the article record.
+
+        Phase 8.4: Enhanced to save suggested_content and diff structure
+        for the comparison view in ProofreadingReviewPanel.
+        """
+        # Save proofreading issues
         article.proofreading_issues = [
             issue.model_dump(mode="json") for issue in result.issues
         ]
         article.critical_issues_count = result.statistics.blocking_issue_count
 
+        # Phase 8.4: Save AI suggested content for diff view
+        if result.suggested_content:
+            article.suggested_content = result.suggested_content
+            # Generate structured diff for frontend visualization
+            article.suggested_content_changes = generate_content_diff(
+                original=article.body or "",
+                suggested=result.suggested_content
+            )
+            logger.info(
+                "proofreading_suggested_content_saved",
+                article_id=article.id,
+                original_length=len(article.body or ""),
+                suggested_length=len(result.suggested_content),
+                has_changes=article.body != result.suggested_content,
+            )
+
+        # Save complete result to metadata (backup/audit)
         metadata = dict(article.article_metadata or {})
         metadata["proofreading"] = result.model_dump(mode="json")
         article.article_metadata = metadata
