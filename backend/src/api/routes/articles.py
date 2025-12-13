@@ -26,6 +26,7 @@ from src.api.schemas.article import (
     FAQProposal,
     ParagraphSuggestion,
     ProofreadingDecisionDetail,
+    RelatedArticleResponse,
 )
 from src.config.database import get_session
 from src.config.logging import get_logger
@@ -767,6 +768,22 @@ async def get_article_review_data(
             tag_strategy=seo_suggestion.tag_strategy if seo_suggestion else None,
         )
 
+    # Phase 12: Build related articles list
+    related_articles = []
+    if article.related_articles:
+        for ra in article.related_articles:
+            if isinstance(ra, dict):
+                related_articles.append(RelatedArticleResponse(
+                    article_id=ra.get("article_id", ""),
+                    title=ra.get("title", ""),
+                    title_main=ra.get("title_main"),
+                    url=ra.get("url", ""),
+                    excerpt=ra.get("excerpt"),
+                    similarity=ra.get("similarity", 0.0),
+                    match_type=ra.get("match_type", "keyword"),
+                    ai_keywords=ra.get("ai_keywords", []),
+                ))
+
     return ArticleReviewResponse(
         id=article.id,
         title=article.title,
@@ -779,6 +796,7 @@ async def get_article_review_data(
         paragraph_suggestions=paragraph_suggestions,
         proofreading_issues=article.proofreading_issues or [],
         existing_decisions=existing_decisions,
+        related_articles=related_articles,
         ai_model_used=article.ai_model_used,
         suggested_generated_at=article.suggested_generated_at,
         generation_cost=float(article.generation_cost) if article.generation_cost else None,

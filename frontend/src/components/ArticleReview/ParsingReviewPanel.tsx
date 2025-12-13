@@ -34,7 +34,7 @@ import { TagsComparisonCard, TagSource } from './TagsComparisonCard';
 import { FAQReviewSection, type AIFAQSuggestion } from './FAQReviewSection';
 import { CategorySelectionCard, type AICategoryRecommendation, type AISecondaryCategoryRecommendation } from './CategorySelectionCard';
 import { ExcerptReviewSection } from './ExcerptReviewSection';
-import type { SuggestedTag } from '../../types/api';
+import type { SuggestedTag, RelatedArticle } from '../../types/api';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import type { SEOTitleSuggestionsData, SelectSEOTitleResponse } from '../../types/api';
 import { api } from '../../services/api-client';
@@ -710,6 +710,77 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
               }}
             />
           </Card>
+
+          {/* Phase 12: Related Articles for Internal Linking */}
+          {data.articleReview?.related_articles && data.articleReview.related_articles.length > 0 && (
+            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200" data-testid="related-articles-card">
+              <h4 className="text-sm font-semibold text-emerald-900 mb-3 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+                相關文章推薦 ({data.articleReview.related_articles.length} 篇)
+                <span className="ml-auto text-xs text-emerald-600 font-normal">
+                  用於內部鏈接優化 SEO
+                </span>
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {data.articleReview.related_articles.map((article, idx) => (
+                  <div key={article.article_id} className="p-3 bg-white rounded-lg border border-emerald-200 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <span className="text-xs font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                        #{idx + 1}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          article.match_type === 'semantic'
+                            ? 'bg-purple-100 text-purple-700'
+                            : article.match_type === 'content'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-amber-100 text-amber-700'
+                        }`}>
+                          {article.match_type === 'semantic' ? '語義匹配' : article.match_type === 'content' ? '內容匹配' : '關鍵詞匹配'}
+                        </span>
+                        <span className="text-xs font-semibold text-emerald-700">
+                          {Math.round(article.similarity * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                    <h5 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
+                      {article.title_main || article.title}
+                    </h5>
+                    {article.excerpt && (
+                      <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                        {article.excerpt}
+                      </p>
+                    )}
+                    {article.ai_keywords && article.ai_keywords.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {article.ai_keywords.slice(0, 3).map((keyword, kIdx) => (
+                          <span key={kIdx} className="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
+                            {keyword}
+                          </span>
+                        ))}
+                        {article.ai_keywords.length > 3 && (
+                          <span className="text-[10px] text-gray-400">+{article.ai_keywords.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                    <a
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-emerald-600 hover:text-emerald-800 hover:underline flex items-center gap-1"
+                    >
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      查看原文
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       </div>
 

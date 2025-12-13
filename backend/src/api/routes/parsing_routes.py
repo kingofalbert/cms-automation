@@ -120,6 +120,19 @@ class ParseArticleResponse(BaseModel):
     errors: list[str] = []
 
 
+class RelatedArticleSchema(BaseModel):
+    """Related article data for internal linking (Phase 12)."""
+
+    article_id: str
+    title: str
+    title_main: str | None = None
+    url: str
+    excerpt: str | None = None
+    similarity: float
+    match_type: str  # 'semantic', 'content', or 'keyword'
+    ai_keywords: list[str] = []
+
+
 class ParsedArticleData(BaseModel):
     """Parsed article data for display/confirmation."""
 
@@ -146,6 +159,9 @@ class ParsedArticleData(BaseModel):
 
     # Images
     images: list[dict[str, Any]] = []
+
+    # Related articles for internal linking (Phase 12)
+    related_articles: list[RelatedArticleSchema] = []
 
     class Config:
         from_attributes = True
@@ -354,6 +370,23 @@ async def get_parsing_result(
         for img in sorted(article.article_images, key=lambda x: x.position)
     ]
 
+    # Format related articles (Phase 12)
+    related_articles = []
+    if article.related_articles:
+        for ra in article.related_articles:
+            related_articles.append(
+                RelatedArticleSchema(
+                    article_id=ra.get("article_id", ""),
+                    title=ra.get("title", ""),
+                    title_main=ra.get("title_main"),
+                    url=ra.get("url", ""),
+                    excerpt=ra.get("excerpt"),
+                    similarity=ra.get("similarity", 0.0),
+                    match_type=ra.get("match_type", "keyword"),
+                    ai_keywords=ra.get("ai_keywords", []),
+                )
+            )
+
     return ParsedArticleData(
         title_prefix=article.title_prefix,
         title_main=article.title_main,
@@ -369,6 +402,7 @@ async def get_parsing_result(
         parsing_confirmed=article.parsing_confirmed,
         has_seo_data=bool(article.meta_description or article.seo_keywords),
         images=images,
+        related_articles=related_articles,
     )
 
 

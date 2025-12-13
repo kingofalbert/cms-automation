@@ -220,6 +220,12 @@ class ArticleReviewResponse(BaseSchema):
     # Existing decisions (hydrate from database)
     existing_decisions: list[ProofreadingDecisionDetail] = Field(default_factory=list)
 
+    # Phase 12: Related Articles for Internal Linking
+    related_articles: list[RelatedArticleResponse] = Field(
+        default_factory=list,
+        description='AI-recommended related articles for internal linking'
+    )
+
     # AI metadata
     ai_model_used: str | None = None
     suggested_generated_at: datetime | None = None

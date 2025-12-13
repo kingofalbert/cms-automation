@@ -51,6 +51,9 @@ const ArticleParsingPage = createLazyRoute(() => import('../pages/ArticleParsing
 // Phase 7: Article SEO confirmation page
 const ArticleSEOConfirmationPage = createLazyRoute(() => import('../pages/ArticleSEOConfirmationPage'));
 
+// Pipeline Monitor page
+const PipelineMonitorPage = createLazyRoute(() => import('../pages/PipelineMonitorPage'));
+
 // Phase 2+: Commented out for future use
 // const HomePage = createLazyRoute(() => import('../pages/HomePage'));
 // const ArticleGeneratorPage = createLazyRoute(() => import('../pages/ArticleGeneratorPage'));
@@ -126,6 +129,15 @@ export const routes: RouteConfig[] = [
     description: 'Review and confirm AI-generated SEO keywords, meta description, tags, and FAQs',
     showInNav: false,
     loadingType: 'detail',
+  },
+  // Pipeline Monitor page
+  {
+    path: '/pipeline',
+    ...PipelineMonitorPage,
+    title: 'Pipeline 監控',
+    description: '監控大紀元健康文章處理 Pipeline 的運行狀態',
+    showInNav: false,
+    loadingType: 'dashboard',
   },
 
   // PHASE 2+ ROUTES (Hidden in Phase 1)

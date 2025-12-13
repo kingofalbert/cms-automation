@@ -1,13 +1,18 @@
 /**
- * Scrape Health Articles Edge Function (V2)
+ * Scrape Health Articles Edge Function (V3 - Full Crawl Support)
  *
  * 完整爬取大紀元健康文章：
  * 1. 從列表頁獲取文章 URL
  * 2. 訪問每篇文章詳情頁
  * 3. DOM 解析提取完整內容（標題、作者、正文、圖片）
  *
- * @version 2.0
- * @date 2025-12-07
+ * 支援全量抓取模式：
+ * - startPage: 指定起始頁碼（用於分批抓取）
+ * - fullCrawl: 設為 true 時穿越所有頁面，不因遇到已存在文章而停止
+ * - categoryIndex: 指定只抓取某個分類（0=健康養生, 1=食療養生, 2=健康生活）
+ *
+ * @version 3.0
+ * @date 2025-12-10
  */
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
@@ -19,17 +24,17 @@ import { DOMParser, Element } from 'https://deno.land/x/deno_dom@v0.1.38/deno-do
 // ============================================================
 
 const HEALTH_CATEGORIES = [
-  { url: '/b5/nf2283.htm', name: '健康養生' },
-  { url: '/b5/ncid248.htm', name: '食療養生' },
-  { url: '/b5/ncid246.htm', name: '健康生活' },
+  { url: '/b5/nf2283.htm', name: '健康養生', maxPages: 410 },    // ~4000 篇
+  { url: '/b5/ncid248.htm', name: '食療養生', maxPages: 15 },    // ~100-200 篇
+  { url: '/b5/ncid246.htm', name: '健康生活', maxPages: 15 },    // ~100-200 篇
 ]
 
 const BASE_URL = 'https://www.epochtimes.com'
 const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-const LIST_PAGE_DELAY_MS = 500      // 列表頁間延遲
-const DETAIL_PAGE_DELAY_MS = 1000   // 詳情頁間延遲（更禮貌）
-const MAX_PAGES_PER_CATEGORY = 100
-const MAX_CONSECUTIVE_EXISTING = 10
+const LIST_PAGE_DELAY_MS = 1000      // 列表頁間延遲（穩定慢速）
+const DETAIL_PAGE_DELAY_MS = 1500    // 詳情頁間延遲（更禮貌）
+const DEFAULT_MAX_PAGES = 500        // 預設最大頁數
+const MAX_CONSECUTIVE_EXISTING = 50  // 全量模式下提高此值
 
 // ============================================================
 // Types
@@ -111,16 +116,32 @@ serve(async (req) => {
 
     // Parse request options
     const body = await req.json().catch(() => ({}))
-    const maxPagesPerCategory = body.maxPages || MAX_PAGES_PER_CATEGORY
-    const incrementalOnly = body.incrementalOnly ?? true
-    const maxArticlesPerRun = body.maxArticles || 50 // 每次運行最多處理的文章數
+
+    // Full crawl mode options
+    const fullCrawl = body.fullCrawl ?? false           // 全量抓取模式
+    const startPage = body.startPage || 1               // 起始頁碼
+    const maxPagesPerCategory = body.maxPages || DEFAULT_MAX_PAGES
+    const maxArticlesPerRun = body.maxArticles || 100   // 每次運行最多處理的文章數
+    const categoryIndex = body.categoryIndex            // 指定分類索引（可選）
+    const incrementalOnly = !fullCrawl && (body.incrementalOnly ?? true)
+
+    console.log(`=== Scrape Config ===`)
+    console.log(`fullCrawl: ${fullCrawl}, startPage: ${startPage}, maxPages: ${maxPagesPerCategory}`)
+    console.log(`maxArticles: ${maxArticlesPerRun}, categoryIndex: ${categoryIndex ?? 'all'}`)
 
     // Create job record
     const { data: job } = await supabase
       .from('scrape_jobs')
       .insert({
         job_type: 'scrape',
-        metadata: { incrementalOnly, maxPagesPerCategory, maxArticlesPerRun }
+        metadata: {
+          fullCrawl,
+          startPage,
+          maxPagesPerCategory,
+          maxArticlesPerRun,
+          categoryIndex,
+          incrementalOnly
+        }
       })
       .select()
       .single()
@@ -134,23 +155,39 @@ serve(async (req) => {
     }
 
     let totalNewArticles = 0
+    let lastProcessedPage = startPage
+
+    // Determine which categories to process
+    const categoriesToProcess = categoryIndex !== undefined
+      ? [HEALTH_CATEGORIES[categoryIndex]]
+      : HEALTH_CATEGORIES
 
     // Phase 1: Get article URLs from list pages
     console.log('Phase 1: Collecting article URLs from list pages...')
 
-    for (const category of HEALTH_CATEGORIES) {
+    for (const category of categoriesToProcess) {
       if (totalNewArticles >= maxArticlesPerRun) {
         console.log(`Reached max articles limit (${maxArticlesPerRun}), stopping`)
         break
       }
 
-      console.log(`Scraping category: ${category.name}`)
+      console.log(`Scraping category: ${category.name} (starting from page ${startPage})`)
 
-      const articleUrls = await scrapeListPages(
-        category.url,
+      // Use category-specific max pages if available
+      const categoryMaxPages = Math.min(
         maxPagesPerCategory,
-        incrementalOnly ? supabase : null
+        (category as any).maxPages || maxPagesPerCategory
       )
+
+      const { articles: articleUrls, lastPage } = await scrapeListPages(
+        category.url,
+        startPage,
+        categoryMaxPages,
+        fullCrawl ? null : supabase,  // Pass supabase for duplicate check only in incremental mode
+        fullCrawl
+      )
+
+      lastProcessedPage = lastPage
 
       console.log(`Found ${articleUrls.length} article URLs in ${category.name}`)
 
@@ -253,10 +290,20 @@ serve(async (req) => {
           articles_new: result.new,
           articles_failed: result.failed,
           status: 'completed',
-          error_message: result.errors.length > 0 ? result.errors.slice(0, 5).join('; ') : null
+          error_message: result.errors.length > 0 ? result.errors.slice(0, 5).join('; ') : null,
+          metadata: {
+            ...job.metadata,
+            lastProcessedPage,
+            completedAt: new Date().toISOString()
+          }
         })
         .eq('id', job.id)
     }
+
+    // Get current total count
+    const { count: totalCount } = await supabase
+      .from('health_articles')
+      .select('*', { count: 'exact', head: true })
 
     return new Response(
       JSON.stringify({
@@ -265,7 +312,13 @@ serve(async (req) => {
         new: result.new,
         failed: result.failed,
         errors: result.errors.slice(0, 10),
-        jobId: job?.id
+        jobId: job?.id,
+        // Batch continuation info
+        lastProcessedPage,
+        nextStartPage: lastProcessedPage + 1,
+        totalArticlesInDb: totalCount,
+        // Helpful message for next batch
+        nextBatchCommand: `{ "fullCrawl": true, "startPage": ${lastProcessedPage + 1}, "maxPages": 20, "maxArticles": 100, "categoryIndex": ${categoryIndex ?? 0} }`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
@@ -283,16 +336,26 @@ serve(async (req) => {
 // Phase 1: Scrape List Pages
 // ============================================================
 
+interface ListPagesResult {
+  articles: ArticleBasicInfo[]
+  lastPage: number
+}
+
 async function scrapeListPages(
   categoryPath: string,
+  startPage: number,
   maxPages: number,
-  supabase: any | null
-): Promise<ArticleBasicInfo[]> {
+  supabase: any | null,
+  fullCrawl: boolean
+): Promise<ListPagesResult> {
   const articles: ArticleBasicInfo[] = []
-  let page = 1
+  let page = startPage
   let consecutiveExisting = 0
+  const endPage = startPage + maxPages - 1
 
-  while (page <= maxPages) {
+  console.log(`Scraping pages ${startPage} to ${endPage} for ${categoryPath}`)
+
+  while (page <= endPage) {
     const url = page === 1
       ? `${BASE_URL}${categoryPath}`
       : `${BASE_URL}${categoryPath.replace('.htm', '')}_${page}.htm`
@@ -313,11 +376,12 @@ async function scrapeListPages(
 
       const links = doc.querySelectorAll('a[href*="/b5/"][href$=".htm"]')
       if (links.length === 0) {
-        console.log('No article links found, stopping')
+        console.log(`No article links found on page ${page}, stopping`)
         break
       }
 
       let pageNewCount = 0
+      let pageExistingCount = 0
 
       for (const link of links) {
         const href = (link as Element).getAttribute('href') || ''
@@ -329,8 +393,8 @@ async function scrapeListPages(
 
         const articleId = match[1]
 
-        // Check if already exists (for incremental mode)
-        if (supabase) {
+        // In full crawl mode, skip duplicate check at list level (do it at insert time)
+        if (!fullCrawl && supabase) {
           const { data: existing } = await supabase
             .from('health_articles')
             .select('id')
@@ -338,10 +402,12 @@ async function scrapeListPages(
             .single()
 
           if (existing) {
+            pageExistingCount++
             consecutiveExisting++
+            // Only stop in incremental mode
             if (consecutiveExisting >= MAX_CONSECUTIVE_EXISTING) {
-              console.log(`Found ${MAX_CONSECUTIVE_EXISTING} consecutive existing, stopping`)
-              return articles
+              console.log(`Found ${MAX_CONSECUTIVE_EXISTING} consecutive existing, stopping incremental`)
+              return { articles, lastPage: page }
             }
             continue
           }
@@ -355,7 +421,7 @@ async function scrapeListPages(
         }
       }
 
-      console.log(`List page ${page}: found ${pageNewCount} new URLs`)
+      console.log(`Page ${page}: ${pageNewCount} new URLs collected${pageExistingCount > 0 ? `, ${pageExistingCount} existing skipped` : ''}`)
       page++
       await sleep(LIST_PAGE_DELAY_MS)
 
@@ -365,7 +431,7 @@ async function scrapeListPages(
     }
   }
 
-  return articles
+  return { articles, lastPage: page - 1 }
 }
 
 // ============================================================

@@ -645,6 +645,32 @@ export interface WorklistUpdateMessage {
 }
 
 // ============================================================================
+// Phase 12: Related Articles for Internal Linking
+// ============================================================================
+
+/**
+ * Related article recommendation for internal linking
+ */
+export interface RelatedArticle {
+  /** Article ID (e.g., "n12345678") */
+  article_id: string;
+  /** Full article title */
+  title: string;
+  /** Main title component (optional) */
+  title_main?: string;
+  /** Original article URL */
+  url: string;
+  /** Article excerpt/summary */
+  excerpt?: string;
+  /** Similarity score (0-1) */
+  similarity: number;
+  /** Match type: semantic, content, or keyword */
+  match_type: 'semantic' | 'content' | 'keyword';
+  /** AI-extracted keywords */
+  ai_keywords: string[];
+}
+
+// ============================================================================
 // Article Review (Proofreading) 相關類型
 // ============================================================================
 
@@ -748,6 +774,9 @@ export interface ArticleReviewResponse {
 
   // Existing decisions (hydrated from database)
   existing_decisions: ProofreadingDecisionDetail[];
+
+  // Phase 12: Related Articles for Internal Linking
+  related_articles?: RelatedArticle[];
 
   // AI metadata
   ai_model_used: string | null;
