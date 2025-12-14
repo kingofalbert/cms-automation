@@ -18,15 +18,42 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { worklistAPI } from '../../services/worklist';
 import { articlesAPI } from '../../services/articles';
-import type { WorklistItemDetail } from '../../types/worklist';
-import type { ArticleReviewResponse } from '../../types/api';
+import type { WorklistItemDetail, ProofreadingIssue } from '../../types/worklist';
+import type { ArticleReviewResponse, ArticleReviewResponseTransformed, APIProofreadingIssue } from '../../types/api';
+import { transformArticleReviewResponse, transformAPIProofreadingIssues } from '../../types/api';
 
 export interface ArticleReviewData extends WorklistItemDetail {
   hasParsingData: boolean;
   hasProofreadingData: boolean;
   isReadyToPublish: boolean;
-  articleReview: ArticleReviewResponse | null;
+  articleReview: ArticleReviewResponseTransformed | null;
 }
+
+/**
+ * Check if an issue needs transformation (has API format fields)
+ */
+const isAPIFormat = (issue: ProofreadingIssue | APIProofreadingIssue): issue is APIProofreadingIssue => {
+  // API format has 'evidence' and 'message', frontend format has 'original_text' and 'explanation'
+  return 'evidence' in issue || 'message' in issue;
+};
+
+/**
+ * Transform worklist proofreading issues from API format to frontend format
+ * Handles both API format (from worklist) and frontend format (already transformed)
+ */
+const transformWorklistIssues = (issues: (ProofreadingIssue | APIProofreadingIssue)[] | undefined): ProofreadingIssue[] => {
+  if (!issues || issues.length === 0) return [];
+
+  // Check if first issue is in API format (has 'evidence' or 'message' fields)
+  const firstIssue = issues[0];
+  if (isAPIFormat(firstIssue)) {
+    // Transform from API format
+    return transformAPIProofreadingIssues(issues as APIProofreadingIssue[]);
+  }
+
+  // Already in frontend format
+  return issues as ProofreadingIssue[];
+};
 
 /**
  * Transform worklist item detail to review data
@@ -35,16 +62,24 @@ const transformToReviewData = (
   item: WorklistItemDetail,
   review: ArticleReviewResponse | null
 ): ArticleReviewData => {
-  const proofreadingIssues =
-    review?.proofreading_issues?.length ? review.proofreading_issues : item.proofreading_issues;
+  // Transform API response including proofreading issues to frontend format
+  const transformedReview = review ? transformArticleReviewResponse(review) : null;
+
+  // Transform worklist issues if they're in API format
+  const transformedWorklistIssues = transformWorklistIssues(item.proofreading_issues as (ProofreadingIssue | APIProofreadingIssue)[]);
+
+  // Prefer articleReview issues (richer data), fall back to transformed worklist issues
+  const transformedIssues = transformedReview?.proofreading_issues?.length
+    ? transformedReview.proofreading_issues
+    : transformedWorklistIssues;
 
   return {
     ...item,
-    proofreading_issues: proofreadingIssues || item.proofreading_issues,
+    proofreading_issues: transformedIssues,
     hasParsingData: Boolean(item.title && item.content),
-    hasProofreadingData: Boolean(proofreadingIssues && proofreadingIssues.length > 0),
+    hasProofreadingData: Boolean(transformedIssues && transformedIssues.length > 0),
     isReadyToPublish: item.status === 'ready_to_publish' || item.status === 'publishing',
-    articleReview: review,
+    articleReview: transformedReview,
   };
 };
 

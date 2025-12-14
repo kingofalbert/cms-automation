@@ -22,8 +22,32 @@ import {
   Search,
   Sparkles,
   Code,
+  Filter,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+
+/**
+ * Human-readable category labels for proofreading issue categories
+ */
+const CATEGORY_LABELS: Record<string, { zh: string; en: string }> = {
+  T: { zh: '錯字', en: 'Typo' },
+  P: { zh: '標點', en: 'Punctuation' },
+  S: { zh: '結構', en: 'Structure' },
+  C: { zh: '一致性', en: 'Consistency' },
+  G: { zh: '文法', en: 'Grammar' },
+  W: { zh: '用詞', en: 'Word Choice' },
+};
+
+/**
+ * Get human-readable label for a category code
+ */
+function getCategoryLabel(code: string, locale: string = 'zh'): string {
+  const label = CATEGORY_LABELS[code];
+  if (!label) return code;
+  return locale.startsWith('en') ? label.en : label.zh;
+}
 
 interface ProofreadingIssueListProps {
   issues: ProofreadingIssue[];
@@ -46,12 +70,19 @@ export function ProofreadingIssueList({
   onBatchAccept,
   onBatchReject,
 }: ProofreadingIssueListProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<IssueSeverity | 'all'>('all');
   const [statusFilter, setStatusFilter] = useState<DecisionStatus | 'all'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [engineFilter, setEngineFilter] = useState<IssueEngine | 'all'>('all');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Check if any filter is active
+  const hasActiveFilters = severityFilter !== 'all' || statusFilter !== 'all' ||
+    categoryFilter !== 'all' || engineFilter !== 'all';
+  const activeFilterCount = [severityFilter !== 'all', statusFilter !== 'all',
+    categoryFilter !== 'all', engineFilter !== 'all'].filter(Boolean).length;
 
   // Refs to track issue elements for scrolling
   const issueRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -130,95 +161,164 @@ export function ProofreadingIssueList({
   return (
     <div className="flex h-full flex-col">
       {/* Search and Filters */}
-      <div className="border-b border-gray-200 p-4">
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      <div className="border-b border-gray-200 p-3">
+        {/* Search Bar */}
+        <div className="relative mb-2">
+          <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <Input
             type="text"
             placeholder={t('common.search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-8 text-sm"
           />
         </div>
 
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <select
-              value={severityFilter}
-              onChange={(e) => setSeverityFilter(e.target.value as any)}
-              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
-            >
-              <option value="all">
-                {t('proofreading.issueList.filters.severity.all')}
-              </option>
-              <option value="critical">
-                {t('proofreading.issueList.filters.severity.critical')}
-              </option>
-              <option value="warning">
-                {t('proofreading.issueList.filters.severity.warning')}
-              </option>
-              <option value="info">
-                {t('proofreading.issueList.filters.severity.info')}
-              </option>
-            </select>
+        {/* Collapsible Filter Toggle */}
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          className={cn(
+            'flex w-full items-center justify-between rounded px-2 py-1.5 text-xs font-medium transition-colors',
+            hasActiveFilters
+              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              : 'text-gray-600 hover:bg-gray-100'
+          )}
+        >
+          <span className="flex items-center gap-1.5">
+            <Filter className="h-3.5 w-3.5" />
+            {t('proofreading.issueList.filters.title') || '篩選'}
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {activeFilterCount}
+              </span>
+            )}
+          </span>
+          {showFilters ? (
+            <ChevronUp className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronDown className="h-3.5 w-3.5" />
+          )}
+        </button>
 
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
-            >
-              <option value="all">
-                {t('proofreading.issueList.filters.status.all')}
-              </option>
-              <option value="pending">
-                {t('proofreading.issueList.filters.status.pending')}
-              </option>
-              <option value="accepted">
-                {t('proofreading.issueList.filters.status.accepted')}
-              </option>
-              <option value="rejected">
-                {t('proofreading.issueList.filters.status.rejected')}
-              </option>
-              <option value="modified">
-                {t('proofreading.issueList.filters.status.modified')}
-              </option>
-            </select>
-          </div>
-
-          <div className="flex gap-2">
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
-            >
-              <option value="all">
-                {t('proofreading.issueList.filters.category.all')}
-              </option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+        {/* Collapsible Filter Panel */}
+        {showFilters && (
+          <div className="mt-2 space-y-1.5 rounded-md bg-gray-50 p-2">
+            {/* Row 1: Severity + Status */}
+            <div className="flex gap-1.5">
+              <select
+                value={severityFilter}
+                onChange={(e) => setSeverityFilter(e.target.value as any)}
+                className={cn(
+                  'flex-1 rounded border px-1.5 py-1 text-xs',
+                  severityFilter !== 'all'
+                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white'
+                )}
+              >
+                <option value="all">
+                  {t('proofreading.issueList.filters.severity.all')}
                 </option>
-              ))}
-            </select>
+                <option value="critical">
+                  {t('proofreading.issueList.filters.severity.critical')}
+                </option>
+                <option value="warning">
+                  {t('proofreading.issueList.filters.severity.warning')}
+                </option>
+                <option value="info">
+                  {t('proofreading.issueList.filters.severity.info')}
+                </option>
+              </select>
 
-            <select
-              value={engineFilter}
-              onChange={(e) => setEngineFilter(e.target.value as any)}
-              className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm"
-            >
-              <option value="all">
-                {t('proofreading.issueList.filters.engine.all')}
-              </option>
-              <option value="ai">
-                {t('proofreading.issueList.filters.engine.ai')}
-              </option>
-              <option value="deterministic">
-                {t('proofreading.issueList.filters.engine.deterministic')}
-              </option>
-            </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                className={cn(
+                  'flex-1 rounded border px-1.5 py-1 text-xs',
+                  statusFilter !== 'all'
+                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white'
+                )}
+              >
+                <option value="all">
+                  {t('proofreading.issueList.filters.status.all')}
+                </option>
+                <option value="pending">
+                  {t('proofreading.issueList.filters.status.pending')}
+                </option>
+                <option value="accepted">
+                  {t('proofreading.issueList.filters.status.accepted')}
+                </option>
+                <option value="rejected">
+                  {t('proofreading.issueList.filters.status.rejected')}
+                </option>
+                <option value="modified">
+                  {t('proofreading.issueList.filters.status.modified')}
+                </option>
+              </select>
+            </div>
+
+            {/* Row 2: Category + Engine */}
+            <div className="flex gap-1.5">
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className={cn(
+                  'flex-1 rounded border px-1.5 py-1 text-xs',
+                  categoryFilter !== 'all'
+                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white'
+                )}
+              >
+                <option value="all">
+                  {t('proofreading.issueList.filters.category.all')}
+                </option>
+                {categories.map((category) => (
+                  <option key={category} value={category}>
+                    {getCategoryLabel(category, i18n.language)} ({category})
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={engineFilter}
+                onChange={(e) => setEngineFilter(e.target.value as any)}
+                className={cn(
+                  'flex-1 rounded border px-1.5 py-1 text-xs',
+                  engineFilter !== 'all'
+                    ? 'border-blue-300 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 bg-white'
+                )}
+              >
+                <option value="all">
+                  {t('proofreading.issueList.filters.engine.all')}
+                </option>
+                <option value="ai">
+                  {t('proofreading.issueList.filters.engine.ai')}
+                </option>
+                <option value="deterministic">
+                  {t('proofreading.issueList.filters.engine.deterministic')}
+                </option>
+              </select>
+            </div>
+
+            {/* Clear Filters Button */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSeverityFilter('all');
+                  setStatusFilter('all');
+                  setCategoryFilter('all');
+                  setEngineFilter('all');
+                }}
+                className="w-full rounded bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-300"
+              >
+                {t('proofreading.issueList.filters.clear') || '清除篩選'}
+              </button>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Batch Actions */}
@@ -286,10 +386,12 @@ interface IssueListItemProps {
 
 const IssueListItem = forwardRef<HTMLDivElement, IssueListItemProps>(
   ({ issue, index, isSelected, isChecked, decision, onClick, onCheckChange }, ref) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const decisionStatus = decision?.decision_type || issue.decision_status;
-    const categoryLabel =
-      issue.rule_category || t('proofreading.issueList.uncategorized');
+    const categoryCode = issue.rule_category || '';
+    const categoryLabel = categoryCode
+      ? getCategoryLabel(categoryCode, i18n.language)
+      : t('proofreading.issueList.uncategorized');
     const originalText =
       issue.original_text || t('proofreading.issueList.noOriginalText');
     const suggestedText = issue.suggested_text || originalText;

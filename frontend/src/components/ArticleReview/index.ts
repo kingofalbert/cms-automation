@@ -44,6 +44,10 @@ export type { ProofreadingReviewPanelProps } from './ProofreadingReviewPanel';
 export { DiffViewSection } from './DiffViewSection';
 export type { DiffViewSectionProps } from './DiffViewSection';
 
+// Phase 8.4: Real-time Preview Mode
+export { ProofreadingPreviewSection } from './ProofreadingPreviewSection';
+export type { ProofreadingPreviewSectionProps, WordChange } from './ProofreadingPreviewSection';
+
 export { ProofreadingIssuesSection } from './ProofreadingIssuesSection';
 export type { ProofreadingIssuesSectionProps } from './ProofreadingIssuesSection';
 

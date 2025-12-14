@@ -196,6 +196,109 @@ def _repair_json(text: str) -> str | None:
     return repaired
 
 
+def _clean_metadata_sections_from_body(body_html: str) -> str:
+    """Remove metadata sections (Tag suggestions, SEO keywords, etc.) from body content.
+
+    These sections should be extracted separately and not included in the article body.
+    Complete list of patterns to remove:
+
+    1. Tag/Label suggestions:
+       - ### Tag 建議 / ### Tag建議 / ### 標籤建議
+    2. SEO keyword suggestions:
+       - ### SEO 關鍵字建議 / ### SEO關鍵字建議 / ### 關鍵字建議
+    3. Meta description suggestions:
+       - ### Meta 摘要建議 / ### Meta Description
+    4. Meta description markers (extracted to meta_description field):
+       - 【Meta摘要】 / 【Meta】 / Meta摘要：
+    5. SEO Title markers (extracted to seo_title field):
+       - 這是 SEO title / 【SEO title】 / SEO title：
+    6. Any other suggestion/recommendation sections
+
+    Args:
+        body_html: The body HTML content from AI parsing
+
+    Returns:
+        Cleaned body HTML with metadata sections removed
+    """
+    import re
+
+    if not body_html:
+        return body_html
+
+    # Patterns for metadata section headers (markdown style in <p> tags)
+    # These match from the header to the next header or end
+    metadata_patterns = [
+        # Tag suggestions (various formats)
+        r'<p>\s*#{1,3}\s*Tag\s*建議\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        r'<p>\s*#{1,3}\s*標籤建議\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        # SEO keyword suggestions
+        r'<p>\s*#{1,3}\s*SEO\s*關鍵字建議\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        r'<p>\s*#{1,3}\s*關鍵字建議\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        r'<p>\s*#{1,3}\s*SEO\s*Keywords?\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        # Meta description suggestions (suggestions, not the actual extracted value)
+        r'<p>\s*#{1,3}\s*Meta\s*摘要建議\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        r'<p>\s*#{1,3}\s*Meta\s*Description\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        # Additional suggestion sections
+        r'<p>\s*#{1,3}\s*摘要建議\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+        r'<p>\s*#{1,3}\s*Excerpt\s*</p>.*?(?=<p>\s*#{1,3}|$)',
+    ]
+
+    cleaned = body_html
+    for pattern in metadata_patterns:
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+    # Plain text markdown headers (not wrapped in <p> tags)
+    plain_text_patterns = [
+        r'###\s*Tag\s*建議\s*\n.*?(?=###|$)',
+        r'###\s*標籤建議\s*\n.*?(?=###|$)',
+        r'###\s*SEO\s*關鍵字建議\s*\n.*?(?=###|$)',
+        r'###\s*關鍵字建議\s*\n.*?(?=###|$)',
+        r'###\s*Meta\s*摘要建議\s*\n.*?(?=###|$)',
+        r'###\s*摘要建議\s*\n.*?(?=###|$)',
+    ]
+
+    for pattern in plain_text_patterns:
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
+
+    # Meta Description markers (【Meta摘要】, 【Meta】, Meta摘要：)
+    # These are extracted to meta_description field and should not remain in body
+    meta_marker_patterns = [
+        r'<p>\s*【Meta摘要】.*?</p>',
+        r'<p>\s*【Meta】.*?</p>',
+        r'<p>\s*Meta摘要[：:]\s*.*?</p>',
+        r'【Meta摘要】[^\n]*\n?',
+        r'【Meta】[^\n]*\n?',
+        r'Meta摘要[：:][^\n]*\n?',
+    ]
+
+    for pattern in meta_marker_patterns:
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+
+    # SEO Title markers (這是 SEO title, 【SEO title】)
+    # These are extracted to seo_title field and should not remain in body
+    seo_title_patterns = [
+        r'<p>\s*這是\s*SEO\s*title[：:]?\s*.*?</p>',
+        r'<p>\s*【SEO\s*title】[：:]?\s*.*?</p>',
+        r'<p>\s*SEO\s*title[：:]\s*.*?</p>',
+        r'這是\s*SEO\s*title[：:]?[^\n]*\n?',
+        r'【SEO\s*title】[：:]?[^\n]*\n?',
+        r'SEO\s*title[：:][^\n]*\n?',
+    ]
+
+    for pattern in seo_title_patterns:
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
+
+    # Clean up any resulting empty paragraphs or extra whitespace
+    cleaned = re.sub(r'<p>\s*</p>', '', cleaned)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    cleaned = cleaned.strip()
+
+    if cleaned != body_html:
+        logger.info("[BODY CLEANUP] Removed metadata sections from body_html")
+
+    return cleaned
+
+
 class ArticleParserService:
     """Service for parsing Google Doc HTML into structured article data.
 
@@ -456,6 +559,9 @@ class ArticleParserService:
                 else None
             )
 
+            # Clean metadata sections from body_html before creating ParsedArticle
+            cleaned_body_html = _clean_metadata_sections_from_body(parsed_data["body_html"])
+
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
                 title_prefix=parsed_data.get("title_prefix"),
@@ -466,7 +572,7 @@ class ArticleParserService:
                 seo_title_source="extracted" if parsed_data.get("seo_title_extracted") else None,
                 author_line=parsed_data.get("author_line"),
                 author_name=parsed_data.get("author_name"),
-                body_html=parsed_data["body_html"],
+                body_html=cleaned_body_html,
                 meta_description=parsed_data.get("meta_description"),
                 seo_keywords=parsed_data.get("seo_keywords", []),
                 tags=parsed_data.get("tags", []),
@@ -686,8 +792,16 @@ Extract and structure the following elements from the HTML:
 
 3. **Body Content**:
    - `body_html`: Clean HTML with only article paragraphs
+   - **CRITICAL: EXCLUDE the following metadata sections from body_html** (these are extracted separately):
+     * Title and author lines (already extracted above)
+     * SEO Title markers ("這是 SEO title", "【SEO title】")
+     * Meta Description markers ("【Meta摘要】", "【Meta】", "Meta摘要：")
+     * Tag suggestion sections ("### Tag 建議", "### 標籤建議")
+     * SEO keyword sections ("### SEO 關鍵字建議", "### 關鍵字建議")
+     * Any other markdown headers starting with "###" followed by suggestion/recommendation content
    - Remove headers, navigation, metadata
    - Preserve paragraph structure and formatting
+   - body_html should contain ONLY the main article content, not metadata sections
 
 4. **Images**:
    - Extract all <img> tags and plain URL images
@@ -910,6 +1024,9 @@ Process the above {content_type} and return the complete JSON response:"""
             seo_data = self._extract_seo_metadata(soup)
             images = self._extract_images(soup)
 
+            # Clean metadata sections from body_html
+            cleaned_body_html = _clean_metadata_sections_from_body(body_html)
+
             # Construct parsed article
             parsed_article = ParsedArticle(
                 title_prefix=title_data.get("prefix"),
@@ -920,7 +1037,7 @@ Process the above {content_type} and return the complete JSON response:"""
                 seo_title_source="extracted" if seo_title_data.get("extracted") else None,
                 author_line=author_data.get("raw_line"),
                 author_name=author_data.get("name"),
-                body_html=body_html,
+                body_html=cleaned_body_html,
                 meta_description=seo_data.get("description"),
                 seo_keywords=seo_data.get("keywords", []),
                 tags=seo_data.get("tags", []),

@@ -1,26 +1,29 @@
 /**
  * ProofreadingReviewPanel - Proofreading review interface
  *
- * Phase 8.3: Proofreading Review Panel
+ * Phase 8.3 + 8.4: Proofreading Review Panel with Preview Mode
  * - 30% + 70% layout
- * - Left: Diff view (original vs proofread)
+ * - Left: Diff view OR Preview mode (switchable)
  * - Right: Issue list with accept/reject controls
  * - Batch approval operations
+ * - Real-time preview with change highlighting
  *
  * Layout:
  * ┌──────────────┬────────────────────────────────────┐
- * │ Diff View    │ Issues List (70%)                  │
+ * │ Diff/Preview │ Issues List (70%)                  │
  * │ (30%)        │ • Critical issues                  │
- * │              │ • Warning issues                   │
+ * │ [Toggle]     │ • Warning issues                   │
  * │ Controls     │ • Info issues                      │
  * │              │ Batch controls                     │
  * └──────────────┴────────────────────────────────────┘
  */
 
 import React, { useState, useMemo } from 'react';
+import { FileText, Eye } from 'lucide-react';
 import { Card } from '../ui';
 import { Button } from '../ui';
 import { DiffViewSection, type DiffStats } from './DiffViewSection';
+import { ProofreadingPreviewSection, type WordChange } from './ProofreadingPreviewSection';
 import { ProofreadingIssuesSection } from './ProofreadingIssuesSection';
 import { BatchApprovalControls } from './BatchApprovalControls';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
@@ -45,6 +48,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
 }) => {
   // Local state for decisions
   const [decisions, setDecisions] = useState<Map<string, DecisionPayload>>(new Map());
+  // View mode: 'diff' or 'preview'
+  const [contentViewMode, setContentViewMode] = useState<'diff' | 'preview'>('diff');
 
   // Use article review issues if available (richer data with historical context)
   // Falls back to worklist issues for backward compatibility
@@ -171,14 +176,51 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
       {/* Main content: 30% + 70% grid */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-10 gap-6 overflow-auto">
         {/* Left column: 30% (3 out of 10 cols) */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-4">
+          {/* View mode toggle */}
+          <div className="flex rounded-lg overflow-hidden border border-gray-200 bg-white">
+            <button
+              type="button"
+              onClick={() => setContentViewMode('diff')}
+              className={`flex-1 px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                contentViewMode === 'diff'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <FileText className="w-4 h-4" />
+              对比视图
+            </button>
+            <button
+              type="button"
+              onClick={() => setContentViewMode('preview')}
+              className={`flex-1 px-4 py-2 text-sm font-medium flex items-center justify-center gap-2 border-l border-gray-200 transition-colors ${
+                contentViewMode === 'preview'
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              预览模式
+            </button>
+          </div>
+
           <Card className="p-6">
-            <DiffViewSection
-              originalContent={data.articleReview?.content?.original || ''}
-              proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.articleReview?.content?.original || ''}
-              diffStats={data.articleReview?.content?.changes?.stats as DiffStats | undefined}
-              hasDiffData={!!data.articleReview?.content?.changes}
-            />
+            {contentViewMode === 'diff' ? (
+              <DiffViewSection
+                originalContent={data.articleReview?.content?.original || ''}
+                proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.articleReview?.content?.original || ''}
+                diffStats={data.articleReview?.content?.changes?.stats as DiffStats | undefined}
+                hasDiffData={!!data.articleReview?.content?.changes}
+              />
+            ) : (
+              <ProofreadingPreviewSection
+                originalContent={data.articleReview?.content?.original || ''}
+                proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.articleReview?.content?.original || ''}
+                diffStats={data.articleReview?.content?.changes?.stats as DiffStats | undefined}
+                wordChanges={data.articleReview?.content?.changes?.word_changes as WordChange[] | undefined}
+              />
+            )}
           </Card>
         </div>
 

@@ -21,7 +21,7 @@ import { ProofreadingIssueDetailPanel } from '@/components/ProofreadingReview/Pr
 import { ReviewStatsBar } from '@/components/ProofreadingReview/ReviewStatsBar';
 import { ProofreadingReviewHeader } from '@/components/ProofreadingReview/ProofreadingReviewHeader';
 import { Button } from '@/components/ui';
-import { ArrowLeft, Save, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle } from 'lucide-react';
 
 type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
 
@@ -265,11 +265,17 @@ export default function ProofreadingReviewPage() {
 
   return (
     <div className="flex h-screen flex-col bg-gray-50">
-      {/* Header */}
+      {/* Header with action buttons */}
       <ProofreadingReviewHeader
         worklistItem={worklistItem}
         onBack={() => navigate('/worklist')}
         onCancel={handleCancel}
+        dirtyCount={dirtyCount}
+        totalIssues={issues.length}
+        allIssuesDecided={allIssuesDecided}
+        isSaving={saveDecisionsMutation.isPending}
+        onSaveDraft={() => saveDecisionsMutation.mutate(undefined)}
+        onCompleteReview={() => saveDecisionsMutation.mutate('ready_to_publish')}
       />
 
       {/* Stats Bar */}
@@ -326,75 +332,39 @@ export default function ProofreadingReviewPage() {
         </div>
 
         {/* Right: Issue Detail Panel (30%) */}
-        <div className="w-[30%] overflow-y-auto border-l border-gray-200 bg-gray-50">
-          {/* Issue Detail Panel */}
-          <div className="bg-white">
-            <ProofreadingIssueDetailPanel
-              issue={selectedIssue}
-              decision={selectedIssue ? decisions[selectedIssue.id] : undefined}
-              onDecision={addDecision}
-              onClearDecision={clearDecision}
-              existingDecisions={[]}
-            />
-          </div>
+        <div className="w-[30%] overflow-y-auto border-l-2 border-blue-100 bg-white shadow-lg">
+          <ProofreadingIssueDetailPanel
+            issue={selectedIssue}
+            decision={selectedIssue ? decisions[selectedIssue.id] : undefined}
+            onDecision={addDecision}
+            onClearDecision={clearDecision}
+            existingDecisions={[]}
+            issueIndex={selectedIssue ? issues.findIndex(i => i.id === selectedIssue.id) + 1 : undefined}
+            totalIssues={issues.length}
+          />
         </div>
       </div>
 
-      {/* Footer Actions */}
-      <div className="border-t border-gray-200 bg-white">
-        {/* Review Notes Textarea */}
-        <div className="border-b border-gray-100 px-6 py-3">
-          <label htmlFor="review-notes" className="mb-1 block text-xs font-medium text-gray-700">
+      {/* Simplified Footer - Review Notes only */}
+      <div className="border-t border-gray-200 bg-white px-6 py-3">
+        <div className="flex items-center gap-4">
+          {/* Review Notes - compact inline */}
+          <label htmlFor="review-notes" className="text-xs font-medium text-gray-700 whitespace-nowrap">
             {t('proofreading.reviewNotes.label')}
           </label>
           <textarea
             id="review-notes"
             value={reviewNotes}
             onChange={(e) => setReviewNotes(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            rows={2}
+            className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            rows={1}
             placeholder={t('proofreading.reviewNotes.placeholder')}
           />
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {dirtyCount} / {issues.length} {t('proofreading.labels.issuesDecided')}
-            </span>
-            {dirtyCount > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setDecisions({});
-                  toast.info(t('proofreading.messages.decisionsCleared'));
-                }}
-              >
-                {t('common.clearAll')}
-              </Button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              disabled={dirtyCount === 0 || saveDecisionsMutation.isPending}
-              onClick={() => saveDecisionsMutation.mutate(undefined)}
-            >
-              <Save className="mr-2 h-4 w-4" />
-              {t('proofreading.actions.saveDraft')}
-            </Button>
-
-            <Button
-              disabled={!allIssuesDecided || saveDecisionsMutation.isPending}
-              onClick={() => saveDecisionsMutation.mutate('ready_to_publish')}
-            >
-              <CheckCircle className="mr-2 h-4 w-4" />
-              {t('proofreading.actions.completeReview')}
-            </Button>
-          </div>
+          {/* Status display */}
+          <span className="text-xs text-gray-500 whitespace-nowrap">
+            {dirtyCount} / {issues.length} {t('proofreading.labels.issuesDecided')}
+          </span>
         </div>
       </div>
     </div>

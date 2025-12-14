@@ -745,6 +745,62 @@ export interface ProofreadingDecisionDetail {
   decided_at: string;
 }
 
+/**
+ * API Proofreading Issue - Actual structure returned by backend API
+ * Different from frontend ProofreadingIssue which has transformed field names
+ */
+export interface APIProofreadingIssue {
+  source: 'script' | 'ai';
+  message: string;           // Maps to explanation
+  rule_id: string;
+  category: string;          // Maps to rule_category
+  evidence: string;          // Maps to original_text
+  location: {
+    offset: number;
+    line?: number;
+    column?: number;
+  };
+  severity: 'critical' | 'warning' | 'info';
+  confidence: number;        // 0-1 value
+  suggestion: string;        // Maps to suggested_text
+  subcategory?: string;
+  can_auto_fix?: boolean;
+  attributed_by?: string;
+  blocks_publish?: boolean;
+}
+
+/**
+ * Transform API proofreading issue to frontend format
+ */
+export const transformAPIProofreadingIssue = (
+  apiIssue: APIProofreadingIssue,
+  index: number
+): ProofreadingIssue => ({
+  id: `${apiIssue.rule_id}-${index}`,
+  rule_id: apiIssue.rule_id,
+  rule_category: apiIssue.category || apiIssue.subcategory || 'general',
+  severity: apiIssue.severity,
+  engine: apiIssue.source === 'ai' ? 'ai' : 'deterministic',
+  position: {
+    start: apiIssue.location.offset,
+    end: apiIssue.location.offset + (apiIssue.evidence?.length || 0),
+    line: apiIssue.location.line,
+    column: apiIssue.location.column,
+  },
+  original_text: apiIssue.evidence || '',
+  suggested_text: apiIssue.suggestion || '',
+  explanation: apiIssue.message || '',
+  confidence: apiIssue.confidence,
+  decision_status: 'pending',
+});
+
+/**
+ * Transform array of API proofreading issues
+ */
+export const transformAPIProofreadingIssues = (
+  apiIssues: APIProofreadingIssue[]
+): ProofreadingIssue[] => apiIssues.map(transformAPIProofreadingIssue);
+
 export interface ArticleReviewResponse {
   // Basic info
   id: number;
@@ -769,8 +825,8 @@ export interface ArticleReviewResponse {
   // Paragraph suggestions
   paragraph_suggestions: ParagraphSuggestion[];
 
-  // Proofreading issues
-  proofreading_issues: ProofreadingIssue[];
+  // Proofreading issues (raw API format, needs transformation)
+  proofreading_issues: APIProofreadingIssue[];
 
   // Existing decisions (hydrated from database)
   existing_decisions: ProofreadingDecisionDetail[];
@@ -787,3 +843,20 @@ export interface ArticleReviewResponse {
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * Transformed ArticleReviewResponse with frontend-ready proofreading issues
+ */
+export interface ArticleReviewResponseTransformed extends Omit<ArticleReviewResponse, 'proofreading_issues'> {
+  proofreading_issues: ProofreadingIssue[];
+}
+
+/**
+ * Transform ArticleReviewResponse to have frontend-ready proofreading issues
+ */
+export const transformArticleReviewResponse = (
+  response: ArticleReviewResponse
+): ArticleReviewResponseTransformed => ({
+  ...response,
+  proofreading_issues: transformAPIProofreadingIssues(response.proofreading_issues || []),
+});

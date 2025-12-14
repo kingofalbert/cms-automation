@@ -459,6 +459,8 @@
     },
     "issueList": {
       "filters": {
+        "title": "Filters",
+        "clear": "Clear Filters",
         "severity": {
           "all": "All Severity",
           "critical": "Critical",
@@ -515,8 +517,30 @@
         "answer": "A: {{answer}}"
       }
     },
+    "issueDetail": {
+      "title": "Issue Details",
+      "original": "Original",
+      "suggested": "Suggested",
+      "explanation": "Explanation",
+      "splitView": "Split",
+      "diffView": "Diff",
+      "deleted": "Deleted",
+      "added": "Added",
+      "decisionHistory": "Decision History",
+      "decisionActions": "Decision Actions",
+      "customModification": "Custom Modification",
+      "decisionRationale": "Decision Rationale (Optional)",
+      "provideFeedback": "Provide Feedback (Optional)",
+      "feedbackCategory": "Feedback Category",
+      "feedbackNotes": "Feedback Notes",
+      "keyboardShortcuts": "Keyboard Shortcuts",
+      "keyAccept": "A - Accept",
+      "keyReject": "R - Reject",
+      "keyNavigate": "↑/↓ - Navigate"
+    },
     "messages": {
       "selectIssue": "Select an issue from the left to view details",
+      "selectIssueHint": "Click an issue from the list to view details",
       "noIssuesFound": "No proofreading issues found",
       "loadFailed": "Failed to load",
       "decisionsSaved": "Decisions saved",

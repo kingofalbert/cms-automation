@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ProofreadingIssue, DecisionPayload } from '@/types/worklist';
 import { cn } from '@/lib/cn';
+import { sanitizeHtmlContent } from '@/lib/sanitizeHtml';
 import { DiffView } from './DiffView';
 
 type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
@@ -35,6 +36,15 @@ export function ProofreadingArticleContent({
 }: ProofreadingArticleContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Sanitize content to remove CSS pollution from Google Docs
+  const cleanContent = useMemo(() => {
+    return sanitizeHtmlContent(content, {
+      removeStyles: true,
+      removeScripts: true,
+      convertToText: false,
+    });
+  }, [content]);
+
   // Auto-scroll to selected issue when it changes
   useEffect(() => {
     if (!selectedIssue) return;
@@ -57,8 +67,8 @@ export function ProofreadingArticleContent({
   // IMPORTANT: Calculate renderedContent BEFORE early returns to maintain hook order
   // Render content with issue highlights (used in original and preview modes)
   const renderedContent = useMemo(() => {
-    if (!content || issues.length === 0) {
-      return <p className="whitespace-pre-wrap text-gray-700">{content}</p>;
+    if (!cleanContent || issues.length === 0) {
+      return <p className="whitespace-pre-wrap text-gray-700">{cleanContent}</p>;
     }
 
     // Sort issues defensively to avoid undefined position errors
@@ -80,8 +90,8 @@ export function ProofreadingArticleContent({
           ? issue.position.end
           : rawStart;
 
-      const start = Math.max(0, Math.min(content.length, rawStart));
-      const end = Math.max(start, Math.min(content.length, rawEnd));
+      const start = Math.max(0, Math.min(cleanContent.length, rawStart));
+      const end = Math.max(start, Math.min(cleanContent.length, rawEnd));
 
       const decision = decisions[issue.id];
       const decisionStatus = decision?.decision_type || issue.decision_status;
@@ -89,13 +99,13 @@ export function ProofreadingArticleContent({
       if (start > lastIndex) {
         parts.push(
           <span key={`text-${idx}`} className="whitespace-pre-wrap">
-            {content.slice(lastIndex, start)}
+            {cleanContent.slice(lastIndex, start)}
           </span>
         );
       }
 
       const issueText =
-        end > start ? content.slice(start, end) : issue.original_text || issue.suggested_text || '';
+        end > start ? cleanContent.slice(start, end) : issue.original_text || issue.suggested_text || '';
       const isSelected = selectedIssue?.id === issue.id;
 
       parts.push(
@@ -126,22 +136,22 @@ export function ProofreadingArticleContent({
       lastIndex = end;
     });
 
-    if (lastIndex < content.length) {
+    if (lastIndex < cleanContent.length) {
       parts.push(
         <span key="text-end" className="whitespace-pre-wrap">
-          {content.slice(lastIndex)}
+          {cleanContent.slice(lastIndex)}
         </span>
       );
     }
 
     return <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">{parts}</div>;
-  }, [content, issues, decisions, selectedIssue, viewMode, onIssueClick]);
+  }, [cleanContent, issues, decisions, selectedIssue, viewMode, onIssueClick]);
 
   // NOW that all hooks are called, we can conditionally render based on viewMode
 
   // If in diff mode and we have suggested content, show diff view
   if (viewMode === 'diff' && suggestedContent) {
-    return <DiffView original={content} suggested={suggestedContent} title={title} />;
+    return <DiffView original={cleanContent} suggested={suggestedContent} title={title} />;
   }
 
   // If in rendered mode, show Markdown-rendered content
@@ -169,7 +179,7 @@ export function ProofreadingArticleContent({
               ),
             }}
           >
-            {content}
+            {cleanContent}
           </ReactMarkdown>
         </div>
       </div>

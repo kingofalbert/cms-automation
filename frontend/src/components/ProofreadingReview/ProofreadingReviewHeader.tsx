@@ -3,7 +3,7 @@
  * Top navigation bar with breadcrumb, title, and action buttons.
  */
 
-import { ArrowLeft, FileText, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, FileText, ChevronRight, X, Save, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { WorklistItemDetail } from '@/types/worklist';
 import { useTranslation } from 'react-i18next';
@@ -12,17 +12,30 @@ interface ProofreadingReviewHeaderProps {
   worklistItem: WorklistItemDetail;
   onBack: () => void;
   onCancel?: () => void;
+  // Action buttons props
+  dirtyCount?: number;
+  totalIssues?: number;
+  allIssuesDecided?: boolean;
+  isSaving?: boolean;
+  onSaveDraft?: () => void;
+  onCompleteReview?: () => void;
 }
 
 export function ProofreadingReviewHeader({
   worklistItem,
   onBack,
   onCancel,
+  dirtyCount = 0,
+  totalIssues = 0,
+  allIssuesDecided = false,
+  isSaving = false,
+  onSaveDraft,
+  onCompleteReview,
 }: ProofreadingReviewHeaderProps) {
   const { t } = useTranslation();
 
   return (
-    <div className="border-b border-gray-200 bg-white">
+    <div className="sticky top-0 z-10 border-b border-gray-200 bg-white shadow-sm">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 px-6 pt-3 pb-2 text-sm">
         <button
@@ -67,7 +80,7 @@ export function ProofreadingReviewHeader({
             </span>
           )}
 
-          {/* Action Buttons */}
+          {/* Navigation Buttons */}
           <div className="ml-2 flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onBack}>
               <ArrowLeft className="mr-1.5 h-4 w-4" />
@@ -80,6 +93,40 @@ export function ProofreadingReviewHeader({
               </Button>
             )}
           </div>
+
+          {/* Primary Action Buttons - Always visible */}
+          {(onSaveDraft || onCompleteReview) && (
+            <div className="ml-4 flex items-center gap-2 border-l border-gray-200 pl-4">
+              {/* Progress indicator */}
+              <span className="text-xs text-gray-500">
+                {dirtyCount}/{totalIssues}
+              </span>
+
+              {onSaveDraft && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={dirtyCount === 0 || isSaving}
+                  onClick={onSaveDraft}
+                >
+                  <Save className="mr-1.5 h-4 w-4" />
+                  {t('proofreading.actions.saveDraft') || 'Save Draft'}
+                </Button>
+              )}
+
+              {onCompleteReview && (
+                <Button
+                  size="sm"
+                  disabled={!allIssuesDecided || isSaving}
+                  onClick={onCompleteReview}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <CheckCircle className="mr-1.5 h-4 w-4" />
+                  {t('proofreading.actions.completeReview') || 'Complete Review'}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -459,6 +459,8 @@
     },
     "issueList": {
       "filters": {
+        "title": "篩選",
+        "clear": "清除篩選",
         "severity": {
           "all": "全部嚴重程度",
           "critical": "高風險",
@@ -515,8 +517,30 @@
         "answer": "A：{{answer}}"
       }
     },
+    "issueDetail": {
+      "title": "問題詳情",
+      "original": "原文",
+      "suggested": "建議修改",
+      "explanation": "說明",
+      "splitView": "分割",
+      "diffView": "差異",
+      "deleted": "刪除",
+      "added": "新增",
+      "decisionHistory": "決策歷史",
+      "decisionActions": "決策操作",
+      "customModification": "自訂修改",
+      "decisionRationale": "決策說明（選填）",
+      "provideFeedback": "提供回饋（選填）",
+      "feedbackCategory": "回饋分類",
+      "feedbackNotes": "回饋備註",
+      "keyboardShortcuts": "快捷鍵",
+      "keyAccept": "A - 接受",
+      "keyReject": "R - 拒絕",
+      "keyNavigate": "↑/↓ - 導航"
+    },
     "messages": {
       "selectIssue": "請從左側選擇一個問題以查看詳情",
+      "selectIssueHint": "點擊列表中的問題以查看詳情",
       "noIssuesFound": "未發現校對問題",
       "loadFailed": "載入失敗",
       "decisionsSaved": "決策已儲存",
