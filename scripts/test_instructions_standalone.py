@@ -23,13 +23,18 @@ def build_wordpress_instructions(
     secondary_categories: list[str] | None = None,
     publish_mode: str = "publish",
     author_name: str | None = None,
+    faqs: list[dict[str, str]] | None = None,
 ) -> str:
     """Build WordPress-specific instructions (copied from computer_use_cms.py)."""
+    import json
+
     tags = tags or []
     secondary_categories = secondary_categories or []
+    faqs = faqs or []
     has_images = bool(article_images)
     has_categories = bool(primary_category or secondary_categories)
     has_author = bool(author_name)
+    has_faqs = bool(faqs)
 
     body_preview = body[:500] + "..." if len(body) > 500 else body
 
@@ -86,6 +91,35 @@ def build_wordpress_instructions(
 - Author Name: {author_name}
 - This author should be selected from the WordPress Author dropdown in the Document sidebar"""
 
+    # Build FAQ Schema info section
+    faq_info = ""
+    faq_schema_json = ""
+    if has_faqs:
+        faq_lines = []
+        for idx, faq in enumerate(faqs, 1):
+            q = faq.get('question', '')[:80]
+            a = faq.get('answer', '')[:100]
+            faq_lines.append(f"  FAQ {idx}:\n    Q: {q}{'...' if len(faq.get('question', '')) > 80 else ''}\n    A: {a}{'...' if len(faq.get('answer', '')) > 100 else ''}")
+        faq_info = "\n**FAQ Schema for AI Search Engines (JSON-LD):**\n" + "\n".join(faq_lines)
+
+        # Build the actual JSON-LD schema
+        faq_entities = []
+        for faq in faqs:
+            faq_entities.append({
+                "@type": "Question",
+                "name": faq.get('question', ''),
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": faq.get('answer', '')
+                }
+            })
+        faq_schema = {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": faq_entities
+        }
+        faq_schema_json = json.dumps(faq_schema, ensure_ascii=False, indent=2)
+
     publish_summary = (
         "Save the article as a draft (do not publish to the live site)"
         if publish_mode == "draft"
@@ -123,6 +157,11 @@ def build_wordpress_instructions(
             )
         ),
         "Configure SEO metadata (Yoast SEO or Rank Math)",
+        (
+            f"Insert FAQ Schema JSON-LD for AI search engines ({len(faqs)} FAQs)"
+            if has_faqs
+            else "Skip FAQ Schema (no FAQs provided)"
+        ),
         publish_summary,
         "Return the post ID and relevant URLs",
     ]
@@ -249,6 +288,19 @@ def build_wordpress_instructions(
         f"Update the meta description to: {meta_description}",
     ])
 
+    # Add FAQ Schema step (for AI search engines like Perplexity, ChatGPT, Google SGE)
+    if has_faqs:
+        add_step("Insert FAQ Schema JSON-LD (for AI Search Engines)", [
+            "**IMPORTANT**: This FAQ Schema is HIDDEN metadata for search engines, NOT visible content",
+            'In the editor, click the "+" button to add a new block at the END of the article',
+            'Search for "Custom HTML" block and add it',
+            "Paste the following JSON-LD script into the Custom HTML block:",
+            f'```\n<script type="application/ld+json">\n{faq_schema_json}\n</script>\n```',
+            "The block should appear at the bottom of the content but won't be visible to readers",
+            "This structured data helps AI search engines understand and feature your FAQs",
+            "Take a screenshot showing the Custom HTML block is added",
+        ])
+
     if publish_mode == "draft":
         add_step("Save as Draft (Do NOT Publish)", [
             "Click the \"Save draft\" button",
@@ -292,7 +344,7 @@ def build_wordpress_instructions(
 **Article Content:**
 Title: {title}
 Body Preview: {body_preview}
-[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}{author_info}
+[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}{author_info}{faq_info}
 
 **SEO Configuration (Yoast SEO / Rank Math):**
 - Meta Title: {meta_title}
@@ -356,6 +408,20 @@ def main():
                 "source_url": "https://example.com/heart.png",
             },
         ],
+        "faqs": [
+            {
+                "question": "每天步行30分鐘真的能降低心臟病風險嗎？",
+                "answer": "是的，根據美國心臟協會最新研究，每天步行30分鐘可以降低心臟病風險約40%。這是因為步行能改善血液循環、降低血壓和膽固醇。"
+            },
+            {
+                "question": "什麼時間步行最有效果？",
+                "answer": "研究顯示，早晨或傍晚步行效果最佳。早晨步行有助於提升一整天的新陳代謝，傍晚步行則有助於舒緩壓力和改善睡眠質量。"
+            },
+            {
+                "question": "步行的正確姿勢是什麼？",
+                "answer": "正確的步行姿勢包括：保持頭部正直，眼睛平視前方；肩膀放鬆下沉；手臂自然擺動；腳跟先著地，再過渡到腳尖。"
+            },
+        ],
     }
 
     # Generate instructions
@@ -375,6 +441,7 @@ def main():
         secondary_categories=test_data["secondary_categories"],
         publish_mode="draft",
         author_name=test_data["author_name"],
+        faqs=test_data["faqs"],
     )
 
     # Verify all fields are present
@@ -402,6 +469,15 @@ def main():
         ("Featured Image step", "Featured Image", "Featured Image" in instructions),
         ("Draft mode summary", "Save the article as a draft", "Save the article as a draft" in instructions),
         ("Draft mode note", "draft", "draft" in instructions.lower()),
+        # FAQ Schema checks
+        ("FAQ Schema summary step", "FAQ Schema JSON-LD", "FAQ Schema JSON-LD" in instructions),
+        ("FAQ Schema step", "Insert FAQ Schema", "Insert FAQ Schema" in instructions),
+        ("FAQ Schema info section", "FAQ Schema for AI Search Engines", "FAQ Schema for AI Search Engines" in instructions),
+        ("FAQ 1 question preview", test_data["faqs"][0]["question"][:30], test_data["faqs"][0]["question"][:30] in instructions),
+        ("FAQPage schema type", '"@type": "FAQPage"', '"@type": "FAQPage"' in instructions),
+        ("Schema.org context", '"@context": "https://schema.org"', '"@context": "https://schema.org"' in instructions),
+        ("Custom HTML block instruction", "Custom HTML", "Custom HTML" in instructions),
+        ("JSON-LD script tag", 'application/ld+json', 'application/ld+json' in instructions),
     ]
 
     passed = 0

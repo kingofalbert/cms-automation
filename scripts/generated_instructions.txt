@@ -1,0 +1,211 @@
+You are an AI assistant helping to prepare an article in WordPress with full SEO configuration.
+
+**Your Task:**
+1. Navigate to the WordPress admin dashboard
+2. Log in if needed
+3. Create a new post
+4. Set article title
+5. Add article content (body)
+6. Upload article images and insert them at correct positions
+7. Set the Featured Image (題圖) in the Document sidebar
+8. Set article author to '張明德'
+9. Set Primary Category ('健康') with 'Make Primary' and Secondary Categories
+10. Configure SEO metadata (Yoast SEO or Rank Math)
+11. Insert FAQ Schema JSON-LD for AI search engines (3 FAQs)
+12. Save the article as a draft (do not publish to the live site)
+13. Return the post ID and relevant URLs
+
+**WordPress Details:**
+- Admin URL: https://test.epochtimes.com/wp-admin
+- Username: test_user
+- Password: test_password
+
+**Article Content:**
+Title: 【健康專題】2024年最新研究：每天步行30分鐘可降低心臟病風險40%
+Body Preview: <p>根據最新醫學研究，每天步行30分鐘對心血管健康有顯著益處。</p>
+<p>美國心臟協會近日發布的研究報告指出，規律的步行運動能夠降低血壓和膽固醇。</p>
+<h2>專家建議</h2>
+<p>心臟科醫師張明德表示：「步行是最簡單的有氧運動之一。」</p>
+[Full body content will be provided when needed]
+**Article Images to Upload (with exact positions):**
+  Image 1:
+    - Filename: walking_heart.jpg
+    - Insert after paragraph: 0 (0 = before first paragraph, 1 = after first paragraph, etc.)
+    - Caption/Alt text: 研究顯示每天步行30分鐘可有效降低心臟病風險
+    - Local path: /tmp/walking_heart.jpg
+    - Original URL: https://example.com/walking.jpg
+  Image 2:
+    - Filename: heart_diagram.png
+    - Insert after paragraph: 2 (0 = before first paragraph, 1 = after first paragraph, etc.)
+    - Caption/Alt text: 心臟結構與運動對血液循環的影響
+    - Local path: /tmp/heart_diagram.png
+    - Original URL: https://example.com/heart.png
+**WordPress Tags to Add:**
+  - 健康
+  - 運動
+  - 心臟病
+  - 醫學研究
+**WordPress Primary Category (主分類) - CRITICAL:**
+  - Category: 健康
+  - This determines the article URL structure (e.g., example.com/健康/article-slug)
+  - This determines the breadcrumb navigation
+  - You MUST click "Make Primary" or "設為主分類" after selecting this category
+
+**WordPress Secondary Categories (副分類) - For Cross-listing:**
+  - 生活
+  - 醫療
+  - These allow the article to appear in multiple category archive pages
+  - Do NOT click "Make Primary" for these categories
+
+
+**Article Author:**
+- Author Name: 張明德
+- This author should be selected from the WordPress Author dropdown in the Document sidebar
+**FAQ Schema for AI Search Engines (JSON-LD):**
+  FAQ 1:
+    Q: 每天步行30分鐘真的能降低心臟病風險嗎？
+    A: 是的，根據美國心臟協會最新研究，每天步行30分鐘可以降低心臟病風險約40%。這是因為步行能改善血液循環、降低血壓和膽固醇。
+  FAQ 2:
+    Q: 什麼時間步行最有效果？
+    A: 研究顯示，早晨或傍晚步行效果最佳。早晨步行有助於提升一整天的新陳代謝，傍晚步行則有助於舒緩壓力和改善睡眠質量。
+  FAQ 3:
+    Q: 步行的正確姿勢是什麼？
+    A: 正確的步行姿勢包括：保持頭部正直，眼睛平視前方；肩膀放鬆下沉；手臂自然擺動；腳跟先著地，再過渡到腳尖。
+
+**SEO Configuration (Yoast SEO / Rank Math):**
+- Meta Title: 每天步行30分鐘降低心臟病風險40% | 2024最新研究
+- Meta Description: 美國心臟協會最新研究：每天步行30分鐘可降低心臟病風險40%。專家建議從15分鐘開始。
+- Focus Keyword: 步行降低心臟病風險
+- Additional Keywords: 步行運動, 心臟健康, 有氧運動
+
+**Step-by-Step Instructions:**
+1. **Navigate to WordPress Admin**
+   - Open https://test.epochtimes.com/wp-admin in the browser
+   - Wait for the login page to load
+
+2. **Log In**
+   - Enter username: test_user
+   - Enter password: test_password
+   - Click the "Log In" button
+
+3. **Create a New Post**
+   - Open "Posts" → "Add New"
+
+4. **Set the Article Title**
+   - Click the title field
+   - Paste the article title: 【健康專題】2024年最新研究：每天步行30分鐘可降低心臟病風險40%
+
+5. **Add Article Content**
+   - Click inside the content area
+   - Paste the full article body
+
+6. **Upload and Insert Article Images at Correct Positions**
+   - Now that the article body is in place, insert images at their correct positions
+   - Upload each provided file
+   - **IMPORTANT: For EACH image in the Media Library, set these fields:**
+   -   - Alt Text (替代文字): Use the provided alt_text or caption
+   -   - Caption (圖說): Use the provided caption text - this will display below the image
+   - **IMPORTANT: Insert each image at its specified position:**
+   - Image 1 (walking_heart.jpg): Insert at the very beginning of the article (before the first paragraph) with caption: '研究顯示每天步行30分鐘可有效降低心臟病風險...'
+   - Image 2 (heart_diagram.png): Insert after paragraph 2 with caption: '心臟結構與運動對血液循環的影響...'
+   - Verify each image shows its caption below it in the editor
+
+7. **Set Featured Image (題圖/特色圖片)**
+   - In the right sidebar, scroll to "Featured image" section
+   - Click on "Set featured image" button
+   - From the Media Library, select the image: "walking_heart.jpg"
+   - Set the alt text to: "一位中年人在公園步道上快走運動..."
+   - Click "Set featured image" to confirm
+
+8. **Set Article Author (文章作者)**
+   - In the right sidebar, scroll to the "Author" dropdown
+   - Click the Author dropdown and search for: "張明德"
+   - Select "張明德" from the dropdown list
+
+9. **Set Tags and Categories (with Primary Category)**
+   - In the right sidebar, expand the "Tags" panel
+   - Add each tag from the list: 健康, 運動, 心臟病, 醫學研究
+   - **CRITICAL: In the right sidebar, expand the "Categories" panel**
+   - **Step 1 - Set Primary Category:** Find "健康"
+   - Check the checkbox next to "健康"
+   - **Step 2 - Make Primary:** Click "Make Primary" or "設為主分類"
+   - **Step 3 - Add Secondary Categories:** Also check:
+   - Check "生活" (do NOT make primary)
+   - Check "醫療" (do NOT make primary)
+
+10. **Configure SEO Metadata**
+   - Scroll to the Yoast SEO (or Rank Math) panel
+   - Set the focus keyphrase to: 步行降低心臟病風險
+   - Update the SEO title to: 每天步行30分鐘降低心臟病風險40% | 2024最新研究
+   - Update the meta description to: 美國心臟協會最新研究：每天步行30分鐘可降低心臟病風險40%。專家建議從15分鐘開始。
+
+11. **Insert FAQ Schema JSON-LD (for AI Search Engines)**
+   - **IMPORTANT**: This FAQ Schema is HIDDEN metadata for search engines, NOT visible content
+   - In the editor, click the "+" button to add a new block at the END of the article
+   - Search for "Custom HTML" block and add it
+   - Paste the following JSON-LD script into the Custom HTML block:
+   - ```
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "每天步行30分鐘真的能降低心臟病風險嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "是的，根據美國心臟協會最新研究，每天步行30分鐘可以降低心臟病風險約40%。這是因為步行能改善血液循環、降低血壓和膽固醇。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "什麼時間步行最有效果？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "研究顯示，早晨或傍晚步行效果最佳。早晨步行有助於提升一整天的新陳代謝，傍晚步行則有助於舒緩壓力和改善睡眠質量。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "步行的正確姿勢是什麼？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "正確的步行姿勢包括：保持頭部正直，眼睛平視前方；肩膀放鬆下沉；手臂自然擺動；腳跟先著地，再過渡到腳尖。"
+      }
+    }
+  ]
+}
+</script>
+```
+   - The block should appear at the bottom of the content but won't be visible to readers
+   - This structured data helps AI search engines understand and feature your FAQs
+   - Take a screenshot showing the Custom HTML block is added
+
+12. **Save as Draft (Do NOT Publish)**
+   - Click the "Save draft" button
+   - Wait for the "Draft saved" confirmation
+
+13. **Capture Post Links and ID**
+   - Copy the "View Post" link if available (for drafts, copy the editor URL)
+   - Note the WordPress post ID (visible in the URL as ?post=ID or post=ID)
+   - Take a final screenshot for records
+
+14. **Return Results**
+   - Respond with a JSON object containing the post ID, URLs, and status.
+   - Example payload: {"article_id": "<POST_ID>", "article_url": null, "editor_url": "<EDITOR_URL>", "status": "draft"}
+   - Ensure URLs are absolute and valid.
+
+**Important Notes:**
+- Take screenshots at each major step for audit purposes.
+- If any errors appear, document them and attempt a reasonable recovery.
+- Current publishing mode: "draft". If it is "draft", never click the Publish button.
+
+--- FULL ARTICLE BODY START ---
+<p>根據最新醫學研究，每天步行30分鐘對心血管健康有顯著益處。</p>
+<p>美國心臟協會近日發布的研究報告指出，規律的步行運動能夠降低血壓和膽固醇。</p>
+<h2>專家建議</h2>
+<p>心臟科醫師張明德表示：「步行是最簡單的有氧運動之一。」</p>
+--- FULL ARTICLE BODY END ---
+
+Begin the task now and follow the steps carefully.

@@ -10,6 +10,7 @@ from src.api.schemas.seo import SEOMetadata
 from src.config import get_logger, get_settings
 from src.config.database import get_async_session
 from src.models import Article, ArticleStatus
+from src.models.article_faq import ArticleFAQ
 from src.services.drive_image_retriever import create_drive_image_retriever
 from src.services.hybrid_publisher import create_hybrid_publisher
 from src.workers.celery_app import celery_app
@@ -173,6 +174,26 @@ async def _publish_article_async(
 
         seo_data = SEOMetadata(**seo_data_dict)
 
+        # Retrieve FAQs for FAQ Schema (only approved/published ones)
+        faq_stmt = select(ArticleFAQ).where(
+            ArticleFAQ.article_id == article_id,
+            ArticleFAQ.status.in_(["approved", "published"]),
+        ).order_by(ArticleFAQ.position)
+        faq_result = await session.execute(faq_stmt)
+        article_faqs = faq_result.scalars().all()
+
+        faqs_for_schema = []
+        if article_faqs:
+            faqs_for_schema = [
+                {"question": faq.question, "answer": faq.answer}
+                for faq in article_faqs
+            ]
+            logger.info(
+                "article_faqs_loaded_for_schema",
+                article_id=article_id,
+                faq_count=len(faqs_for_schema),
+            )
+
         # Retrieve article images from Google Drive
         image_retriever = await create_drive_image_retriever(session)
         article_images = []
@@ -222,6 +243,8 @@ async def _publish_article_async(
                 secondary_categories=article.secondary_categories or [],
                 # Author information
                 author_name=article.author_name,
+                # FAQ Schema for AI search engines
+                faqs=faqs_for_schema,
             )
 
         finally:

@@ -104,6 +104,7 @@ class HybridPublisher:
         primary_category: str | None = None,
         secondary_categories: list[str] | None = None,
         author_name: str | None = None,
+        faqs: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         """Publish article using best available method.
 
@@ -121,6 +122,7 @@ class HybridPublisher:
             primary_category: WordPress primary category (determines URL structure)
             secondary_categories: WordPress secondary categories for cross-listing
             author_name: Article author name for WordPress author field
+            faqs: List of FAQs for FAQ Schema (each with 'question' and 'answer')
 
         Returns:
             Publishing result with method used
@@ -153,6 +155,7 @@ class HybridPublisher:
                     primary_category=primary_category,
                     secondary_categories=secondary_categories,
                     author_name=author_name,
+                    faqs=faqs,
                 )
             else:  # computer_use
                 result = await self._publish_with_computer_use(
@@ -168,6 +171,7 @@ class HybridPublisher:
                     primary_category=primary_category,
                     secondary_categories=secondary_categories,
                     author_name=author_name,
+                    faqs=faqs,
                 )
 
             # Add method to result
@@ -206,6 +210,7 @@ class HybridPublisher:
                         primary_category=primary_category,
                         secondary_categories=secondary_categories,
                         author_name=author_name,
+                        faqs=faqs,
                     )
                     result["publishing_method"] = "computer_use_fallback"
                     return result
@@ -316,6 +321,7 @@ class HybridPublisher:
         primary_category: str | None = None,
         secondary_categories: list[str] | None = None,
         author_name: str | None = None,
+        faqs: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         """Publish using Playwright (free).
 
@@ -332,6 +338,7 @@ class HybridPublisher:
             primary_category: Primary category
             secondary_categories: Secondary categories
             author_name: Author name
+            faqs: FAQs for FAQ Schema (not yet supported in Playwright)
 
         Returns:
             Publishing result
@@ -373,6 +380,7 @@ class HybridPublisher:
         primary_category: str | None = None,
         secondary_categories: list[str] | None = None,
         author_name: str | None = None,
+        faqs: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         """Publish using Computer Use (paid, intelligent).
 
@@ -389,6 +397,7 @@ class HybridPublisher:
             primary_category: Primary category
             secondary_categories: Secondary categories
             author_name: Author name
+            faqs: FAQs for FAQ Schema insertion
 
         Returns:
             Publishing result
@@ -408,6 +417,7 @@ class HybridPublisher:
             primary_category=primary_category,
             secondary_categories=secondary_categories,
             author_name=author_name,
+            faqs=faqs,
         )
 
         return result

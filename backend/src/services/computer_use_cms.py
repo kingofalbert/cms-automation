@@ -44,6 +44,7 @@ class ComputerUseCMSService:
         article_images: list[dict[str, Any]] | None = None,
         publish_mode: str = "publish",
         author_name: str | None = None,
+        faqs: list[dict[str, str]] | None = None,
     ) -> dict[str, Any]:
         """Publish article to CMS using Computer Use API.
 
@@ -62,6 +63,7 @@ class ComputerUseCMSService:
             article_images: List of image metadata dicts with local_path for upload
             publish_mode: "publish" to make the post live, "draft" to save without publishing
             author_name: WordPress author name to select in the author dropdown
+            faqs: List of FAQs for FAQ Schema (each with 'question' and 'answer' keys)
 
         Returns:
             dict: Publishing result with status, URL, metadata
@@ -108,6 +110,7 @@ class ComputerUseCMSService:
                 article_images=article_images or [],
                 publish_mode=publish_mode,
                 author_name=author_name,
+                faqs=faqs,
             )
 
             # Initialize Computer Use tools
@@ -305,6 +308,7 @@ class ComputerUseCMSService:
         article_images: list[dict[str, Any]],
         publish_mode: str,
         author_name: str | None = None,
+        faqs: list[dict[str, str]] | None = None,
     ) -> str:
         """Build Computer Use instructions for CMS publishing.
 
@@ -323,6 +327,7 @@ class ComputerUseCMSService:
             article_images: List of image metadata with local paths
             publish_mode: "publish" or "draft"
             author_name: WordPress author name
+            faqs: List of FAQs for FAQ Schema
 
         Returns:
             str: Detailed instructions for Claude
@@ -342,6 +347,7 @@ class ComputerUseCMSService:
                 secondary_categories=secondary_categories,
                 publish_mode=publish_mode,
                 author_name=author_name,
+                faqs=faqs,
             )
         else:
             raise ValueError(f"Unsupported CMS type: {cms_type}")
@@ -361,15 +367,18 @@ class ComputerUseCMSService:
         secondary_categories: list[str] | None = None,
         publish_mode: str = "publish",
         author_name: str | None = None,
+        faqs: list[dict[str, str]] | None = None,
     ) -> str:
         """Build WordPress-specific instructions."""
 
         tags = tags or []
         categories = categories or []
         secondary_categories = secondary_categories or []
+        faqs = faqs or []
         has_images = bool(article_images)
         has_categories = bool(primary_category or secondary_categories or categories)
         has_author = bool(author_name)
+        has_faqs = bool(faqs)
 
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
@@ -425,6 +434,36 @@ class ComputerUseCMSService:
                 f"  - {category}" for category in categories
             )
 
+        # Build FAQ Schema info section
+        faq_info = ""
+        faq_schema_json = ""
+        if has_faqs:
+            faq_lines = []
+            for idx, faq in enumerate(faqs, 1):
+                q = faq.get('question', '')[:80]
+                a = faq.get('answer', '')[:100]
+                faq_lines.append(f"  FAQ {idx}:\n    Q: {q}{'...' if len(faq.get('question', '')) > 80 else ''}\n    A: {a}{'...' if len(faq.get('answer', '')) > 100 else ''}")
+            faq_info = "\n**FAQ Schema for AI Search Engines (JSON-LD):**\n" + "\n".join(faq_lines)
+
+            # Build the actual JSON-LD schema
+            faq_entities = []
+            for faq in faqs:
+                faq_entities.append({
+                    "@type": "Question",
+                    "name": faq.get('question', ''),
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": faq.get('answer', '')
+                    }
+                })
+            faq_schema = {
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                "mainEntity": faq_entities
+            }
+            import json
+            faq_schema_json = json.dumps(faq_schema, ensure_ascii=False, indent=2)
+
         publish_summary = (
             "Save the article as a draft (do not publish to the live site)"
             if publish_mode == "draft"
@@ -462,6 +501,11 @@ class ComputerUseCMSService:
                 )
             ),
             "Configure SEO metadata (Yoast SEO or Rank Math)",
+            (
+                f"Insert FAQ Schema JSON-LD for AI search engines ({len(faqs)} FAQs)"
+                if has_faqs
+                else "Skip FAQ Schema (no FAQs provided)"
+            ),
             publish_summary,
             "Return the post ID and relevant URLs",
         ]
@@ -661,6 +705,22 @@ class ComputerUseCMSService:
             ],
         )
 
+        # Add FAQ Schema step (for AI search engines like Perplexity, ChatGPT, Google SGE)
+        if has_faqs:
+            add_step(
+                "Insert FAQ Schema JSON-LD (for AI Search Engines)",
+                [
+                    "**IMPORTANT**: This FAQ Schema is HIDDEN metadata for search engines, NOT visible content",
+                    'In the editor, click the "+" button to add a new block at the END of the article',
+                    'Search for "Custom HTML" block and add it',
+                    "Paste the following JSON-LD script into the Custom HTML block:",
+                    f'```\n<script type="application/ld+json">\n{faq_schema_json}\n</script>\n```',
+                    "The block should appear at the bottom of the content but won't be visible to readers",
+                    "This structured data helps AI search engines understand and feature your FAQs",
+                    "Take a screenshot showing the Custom HTML block is added",
+                ],
+            )
+
         if publish_mode == "draft":
             add_step(
                 "Save as Draft (Do NOT Publish)",
@@ -729,7 +789,7 @@ class ComputerUseCMSService:
 **Article Content:**
 Title: {title}
 Body Preview: {body_preview}
-[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}{author_info}
+[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}{author_info}{faq_info}
 
 **SEO Configuration (Yoast SEO / Rank Math):**
 - Meta Title: {seo_data.meta_title}
