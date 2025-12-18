@@ -435,9 +435,10 @@ class ComputerUseCMSService:
             "Navigate to the WordPress admin dashboard",
             "Log in if needed",
             "Create a new post",
-            "Set article title and content",
+            "Set article title",
+            "Add article content (body text)",
             (
-                "Upload article images to the WordPress media library and insert them into the content"
+                "Upload article images and insert them at correct paragraph positions"
                 if has_images
                 else "Skip image upload (no images provided)"
             ),
@@ -513,6 +514,18 @@ class ComputerUseCMSService:
             ],
         )
 
+        # CRITICAL: Add article content BEFORE inserting images
+        # So that paragraph positions (1, 2, 3...) exist for image insertion
+        add_step(
+            "Add Article Content",
+            [
+                "Click inside the content area of the editor",
+                "Use the text editor tool to paste the full article body (provided below)",
+                "Ensure formatting is preserved (headings, paragraphs, lists, etc.)",
+                "Take a screenshot of the populated editor",
+            ],
+        )
+
         if has_images:
             # Build specific insertion instructions for each image
             image_insertion_instructions = []
@@ -534,7 +547,8 @@ class ComputerUseCMSService:
             add_step(
                 "Upload and Insert Article Images at Correct Positions",
                 [
-                    'Open the media uploader from the editor ("Add Block" → Image or "Add media")',
+                    "Now that the article body is in place, insert images at their correct positions",
+                    'For each image: Click at the target position in the content, then use "Add Block" → Image',
                     "Upload each provided file and wait for uploads to complete",
                     "**IMPORTANT: Insert each image at its specified position:**",
                 ]
@@ -545,21 +559,6 @@ class ComputerUseCMSService:
                     "Take a screenshot showing the images inserted in the content",
                 ],
             )
-
-        add_step(
-            "Add Article Content",
-            [
-                "Click inside the content area of the editor",
-                "Use the text editor tool to paste the full article body (provided below)",
-                "Ensure formatting is preserved (headings, paragraphs, lists, etc.)",
-                (
-                    "Confirm that uploaded images appear in the correct locations within the content"
-                    if has_images
-                    else "No images were provided, so focus on text formatting only"
-                ),
-                "Take a screenshot of the populated editor",
-            ],
-        )
 
         # Set Featured Image step (must be done after uploading images)
         if has_images:
@@ -625,9 +624,11 @@ class ComputerUseCMSService:
                     f'This ensures the URL will be: example.com/{primary_category}/article-slug',
                 ]
                 if secondary_categories:
-                    category_instructions.extend([
-                        f'**Step 3 - Add Secondary Categories:** Also check these categories for cross-listing:',
-                    ] + [f'  - Check "{cat}" (do NOT make primary)' for cat in secondary_categories])
+                    category_instructions.append(
+                        f'**Step 3 - Add Secondary Categories:** Also check these categories for cross-listing:'
+                    )
+                    for cat in secondary_categories:
+                        category_instructions.append(f'Check "{cat}" (do NOT make primary)')
                 category_instructions.append("Take a screenshot showing the category selections with Primary marked")
             elif categories:
                 # Fallback to legacy behavior
