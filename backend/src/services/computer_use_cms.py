@@ -43,6 +43,7 @@ class ComputerUseCMSService:
         secondary_categories: list[str] | None = None,
         article_images: list[dict[str, Any]] | None = None,
         publish_mode: str = "publish",
+        author_name: str | None = None,
     ) -> dict[str, Any]:
         """Publish article to CMS using Computer Use API.
 
@@ -60,6 +61,7 @@ class ComputerUseCMSService:
             secondary_categories: WordPress secondary categories (for cross-listing)
             article_images: List of image metadata dicts with local_path for upload
             publish_mode: "publish" to make the post live, "draft" to save without publishing
+            author_name: WordPress author name to select in the author dropdown
 
         Returns:
             dict: Publishing result with status, URL, metadata
@@ -105,6 +107,7 @@ class ComputerUseCMSService:
                 secondary_categories=secondary_categories,
                 article_images=article_images or [],
                 publish_mode=publish_mode,
+                author_name=author_name,
             )
 
             # Initialize Computer Use tools
@@ -301,6 +304,7 @@ class ComputerUseCMSService:
         secondary_categories: list[str] | None,
         article_images: list[dict[str, Any]],
         publish_mode: str,
+        author_name: str | None = None,
     ) -> str:
         """Build Computer Use instructions for CMS publishing.
 
@@ -317,6 +321,8 @@ class ComputerUseCMSService:
             primary_category: WordPress primary category (determines URL)
             secondary_categories: WordPress secondary categories (cross-listing)
             article_images: List of image metadata with local paths
+            publish_mode: "publish" or "draft"
+            author_name: WordPress author name
 
         Returns:
             str: Detailed instructions for Claude
@@ -335,6 +341,7 @@ class ComputerUseCMSService:
                 primary_category=primary_category,
                 secondary_categories=secondary_categories,
                 publish_mode=publish_mode,
+                author_name=author_name,
             )
         else:
             raise ValueError(f"Unsupported CMS type: {cms_type}")
@@ -353,6 +360,7 @@ class ComputerUseCMSService:
         primary_category: str | None = None,
         secondary_categories: list[str] | None = None,
         publish_mode: str = "publish",
+        author_name: str | None = None,
     ) -> str:
         """Build WordPress-specific instructions."""
 
@@ -361,6 +369,7 @@ class ComputerUseCMSService:
         secondary_categories = secondary_categories or []
         has_images = bool(article_images)
         has_categories = bool(primary_category or secondary_categories or categories)
+        has_author = bool(author_name)
 
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
@@ -431,6 +440,16 @@ class ComputerUseCMSService:
                 "Upload article images to the WordPress media library and insert them into the content"
                 if has_images
                 else "Skip image upload (no images provided)"
+            ),
+            (
+                "Set the Featured Image (題圖) in the Document sidebar"
+                if has_images
+                else "Skip featured image (no images provided)"
+            ),
+            (
+                f"Set article author to '{author_name}'"
+                if has_author
+                else "Skip author selection (use default)"
             ),
             (
                 f"Set Primary Category ('{primary_category}') with 'Make Primary' and Secondary Categories"
@@ -542,6 +561,47 @@ class ComputerUseCMSService:
             ],
         )
 
+        # Set Featured Image step (must be done after uploading images)
+        if has_images:
+            # Determine which image should be the featured image
+            # Priority: position 0 (before first paragraph) or first image in list
+            featured_img = next(
+                (img for img in article_images if img.get('position') == 0),
+                article_images[0] if article_images else None
+            )
+            if featured_img:
+                featured_filename = featured_img.get('filename', 'first uploaded image')
+                featured_alt = featured_img.get('alt_text') or featured_img.get('caption', '')
+
+                add_step(
+                    "Set Featured Image (題圖/特色圖片)",
+                    [
+                        'In the right sidebar (Document panel), scroll to find "Featured image" section',
+                        'Click on "Set featured image" button',
+                        f'From the Media Library, select the image: "{featured_filename}"',
+                        'If not visible, search for it in the Media Library',
+                        f'Set the alt text to: "{featured_alt[:100]}..."' if featured_alt else 'Set appropriate alt text based on image content',
+                        'Click "Set featured image" to confirm',
+                        'Verify the featured image thumbnail appears in the sidebar',
+                        'Take a screenshot of the Featured Image panel showing the selected image',
+                    ],
+                )
+
+        # Set Author step
+        if has_author:
+            add_step(
+                "Set Article Author (文章作者)",
+                [
+                    'In the right sidebar (Document panel), scroll to find the "Author" dropdown',
+                    'If the Author panel is collapsed, click to expand it',
+                    f'Click the Author dropdown and search for: "{author_name}"',
+                    f'Select "{author_name}" from the dropdown list',
+                    'If the author is not found, note this in the final result',
+                    'Verify the correct author is now displayed',
+                    'Take a screenshot of the Author selection',
+                ],
+            )
+
         if tags or has_categories:
             tag_instructions = (
                 [
@@ -643,6 +703,15 @@ class ComputerUseCMSService:
 
         detailed_block = "\n\n".join(steps)
 
+        # Build author info section
+        author_info = ""
+        if author_name:
+            author_info = f"""
+
+**Article Author:**
+- Author Name: {author_name}
+- This author should be selected from the WordPress Author dropdown in the Document sidebar"""
+
         instructions = f"""You are an AI assistant helping to prepare an article in WordPress with full SEO configuration.
 
 **Your Task:**
@@ -656,7 +725,7 @@ class ComputerUseCMSService:
 **Article Content:**
 Title: {title}
 Body Preview: {body_preview}
-[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}
+[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}{author_info}
 
 **SEO Configuration (Yoast SEO / Rank Math):**
 - Meta Title: {seo_data.meta_title}

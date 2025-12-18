@@ -170,10 +170,38 @@ class ArticleProcessingService:
         article.meta_description = parsed_article.meta_description
         article.seo_keywords = parsed_article.seo_keywords
 
+        # Store taxonomy fields (tags, categories)
+        if parsed_article.tags:
+            article.tags = parsed_article.tags
+        if parsed_article.primary_category:
+            article.primary_category = parsed_article.primary_category
+        if parsed_article.secondary_categories:
+            article.secondary_categories = parsed_article.secondary_categories
+
+        # Store SEO fields
+        if parsed_article.focus_keyword:
+            article.focus_keyword = parsed_article.focus_keyword
+        if parsed_article.seo_title:
+            article.seo_title = parsed_article.seo_title
+            article.seo_title_extracted = parsed_article.seo_title_extracted
+            article.seo_title_source = parsed_article.seo_title_source
+
+        # Store AI suggestions for user review
+        if parsed_article.suggested_titles:
+            article.suggested_titles = parsed_article.suggested_titles
+        if parsed_article.suggested_meta_description:
+            article.suggested_meta_description = parsed_article.suggested_meta_description
+        if parsed_article.suggested_seo_keywords:
+            article.suggested_seo_keywords = parsed_article.suggested_seo_keywords
+
+        # Store proofreading issues if available
+        if parsed_article.proofreading_issues:
+            article.proofreading_issues = parsed_article.proofreading_issues
+
         # Note: parsing_confirmed remains False until user confirms
         # parsing_confirmed_at and parsing_confirmed_by will be set by API endpoint
 
-        logger.debug(f"Updated article {article_id} with parsed data")
+        logger.debug(f"Updated article {article_id} with parsed data (including tags, categories, SEO fields)")
 
         # Phase 7.5: Save AI-generated FAQs to article_faqs table
         # This allows FAQs to be displayed immediately without needing manual generation

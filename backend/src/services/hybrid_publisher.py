@@ -100,6 +100,10 @@ class HybridPublisher:
         article_images: list[dict[str, Any]] | None = None,
         article_metadata: dict[str, Any] | None = None,
         publish_mode: str = "publish",
+        tags: list[str] | None = None,
+        primary_category: str | None = None,
+        secondary_categories: list[str] | None = None,
+        author_name: str | None = None,
     ) -> dict[str, Any]:
         """Publish article using best available method.
 
@@ -112,6 +116,11 @@ class HybridPublisher:
             seo_data: SEO metadata
             article_images: List of article images
             article_metadata: Additional article metadata
+            publish_mode: "publish" or "draft"
+            tags: WordPress post tags
+            primary_category: WordPress primary category (determines URL structure)
+            secondary_categories: WordPress secondary categories for cross-listing
+            author_name: Article author name for WordPress author field
 
         Returns:
             Publishing result with method used
@@ -140,6 +149,10 @@ class HybridPublisher:
                     seo_data=seo_data,
                     article_images=article_images,
                     publish_mode=publish_mode,
+                    tags=tags,
+                    primary_category=primary_category,
+                    secondary_categories=secondary_categories,
+                    author_name=author_name,
                 )
             else:  # computer_use
                 result = await self._publish_with_computer_use(
@@ -151,6 +164,10 @@ class HybridPublisher:
                     seo_data=seo_data,
                     article_images=article_images,
                     publish_mode=publish_mode,
+                    tags=tags,
+                    primary_category=primary_category,
+                    secondary_categories=secondary_categories,
+                    author_name=author_name,
                 )
 
             # Add method to result
@@ -185,6 +202,10 @@ class HybridPublisher:
                         seo_data=seo_data,
                         article_images=article_images,
                         publish_mode=publish_mode,
+                        tags=tags,
+                        primary_category=primary_category,
+                        secondary_categories=secondary_categories,
+                        author_name=author_name,
                     )
                     result["publishing_method"] = "computer_use_fallback"
                     return result
@@ -291,6 +312,10 @@ class HybridPublisher:
         seo_data: SEOMetadata,
         article_images: list[dict[str, Any]],
         publish_mode: str,
+        tags: list[str] | None = None,
+        primary_category: str | None = None,
+        secondary_categories: list[str] | None = None,
+        author_name: str | None = None,
     ) -> dict[str, Any]:
         """Publish using Playwright (free).
 
@@ -302,6 +327,11 @@ class HybridPublisher:
             article_body: Body
             seo_data: SEO data
             article_images: Images
+            publish_mode: "publish" or "draft"
+            tags: WordPress post tags
+            primary_category: Primary category
+            secondary_categories: Secondary categories
+            author_name: Author name
 
         Returns:
             Publishing result
@@ -322,6 +352,9 @@ class HybridPublisher:
             article_images=article_images or [],
             headless=True,
             publish_mode=publish_mode,
+            tags=tags,
+            primary_category=primary_category,
+            secondary_categories=secondary_categories,
         )
 
         return result
@@ -336,6 +369,10 @@ class HybridPublisher:
         seo_data: SEOMetadata,
         article_images: list[dict[str, Any]],
         publish_mode: str,
+        tags: list[str] | None = None,
+        primary_category: str | None = None,
+        secondary_categories: list[str] | None = None,
+        author_name: str | None = None,
     ) -> dict[str, Any]:
         """Publish using Computer Use (paid, intelligent).
 
@@ -347,6 +384,11 @@ class HybridPublisher:
             article_body: Body
             seo_data: SEO data
             article_images: Images
+            publish_mode: "publish" or "draft"
+            tags: WordPress post tags
+            primary_category: Primary category
+            secondary_categories: Secondary categories
+            author_name: Author name
 
         Returns:
             Publishing result
@@ -362,6 +404,10 @@ class HybridPublisher:
             cms_password=password,
             article_images=article_images or [],
             publish_mode=publish_mode,
+            tags=tags,
+            primary_category=primary_category,
+            secondary_categories=secondary_categories,
+            author_name=author_name,
         )
 
         return result

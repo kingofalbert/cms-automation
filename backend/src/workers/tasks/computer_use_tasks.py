@@ -126,33 +126,50 @@ async def _publish_article_async(
                 "cms_article_id": article.cms_article_id,
             }
 
-        # Extract SEO data from metadata
-        seo_data_dict = article.article_metadata.get("seo", {})
+        # Build SEO data from article fields (not from article_metadata)
+        # Priority: use parsed/stored fields, fallback to generated defaults
 
-        # Handle case where seo_data might be None or empty
-        if not seo_data_dict:
-            logger.warning(
-                "article_missing_seo_data",
-                article_id=article_id,
-            )
-            # Create default SEO data
-            seo_data_dict = {
-                "meta_title": article.title[:60],
-                "meta_description": (article.body[:150] + "...")
-                if len(article.body) > 150
-                else article.body,
-                "focus_keyword": article.title.split()[0] if article.title else "article",
-                "keywords": [],
-                "canonical_url": None,
-                "og_title": article.title[:70],
-                "og_description": (article.body[:200] + "...")
-                if len(article.body) > 200
-                else article.body,
-                "og_image": None,
-                "schema_type": "Article",
-                "readability_score": None,
-                "seo_score": None,
-            }
+        # Meta title: use seo_title if available, else truncate article title
+        meta_title = article.seo_title or article.title[:60]
+
+        # Meta description: use parsed meta_description, else truncate body
+        meta_description = article.meta_description
+        if not meta_description or len(meta_description) < 50:
+            body_text = article.body_html or article.body
+            meta_description = (body_text[:150] + "...") if len(body_text) > 150 else body_text
+
+        # Focus keyword: use parsed focus_keyword, else first keyword or first word of title
+        focus_keyword = article.focus_keyword
+        if not focus_keyword and article.seo_keywords:
+            focus_keyword = article.seo_keywords[0]
+        if not focus_keyword:
+            focus_keyword = article.title.split()[0] if article.title else "article"
+
+        # Additional keywords
+        keywords = article.seo_keywords or []
+
+        seo_data_dict = {
+            "meta_title": meta_title,
+            "meta_description": meta_description,
+            "focus_keyword": focus_keyword,
+            "keywords": keywords,
+            "canonical_url": None,
+            "og_title": meta_title[:70] if meta_title else article.title[:70],
+            "og_description": meta_description[:200] if meta_description else None,
+            "og_image": None,
+            "schema_type": "Article",
+            "readability_score": None,
+            "seo_score": None,
+        }
+
+        logger.info(
+            "seo_data_built_from_article_fields",
+            article_id=article_id,
+            has_seo_title=bool(article.seo_title),
+            has_meta_description=bool(article.meta_description),
+            has_focus_keyword=bool(article.focus_keyword),
+            keywords_count=len(keywords),
+        )
 
         seo_data = SEOMetadata(**seo_data_dict)
 
@@ -185,17 +202,26 @@ async def _publish_article_async(
 
             publish_mode = "draft" if settings.ENVIRONMENT != "production" else "publish"
 
-            # Publish article using hybrid strategy
+            # Use body_html if available (cleaned HTML), fallback to body
+            article_body = article.body_html or article.body
+
+            # Publish article using hybrid strategy with all taxonomy and metadata
             publish_result = await hybrid_publisher.publish_article(
                 cms_url=cms_url,
                 username=cms_username,
                 password=cms_password,
                 article_title=article.title,
-                article_body=article.body,
+                article_body=article_body,
                 seo_data=seo_data,
                 article_images=article_images,
                 article_metadata=article.article_metadata or {},
                 publish_mode=publish_mode,
+                # WordPress taxonomy fields
+                tags=article.tags or [],
+                primary_category=article.primary_category,
+                secondary_categories=article.secondary_categories or [],
+                # Author information
+                author_name=article.author_name,
             )
 
         finally:

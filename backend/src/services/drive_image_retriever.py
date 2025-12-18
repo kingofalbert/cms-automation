@@ -5,8 +5,10 @@ from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.config import get_logger
+from src.models.article_image import ArticleImage
 from src.models.uploaded_file import UploadedFile
 from src.services.storage import create_google_drive_storage
 
@@ -34,28 +36,184 @@ class DriveImageRetriever:
         self.downloaded_files: list[dict] = []
 
     async def get_article_images(self, article_id: int) -> list[dict]:
-        """Get all images associated with an article from Google Drive.
+        """Get all images associated with an article for WordPress publishing.
+
+        This method retrieves images from the article_images table (parsed images)
+        which contains position, caption, and alt_text information required for
+        proper WordPress publishing.
 
         Args:
             article_id: Article ID to fetch images for
 
         Returns:
-            List of image metadata dicts with local file paths
+            List of image metadata dicts with local file paths and publishing metadata
 
         Example return:
         [
             {
-                "drive_file_id": "abc123",
                 "filename": "image1.jpg",
-                "mime_type": "image/jpeg",
+                "position": 0,              # Paragraph index for insertion
+                "caption": "圖說文字...",    # Image caption from document
+                "alt_text": "替代文字...",   # Alt text for SEO/accessibility
                 "local_path": "/tmp/images/image1.jpg",
-                "web_view_link": "https://drive.google.com/...",
+                "source_url": "https://...", # Original source URL
+                "mime_type": "image/jpeg",
             }
         ]
         """
         logger.info("retrieving_article_images", article_id=article_id)
 
-        # Query uploaded_files for article images
+        # First, query article_images table for parsed image info (position, caption, alt_text)
+        stmt = select(ArticleImage).where(
+            ArticleImage.article_id == article_id
+        ).order_by(ArticleImage.position)
+        result = await self.session.execute(stmt)
+        article_images = result.scalars().all()
+
+        if not article_images:
+            logger.info("no_parsed_images_found_for_article", article_id=article_id)
+            # Fallback: try uploaded_files table for backward compatibility
+            return await self._get_images_from_uploaded_files(article_id)
+
+        logger.info(
+            "found_parsed_article_images",
+            article_id=article_id,
+            count=len(article_images),
+        )
+
+        # Create temp directory for downloads
+        self.temp_dir = Path(tempfile.mkdtemp(prefix="cms_images_"))
+        logger.debug("created_temp_directory", path=str(self.temp_dir))
+
+        images = []
+        storage = None
+
+        for idx, article_image in enumerate(article_images):
+            try:
+                local_path = None
+                filename = f"image_{idx + 1}"
+
+                # Try to get the image file
+                # Priority 1: Use source_path if file exists locally
+                if article_image.source_path:
+                    source_file = Path(article_image.source_path)
+                    if source_file.exists():
+                        # Copy to temp directory
+                        filename = source_file.name
+                        local_path = self.temp_dir / filename
+                        local_path.write_bytes(source_file.read_bytes())
+                        logger.debug(
+                            "image_copied_from_source_path",
+                            source_path=str(source_file),
+                            local_path=str(local_path),
+                        )
+
+                # Priority 2: Download from source_url
+                if not local_path and article_image.source_url:
+                    try:
+                        import httpx
+                        async with httpx.AsyncClient(timeout=30.0) as client:
+                            response = await client.get(article_image.source_url, follow_redirects=True)
+                            if response.status_code == 200:
+                                # Extract filename from URL or use index
+                                url_path = article_image.source_url.split('?')[0]
+                                if '/' in url_path:
+                                    filename = url_path.split('/')[-1] or f"image_{idx + 1}.jpg"
+                                local_path = self.temp_dir / filename
+                                local_path.write_bytes(response.content)
+                                logger.debug(
+                                    "image_downloaded_from_source_url",
+                                    source_url=article_image.source_url[:100],
+                                    local_path=str(local_path),
+                                )
+                    except Exception as download_err:
+                        logger.warning(
+                            "failed_to_download_from_source_url",
+                            source_url=article_image.source_url[:100] if article_image.source_url else None,
+                            error=str(download_err),
+                        )
+
+                # Priority 3: Try to find in uploaded_files and download from Google Drive
+                if not local_path:
+                    uploaded_file = await self._find_matching_uploaded_file(article_id, article_image)
+                    if uploaded_file:
+                        if storage is None:
+                            storage = await create_google_drive_storage()
+                        try:
+                            file_data = await storage.download_file(uploaded_file.drive_file_id)
+                            filename = uploaded_file.filename
+                            local_path = self.temp_dir / filename
+                            local_path.write_bytes(file_data)
+                            logger.debug(
+                                "image_downloaded_from_drive",
+                                drive_file_id=uploaded_file.drive_file_id,
+                                local_path=str(local_path),
+                            )
+                        except Exception as drive_err:
+                            logger.warning(
+                                "failed_to_download_from_drive",
+                                drive_file_id=uploaded_file.drive_file_id,
+                                error=str(drive_err),
+                            )
+
+                if not local_path:
+                    logger.warning(
+                        "could_not_retrieve_image_file",
+                        article_image_id=article_image.id,
+                        position=article_image.position,
+                    )
+                    continue
+
+                # Build complete image metadata for Computer Use
+                image_metadata = {
+                    "filename": filename,
+                    "position": article_image.position,
+                    "caption": article_image.caption or "",
+                    "alt_text": article_image.alt_text or article_image.caption or "",
+                    "description": article_image.description or "",
+                    "local_path": str(local_path),
+                    "source_url": article_image.source_url or "",
+                    "mime_type": self._guess_mime_type(filename),
+                }
+
+                images.append(image_metadata)
+                self.downloaded_files.append(image_metadata)
+
+                logger.debug(
+                    "image_prepared_for_upload",
+                    filename=filename,
+                    position=article_image.position,
+                    has_caption=bool(article_image.caption),
+                    has_alt_text=bool(article_image.alt_text),
+                )
+
+            except Exception as e:
+                logger.error(
+                    "failed_to_process_article_image",
+                    article_image_id=article_image.id,
+                    position=article_image.position,
+                    error=str(e),
+                    exc_info=True,
+                )
+                continue
+
+        logger.info(
+            "article_images_retrieved",
+            article_id=article_id,
+            total=len(article_images),
+            prepared=len(images),
+        )
+
+        return images
+
+    async def _get_images_from_uploaded_files(self, article_id: int) -> list[dict]:
+        """Fallback: Get images from uploaded_files table (legacy support).
+
+        This is used when article_images table has no entries, for backward
+        compatibility with older articles that only have uploaded_files records.
+        """
+        logger.info("fallback_to_uploaded_files", article_id=article_id)
+
         stmt = select(UploadedFile).where(
             UploadedFile.article_id == article_id,
             UploadedFile.file_type == "image",
@@ -64,70 +222,88 @@ class DriveImageRetriever:
         uploaded_files = result.scalars().all()
 
         if not uploaded_files:
-            logger.info("no_images_found_for_article", article_id=article_id)
+            logger.info("no_uploaded_files_found", article_id=article_id)
             return []
-
-        logger.info(
-            "found_article_images",
-            article_id=article_id,
-            count=len(uploaded_files),
-        )
 
         # Create temp directory for downloads
         self.temp_dir = Path(tempfile.mkdtemp(prefix="cms_images_"))
-        logger.debug("created_temp_directory", path=str(self.temp_dir))
-
-        # Download images from Google Drive
         storage = await create_google_drive_storage()
         images = []
 
-        for uploaded_file in uploaded_files:
+        for idx, uploaded_file in enumerate(uploaded_files):
             try:
-                # Download from Google Drive
                 file_data = await storage.download_file(uploaded_file.drive_file_id)
-
-                # Save to temp file
                 local_path = self.temp_dir / uploaded_file.filename
                 local_path.write_bytes(file_data)
 
+                # Note: uploaded_files doesn't have position/caption/alt_text
+                # Use index as position and empty strings for text fields
                 image_metadata = {
-                    "drive_file_id": uploaded_file.drive_file_id,
                     "filename": uploaded_file.filename,
-                    "mime_type": uploaded_file.mime_type,
+                    "position": idx,  # Use index as fallback position
+                    "caption": "",    # Not available in uploaded_files
+                    "alt_text": "",   # Not available in uploaded_files
+                    "description": "",
                     "local_path": str(local_path),
-                    "web_view_link": uploaded_file.web_view_link,
-                    "file_size": uploaded_file.file_size,
+                    "source_url": uploaded_file.web_view_link or "",
+                    "mime_type": uploaded_file.mime_type or self._guess_mime_type(uploaded_file.filename),
                 }
 
                 images.append(image_metadata)
                 self.downloaded_files.append(image_metadata)
 
-                logger.debug(
-                    "image_downloaded_from_drive",
-                    drive_file_id=uploaded_file.drive_file_id,
-                    filename=uploaded_file.filename,
-                    local_path=str(local_path),
-                )
-
             except Exception as e:
                 logger.error(
-                    "failed_to_download_image",
+                    "failed_to_download_uploaded_file",
                     drive_file_id=uploaded_file.drive_file_id,
-                    filename=uploaded_file.filename,
                     error=str(e),
-                    exc_info=True,
                 )
-                # Continue with other images
                 continue
 
-        logger.info(
-            "article_images_retrieved",
-            article_id=article_id,
-            total=len(uploaded_files),
-            downloaded=len(images),
-        )
-
         return images
+
+    async def _find_matching_uploaded_file(
+        self, article_id: int, article_image: ArticleImage
+    ) -> UploadedFile | None:
+        """Find an uploaded_file that matches the article_image.
+
+        Matches by filename or position.
+        """
+        stmt = select(UploadedFile).where(
+            UploadedFile.article_id == article_id,
+            UploadedFile.file_type == "image",
+        )
+        result = await self.session.execute(stmt)
+        uploaded_files = result.scalars().all()
+
+        if not uploaded_files:
+            return None
+
+        # Try to match by source URL containing drive file ID
+        if article_image.source_url:
+            for uf in uploaded_files:
+                if uf.drive_file_id and uf.drive_file_id in article_image.source_url:
+                    return uf
+
+        # Fallback: match by position (index in list)
+        if article_image.position < len(uploaded_files):
+            return uploaded_files[article_image.position]
+
+        return uploaded_files[0] if uploaded_files else None
+
+    def _guess_mime_type(self, filename: str) -> str:
+        """Guess MIME type from filename extension."""
+        ext = Path(filename).suffix.lower()
+        mime_types = {
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".svg": "image/svg+xml",
+            ".bmp": "image/bmp",
+        }
+        return mime_types.get(ext, "image/jpeg")
 
     def cleanup(self) -> None:
         """Clean up temporary files and directory.
