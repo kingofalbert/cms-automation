@@ -158,7 +158,7 @@ def build_wordpress_instructions(
         ),
         "Configure SEO metadata (Yoast SEO or Rank Math)",
         (
-            f"Insert FAQ Schema JSON-LD for AI search engines ({len(faqs)} FAQs)"
+            f"Insert FAQ Schema JSON-LD for AI search engines ({len(faqs)} FAQs) - skip if not supported"
             if has_faqs
             else "Skip FAQ Schema (no FAQs provided)"
         ),
@@ -290,15 +290,24 @@ def build_wordpress_instructions(
 
     # Add FAQ Schema step (for AI search engines like Perplexity, ChatGPT, Google SGE)
     if has_faqs:
-        add_step("Insert FAQ Schema JSON-LD (for AI Search Engines)", [
+        add_step("Insert FAQ Schema JSON-LD (for AI Search Engines) - OPTIONAL", [
             "**IMPORTANT**: This FAQ Schema is HIDDEN metadata for search engines, NOT visible content",
             'In the editor, click the "+" button to add a new block at the END of the article',
-            'Search for "Custom HTML" block and add it',
-            "Paste the following JSON-LD script into the Custom HTML block:",
+            'Search for "Custom HTML" block (also called "自訂 HTML" in Chinese)',
+            "",
+            "**IF Custom HTML block is found:**",
+            "  - Add the Custom HTML block",
+            "  - Paste the following JSON-LD script into it:",
             f'```\n<script type="application/ld+json">\n{faq_schema_json}\n</script>\n```',
-            "The block should appear at the bottom of the content but won't be visible to readers",
-            "This structured data helps AI search engines understand and feature your FAQs",
-            "Take a screenshot showing the Custom HTML block is added",
+            "  - The block won't be visible to readers but helps AI search engines",
+            "  - Take a screenshot showing the Custom HTML block is added",
+            "",
+            "**IF Custom HTML block is NOT found (graceful skip):**",
+            "  - This is OK - the WordPress editor may not support Custom HTML blocks",
+            "  - Take a screenshot showing the block search results",
+            "  - Log this as a warning: 'FAQ Schema skipped: Custom HTML block not available'",
+            "  - Continue to the next step - do NOT stop the publishing process",
+            "  - The article will still be published successfully without FAQ Schema",
         ])
 
     if publish_mode == "draft":
@@ -472,12 +481,17 @@ def main():
         # FAQ Schema checks
         ("FAQ Schema summary step", "FAQ Schema JSON-LD", "FAQ Schema JSON-LD" in instructions),
         ("FAQ Schema step", "Insert FAQ Schema", "Insert FAQ Schema" in instructions),
+        ("FAQ Schema OPTIONAL marker", "OPTIONAL", "OPTIONAL" in instructions),
         ("FAQ Schema info section", "FAQ Schema for AI Search Engines", "FAQ Schema for AI Search Engines" in instructions),
         ("FAQ 1 question preview", test_data["faqs"][0]["question"][:30], test_data["faqs"][0]["question"][:30] in instructions),
         ("FAQPage schema type", '"@type": "FAQPage"', '"@type": "FAQPage"' in instructions),
         ("Schema.org context", '"@context": "https://schema.org"', '"@context": "https://schema.org"' in instructions),
         ("Custom HTML block instruction", "Custom HTML", "Custom HTML" in instructions),
         ("JSON-LD script tag", 'application/ld+json', 'application/ld+json' in instructions),
+        # Graceful skip checks
+        ("Graceful skip instruction", "graceful skip", "graceful skip" in instructions),
+        ("Skip if not supported", "skip if not supported", "skip if not supported" in instructions),
+        ("Continue instruction", "Continue to the next step", "Continue to the next step" in instructions),
     ]
 
     passed = 0

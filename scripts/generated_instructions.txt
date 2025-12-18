@@ -11,7 +11,7 @@ You are an AI assistant helping to prepare an article in WordPress with full SEO
 8. Set article author to '張明德'
 9. Set Primary Category ('健康') with 'Make Primary' and Secondary Categories
 10. Configure SEO metadata (Yoast SEO or Rank Math)
-11. Insert FAQ Schema JSON-LD for AI search engines (3 FAQs)
+11. Insert FAQ Schema JSON-LD for AI search engines (3 FAQs) - skip if not supported
 12. Save the article as a draft (do not publish to the live site)
 13. Return the post ID and relevant URLs
 
@@ -139,11 +139,14 @@ Body Preview: <p>根據最新醫學研究，每天步行30分鐘對心血管健�
    - Update the SEO title to: 每天步行30分鐘降低心臟病風險40% | 2024最新研究
    - Update the meta description to: 美國心臟協會最新研究：每天步行30分鐘可降低心臟病風險40%。專家建議從15分鐘開始。
 
-11. **Insert FAQ Schema JSON-LD (for AI Search Engines)**
+11. **Insert FAQ Schema JSON-LD (for AI Search Engines) - OPTIONAL**
    - **IMPORTANT**: This FAQ Schema is HIDDEN metadata for search engines, NOT visible content
    - In the editor, click the "+" button to add a new block at the END of the article
-   - Search for "Custom HTML" block and add it
-   - Paste the following JSON-LD script into the Custom HTML block:
+   - Search for "Custom HTML" block (also called "自訂 HTML" in Chinese)
+   - 
+   - **IF Custom HTML block is found:**
+   -   - Add the Custom HTML block
+   -   - Paste the following JSON-LD script into it:
    - ```
 <script type="application/ld+json">
 {
@@ -178,9 +181,15 @@ Body Preview: <p>根據最新醫學研究，每天步行30分鐘對心血管健�
 }
 </script>
 ```
-   - The block should appear at the bottom of the content but won't be visible to readers
-   - This structured data helps AI search engines understand and feature your FAQs
-   - Take a screenshot showing the Custom HTML block is added
+   -   - The block won't be visible to readers but helps AI search engines
+   -   - Take a screenshot showing the Custom HTML block is added
+   - 
+   - **IF Custom HTML block is NOT found (graceful skip):**
+   -   - This is OK - the WordPress editor may not support Custom HTML blocks
+   -   - Take a screenshot showing the block search results
+   -   - Log this as a warning: 'FAQ Schema skipped: Custom HTML block not available'
+   -   - Continue to the next step - do NOT stop the publishing process
+   -   - The article will still be published successfully without FAQ Schema
 
 12. **Save as Draft (Do NOT Publish)**
    - Click the "Save draft" button

@@ -502,7 +502,7 @@ class ComputerUseCMSService:
             ),
             "Configure SEO metadata (Yoast SEO or Rank Math)",
             (
-                f"Insert FAQ Schema JSON-LD for AI search engines ({len(faqs)} FAQs)"
+                f"Insert FAQ Schema JSON-LD for AI search engines ({len(faqs)} FAQs) - skip if not supported"
                 if has_faqs
                 else "Skip FAQ Schema (no FAQs provided)"
             ),
@@ -708,16 +708,25 @@ class ComputerUseCMSService:
         # Add FAQ Schema step (for AI search engines like Perplexity, ChatGPT, Google SGE)
         if has_faqs:
             add_step(
-                "Insert FAQ Schema JSON-LD (for AI Search Engines)",
+                "Insert FAQ Schema JSON-LD (for AI Search Engines) - OPTIONAL",
                 [
                     "**IMPORTANT**: This FAQ Schema is HIDDEN metadata for search engines, NOT visible content",
                     'In the editor, click the "+" button to add a new block at the END of the article',
-                    'Search for "Custom HTML" block and add it',
-                    "Paste the following JSON-LD script into the Custom HTML block:",
+                    'Search for "Custom HTML" block (also called "自訂 HTML" in Chinese)',
+                    "",
+                    "**IF Custom HTML block is found:**",
+                    "  - Add the Custom HTML block",
+                    "  - Paste the following JSON-LD script into it:",
                     f'```\n<script type="application/ld+json">\n{faq_schema_json}\n</script>\n```',
-                    "The block should appear at the bottom of the content but won't be visible to readers",
-                    "This structured data helps AI search engines understand and feature your FAQs",
-                    "Take a screenshot showing the Custom HTML block is added",
+                    "  - The block won't be visible to readers but helps AI search engines",
+                    "  - Take a screenshot showing the Custom HTML block is added",
+                    "",
+                    "**IF Custom HTML block is NOT found (graceful skip):**",
+                    "  - This is OK - the WordPress editor may not support Custom HTML blocks",
+                    "  - Take a screenshot showing the block search results",
+                    "  - Log this as a warning: 'FAQ Schema skipped: Custom HTML block not available'",
+                    "  - Continue to the next step - do NOT stop the publishing process",
+                    "  - The article will still be published successfully without FAQ Schema",
                 ],
             )
 
