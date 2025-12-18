@@ -550,13 +550,16 @@ class ComputerUseCMSService:
                     "Now that the article body is in place, insert images at their correct positions",
                     'For each image: Click at the target position in the content, then use "Add Block" → Image',
                     "Upload each provided file and wait for uploads to complete",
+                    "**IMPORTANT: For EACH image in the Media Library, set these fields:**",
+                    "  - Alt Text (替代文字): Use the provided alt_text or caption",
+                    "  - Caption (圖說): Use the provided caption text - this will display below the image",
                     "**IMPORTANT: Insert each image at its specified position:**",
                 ]
                 + image_insertion_instructions
                 + [
-                    "For each image: Set the alt text to the provided caption",
+                    "Verify each image shows its caption below it in the editor",
                     "Ensure the images appear in the exact positions specified above",
-                    "Take a screenshot showing the images inserted in the content",
+                    "Take a screenshot showing the images inserted in the content with captions",
                 ],
             )
 

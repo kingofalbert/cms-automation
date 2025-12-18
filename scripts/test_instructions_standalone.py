@@ -185,9 +185,12 @@ def build_wordpress_instructions(
         add_step("Upload and Insert Article Images at Correct Positions", [
             "Now that the article body is in place, insert images at their correct positions",
             "Upload each provided file",
+            "**IMPORTANT: For EACH image in the Media Library, set these fields:**",
+            "  - Alt Text (替代文字): Use the provided alt_text or caption",
+            "  - Caption (圖說): Use the provided caption text - this will display below the image",
             "**IMPORTANT: Insert each image at its specified position:**",
         ] + image_insertion_instructions + [
-            "For each image: Set the alt text to the provided caption",
+            "Verify each image shows its caption below it in the editor",
         ])
 
     if has_images:
