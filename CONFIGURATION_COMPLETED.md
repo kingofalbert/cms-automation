@@ -39,7 +39,7 @@ VITE_ENABLE_PERFORMANCE_MONITORING=true
 CMS_TYPE=wordpress
 CMS_BASE_URL=https://admin.epochtimes.com
 CMS_USERNAME=ping.xie
-CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"
+CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"
 
 # HTTP Basic Auth (site-level authentication)
 CMS_HTTP_AUTH_USERNAME=djy

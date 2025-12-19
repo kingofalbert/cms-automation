@@ -2,7 +2,7 @@
  * React Router route definitions for CMS Automation UI.
  *
  * Uses lazy loading with code splitting for optimal performance.
- * Enhanced with preloading and skeleton screens.
+ * Enhanced with preloading, skeleton screens, and authentication.
  */
 
 import { Route, Routes, useLocation } from 'react-router-dom';
@@ -15,6 +15,7 @@ import {
   DashboardSkeleton,
 } from './components/ui/RouteLoadingFallback';
 import { useTranslation } from 'react-i18next';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
 /**
  * Get appropriate loading component based on route type
@@ -75,7 +76,15 @@ export function AppRoutes() {
           <Route
             key={route.path}
             path={route.path}
-            element={<route.component />}
+            element={
+              route.isPublic ? (
+                <route.component />
+              ) : (
+                <ProtectedRoute requiredRoles={route.requiredRoles}>
+                  <route.component />
+                </ProtectedRoute>
+              )
+            }
           />
         ))}
       </Routes>

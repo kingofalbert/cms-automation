@@ -621,18 +621,30 @@ def _build_issue_context(
     """Derive consistent identifiers and text snippets for a proofreading issue."""
     position, start, end = _compute_position(issue)
 
+    # Priority for original_text:
+    # 1. Explicitly stored original_text
+    # 2. Extract from article content using position
+    # 3. Fall back to evidence
+    # 4. Fall back to message (issue description)
     original_text = issue.get("original_text")
     if (not original_text) and article_content and end > start:
         original_text = _safe_slice(article_content, start, end)
     if not original_text:
-        original_text = issue.get("evidence") or issue.get("message") or ""
+        original_text = issue.get("evidence") or ""
+    # If still empty, use message as display text (but mark it differently)
+    display_original = original_text if original_text else issue.get("message", "")
 
+    # Priority for suggested_text:
+    # 1. Explicitly stored suggested_text
+    # 2. suggestion field
+    # 3. Same as original (no change suggested)
     suggested_text = (
         issue.get("suggested_text")
         or issue.get("suggestion")
-        or original_text
         or ""
     )
+    # If no suggestion, indicate same as original
+    display_suggested = suggested_text if suggested_text else display_original
 
     explanation = issue.get("explanation") or issue.get("message") or ""
     explanation_detail = issue.get("explanation_detail") or issue.get("evidence")
@@ -649,8 +661,8 @@ def _build_issue_context(
         "severity": _normalize_severity(issue.get("severity")),
         "engine": _derive_engine(issue),
         "position": position,
-        "original_text": original_text or "",
-        "suggested_text": suggested_text or "",
+        "original_text": display_original,
+        "suggested_text": display_suggested,
         "explanation": explanation,
         "explanation_detail": explanation_detail,
         "confidence": issue.get("confidence"),

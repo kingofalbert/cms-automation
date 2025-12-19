@@ -21,7 +21,7 @@ PROD_FIRST_LAYER_PASSWORD=djy2013
 
 # WordPress 账号（第二层）
 PROD_USERNAME=ping.xie
-PROD_PASSWORD=kfS*qxdQqm@zic6lXvnR(ih!)
+PROD_PASSWORD=kfS*qxdQqm@zic6lXvnR(ih!
 ```
 
 **验证测试**:
@@ -110,7 +110,7 @@ result = await computer_use.publish_article_with_seo(
 # 在 .env 文件中添加
 CMS_BASE_URL=https://admin.epochtimes.com
 CMS_USERNAME=ping.xie
-CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"  # 注意：需要用引号包裹特殊字符
+CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"  # 注意：需要用引号包裹特殊字符
 CMS_TYPE=wordpress
 ```
 
@@ -176,7 +176,7 @@ CMS_TYPE=wordpress
 # === 选项 1: 使用生产环境 ===
 CMS_BASE_URL=https://admin.epochtimes.com
 CMS_USERNAME=ping.xie
-CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"
+CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"
 
 # === 选项 2: 使用测试环境 ===
 # CMS_BASE_URL=https://your-test-wordpress.com
@@ -239,7 +239,7 @@ case $choice in
 # === CMS 配置（生产环境）===
 CMS_BASE_URL=https://admin.epochtimes.com
 CMS_USERNAME=ping.xie
-CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"
+CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"
 CMS_TYPE=wordpress
 EOF
     echo "✅ 生产环境配置已添加到 .env"

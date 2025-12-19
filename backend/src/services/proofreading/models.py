@@ -108,6 +108,9 @@ class ProofreadingIssue(BaseModel):
         default=None, description="Secondary grouping (e.g. A1, B3, F2)"
     )
     message: str = Field(description="Human readable explanation of the issue")
+    original_text: str | None = Field(
+        default=None, description="Original text snippet that has the issue"
+    )
     suggestion: str | None = Field(
         default=None, description="Optional auto-fix suggestion"
     )

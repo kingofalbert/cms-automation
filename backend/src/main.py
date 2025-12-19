@@ -9,6 +9,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from src.api.middleware.error_handler import ErrorHandlingMiddleware
 from src.api.middleware.logging import LoggingMiddleware
+from src.api.middleware.auth import AuthenticationMiddleware
 from src.api.routes import register_routes
 from src.config import get_settings, setup_logging
 from src.config.database import get_db_config
@@ -70,6 +71,12 @@ def create_app() -> FastAPI:
     # Add custom middleware (order matters - last added is first executed)
     app.add_middleware(ErrorHandlingMiddleware)
     app.add_middleware(LoggingMiddleware)
+
+    # Add authentication middleware
+    # Set require_auth=False to disable auth (for testing/development)
+    # In production, set SUPABASE_JWT_SECRET to enable auth
+    require_auth = bool(settings.SUPABASE_JWT_SECRET)
+    app.add_middleware(AuthenticationMiddleware, require_auth=require_auth)
 
     # Register API routes
     register_routes(app)

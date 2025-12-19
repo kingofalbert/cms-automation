@@ -1,10 +1,13 @@
 /**
  * API client for backend communication with authentication.
+ *
+ * Uses Supabase session token for authentication.
  */
 
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 import type { APIError as APIErrorType } from '../types/api';
 import { logAPIError } from '../utils/errorLogger';
+import { supabase } from '../lib/supabase';
 
 /**
  * Base API URL from environment variables.
@@ -34,13 +37,17 @@ function createAPIClient(): AxiosInstance {
     },
   });
 
-  // Request interceptor: Add authentication token
+  // Request interceptor: Add authentication token from Supabase
   client.interceptors.request.use(
-    (config) => {
-      // Get token from localStorage
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+    async (config) => {
+      try {
+        // Get session from Supabase (includes auto-refresh)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.access_token) {
+          config.headers.Authorization = `Bearer ${session.access_token}`;
+        }
+      } catch (err) {
+        console.warn('Failed to get auth session:', err);
       }
       return config;
     },
@@ -50,7 +57,7 @@ function createAPIClient(): AxiosInstance {
   // Response interceptor: Handle errors
   client.interceptors.response.use(
     (response) => response,
-    (error: APIAxiosError) => {
+    async (error: APIAxiosError) => {
       // Extract error details
       const status = error.response?.status || 0;
       const message = error.response?.data?.message || error.message;
@@ -64,11 +71,11 @@ function createAPIClient(): AxiosInstance {
         data: error.config?.data,
       });
 
-      // Handle 401 Unauthorized - clear token and redirect to login
+      // Handle 401 Unauthorized - sign out and redirect to login
       if (status === 401) {
-        localStorage.removeItem('auth_token');
-        // TODO: Redirect to CMS login page
-        window.location.href = '/login';
+        await supabase.auth.signOut();
+        // Use hash router format for redirect
+        window.location.href = '/#/login';
       }
 
       return Promise.reject(error);

@@ -14,8 +14,18 @@ export const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000,
       // Cache time: 10 minutes
       gcTime: 10 * 60 * 1000,
-      // Retry failed requests 3 times with exponential backoff
-      retry: 3,
+      // Retry failed requests, but not for 4xx client errors
+      retry: (failureCount, error) => {
+        // Don't retry on 4xx errors (client errors like 404, 400, etc.)
+        if (error && typeof error === 'object' && 'response' in error) {
+          const status = (error as { response?: { status?: number } }).response?.status;
+          if (status && status >= 400 && status < 500) {
+            return false;
+          }
+        }
+        // Retry up to 3 times for other errors (network issues, 5xx, etc.)
+        return failureCount < 3;
+      },
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       // Refetch on window focus in production
       refetchOnWindowFocus: import.meta.env.PROD,

@@ -100,7 +100,7 @@ cp .env.example .env
 ```bash
 PROD_WORDPRESS_URL=https://admin.epochtimes.com
 PROD_USERNAME=ping.xie
-PROD_PASSWORD=kfS*qxdQqm@zic6lXvnR(ih!)
+PROD_PASSWORD=kfS*qxdQqm@zic6lXvnR(ih!
 PROD_FIRST_LAYER_USERNAME=djy
 PROD_FIRST_LAYER_PASSWORD=djy2013
 ```
@@ -127,7 +127,7 @@ CMS_APPLICATION_PASSWORD=  # 需要設置
 CMS_TYPE=wordpress
 CMS_BASE_URL=https://admin.epochtimes.com
 CMS_USERNAME=ping.xie
-CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"
+CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"
 
 # WordPress 雙層認證（如果需要）
 CMS_HTTP_AUTH_USERNAME=djy

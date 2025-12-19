@@ -151,6 +151,20 @@ class Settings(BaseSettings):
         description="HTTP Basic Auth password (site-level authentication)",
     )
 
+    # Supabase Configuration (Authentication)
+    SUPABASE_URL: str = Field(
+        default="",
+        description="Supabase project URL",
+    )
+    SUPABASE_JWT_SECRET: str = Field(
+        default="",
+        description="Supabase JWT secret for token verification",
+    )
+    SUPABASE_SERVICE_ROLE_KEY: str = Field(
+        default="",
+        description="Supabase service role key for admin operations",
+    )
+
     # Article Generation Settings
     MAX_ARTICLE_WORD_COUNT: int = Field(default=10000, ge=100, le=50000)
     MIN_ARTICLE_WORD_COUNT: int = Field(default=100, ge=50, le=1000)

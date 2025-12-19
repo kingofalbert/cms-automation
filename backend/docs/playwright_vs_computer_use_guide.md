@@ -122,8 +122,8 @@ Claude看屏幕截图 → 理解界面 → 推理下一步 → 执行操作
 {
   "metadata": {
     "wordpress_version": "WordPress 6.4",
-    "editor_type": "Gutenberg",
-    "seo_plugin": "Yoast SEO",
+    "editor_type": "Gutenberg",  // 或 "Classic Editor" - 见下方生产环境说明
+    "seo_plugin": "Yoast SEO",   // 或 "Lite SEO" - 见下方生产环境说明
     "extracted_at": "2025-01-15T10:30:00Z"
   },
   "login": {
@@ -292,6 +292,23 @@ async def _step_set_content(self, content: str):
   }
 }
 ```
+
+---
+
+## ⚠️ 生产环境配置说明 (admin.epochtimes.com)
+
+> **重要**: 生产环境 WordPress 使用的配置与上述示例不同：
+>
+> | 配置项 | 示例配置 | 生产环境 (admin.epochtimes.com) |
+> |--------|---------|-------------------------------|
+> | **编辑器** | Gutenberg | **Classic Editor** |
+> | **SEO 插件** | Yoast SEO | **Lite SEO** |
+> | **认证** | 单层 | **双层** (HTTP Basic Auth + WordPress 登录) |
+>
+> **影响**:
+> 1. **FAQ Schema JSON-LD**: 由于使用 Classic Editor，无法通过 Custom HTML 区块插入，系统会自动跳过此步骤
+> 2. **SEO 字段**: 需要使用 Lite SEO 的选择器，而非 Yoast/Rank Math
+> 3. **登录流程**: 需要先通过 HTTP Basic Auth (`djy/djy2013`)，再进行 WordPress 登录
 
 ---
 

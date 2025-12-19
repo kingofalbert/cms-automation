@@ -95,6 +95,11 @@ curl http://localhost:8000/v1/computer-use/task/{task_id}
 - 编辑器类型：Gutenberg / Classic / Elementor？
 - SEO插件：Yoast SEO / Rank Math / 其他？
 - WordPress版本
+
+> 📝 **生产环境配置 (admin.epochtimes.com)**:
+> - 编辑器类型：**Classic Editor**（非 Gutenberg）
+> - SEO 插件：**Lite SEO**
+> - 注意：由于使用 Classic Editor，FAQ Schema JSON-LD 无法通过 Custom HTML 区块插入
 ```
 
 #### 步骤2：保存配置文件

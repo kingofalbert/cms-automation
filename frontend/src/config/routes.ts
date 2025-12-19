@@ -6,6 +6,8 @@
 
 import { lazy, ComponentType } from 'react';
 
+import type { UserRole } from '../contexts/AuthContext';
+
 export interface RouteConfig {
   path: string;
   /** Lazy-loaded component */
@@ -27,6 +29,10 @@ export interface RouteConfig {
   icon?: string;
   /** Loading fallback type */
   loadingType?: 'default' | 'list' | 'detail' | 'dashboard';
+  /** Whether this route is public (no auth required) */
+  isPublic?: boolean;
+  /** Required roles for access (if not public) */
+  requiredRoles?: UserRole[];
 }
 
 /**
@@ -39,6 +45,9 @@ function createLazyRoute(importFunc: () => Promise<{ default: ComponentType<any>
     preload: importFunc,
   };
 }
+
+// Authentication pages
+const LoginPage = createLazyRoute(() => import('../pages/LoginPage'));
 
 // Phase 1: Active pages
 const SettingsPage = createLazyRoute(() => import('../pages/SettingsPageModern'));
@@ -77,6 +86,25 @@ const PipelineMonitorPage = createLazyRoute(() => import('../pages/PipelineMonit
  * Only /worklist and /settings are active. All other routes are hidden for future phases.
  */
 export const routes: RouteConfig[] = [
+  // Authentication: Login page (public)
+  {
+    path: '/login',
+    ...LoginPage,
+    title: 'Sign In',
+    titleKey: 'routes.login.title',
+    description: 'Sign in to your account',
+    descriptionKey: 'routes.login.description',
+    isPublic: true,
+    loadingType: 'default',
+  },
+  // Auth callback for magic links (public)
+  {
+    path: '/auth/callback',
+    ...LoginPage,
+    title: 'Authentication',
+    isPublic: true,
+    loadingType: 'default',
+  },
   // Phase 1: Redirect root to worklist
   {
     path: '/',

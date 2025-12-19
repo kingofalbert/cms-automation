@@ -18,10 +18,12 @@
 ### 2. Computer Use 自动化 CMS 操作
 - ✅ 自动登录 WordPress 后台
 - ✅ 创建新文章
-- ✅ 设置 Yoast SEO / Rank Math 配置
+- ✅ 设置 SEO 配置（支持 Yoast SEO / Rank Math / Lite SEO）
 - ✅ 配置 Open Graph 标签
 - ✅ 发布文章
 - ✅ 截图记录操作过程
+
+> **生产环境 (admin.epochtimes.com)**: 使用 **Classic Editor** + **Lite SEO**（非 Gutenberg + Yoast）
 
 ## 架构流程
 
@@ -312,8 +314,9 @@ curl http://localhost:8000/v1/articles/1 | jq '.article_metadata'
    - 确认 Application Password 未过期
 
 2. **SEO 插件未找到**
-   - 确认已安装 Yoast SEO 或 Rank Math
+   - 确认已安装 SEO 插件（Yoast SEO / Rank Math / Lite SEO）
    - 插件已激活
+   - **生产环境**: `admin.epochtimes.com` 使用 **Lite SEO**
 
 3. **网络问题**
    - 检查 CMS_BASE_URL 是否可访问

@@ -45,6 +45,7 @@ class ComputerUseCMSService:
         publish_mode: str = "publish",
         author_name: str | None = None,
         faqs: list[dict[str, str]] | None = None,
+        related_articles: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Publish article to CMS using Computer Use API.
 
@@ -64,6 +65,7 @@ class ComputerUseCMSService:
             publish_mode: "publish" to make the post live, "draft" to save without publishing
             author_name: WordPress author name to select in the author dropdown
             faqs: List of FAQs for FAQ Schema (each with 'question' and 'answer' keys)
+            related_articles: List of related article recommendations for internal linking
 
         Returns:
             dict: Publishing result with status, URL, metadata
@@ -111,6 +113,7 @@ class ComputerUseCMSService:
                 publish_mode=publish_mode,
                 author_name=author_name,
                 faqs=faqs,
+                related_articles=related_articles,
             )
 
             # Initialize Computer Use tools
@@ -309,6 +312,7 @@ class ComputerUseCMSService:
         publish_mode: str,
         author_name: str | None = None,
         faqs: list[dict[str, str]] | None = None,
+        related_articles: list[dict[str, Any]] | None = None,
     ) -> str:
         """Build Computer Use instructions for CMS publishing.
 
@@ -328,6 +332,7 @@ class ComputerUseCMSService:
             publish_mode: "publish" or "draft"
             author_name: WordPress author name
             faqs: List of FAQs for FAQ Schema
+            related_articles: List of related article recommendations
 
         Returns:
             str: Detailed instructions for Claude
@@ -348,6 +353,7 @@ class ComputerUseCMSService:
                 publish_mode=publish_mode,
                 author_name=author_name,
                 faqs=faqs,
+                related_articles=related_articles,
             )
         else:
             raise ValueError(f"Unsupported CMS type: {cms_type}")
@@ -368,6 +374,7 @@ class ComputerUseCMSService:
         publish_mode: str = "publish",
         author_name: str | None = None,
         faqs: list[dict[str, str]] | None = None,
+        related_articles: list[dict[str, Any]] | None = None,
     ) -> str:
         """Build WordPress-specific instructions."""
 
@@ -375,10 +382,12 @@ class ComputerUseCMSService:
         categories = categories or []
         secondary_categories = secondary_categories or []
         faqs = faqs or []
+        related_articles = related_articles or []
         has_images = bool(article_images)
         has_categories = bool(primary_category or secondary_categories or categories)
         has_author = bool(author_name)
         has_faqs = bool(faqs)
+        has_related_articles = bool(related_articles)
 
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
@@ -464,6 +473,22 @@ class ComputerUseCMSService:
             import json
             faq_schema_json = json.dumps(faq_schema, ensure_ascii=False, indent=2)
 
+        # Build Related Articles info section
+        related_articles_info = ""
+        if has_related_articles:
+            ra_lines = []
+            for idx, ra in enumerate(related_articles, 1):
+                ra_title = ra.get('title', ra.get('title_main', 'Related Article'))[:60]
+                ra_url = ra.get('url', '#')[:60]
+                ra_similarity = ra.get('similarity', 0)
+                ra_match_type = ra.get('match_type', 'unknown')
+                ra_lines.append(
+                    f"  {idx}. {ra_title}{'...' if len(ra.get('title', '')) > 60 else ''}\n"
+                    f"     URL: {ra_url}{'...' if len(ra.get('url', '')) > 60 else ''}\n"
+                    f"     Match: {ra_match_type} ({ra_similarity*100:.0f}%)"
+                )
+            related_articles_info = "\n**Related Articles for Internal Linking (相關閱讀):**\n" + "\n".join(ra_lines)
+
         publish_summary = (
             "Save the article as a draft (do not publish to the live site)"
             if publish_mode == "draft"
@@ -501,6 +526,11 @@ class ComputerUseCMSService:
                 )
             ),
             "Configure SEO metadata (Yoast SEO or Rank Math)",
+            (
+                f"Insert Related Articles section (相關閱讀) with {len(related_articles)} internal links"
+                if has_related_articles
+                else "Skip Related Articles (none provided)"
+            ),
             (
                 f"Insert FAQ Schema JSON-LD for AI search engines ({len(faqs)} FAQs) - skip if not supported"
                 if has_faqs
@@ -591,19 +621,51 @@ class ComputerUseCMSService:
             add_step(
                 "Upload and Insert Article Images at Correct Positions",
                 [
-                    "Now that the article body is in place, insert images at their correct positions",
-                    'For each image: Click at the target position in the content, then use "Add Block" → Image',
-                    "Upload each provided file and wait for uploads to complete",
-                    "**IMPORTANT: For EACH image in the Media Library, set these fields:**",
-                    "  - Alt Text (替代文字): Use the provided alt_text or caption",
-                    "  - Caption (圖說): Use the provided caption text - this will display below the image",
-                    "**IMPORTANT: Insert each image at its specified position:**",
+                    "**CLASSIC EDITOR IMAGE INSERTION WORKFLOW:**",
+                    "",
+                    "**Step A: Understand Paragraph Positions**",
+                    "  - Position 0 = BEFORE the first paragraph (at the very beginning)",
+                    "  - Position 1 = AFTER paragraph 1 (between paragraph 1 and 2)",
+                    "  - Position 2 = AFTER paragraph 2 (between paragraph 2 and 3)",
+                    "  - And so on...",
+                    "",
+                    "**Step B: For EACH image, follow these steps IN ORDER:**",
+                    "",
+                    "  1. POSITION THE CURSOR:",
+                    "     - In the Visual editor, count the paragraphs from the top",
+                    "     - For position 0: Click at the very START of the content (before first paragraph)",
+                    "     - For position N: Click at the END of paragraph N (after its last character)",
+                    "     - Press Enter to create a new line where the image will go",
+                    "",
+                    "  2. CLICK 'Add Media' BUTTON:",
+                    "     - Click the 'Add Media' button above the editor (NOT 'Add Block')",
+                    "     - This opens the Media Library popup",
+                    "",
+                    "  3. UPLOAD THE IMAGE:",
+                    "     - Click 'Upload Files' tab if not already selected",
+                    "     - Click 'Select Files' and choose the image file",
+                    "     - Wait for upload to complete",
+                    "",
+                    "  4. SET IMAGE METADATA (CRITICAL):",
+                    "     - In the right panel of Media Library, set:",
+                    "     - Alt Text (替代文字): Use the provided alt_text or caption",
+                    "     - Caption (圖說): Use the provided caption - this displays below the image",
+                    "",
+                    "  5. INSERT THE IMAGE:",
+                    "     - Click 'Insert into post' button",
+                    "     - The image will be inserted at cursor position with caption",
+                    "",
+                    "**IMAGES TO INSERT:**",
                 ]
                 + image_insertion_instructions
                 + [
-                    "Verify each image shows its caption below it in the editor",
-                    "Ensure the images appear in the exact positions specified above",
-                    "Take a screenshot showing the images inserted in the content with captions",
+                    "",
+                    "**VERIFICATION:**",
+                    "  - Scroll through the article to verify each image is at its correct position",
+                    "  - Position 0 images should appear BEFORE the first paragraph",
+                    "  - Position N images should appear AFTER paragraph N",
+                    "  - Each image should show its caption below it",
+                    "  - Take a screenshot showing all images in their correct positions",
                 ],
             )
 
@@ -694,16 +756,92 @@ class ComputerUseCMSService:
             )
 
         add_step(
-            "Configure SEO Metadata",
+            "Configure SEO Metadata (Auto-detect SEO Plugin)",
             [
-                "Scroll to the Yoast SEO (or Rank Math) panel",
-                f"Set the focus keyphrase to: {seo_data.focus_keyword}",
-                f"Update the SEO title to: {seo_data.meta_title}",
-                f"Update the meta description to: {seo_data.meta_description}",
-                "Review the SEO analysis indicator (green is ideal, orange is acceptable)",
-                "Take a screenshot of the SEO configuration",
+                "**FIRST: Detect which SEO plugin is installed by looking for these panels:**",
+                "",
+                "**Option A - Lite SEO** (look for 'Lite SEO' metabox at bottom of page):",
+                "  - Click the 'SEO' tab in the Lite SEO panel",
+                f"  - Fill 'SEO Title' field with: {seo_data.meta_title}",
+                f"  - Fill 'SEO Description' field with: {seo_data.meta_description}",
+                "  - Click the 'Keywords' tab",
+                f"  - Add keywords: {', '.join(seo_data.keywords[:5]) if seo_data.keywords else seo_data.focus_keyword}",
+                "",
+                "**Option B - Yoast SEO** (look for 'Yoast SEO' metabox or sidebar panel):",
+                f"  - Set focus keyphrase to: {seo_data.focus_keyword}",
+                f"  - Update SEO title to: {seo_data.meta_title}",
+                f"  - Update meta description to: {seo_data.meta_description}",
+                "  - Check SEO analysis indicator (green/orange is good)",
+                "",
+                "**Option C - Rank Math** (look for 'Rank Math' panel in sidebar):",
+                "  - Click 'Edit Snippet' button",
+                f"  - Set focus keyword to: {seo_data.focus_keyword}",
+                f"  - Update SEO title to: {seo_data.meta_title}",
+                f"  - Update meta description to: {seo_data.meta_description}",
+                "",
+                "**Option D - Slim SEO / Other** (minimal or no SEO panel):",
+                "  - These plugins auto-generate SEO metadata",
+                "  - No manual configuration needed, skip to next step",
+                "",
+                "**Option E - No SEO Plugin Found:**",
+                "  - Log warning: 'No SEO plugin detected'",
+                "  - Continue to next step - article can still be published",
+                "",
+                "Take a screenshot of the SEO configuration (or note if skipped)",
             ],
         )
+
+        # Add Related Articles step (internal linking for SEO)
+        if has_related_articles:
+            # Build the HTML for related articles section
+            related_links_html = []
+            for ra in related_articles:
+                ra_title = ra.get('title', ra.get('title_main', 'Related Article'))
+                ra_url = ra.get('url', '#')
+                related_links_html.append(f'<li><a href="{ra_url}" target="_blank">{ra_title}</a></li>')
+
+            related_articles_html = f'''<h3>相關閱讀</h3>
+<ul>
+{chr(10).join(related_links_html)}
+</ul>'''
+
+            add_step(
+                "Insert Related Articles Section (相關閱讀) - Internal Linking",
+                [
+                    "**PURPOSE**: Add internal links to related articles for SEO and user engagement",
+                    "",
+                    "**CLASSIC EDITOR WORKFLOW:**",
+                    "",
+                    "  1. SWITCH TO HTML/TEXT MODE:",
+                    "     - Click the 'Text' or 'HTML' tab above the editor (NOT Visual)",
+                    "     - This allows direct HTML editing",
+                    "",
+                    "  2. SCROLL TO END OF CONTENT:",
+                    "     - Navigate to the very end of the article content",
+                    "     - Position cursor AFTER the last paragraph, before any FAQ schema",
+                    "",
+                    "  3. INSERT THE RELATED ARTICLES HTML:",
+                    "     - Paste the following HTML block:",
+                    f"```html\n{related_articles_html}\n```",
+                    "",
+                    "  4. SWITCH BACK TO VISUAL MODE:",
+                    "     - Click the 'Visual' tab to verify formatting",
+                    "     - You should see '相關閱讀' as a heading with clickable links below",
+                    "",
+                    "  5. VERIFY LINKS:",
+                    "     - Each link should be clickable",
+                    "     - Links should open in a new tab (target='_blank')",
+                    "     - Take a screenshot showing the Related Articles section",
+                    "",
+                    f"**RELATED ARTICLES TO INSERT ({len(related_articles)} links):**",
+                ]
+                + [f"  - {ra.get('title', 'Article')[:60]}... → {ra.get('url', '#')[:50]}..." for ra in related_articles[:5]]
+                + (["  - (and more...)"] if len(related_articles) > 5 else [])
+                + [
+                    "",
+                    "**NOTE**: These internal links improve SEO by creating a strong internal linking structure",
+                ],
+            )
 
         # Add FAQ Schema step (for AI search engines like Perplexity, ChatGPT, Google SGE)
         if has_faqs:
@@ -798,9 +936,9 @@ class ComputerUseCMSService:
 **Article Content:**
 Title: {title}
 Body Preview: {body_preview}
-[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}{author_info}{faq_info}
+[Full body content will be provided when needed]{image_info}{tags_info}{categories_info}{author_info}{related_articles_info}{faq_info}
 
-**SEO Configuration (Yoast SEO / Rank Math):**
+**SEO Configuration (Auto-detect: Lite SEO / Yoast / Rank Math / Other):**
 - Meta Title: {seo_data.meta_title}
 - Meta Description: {seo_data.meta_description}
 - Focus Keyword: {seo_data.focus_keyword}
@@ -808,6 +946,8 @@ Body Preview: {body_preview}
 - Canonical URL: {seo_data.canonical_url or 'Auto-generate'}
 - OG Title: {seo_data.og_title or seo_data.meta_title}
 - OG Description: {seo_data.og_description or seo_data.meta_description}
+
+**Note:** The system will auto-detect which SEO plugin is installed and configure accordingly.
 
 **Step-by-Step Instructions:**
 {detailed_block}

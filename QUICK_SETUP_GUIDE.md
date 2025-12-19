@@ -42,7 +42,7 @@ vim .env
 CMS_TYPE=wordpress
 CMS_BASE_URL=https://admin.epochtimes.com
 CMS_USERNAME=ping.xie
-CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"
+CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"
 
 # 如果有 HTTP Basic Auth:
 CMS_HTTP_AUTH_USERNAME=djy

@@ -81,7 +81,7 @@
 # ============= 生产 WordPress 凭证 =============
 PROD_WORDPRESS_URL=https://admin.epochtimes.com
 PROD_USERNAME=ping.xie
-PROD_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"
+PROD_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"
 PROD_FIRST_LAYER_USERNAME=djy
 PROD_FIRST_LAYER_PASSWORD=djy2013
 
@@ -89,7 +89,7 @@ PROD_FIRST_LAYER_PASSWORD=djy2013
 CMS_TYPE=wordpress
 CMS_BASE_URL=https://admin.epochtimes.com
 CMS_USERNAME=ping.xie
-CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!)"
+CMS_APPLICATION_PASSWORD="kfS*qxdQqm@zic6lXvnR(ih!"
 
 # ============= 核心系统配置 =============
 ENVIRONMENT=development

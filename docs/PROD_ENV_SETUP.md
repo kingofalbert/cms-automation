@@ -207,8 +207,13 @@ python tests/prod_env_test_v2.py
 | HTTP Auth | ❌ 无 | ✅ 有（djy/djy2013） |
 | WP 账号 | admin | ping.xie |
 | WP 密码 | password | kfS*qxdQqm@zic6lXvnR(ih! |
+| **编辑器** | Gutenberg | **Classic Editor** |
+| SEO 外掛 | Yoast SEO | Lite SEO |
 | 用途 | 开发测试 | 实际发布 |
 | 安全级别 | 低 | 高（双层认证） |
+
+> ⚠️ **重要**: 生产环境使用 **Classic Editor**（传统编辑器），不是 Gutenberg 区块编辑器。
+> 这意味着 FAQ Schema JSON-LD 无法通过 Custom HTML 区块插入，将被优雅跳过。
 
 ---
 

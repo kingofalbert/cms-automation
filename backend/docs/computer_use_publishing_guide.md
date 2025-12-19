@@ -90,7 +90,9 @@ Computer Use automatically configures:
 - Focus keyword
 - Open Graph tags
 - Canonical URL
-- Schema markup (via Yoast SEO or Rank Math)
+- Schema markup (via Yoast SEO, Rank Math, or Lite SEO)
+
+> **生产环境注意**: `admin.epochtimes.com` 使用 **Lite SEO** 插件和 **Classic Editor**（非 Gutenberg）
 
 ## API Usage
 
@@ -496,9 +498,11 @@ logging.getLogger("src.services.drive_image_retriever").setLevel(logging.DEBUG)
 **Problem**: SEO not configured
 
 **Solution**:
-1. Verify Yoast SEO or Rank Math plugin installed
+1. Verify SEO plugin installed (Yoast SEO, Rank Math, or Lite SEO)
 2. Check plugin is activated
 3. Review Computer Use screenshots to see if SEO fields were found
+
+> **生产环境**: `admin.epochtimes.com` 使用 **Lite SEO** 插件
 
 ## Support
 

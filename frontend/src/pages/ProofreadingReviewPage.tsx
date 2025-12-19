@@ -20,8 +20,8 @@ import { ProofreadingArticleContent } from '@/components/ProofreadingReview/Proo
 import { ProofreadingIssueDetailPanel } from '@/components/ProofreadingReview/ProofreadingIssueDetailPanel';
 import { ReviewStatsBar } from '@/components/ProofreadingReview/ReviewStatsBar';
 import { ProofreadingReviewHeader } from '@/components/ProofreadingReview/ProofreadingReviewHeader';
-import { Button } from '@/components/ui';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { Button, SkeletonProofreadingPage, EmptyState, KeyboardShortcutsHint, PROOFREADING_SHORTCUTS_COMPACT } from '@/components/ui';
+import { ArrowLeft, CheckCircle, AlertCircle, PanelLeftClose, PanelRightClose } from 'lucide-react';
 
 type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
 
@@ -37,6 +37,10 @@ export default function ProofreadingReviewPage() {
   const [reviewNotes, setReviewNotes] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('original');
   const [selectedIssueIds, setSelectedIssueIds] = useState<Set<string>>(new Set());
+
+  // Responsive panel visibility (for mobile/tablet)
+  const [showIssueList, setShowIssueList] = useState(true);
+  const [showIssueDetail, setShowIssueDetail] = useState(true);
 
   // Fetch worklist item (contains all proofreading data)
   const {
@@ -208,23 +212,26 @@ export default function ProofreadingReviewPage() {
   }, [issues, selectedIssue]);
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg text-gray-500">{t('common.loading')}</div>
-      </div>
-    );
+    return <SkeletonProofreadingPage />;
   }
 
   if (error || !worklistItem) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg text-red-500">{t('proofreading.messages.loadFailed')}</p>
-          <Button className="mt-4" onClick={() => navigate('/worklist')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('common.backToList')}
-          </Button>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <EmptyState
+          icon={<AlertCircle className="h-16 w-16 text-red-400" />}
+          title={t('proofreading.messages.loadFailed')}
+          description={t('proofreading.messages.loadFailedDesc') || 'Unable to load article data. Please try again.'}
+          action={{
+            label: t('common.backToList'),
+            onClick: () => navigate('/worklist'),
+          }}
+          secondaryAction={{
+            label: t('common.retry'),
+            onClick: () => window.location.reload(),
+          }}
+          size="lg"
+        />
       </div>
     );
   }
@@ -232,33 +239,34 @@ export default function ProofreadingReviewPage() {
   // Check if worklist item has article_id
   if (!worklistItem.article_id) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg text-red-500">
-            {t('proofreading.messages.noArticleLinked')}
-          </p>
-          <Button className="mt-4" onClick={() => navigate('/worklist')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('common.backToList')}
-          </Button>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <EmptyState
+          icon="document"
+          title={t('proofreading.messages.noArticleLinked')}
+          description={t('proofreading.messages.noArticleLinkedDesc') || 'This worklist item is not linked to an article.'}
+          action={{
+            label: t('common.backToList'),
+            onClick: () => navigate('/worklist'),
+          }}
+          size="lg"
+        />
       </div>
     );
   }
 
   if (issues.length === 0) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
-          <p className="mt-4 text-lg text-gray-700">
-            {t('proofreading.messages.noIssuesFound')}
-          </p>
-          <Button className="mt-4" onClick={() => navigate('/worklist')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            {t('common.backToList')}
-          </Button>
-        </div>
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <EmptyState
+          icon={<CheckCircle className="h-20 w-20 text-green-500" />}
+          title={t('proofreading.messages.noIssuesFound')}
+          description={t('proofreading.messages.noIssuesFoundDesc') || 'Great job! This article has no proofreading issues.'}
+          action={{
+            label: t('common.backToList'),
+            onClick: () => navigate('/worklist'),
+          }}
+          size="lg"
+        />
       </div>
     );
   }
@@ -287,16 +295,54 @@ export default function ProofreadingReviewPage() {
         onViewModeChange={setViewMode}
       />
 
-      {/* Main Content - 3 Column Layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left: Issue List (20%) */}
-        <div className="w-1/5 overflow-y-auto border-r border-gray-200 bg-white">
+      {/* Main Content - Responsive 3 Column Layout */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Mobile/Tablet Panel Toggle Buttons */}
+        <div className="absolute top-2 left-2 z-20 flex gap-1 lg:hidden">
+          <button
+            onClick={() => setShowIssueList(!showIssueList)}
+            className={`rounded-md p-2 shadow-md transition-colors ${
+              showIssueList ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+            }`}
+            title={showIssueList ? 'Hide issue list' : 'Show issue list'}
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="absolute top-2 right-2 z-20 flex gap-1 lg:hidden">
+          <button
+            onClick={() => setShowIssueDetail(!showIssueDetail)}
+            className={`rounded-md p-2 shadow-md transition-colors ${
+              showIssueDetail ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'
+            }`}
+            title={showIssueDetail ? 'Hide detail panel' : 'Show detail panel'}
+          >
+            <PanelRightClose className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Left: Issue List - Responsive width */}
+        <div
+          className={`
+            overflow-y-auto border-r border-gray-200 bg-white transition-all duration-300
+            ${showIssueList ? 'w-full sm:w-1/3 lg:w-1/5' : 'w-0 overflow-hidden'}
+            ${!showIssueList && 'border-r-0'}
+            lg:w-1/5 lg:block
+          `}
+        >
           <ProofreadingIssueList
             issues={issues}
             decisions={decisions}
             selectedIssue={selectedIssue}
             selectedIssueIds={selectedIssueIds}
-            onSelectIssue={setSelectedIssue}
+            onSelectIssue={(issue) => {
+              setSelectedIssue(issue);
+              // On mobile, auto-hide list and show detail when selecting
+              if (window.innerWidth < 1024) {
+                setShowIssueList(false);
+                setShowIssueDetail(true);
+              }
+            }}
             onToggleSelect={(issueId) => {
               setSelectedIssueIds((prev) => {
                 const next = new Set(prev);
@@ -317,8 +363,13 @@ export default function ProofreadingReviewPage() {
           />
         </div>
 
-        {/* Center: Article Content (50%) */}
-        <div className="flex-1 overflow-y-auto bg-white p-8">
+        {/* Center: Article Content - Flexible width */}
+        <div
+          className={`
+            flex-1 overflow-y-auto bg-white p-4 sm:p-6 lg:p-8 transition-all duration-300
+            ${!showIssueList && !showIssueDetail ? 'flex-1' : ''}
+          `}
+        >
           <ProofreadingArticleContent
             content={worklistItem.content}
             title={worklistItem.title}
@@ -331,8 +382,17 @@ export default function ProofreadingReviewPage() {
           />
         </div>
 
-        {/* Right: Issue Detail Panel (30%) */}
-        <div className="w-[30%] overflow-y-auto border-l-2 border-blue-100 bg-white shadow-lg">
+        {/* Right: Issue Detail Panel - Responsive width */}
+        <div
+          className={`
+            overflow-y-auto border-l-2 border-blue-100 bg-white shadow-lg transition-all duration-300
+            ${showIssueDetail ? 'w-full sm:w-1/2 lg:w-[30%]' : 'w-0 overflow-hidden'}
+            ${!showIssueDetail && 'border-l-0'}
+            lg:w-[30%] lg:block
+            fixed lg:relative inset-y-0 right-0 z-10 lg:z-auto
+            ${showIssueDetail ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+          `}
+        >
           <ProofreadingIssueDetailPanel
             issue={selectedIssue}
             decision={selectedIssue ? decisions[selectedIssue.id] : undefined}
@@ -343,28 +403,49 @@ export default function ProofreadingReviewPage() {
             totalIssues={issues.length}
           />
         </div>
+
+        {/* Mobile overlay when detail panel is open */}
+        {showIssueDetail && (
+          <div
+            className="fixed inset-0 bg-black/20 z-[5] lg:hidden"
+            onClick={() => setShowIssueDetail(false)}
+          />
+        )}
       </div>
 
-      {/* Simplified Footer - Review Notes only */}
-      <div className="border-t border-gray-200 bg-white px-6 py-3">
-        <div className="flex items-center gap-4">
-          {/* Review Notes - compact inline */}
-          <label htmlFor="review-notes" className="text-xs font-medium text-gray-700 whitespace-nowrap">
-            {t('proofreading.reviewNotes.label')}
-          </label>
-          <textarea
-            id="review-notes"
-            value={reviewNotes}
-            onChange={(e) => setReviewNotes(e.target.value)}
-            className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            rows={1}
-            placeholder={t('proofreading.reviewNotes.placeholder')}
-          />
+      {/* Footer with Review Notes and Keyboard Shortcuts */}
+      <div className="border-t border-gray-200 bg-white px-4 sm:px-6 py-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+          {/* Review Notes - responsive */}
+          <div className="flex items-center gap-2 flex-1 w-full sm:w-auto">
+            <label htmlFor="review-notes" className="text-xs font-medium text-gray-700 whitespace-nowrap hidden sm:inline">
+              {t('proofreading.reviewNotes.label')}
+            </label>
+            <textarea
+              id="review-notes"
+              value={reviewNotes}
+              onChange={(e) => setReviewNotes(e.target.value)}
+              className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              rows={1}
+              placeholder={t('proofreading.reviewNotes.placeholder')}
+            />
+          </div>
 
-          {/* Status display */}
-          <span className="text-xs text-gray-500 whitespace-nowrap">
-            {dirtyCount} / {issues.length} {t('proofreading.labels.issuesDecided')}
-          </span>
+          {/* Status and Shortcuts - responsive */}
+          <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+            {/* Keyboard shortcuts - hidden on mobile */}
+            <div className="hidden md:block">
+              <KeyboardShortcutsHint
+                shortcuts={PROOFREADING_SHORTCUTS_COMPACT}
+                mode="inline"
+              />
+            </div>
+
+            {/* Status display */}
+            <span className="text-xs text-gray-500 whitespace-nowrap">
+              {dirtyCount} / {issues.length} {t('proofreading.labels.issuesDecided')}
+            </span>
+          </div>
         </div>
       </div>
     </div>

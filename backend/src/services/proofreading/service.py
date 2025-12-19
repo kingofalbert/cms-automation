@@ -313,11 +313,16 @@ class ProofreadingAnalysisService:
         issues: list[ProofreadingIssue] = []
         for raw_issue in issues_data:
             try:
+                # Extract original_text from AI response
+                # AI returns it as "original_text", fallback to "evidence" if not present
+                original_text = raw_issue.get("original_text") or raw_issue.get("evidence")
+
                 issue = ProofreadingIssue(
                     rule_id=raw_issue["rule_id"],
                     category=raw_issue.get("category", raw_issue["rule_id"][0]),
                     subcategory=raw_issue.get("subcategory"),
                     message=raw_issue["message"],
+                    original_text=original_text,
                     suggestion=raw_issue.get("suggestion"),
                     severity=raw_issue.get("severity", "warning"),
                     confidence=float(raw_issue.get("confidence", 0.7)),
