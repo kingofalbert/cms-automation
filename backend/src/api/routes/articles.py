@@ -784,6 +784,34 @@ async def get_article_review_data(
                     ai_keywords=ra.get("ai_keywords", []),
                 ))
 
+    # HOTFIX: Compute stable issue IDs for proofreading_issues
+    # This ensures consistency with worklist_routes._compute_issue_id
+    raw_issues = article.proofreading_issues or []
+    processed_issues = []
+    for idx, issue in enumerate(raw_issues):
+        if isinstance(issue, dict):
+            issue_copy = dict(issue)
+            # If issue doesn't have an 'id', compute one using the same algorithm as worklist_routes
+            if not issue_copy.get("id"):
+                import hashlib
+                import json as json_module
+                fingerprint = json_module.dumps(
+                    {
+                        "rule_id": issue_copy.get("rule_id"),
+                        "message": issue_copy.get("message"),
+                        "suggestion": issue_copy.get("suggestion"),
+                        "location": issue_copy.get("location"),
+                        "subcategory": issue_copy.get("subcategory"),
+                    },
+                    sort_keys=True,
+                    default=str,
+                )
+                digest = hashlib.sha1(fingerprint.encode("utf-8")).hexdigest()
+                issue_copy["id"] = f"sug_{digest[:12]}_{idx}"
+            processed_issues.append(issue_copy)
+        else:
+            processed_issues.append(issue)
+
     return ArticleReviewResponse(
         id=article.id,
         title=article.title,
@@ -794,7 +822,7 @@ async def get_article_review_data(
         tags=tags_comparison,
         faq_proposals=faq_proposals,
         paragraph_suggestions=paragraph_suggestions,
-        proofreading_issues=article.proofreading_issues or [],
+        proofreading_issues=processed_issues,
         existing_decisions=existing_decisions,
         related_articles=related_articles,
         ai_model_used=article.ai_model_used,

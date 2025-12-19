@@ -28,6 +28,8 @@ import { PublishPreviewPanel, PublishSettings } from './PublishPreviewPanel';
 import { useArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import { useReviewWorkflow } from '../../hooks/articleReview/useReviewWorkflow';
 import { useKeyboardShortcuts } from '../../hooks/articleReview/useKeyboardShortcuts';
+import { worklistAPI } from '../../services/worklist';
+import { api } from '../../services/api-client';
 import type { WorklistStatus, DecisionPayload } from '../../types/worklist';
 
 export interface ArticleReviewModalProps {
@@ -141,57 +143,91 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   const handleSaveParsingData = useCallback(async (parsingData: ParsingData) => {
     setIsSaving(true);
     try {
-      // TODO: Call API to save parsing data
+      // Call API to save parsing data to article
       console.log('Saving parsing data:', parsingData);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Mock API call
+
+      // Save to article metadata via PATCH endpoint
+      await api.patch(`/v1/articles/${articleId}`, {
+        title: parsingData.title,
+        author: parsingData.author,
+        metadata: {
+          featured_image_path: parsingData.featured_image_path,
+          additional_images: parsingData.additional_images,
+          faq_suggestions: parsingData.faq_suggestions,
+        },
+        meta_description: parsingData.seo_metadata?.meta_description,
+        seo_keywords: parsingData.seo_metadata?.keywords,
+      });
 
       // Invalidate cache to refetch updated data
       refetch();
 
-      // TODO: Show success toast
-      alert('解析数据保存成功！');
+      console.log('解析数据保存成功！');
     } catch (err) {
       console.error('Failed to save parsing data:', err);
       alert('保存失败：' + (err as Error).message);
     } finally {
       setIsSaving(false);
     }
-  }, [refetch]);
+  }, [refetch, articleId]);
 
   // Handle submit proofreading decisions
   const handleSubmitProofreadingDecisions = useCallback(async (decisions: DecisionPayload[]) => {
     setIsSubmitting(true);
     try {
-      // TODO: Call API to submit proofreading decisions
+      // Call API to save proofreading decisions to database
       console.log('Submitting proofreading decisions:', decisions);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Mock API call
+
+      // Use worklistAPI to save review decisions
+      const response = await worklistAPI.saveReviewDecisions(worklistItemId, {
+        decisions: decisions.map(d => ({
+          issue_id: d.issue_id,
+          decision_type: d.decision_type,
+          modified_content: d.modified_content,
+          decision_rationale: d.decision_rationale,
+          feedback_provided: d.feedback_provided,
+          feedback_category: d.feedback_category,
+          feedback_notes: d.feedback_notes,
+        })),
+      });
+
+      console.log('校对决定提交成功！', response);
 
       // Invalidate cache to refetch updated data
       refetch();
-
-      // TODO: Show success toast
-      alert('校对决定提交成功！');
     } catch (err) {
       console.error('Failed to submit proofreading decisions:', err);
       alert('提交失败：' + (err as Error).message);
     } finally {
       setIsSubmitting(false);
     }
-  }, [refetch]);
+  }, [refetch, worklistItemId]);
 
   // Handle publish article
   const handlePublish = useCallback(async (settings: PublishSettings) => {
     setIsPublishing(true);
     try {
-      // TODO: Call API to publish article
+      // Call API to publish article
       console.log('Publishing article with settings:', settings);
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Mock API call
+
+      // First save publish settings to article
+      await api.patch(`/v1/articles/${articleId}`, {
+        primary_category: settings.primary_category,
+        secondary_categories: settings.secondary_categories,
+        tags: settings.tags,
+        scheduled_publish_time: settings.publish_date,
+        excerpt: settings.excerpt,
+      });
+
+      // Then trigger publish via worklist endpoint
+      await api.post(`/v1/worklist/${worklistItemId}/publish`, {
+        publish_settings: settings,
+      });
+
+      console.log('文章发布成功！');
 
       // Invalidate cache to refetch updated data
       refetch();
-
-      // TODO: Show success toast
-      alert('文章发布成功！');
 
       // Close modal after successful publish
       setTimeout(() => {
@@ -203,7 +239,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
     } finally {
       setIsPublishing(false);
     }
-  }, [refetch, onClose]);
+  }, [refetch, onClose, articleId, worklistItemId]);
 
   // Handle save draft (Ctrl+S)
   const handleSaveDraft = useCallback(async () => {

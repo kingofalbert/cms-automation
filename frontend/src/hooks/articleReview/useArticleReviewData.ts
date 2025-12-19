@@ -66,12 +66,23 @@ const transformToReviewData = (
   const transformedReview = review ? transformArticleReviewResponse(review) : null;
 
   // Transform worklist issues if they're in API format
+  // IMPORTANT: Worklist issues have stable IDs computed by the backend (_compute_issue_id)
   const transformedWorklistIssues = transformWorklistIssues(item.proofreading_issues as (ProofreadingIssue | APIProofreadingIssue)[]);
 
-  // Prefer articleReview issues (richer data), fall back to transformed worklist issues
-  const transformedIssues = transformedReview?.proofreading_issues?.length
-    ? transformedReview.proofreading_issues
-    : transformedWorklistIssues;
+  // HOTFIX: Always use worklist issues as they have correct IDs from _compute_issue_id
+  // The articleReview endpoint returns issues without computed IDs, causing ID mismatch
+  // when saving decisions. Worklist issues have: id = "sug_{hash}_{idx}" format
+  const transformedIssues = transformedWorklistIssues.length > 0
+    ? transformedWorklistIssues
+    : (transformedReview?.proofreading_issues || []);
+
+  // Also update the articleReview's proofreading_issues to use the correct IDs
+  const updatedReview = transformedReview
+    ? {
+        ...transformedReview,
+        proofreading_issues: transformedIssues,
+      }
+    : null;
 
   return {
     ...item,
@@ -79,7 +90,7 @@ const transformToReviewData = (
     hasParsingData: Boolean(item.title && item.content),
     hasProofreadingData: Boolean(transformedIssues && transformedIssues.length > 0),
     isReadyToPublish: item.status === 'ready_to_publish' || item.status === 'publishing',
-    articleReview: transformedReview,
+    articleReview: updatedReview,
   };
 };
 
