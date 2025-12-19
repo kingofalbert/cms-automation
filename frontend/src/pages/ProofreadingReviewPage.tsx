@@ -15,6 +15,7 @@ import {
   DecisionType,
   WorklistItemDetail,
 } from '@/types/worklist';
+import { APIProofreadingIssue, transformAPIProofreadingIssues } from '@/types/api';
 import { ProofreadingIssueList } from '@/components/ProofreadingReview/ProofreadingIssueList';
 import { ProofreadingArticleContent } from '@/components/ProofreadingReview/ProofreadingArticleContent';
 import { ProofreadingIssueDetailPanel } from '@/components/ProofreadingReview/ProofreadingIssueDetailPanel';
@@ -94,7 +95,21 @@ export default function ProofreadingReviewPage() {
   });
 
   // Get issues and stats from worklist item
-  const issues = (worklistItem?.proofreading_issues || []) as unknown as ProofreadingIssue[];
+  // Transform API format issues to frontend format if needed
+  const rawIssues = worklistItem?.proofreading_issues || [];
+  const issues: ProofreadingIssue[] = (() => {
+    if (rawIssues.length === 0) return [];
+    // Check if first issue is in API format (has 'evidence' or 'message' fields)
+    // API format uses: evidence, suggestion, message, category
+    // Frontend format uses: original_text, suggested_text, explanation, rule_category
+    const firstIssue = rawIssues[0] as unknown as Record<string, unknown>;
+    if ('evidence' in firstIssue || 'message' in firstIssue) {
+      // Transform from API format to frontend format
+      return transformAPIProofreadingIssues(rawIssues as unknown as APIProofreadingIssue[]);
+    }
+    // Already in frontend format
+    return rawIssues as ProofreadingIssue[];
+  })();
   const stats = worklistItem?.proofreading_stats;
 
   // Add decision

@@ -61,13 +61,16 @@ Article (status: ready_to_publish) + Worklist (status: ready_to_publish)
 Published
 ```
 
-### 主要功能
+### 主要功能 (Phase 8.6 最终设计)
 
-1. **问题展示** - 左侧列表展示所有校对问题（支持过滤、排序、搜索）
-2. **文章渲染** - 中间区域渲染文章，高亮标注问题位置
+1. **问题展示** - 左侧列表展示所有校对问题（支持过滤、排序、搜索），显示原文→建议预览
+2. **文章渲染** - 中间区域三种视图模式：
+   - **文章模式 (默认)**: 完整文章内容，问题位置以颜色高亮标记
+   - **对比模式**: 原文与AI校对后的差异对比
+   - **预览模式**: 应用已接受修改后的最终效果
 3. **决策面板** - 右侧面板提供决策操作（接受/拒绝/自定义修改）
 4. **批量操作** - 多选问题批量决策
-5. **实时预览** - 预览应用修改后的文章效果
+5. **键盘快捷键** - A接受、R拒绝、↑↓导航
 6. **保存提交** - 保存决策并转换worklist状态
 
 ---
@@ -108,7 +111,7 @@ interface DecisionStore {
   decisions: Record<string, DecisionPayload>;
   selectedIssue: ProofreadingIssue | null;
   filters: FilterState;
-  viewMode: 'original' | 'preview' | 'diff';
+  viewMode: 'article' | 'diff' | 'preview';  // Phase 8.6: 'article' is default
 
   // Actions
   addDecision: (issueId: string, decision: Partial<DecisionPayload>) => void;

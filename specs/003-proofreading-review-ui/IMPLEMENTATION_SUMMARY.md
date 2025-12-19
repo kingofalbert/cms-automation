@@ -122,11 +122,19 @@ interface ReviewDecisionsResponse {
 
 **Features Implemented**:
 - 3-column responsive layout (20% / 50% / 30%)
+  - Left: Issue list with stats and filters
+  - Center: Article content with view mode toggle (文章/对比/预览)
+  - Right: Issue details with decision actions
 - State management with React useState (local state)
 - Keyboard shortcuts (A/R for accept/reject, Arrow keys for navigation)
 - Unsaved changes detection with confirmation
 - Auto-select first issue on page load
 - Error boundaries and loading states
+
+**View Modes (Phase 8.6 Update)**:
+- **文章模式 (default)**: Article content with issues highlighted at positions
+- **对比模式**: Side-by-side diff view (original vs AI-proofread)
+- **预览模式**: Preview with accepted changes applied
 
 **Key Code**:
 ```typescript
@@ -211,19 +219,20 @@ const ScoreBadge = memo(({ score }) => { /* ... */ });
 **Performance**: ~80% reduction in re-renders ✅
 
 #### 2.5 ProofreadingArticleContent Component
-**Status**: ✅ Complete
+**Status**: ✅ Complete (Phase 8.6 Updated)
 
 **Location**: `/frontend/src/components/ProofreadingReview/ProofreadingArticleContent.tsx`
 
 **Features**:
 - Article rendering with issue highlighting
 - Clickable issue highlights (navigates to issue)
-- ViewMode support:
-  - **Original**: Show original text with highlights
-  - **Preview**: Show accepted/modified suggestions
-  - **Diff**: Show side-by-side diff (uses DiffView)
-- Severity color coding
-- Decision status overlays
+- ViewMode support (Phase 8.6 redesign):
+  - **文章 (Article)**: Default mode - shows article content with issues highlighted at their positions using severity colors (red=critical, amber=warning, blue=info)
+  - **对比 (Diff)**: Show side-by-side diff of original vs AI-proofread document
+  - **预览 (Preview)**: Show article with accepted/modified suggestions applied
+- Severity color coding with legend in header
+- Decision status overlays (accepted=green, rejected=strikethrough)
+- Scroll-to-selected-issue behavior when clicking on issue list
 
 **Performance**: Already optimized with useMemo ✅
 

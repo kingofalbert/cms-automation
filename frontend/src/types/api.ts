@@ -852,11 +852,54 @@ export interface ArticleReviewResponseTransformed extends Omit<ArticleReviewResp
 }
 
 /**
+ * Check if a proofreading issue is in API format (has evidence/message fields)
+ * vs frontend format (has original_text/explanation fields)
+ */
+const isAPIFormatIssue = (issue: Record<string, unknown>): boolean => {
+  return 'evidence' in issue || ('message' in issue && !('explanation' in issue));
+};
+
+/**
+ * Smart transform for proofreading issues - handles both API and frontend formats
+ * The backend may return issues in either format depending on the endpoint
+ */
+const smartTransformIssues = (issues: unknown[]): ProofreadingIssue[] => {
+  if (!issues || issues.length === 0) return [];
+
+  // Check the first issue to determine format
+  const firstIssue = issues[0] as Record<string, unknown>;
+
+  if (isAPIFormatIssue(firstIssue)) {
+    // Old API format with evidence/suggestion/message - needs transformation
+    return transformAPIProofreadingIssues(issues as APIProofreadingIssue[]);
+  }
+
+  // Already in frontend format with original_text/suggested_text/explanation
+  // Just ensure the structure is correct
+  return (issues as ProofreadingIssue[]).map((issue, index) => ({
+    id: issue.id || `${issue.rule_id}-${index}`,
+    rule_id: issue.rule_id,
+    rule_category: issue.rule_category || 'general',
+    severity: issue.severity || 'info',
+    engine: issue.engine || 'deterministic',
+    position: issue.position || { start: 0, end: 0 },
+    original_text: issue.original_text || '',
+    suggested_text: issue.suggested_text || '',
+    explanation: issue.explanation || '',
+    explanation_detail: issue.explanation_detail,
+    confidence: issue.confidence,
+    tags: issue.tags || [],
+    decision_status: issue.decision_status || 'pending',
+    decision_id: issue.decision_id,
+  }));
+};
+
+/**
  * Transform ArticleReviewResponse to have frontend-ready proofreading issues
  */
 export const transformArticleReviewResponse = (
   response: ArticleReviewResponse
 ): ArticleReviewResponseTransformed => ({
   ...response,
-  proofreading_issues: transformAPIProofreadingIssues(response.proofreading_issues || []),
+  proofreading_issues: smartTransformIssues(response.proofreading_issues || []),
 });
