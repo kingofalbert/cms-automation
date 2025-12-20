@@ -20,6 +20,10 @@ from src.config.wordpress_taxonomy import (
     get_primary_categories,
     get_category_hierarchy,
 )
+from src.services.parser.featured_image_detector import (
+    FeaturedImageDetector,
+    get_featured_image_detector,
+)
 from src.services.parser.models import (
     ImageMetadata,
     ParsedArticle,
@@ -981,21 +985,51 @@ Process the above {content_type} and return the complete JSON response:"""
     def _parse_images_from_ai_response(self, images_data: list[dict]) -> list[ParsedImage]:
         """Convert AI response images data to ParsedImage objects.
 
+        Uses the FeaturedImageDetector to determine if each image should be
+        marked as a featured image (置頂圖片) based on caption keywords or position.
+
         Args:
             images_data: List of image dicts from AI response
 
         Returns:
-            List of ParsedImage objects
+            List of ParsedImage objects with featured image detection applied
         """
+        if not images_data:
+            return []
+
+        # Get the featured image detector
+        detector = get_featured_image_detector()
+
+        # Determine first paragraph position (images before this are potentially featured)
+        # For AI parsing, we assume the first content is at position 1
+        # Images at position 0 are before the body starts
+        first_paragraph_position = 1
+
+        # Use batch detection to ensure only one featured image
+        detection_results = detector.detect_batch(
+            images=images_data,
+            first_paragraph_position=first_paragraph_position,
+        )
+
         parsed_images = []
-        for img_data in images_data:
+        for img_data, detection_result in zip(images_data, detection_results, strict=True):
             try:
                 parsed_image = ParsedImage(
                     position=img_data.get("position", 0),
                     source_url=img_data.get("source_url"),
                     caption=img_data.get("caption"),
+                    # Phase 13: Apply featured image detection
+                    is_featured=detection_result.is_featured,
+                    image_type=detection_result.image_type.value,
+                    detection_method=detection_result.detection_method.value,
                 )
                 parsed_images.append(parsed_image)
+
+                if detection_result.is_featured:
+                    logger.info(
+                        f"Featured image detected at position {img_data.get('position', 0)}: "
+                        f"{detection_result.reason}"
+                    )
             except Exception as e:
                 logger.warning(f"Failed to parse image from AI response: {e}, data: {img_data}")
                 continue
@@ -1412,18 +1446,20 @@ Process the above {content_type} and return the complete JSON response:"""
         return {"description": description, "keywords": keywords, "tags": tags}
 
     def _extract_images(self, soup: BeautifulSoup) -> list[ParsedImage]:
-        """Extract images with positions.
+        """Extract images with positions and apply featured image detection.
 
         Args:
             soup: BeautifulSoup parsed HTML
 
         Returns:
-            List of ParsedImage objects
+            List of ParsedImage objects with featured image detection applied
         """
         logger.debug("Extracting images using heuristics")
 
-        images = []
+        # Collect raw image data first
+        raw_images: list[dict] = []
         paragraph_index = 0
+        first_content_position = None
 
         # Strategy 1: Find all <img> tags and <figure> elements (HTML structure)
         # Process all top-level elements to track paragraph positions
@@ -1433,6 +1469,8 @@ Process the above {content_type} and return the complete JSON response:"""
                 text = element.get_text(strip=True)
                 if text and len(text) > 10:  # Only count substantial paragraphs
                     paragraph_index += 1
+                    if first_content_position is None:
+                        first_content_position = paragraph_index
 
             elif element.name == "figure":
                 # Extract image from figure element
@@ -1448,13 +1486,11 @@ Process the above {content_type} and return the complete JSON response:"""
                         else img_tag.get("alt") or img_tag.get("title")
                     )
 
-                    images.append(
-                        ParsedImage(
-                            position=paragraph_index,
-                            source_url=source_url,
-                            caption=caption,
-                        )
-                    )
+                    raw_images.append({
+                        "position": paragraph_index,
+                        "source_url": source_url,
+                        "caption": caption,
+                    })
                     logger.debug(f"Found image in <figure> at position {paragraph_index}: {source_url}")
 
             elif element.name == "img":
@@ -1463,17 +1499,15 @@ Process the above {content_type} and return the complete JSON response:"""
                 if source_url:
                     caption = element.get("alt") or element.get("title")
 
-                    images.append(
-                        ParsedImage(
-                            position=paragraph_index,
-                            source_url=source_url,
-                            caption=caption,
-                        )
-                    )
+                    raw_images.append({
+                        "position": paragraph_index,
+                        "source_url": source_url,
+                        "caption": caption,
+                    })
                     logger.debug(f"Found <img> tag at position {paragraph_index}: {source_url}")
 
         # Strategy 2: If no images found in HTML tags, search for image URLs in plain text
-        if not images:
+        if not raw_images:
             import re
 
             full_text = soup.get_text()
@@ -1500,13 +1534,11 @@ Process the above {content_type} and return the complete JSON response:"""
                 if caption_match:
                     caption = caption_match.group(1).strip()
 
-                images.append(
-                    ParsedImage(
-                        position=0,  # Place at beginning since we don't have paragraph context
-                        source_url=source_url,
-                        caption=caption,
-                    )
-                )
+                raw_images.append({
+                    "position": 0,  # Place at beginning since we don't have paragraph context
+                    "source_url": source_url,
+                    "caption": caption,
+                })
                 logger.debug(f"Found image URL in text: {source_url}")
 
             # Process Google Docs redirected image URLs
@@ -1523,17 +1555,46 @@ Process the above {content_type} and return the complete JSON response:"""
                 if caption_match:
                     caption = caption_match.group(1).strip()
 
-                images.append(
-                    ParsedImage(
-                        position=0,
-                        source_url=source_url,
-                        caption=caption,
-                    )
-                )
+                raw_images.append({
+                    "position": 0,
+                    "source_url": source_url,
+                    "caption": caption,
+                })
                 logger.debug(f"Found Google Docs image URL in text: {source_url}")
 
-        logger.debug(f"Extracted {len(images)} images total")
-        return images
+        if not raw_images:
+            logger.debug("No images found")
+            return []
+
+        # Phase 13: Apply featured image detection
+        detector = get_featured_image_detector()
+        detection_results = detector.detect_batch(
+            images=raw_images,
+            first_paragraph_position=first_content_position or 1,
+        )
+
+        # Create ParsedImage objects with detection results
+        parsed_images = []
+        for img_data, detection_result in zip(raw_images, detection_results, strict=True):
+            parsed_images.append(
+                ParsedImage(
+                    position=img_data["position"],
+                    source_url=img_data["source_url"],
+                    caption=img_data.get("caption"),
+                    is_featured=detection_result.is_featured,
+                    image_type=detection_result.image_type.value,
+                    detection_method=detection_result.detection_method.value,
+                )
+            )
+
+            if detection_result.is_featured:
+                logger.info(
+                    f"Featured image detected at position {img_data['position']}: "
+                    f"{detection_result.reason}"
+                )
+
+        logger.debug(f"Extracted {len(parsed_images)} images total")
+        return parsed_images
 
     def validate_parsed_article(self, article: ParsedArticle) -> list[str]:
         """Validate a parsed article for quality issues.

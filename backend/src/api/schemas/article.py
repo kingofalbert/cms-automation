@@ -34,6 +34,21 @@ class ArticleImageResponse(BaseSchema):
     alt_text: str | None = Field(default=None, description="Image alt text for SEO and accessibility")
     description: str | None = Field(default=None, description="Image description for WordPress media library")
     position: int = Field(..., description="Paragraph index (0-based) where image appears")
+
+    # Phase 13: Featured image detection fields
+    is_featured: bool = Field(
+        default=False,
+        description="Whether this is the featured/cover image (置頂圖片)"
+    )
+    image_type: str = Field(
+        default="content",
+        description="Image type: featured (置頂) / content (正文) / inline (行內)"
+    )
+    detection_method: str | None = Field(
+        default=None,
+        description="How featured status was detected: caption_keyword / position_before_body / manual"
+    )
+
     image_metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Technical metadata: dimensions, file size, format, EXIF"

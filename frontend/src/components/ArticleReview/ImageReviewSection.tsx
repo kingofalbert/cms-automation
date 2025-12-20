@@ -9,7 +9,7 @@
  * - Comprehensive metadata display
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '../ui';
 import {
   Image as ImageIcon,
@@ -26,7 +26,29 @@ import {
   HardDrive,
   Type,
   Link2,
+  Sparkles,
+  Loader2,
+  Check,
+  Edit3,
 } from 'lucide-react';
+
+/**
+ * API response for image alt text suggestion
+ */
+interface ImageAltSuggestion {
+  image_id: number;
+  parsed_alt_text: string | null;
+  parsed_caption: string | null;
+  parsed_description: string | null;
+  suggested_alt_text: string;
+  suggested_alt_text_confidence: number;
+  suggested_description: string;
+  suggested_description_confidence: number;
+  generation_method: 'vision' | 'context' | 'failed';
+  model_used: string;
+  tokens_used: number;
+  error_message: string | null;
+}
 
 /**
  * Epoch Times image standards
@@ -78,6 +100,21 @@ interface ImageMetadata {
 }
 
 /**
+ * Image type classification
+ */
+export type ImageType = 'featured' | 'content' | 'inline';
+
+/**
+ * Detection method for featured image
+ */
+export type DetectionMethod =
+  | 'caption_keyword'
+  | 'position_before_body'
+  | 'manual'
+  | 'position_legacy'
+  | 'none';
+
+/**
  * Article image data structure
  */
 export interface ArticleImageData {
@@ -90,6 +127,12 @@ export interface ArticleImageData {
   alt_text?: string;
   description?: string;
   position: number;
+  /** Phase 13: Whether this is the featured/cover image (置頂圖片) */
+  is_featured?: boolean;
+  /** Phase 13: Image type: featured (置頂) / content (正文) / inline (行內) */
+  image_type?: ImageType;
+  /** Phase 13: How featured status was detected */
+  detection_method?: DetectionMethod;
   image_metadata?: ImageMetadata;
   created_at?: string;
   updated_at?: string;
@@ -108,6 +151,8 @@ export interface ImageReviewSectionProps {
   onFeaturedImageChange: (url: string) => void;
   /** Callback when additional images change */
   onAdditionalImagesChange: (urls: string[]) => void;
+  /** Callback when image alt text is updated */
+  onImageAltUpdate?: (imageId: number, altText: string, description: string) => void;
 }
 
 /**
@@ -235,15 +280,122 @@ const StatusBadge: React.FC<{
 };
 
 /**
- * Single image card with detailed information
+ * Featured image badge component
+ * Displays detection method and confidence information
+ */
+const FeaturedBadge: React.FC<{
+  detectionMethod?: DetectionMethod;
+}> = ({ detectionMethod }) => {
+  const getDetectionLabel = (): { label: string; tooltip: string } => {
+    switch (detectionMethod) {
+      case 'caption_keyword':
+        return { label: '圖說標記', tooltip: 'Caption 包含「置頂」等關鍵字' };
+      case 'position_before_body':
+        return { label: '位置檢測', tooltip: '圖片位於正文之前' };
+      case 'manual':
+        return { label: '手動設置', tooltip: '由用戶手動標記為置頂' };
+      case 'position_legacy':
+        return { label: '舊版遷移', tooltip: '從舊版 position=0 遷移' };
+      default:
+        return { label: '自動檢測', tooltip: '系統自動識別' };
+    }
+  };
+
+  const { label, tooltip } = getDetectionLabel();
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-200"
+      title={tooltip}
+    >
+      ⭐ 置頂圖片
+      <span className="text-[10px] text-amber-600">({label})</span>
+    </span>
+  );
+};
+
+/**
+ * Confidence badge component
+ */
+const ConfidenceBadge: React.FC<{ confidence: number }> = ({ confidence }) => {
+  const percentage = Math.round(confidence * 100);
+  let colorClass = 'bg-green-100 text-green-700';
+  if (percentage < 70) colorClass = 'bg-amber-100 text-amber-700';
+  if (percentage < 50) colorClass = 'bg-red-100 text-red-700';
+
+  return (
+    <span className={`text-[10px] px-1.5 py-0.5 rounded ${colorClass}`}>
+      {percentage}% 信心度
+    </span>
+  );
+};
+
+/**
+ * Single image card with detailed information and AI suggestions
  */
 const ImageInfoCard: React.FC<{
   image: ArticleImageData;
   imageUrl: string;
   isFeatured: boolean;
   onRemove?: () => void;
-}> = ({ image, imageUrl, isFeatured, onRemove }) => {
+  onAltTextUpdate?: (imageId: number, altText: string, description: string) => void;
+}> = ({ image, imageUrl, isFeatured, onRemove, onAltTextUpdate }) => {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [suggestion, setSuggestion] = useState<ImageAltSuggestion | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [editingAltText, setEditingAltText] = useState<string | null>(null);
+  const [editingDescription, setEditingDescription] = useState<string | null>(null);
+
+  // Generate AI suggestions
+  const handleGenerateAlt = useCallback(async () => {
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/v1/images/${image.id}/generate-alt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ use_vision: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`生成失敗: ${response.statusText}`);
+      }
+
+      const data: ImageAltSuggestion = await response.json();
+      setSuggestion(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '生成失敗');
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [image.id]);
+
+  // Apply suggested alt text
+  const handleApplyAltText = useCallback(() => {
+    if (suggestion && onAltTextUpdate) {
+      onAltTextUpdate(
+        image.id,
+        suggestion.suggested_alt_text,
+        editingDescription ?? suggestion.suggested_description
+      );
+      // Update local state to show as "adopted"
+      setEditingAltText(suggestion.suggested_alt_text);
+    }
+  }, [suggestion, image.id, onAltTextUpdate, editingDescription]);
+
+  // Apply suggested description
+  const handleApplyDescription = useCallback(() => {
+    if (suggestion && onAltTextUpdate) {
+      onAltTextUpdate(
+        image.id,
+        editingAltText ?? suggestion.suggested_alt_text,
+        suggestion.suggested_description
+      );
+      setEditingDescription(suggestion.suggested_description);
+    }
+  }, [suggestion, image.id, onAltTextUpdate, editingAltText]);
 
   const specs = image.image_metadata?.image_technical_specs;
   const resolutionCheck = checkResolution(specs?.width, specs?.height, isFeatured);
@@ -275,8 +427,12 @@ const ImageInfoCard: React.FC<{
         <div className="flex items-center gap-2">
           <FileImage className="w-4 h-4 text-gray-500" />
           <span className="text-sm font-medium text-gray-700">
-            {isFeatured ? '特色圖片' : `圖片 #${image.position + 1}`}
+            {isFeatured ? '置頂圖片' : `正文圖片 #${image.position + 1}`}
           </span>
+          {/* Phase 13: Show FeaturedBadge for featured images */}
+          {isFeatured && (
+            <FeaturedBadge detectionMethod={image.detection_method} />
+          )}
           {hasIssues && (
             <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">需修正</span>
           )}
@@ -378,6 +534,146 @@ const ImageInfoCard: React.FC<{
             </div>
           </div>
 
+          {/* AI Suggestions Section */}
+          <div className="border-t pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-purple-500" />
+                AI 建議 (Alt Text & Description)
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateAlt}
+                disabled={isGenerating}
+                className="text-xs h-7 px-2"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    {suggestion ? '重新生成' : 'AI 生成'}
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700 mb-2">
+                {error}
+              </div>
+            )}
+
+            {/* Suggestions display */}
+            {suggestion && (
+              <div className="space-y-3">
+                {/* Generation info */}
+                <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                  <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">
+                    {suggestion.generation_method === 'vision' ? '🔍 視覺分析' : '📝 上下文推斷'}
+                  </span>
+                  <span>模型: {suggestion.model_used}</span>
+                  <span>Token: {suggestion.tokens_used}</span>
+                </div>
+
+                {/* Alt Text Comparison */}
+                <div className="p-2 bg-gray-50 rounded border">
+                  <div className="text-[10px] font-medium text-gray-600 mb-1.5 flex items-center gap-1">
+                    <Info className="w-3 h-3" />
+                    Alt Text 對比
+                  </div>
+
+                  {/* Original */}
+                  <div className="mb-2">
+                    <div className="text-[10px] text-gray-500 mb-0.5">原始解析：</div>
+                    <div className={`text-xs p-1.5 rounded border ${
+                      image.alt_text ? 'bg-white border-gray-200' : 'bg-gray-100 border-gray-200 italic text-gray-400'
+                    }`}>
+                      {image.alt_text || '(未設置)'}
+                    </div>
+                  </div>
+
+                  {/* AI Suggestion */}
+                  <div>
+                    <div className="text-[10px] text-gray-500 mb-0.5 flex items-center gap-2">
+                      <span>💡 AI 建議：</span>
+                      <ConfidenceBadge confidence={suggestion.suggested_alt_text_confidence} />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 text-xs p-1.5 rounded border bg-purple-50 border-purple-200 text-purple-900">
+                        {suggestion.suggested_alt_text}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleApplyAltText}
+                        className="px-2 py-1 bg-purple-600 text-white text-[10px] rounded hover:bg-purple-700 flex items-center gap-1 flex-shrink-0"
+                        title="採用此建議"
+                      >
+                        <Check className="w-3 h-3" />
+                        採用
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description Comparison */}
+                <div className="p-2 bg-gray-50 rounded border">
+                  <div className="text-[10px] font-medium text-gray-600 mb-1.5 flex items-center gap-1">
+                    <Edit3 className="w-3 h-3" />
+                    Description 對比
+                  </div>
+
+                  {/* Original */}
+                  <div className="mb-2">
+                    <div className="text-[10px] text-gray-500 mb-0.5">原始解析：</div>
+                    <div className={`text-xs p-1.5 rounded border ${
+                      image.description ? 'bg-white border-gray-200' : 'bg-gray-100 border-gray-200 italic text-gray-400'
+                    }`}>
+                      {image.description || '(未設置)'}
+                    </div>
+                  </div>
+
+                  {/* AI Suggestion */}
+                  <div>
+                    <div className="text-[10px] text-gray-500 mb-0.5 flex items-center gap-2">
+                      <span>💡 AI 建議：</span>
+                      <ConfidenceBadge confidence={suggestion.suggested_description_confidence} />
+                    </div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 text-xs p-1.5 rounded border bg-purple-50 border-purple-200 text-purple-900">
+                        {suggestion.suggested_description}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleApplyDescription}
+                        className="px-2 py-1 bg-purple-600 text-white text-[10px] rounded hover:bg-purple-700 flex items-center gap-1 flex-shrink-0"
+                        title="採用此建議"
+                      >
+                        <Check className="w-3 h-3" />
+                        採用
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Placeholder when no suggestion yet */}
+            {!suggestion && !isGenerating && !error && (
+              <div className="p-3 bg-gray-50 border border-dashed border-gray-300 rounded text-center">
+                <Sparkles className="w-6 h-6 mx-auto text-gray-400 mb-1" />
+                <p className="text-xs text-gray-500">
+                  點擊「AI 生成」按鈕，使用 GPT-4o 分析圖片並生成 Alt Text 和 Description 建議
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Standards comparison */}
           <div className="border-t pt-3">
             <div className="text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
@@ -446,6 +742,7 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
   worklistItemId,
   onFeaturedImageChange,
   onAdditionalImagesChange,
+  onImageAltUpdate,
 }) => {
   const handleRemoveAdditionalImage = (index: number) => {
     const newImages = [...additionalImages];
@@ -453,23 +750,33 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
     onAdditionalImagesChange(newImages);
   };
 
-  // Get featured image data (position 0)
-  const featuredImageData = articleImages.find((img) => img.position === 0);
+  // Phase 13: Use is_featured field for separation (fallback to position for legacy data)
+  // Get featured image data - using is_featured field or fallback to position === 0
+  const featuredImageData = articleImages.find(
+    (img) => img.is_featured === true || (img.is_featured === undefined && img.position === 0)
+  );
 
-  // Get additional images data (position > 0)
-  const additionalImagesData = articleImages
-    .filter((img) => img.position > 0)
+  // Get content images (non-featured), sorted by position
+  const contentImagesData = articleImages
+    .filter((img) => !img.is_featured && (img.is_featured !== undefined || img.position > 0))
     .sort((a, b) => a.position - b.position);
 
   // Count issues
   const totalIssues = articleImages.reduce((count, img) => {
     const specs = img.image_metadata?.image_technical_specs;
-    const isFeatured = img.position === 0;
+    // Use is_featured field for standards check (fallback to position for legacy)
+    const isFeatured = img.is_featured === true || (img.is_featured === undefined && img.position === 0);
     if (checkResolution(specs?.width, specs?.height, isFeatured).status === 'fail') count++;
     if (checkFileSize(specs?.file_size_bytes, isFeatured).status === 'fail') count++;
     if (checkFormat(specs?.format, isFeatured).status === 'fail') count++;
     return count;
   }, 0);
+
+  // Count featured vs content images for display
+  const featuredCount = articleImages.filter(
+    (img) => img.is_featured === true || (img.is_featured === undefined && img.position === 0)
+  ).length;
+  const contentCount = articleImages.length - featuredCount;
 
   return (
     <div className="space-y-4">
@@ -477,7 +784,7 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
         <ImageIcon className="w-5 h-5" />
         圖片審核
         <span className="text-sm font-normal text-gray-500">
-          ({articleImages.length} 張圖片)
+          ({articleImages.length} 張圖片：{featuredCount} 置頂 + {contentCount} 正文)
         </span>
         {totalIssues > 0 && (
           <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
@@ -486,15 +793,18 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
         )}
       </h3>
 
-      {/* Featured Image */}
+      {/* Featured Image (置頂圖片) */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">特色圖片</label>
+        <label className="block text-sm font-medium text-gray-700">
+          置頂圖片 (Featured Image)
+        </label>
         {featuredImage && featuredImageData ? (
           <ImageInfoCard
             image={featuredImageData}
             imageUrl={featuredImage}
             isFeatured={true}
             onRemove={() => onFeaturedImageChange('')}
+            onAltTextUpdate={onImageAltUpdate}
           />
         ) : featuredImage ? (
           // Legacy display if no article image data
@@ -526,20 +836,21 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
         )}
       </div>
 
-      {/* Additional Images */}
+      {/* Content Images (正文圖片) */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          附加圖片 ({additionalImages.length})
+          正文圖片 (Content Images) ({contentCount})
         </label>
-        {additionalImagesData.length > 0 ? (
+        {contentImagesData.length > 0 ? (
           <div className="space-y-3">
-            {additionalImagesData.map((imgData, index) => (
+            {contentImagesData.map((imgData, index) => (
               <ImageInfoCard
                 key={imgData.id}
                 image={imgData}
                 imageUrl={additionalImages[index] || imgData.source_url || ''}
                 isFeatured={false}
                 onRemove={() => handleRemoveAdditionalImage(index)}
+                onAltTextUpdate={onImageAltUpdate}
               />
             ))}
           </div>

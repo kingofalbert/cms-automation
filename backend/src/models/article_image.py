@@ -5,6 +5,7 @@ from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Enum,
     ForeignKey,
@@ -88,6 +89,27 @@ class ArticleImage(Base, TimestampMixin):
         comment="Paragraph index (0-based) where image should appear in body",
     )
 
+    # Featured image detection (Phase 13)
+    is_featured: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Whether this is the featured/cover image (置頂圖片)",
+    )
+
+    image_type: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="content",
+        comment="Image type: featured (置頂) / content (正文) / inline (行內)",
+    )
+
+    detection_method: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="How featured status was detected: caption_keyword / position_before_body / manual",
+    )
+
     # Technical specifications (JSONB)
     # Note: Using 'image_metadata' as Python attr name, 'metadata' as DB column name
     # because 'metadata' is reserved by SQLAlchemy
@@ -119,13 +141,18 @@ class ArticleImage(Base, TimestampMixin):
     __table_args__ = (
         CheckConstraint("position >= 0", name="article_images_positive_position"),
         UniqueConstraint("article_id", "position", name="article_images_unique_position"),
+        CheckConstraint(
+            "image_type IN ('featured', 'content', 'inline')",
+            name="article_images_valid_image_type",
+        ),
     )
 
     def __repr__(self) -> str:
         """String representation."""
+        featured_str = " [FEATURED]" if self.is_featured else ""
         return (
             f"<ArticleImage(id={self.id}, article_id={self.article_id}, "
-            f"position={self.position}, caption='{self.caption[:30] if self.caption else None}...')>"
+            f"position={self.position}, type={self.image_type}{featured_str})>"
         )
 
     @property
@@ -170,6 +197,11 @@ class ArticleImage(Base, TimestampMixin):
         if self.image_metadata and "image_technical_specs" in self.image_metadata:
             return self.image_metadata["image_technical_specs"].get("format")
         return None
+
+    @property
+    def is_content_image(self) -> bool:
+        """Check if this is a content (non-featured) image."""
+        return not self.is_featured and self.image_type == "content"
 
 
 class ImageReviewAction(str, PyEnum):

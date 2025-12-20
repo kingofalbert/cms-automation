@@ -87,6 +87,20 @@ class ParsedImage(BaseModel):
     description: str | None = Field(None, description="Image description for WordPress media library")
     metadata: ImageMetadata | None = Field(default=None, description="Technical image specs")
 
+    # Phase 13: Featured image detection fields
+    is_featured: bool = Field(
+        default=False,
+        description="Whether this is the featured/cover image (置頂圖片)"
+    )
+    image_type: str = Field(
+        default="content",
+        description="Image type: featured (置頂) / content (正文) / inline (行內)"
+    )
+    detection_method: str | None = Field(
+        default=None,
+        description="How featured status was detected: caption_keyword / position_before_body / manual / none"
+    )
+
     # Compatibility attributes for proofreading engine
     @property
     def id(self) -> str | None:

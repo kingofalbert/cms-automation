@@ -514,6 +514,10 @@ async def _serialize_item_detail(
                     alt_text=img.alt_text,
                     description=img.description,
                     position=img.position,
+                    # Phase 13: Featured image detection fields
+                    is_featured=img.is_featured if hasattr(img, 'is_featured') else False,
+                    image_type=img.image_type if hasattr(img, 'image_type') else "content",
+                    detection_method=img.detection_method if hasattr(img, 'detection_method') else None,
                     image_metadata=img.image_metadata or {},
                     created_at=img.created_at,
                     updated_at=img.updated_at,
