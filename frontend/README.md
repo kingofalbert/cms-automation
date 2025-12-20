@@ -63,6 +63,24 @@ frontend/
   - Auto-navigation after decision (減少上下文切換)
   - Completion prompt for workflow closure
 
+- **[Preview WYSIWYG Design Spec](./docs/PREVIEW_WYSIWYG_DESIGN_SPEC.md)** - WYSIWYG preview rendering system
+  - Font anomaly detection
+  - HTML format issue highlighting
+  - Mode switching (preview/source)
+
+## Key Components
+
+### Image Review Section (Phase 13)
+
+Enhanced image review for article parsing with:
+- Original URL display (Google Drive links)
+- Caption and Alt Text display
+- Resolution comparison with Epoch Times standards
+- File size and format validation
+- Issue highlighting (red/yellow/green status badges)
+
+See: `src/components/ArticleReview/ImageReviewSection.tsx`
+
 ## Development
 
 ### Running Tests

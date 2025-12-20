@@ -30,12 +30,16 @@ class ArticleImageResponse(BaseSchema):
     preview_path: str | None = Field(default=None, description="Path to preview/thumbnail in storage")
     source_path: str | None = Field(default=None, description="Path to downloaded high-res source")
     source_url: str | None = Field(default=None, description='Original "原圖/點此下載" URL from Google Doc')
-    caption: str | None = Field(default=None, description="Image caption extracted from document")
+    caption: str | None = Field(default=None, description="Image caption extracted from document (圖說)")
+    alt_text: str | None = Field(default=None, description="Image alt text for SEO and accessibility")
+    description: str | None = Field(default=None, description="Image description for WordPress media library")
     position: int = Field(..., description="Paragraph index (0-based) where image appears")
     image_metadata: dict[str, Any] = Field(
         default_factory=dict,
         description="Technical metadata: dimensions, file size, format, EXIF"
     )
+    created_at: datetime | None = Field(default=None, description="When image was first parsed")
+    updated_at: datetime | None = Field(default=None, description="When image was last updated")
 
 
 class ArticleResponse(TimestampSchema):

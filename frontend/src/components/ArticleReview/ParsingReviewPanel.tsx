@@ -547,6 +547,7 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
             <ImageReviewSection
               featuredImage={featuredImage}
               additionalImages={additionalImages}
+              articleImages={(data as any).article_images || []}
               worklistItemId={data.id}
               onFeaturedImageChange={(url) => {
                 setFeaturedImage(url);

@@ -85,13 +85,17 @@ describe('ProofreadingPreviewSection', () => {
   });
 
   describe('Highlight Toggle', () => {
-    it('should have highlight toggle button', () => {
+    it('should have highlight toggle button in text mode', () => {
       render(
         <ProofreadingPreviewSection
           originalContent={mockOriginalContent}
           proofreadContent={mockProofreadContent}
         />
       );
+      // Switch to text mode first (default is rendered mode)
+      const textModeButton = screen.getByTitle('文本模式：显示修改高亮');
+      fireEvent.click(textModeButton);
+      // Now highlight button should be visible
       const highlightButton = screen.getByTitle('隐藏高亮');
       expect(highlightButton).toBeInTheDocument();
     });
@@ -103,13 +107,17 @@ describe('ProofreadingPreviewSection', () => {
           proofreadContent={mockProofreadContent}
         />
       );
+      // Switch to text mode first
+      const textModeButton = screen.getByTitle('文本模式：显示修改高亮');
+      fireEvent.click(textModeButton);
+      // Now find and click highlight button
       const highlightButton = screen.getByTitle('隐藏高亮');
       fireEvent.click(highlightButton);
       // Button should now say show highlights
       expect(screen.getByTitle('显示高亮')).toBeInTheDocument();
     });
 
-    it('should show legend when highlights are enabled', () => {
+    it('should show legend when highlights are enabled in text mode', () => {
       render(
         <ProofreadingPreviewSection
           originalContent={mockOriginalContent}
@@ -117,18 +125,24 @@ describe('ProofreadingPreviewSection', () => {
           wordChanges={mockWordChanges}
         />
       );
+      // Switch to text mode first
+      const textModeButton = screen.getByTitle('文本模式：显示修改高亮');
+      fireEvent.click(textModeButton);
       expect(screen.getByText('图例:')).toBeInTheDocument();
     });
   });
 
   describe('Original Inline Toggle', () => {
-    it('should show original inline toggle when highlights are enabled', () => {
+    it('should show original inline toggle when in text mode with highlights enabled', () => {
       render(
         <ProofreadingPreviewSection
           originalContent={mockOriginalContent}
           proofreadContent={mockProofreadContent}
         />
       );
+      // Switch to text mode first
+      const textModeButton = screen.getByTitle('文本模式：显示修改高亮');
+      fireEvent.click(textModeButton);
       expect(screen.getByTitle('显示原文')).toBeInTheDocument();
     });
 
@@ -139,6 +153,9 @@ describe('ProofreadingPreviewSection', () => {
           proofreadContent={mockProofreadContent}
         />
       );
+      // Switch to text mode first
+      const textModeButton = screen.getByTitle('文本模式：显示修改高亮');
+      fireEvent.click(textModeButton);
       // Disable highlights
       fireEvent.click(screen.getByTitle('隐藏高亮'));
       // Original inline toggle should not be visible
@@ -261,15 +278,29 @@ describe('ProofreadingPreviewSection', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have accessible button titles', () => {
+    it('should have accessible button titles in text mode', () => {
       render(
         <ProofreadingPreviewSection
           originalContent={mockOriginalContent}
           proofreadContent={mockProofreadContent}
         />
       );
+      // Switch to text mode first
+      const textModeButton = screen.getByTitle('文本模式：显示修改高亮');
+      fireEvent.click(textModeButton);
       expect(screen.getByTitle('隐藏高亮')).toBeInTheDocument();
       expect(screen.getByTitle('显示原文')).toBeInTheDocument();
+    });
+
+    it('should have view mode toggle buttons', () => {
+      render(
+        <ProofreadingPreviewSection
+          originalContent={mockOriginalContent}
+          proofreadContent={mockProofreadContent}
+        />
+      );
+      expect(screen.getByTitle('渲染模式：显示最终排版效果')).toBeInTheDocument();
+      expect(screen.getByTitle('文本模式：显示修改高亮')).toBeInTheDocument();
     });
 
     it('should have semantic headings', () => {

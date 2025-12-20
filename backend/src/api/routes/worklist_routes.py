@@ -511,6 +511,8 @@ async def _serialize_item_detail(
                     source_path=img.source_path,
                     source_url=img.source_url,
                     caption=img.caption,
+                    alt_text=img.alt_text,
+                    description=img.description,
                     position=img.position,
                     image_metadata=img.image_metadata or {},
                     created_at=img.created_at,

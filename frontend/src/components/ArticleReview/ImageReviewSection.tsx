@@ -1,21 +1,107 @@
 /**
- * ImageReviewSection - Image management for article
+ * ImageReviewSection - Enhanced Image Review for Article Parsing
  *
- * Phase 8.2: Parsing Review Panel
- * - Featured image selection
- * - Additional images management
- * - Image upload
+ * Phase 13: Enhanced Image Review
+ * - Display original source URL (Google Drive, etc.)
+ * - Show caption (圖說) and Alt Text
+ * - Display image resolution with Epoch Times standard comparison
+ * - Highlight issues when standards not met
+ * - Comprehensive metadata display
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '../ui';
-import { Image as ImageIcon, Upload, X } from 'lucide-react';
+import {
+  Image as ImageIcon,
+  Upload,
+  X,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  ChevronDown,
+  ChevronUp,
+  FileImage,
+  Ruler,
+  HardDrive,
+  Type,
+  Link2,
+} from 'lucide-react';
+
+/**
+ * Epoch Times image standards
+ */
+const EPOCH_TIMES_STANDARDS = {
+  featuredImage: {
+    minWidth: 1200,
+    minHeight: 630,
+    recommendedWidth: 1200,
+    recommendedHeight: 630,
+    maxFileSizeKB: 500,
+    supportedFormats: ['JPEG', 'PNG', 'WebP', 'JPG'],
+  },
+  contentImage: {
+    minWidth: 800,
+    minHeight: 400,
+    maxFileSizeKB: 300,
+    supportedFormats: ['JPEG', 'PNG', 'WebP', 'JPG', 'GIF'],
+  },
+};
+
+/**
+ * Image metadata structure from API
+ */
+interface ImageMetadata {
+  _schema_version?: string;
+  image_technical_specs?: {
+    width?: number;
+    height?: number;
+    aspect_ratio?: string;
+    file_size_bytes?: number;
+    mime_type?: string;
+    format?: string;
+    color_mode?: string;
+    has_transparency?: boolean;
+    bit_depth?: number;
+    dpi?: number;
+  };
+  validation?: {
+    is_valid?: boolean;
+    validation_errors?: string[];
+    validation_warnings?: string[];
+  };
+  exif_data?: {
+    camera_make?: string;
+    camera_model?: string;
+    exif_date?: string;
+  };
+}
+
+/**
+ * Article image data structure
+ */
+export interface ArticleImageData {
+  id: number;
+  article_id: number;
+  preview_path?: string;
+  source_path?: string;
+  source_url?: string;
+  caption?: string;
+  alt_text?: string;
+  description?: string;
+  position: number;
+  image_metadata?: ImageMetadata;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface ImageReviewSectionProps {
   /** Featured image URL */
   featuredImage: string;
   /** Additional image URLs */
   additionalImages: string[];
+  /** Full article image data from API */
+  articleImages?: ArticleImageData[];
   /** Worklist item ID for uploads */
   worklistItemId: number;
   /** Callback when featured image changes */
@@ -25,11 +111,338 @@ export interface ImageReviewSectionProps {
 }
 
 /**
+ * Format file size for display
+ */
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes) return '未知';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+};
+
+/**
+ * Check if resolution meets standards
+ */
+const checkResolution = (
+  width?: number,
+  height?: number,
+  isFeatured: boolean = false
+): { status: 'pass' | 'warning' | 'fail'; message: string } => {
+  if (!width || !height) {
+    return { status: 'warning', message: '無法獲取解析度信息' };
+  }
+
+  const standards = isFeatured
+    ? EPOCH_TIMES_STANDARDS.featuredImage
+    : EPOCH_TIMES_STANDARDS.contentImage;
+
+  if (width >= standards.minWidth && height >= standards.minHeight) {
+    return { status: 'pass', message: `✓ 符合標準 (≥${standards.minWidth}×${standards.minHeight})` };
+  }
+
+  if (width >= standards.minWidth * 0.8 && height >= standards.minHeight * 0.8) {
+    return {
+      status: 'warning',
+      message: `⚠ 接近標準 (建議 ≥${standards.minWidth}×${standards.minHeight})`,
+    };
+  }
+
+  return {
+    status: 'fail',
+    message: `✗ 低於標準 (需要 ≥${standards.minWidth}×${standards.minHeight})`,
+  };
+};
+
+/**
+ * Check if file size meets standards
+ */
+const checkFileSize = (
+  bytes?: number,
+  isFeatured: boolean = false
+): { status: 'pass' | 'warning' | 'fail'; message: string } => {
+  if (!bytes) {
+    return { status: 'warning', message: '無法獲取文件大小' };
+  }
+
+  const maxKB = isFeatured
+    ? EPOCH_TIMES_STANDARDS.featuredImage.maxFileSizeKB
+    : EPOCH_TIMES_STANDARDS.contentImage.maxFileSizeKB;
+
+  const sizeKB = bytes / 1024;
+
+  if (sizeKB <= maxKB) {
+    return { status: 'pass', message: `✓ 文件大小符合 (≤${maxKB}KB)` };
+  }
+
+  if (sizeKB <= maxKB * 1.5) {
+    return { status: 'warning', message: `⚠ 文件略大 (建議 ≤${maxKB}KB)` };
+  }
+
+  return { status: 'fail', message: `✗ 文件過大 (需要 ≤${maxKB}KB)` };
+};
+
+/**
+ * Check if format is supported
+ */
+const checkFormat = (
+  format?: string,
+  isFeatured: boolean = false
+): { status: 'pass' | 'warning' | 'fail'; message: string } => {
+  if (!format) {
+    return { status: 'warning', message: '無法獲取格式信息' };
+  }
+
+  const supportedFormats = isFeatured
+    ? EPOCH_TIMES_STANDARDS.featuredImage.supportedFormats
+    : EPOCH_TIMES_STANDARDS.contentImage.supportedFormats;
+
+  const normalizedFormat = format.toUpperCase();
+
+  if (supportedFormats.includes(normalizedFormat)) {
+    return { status: 'pass', message: `✓ 格式支持 (${format})` };
+  }
+
+  return { status: 'fail', message: `✗ 格式不支持 (${format})` };
+};
+
+/**
+ * Status badge component
+ */
+const StatusBadge: React.FC<{
+  status: 'pass' | 'warning' | 'fail';
+  message: string;
+}> = ({ status, message }) => {
+  const colors = {
+    pass: 'bg-green-100 text-green-800 border-green-200',
+    warning: 'bg-amber-100 text-amber-800 border-amber-200',
+    fail: 'bg-red-100 text-red-800 border-red-200',
+  };
+
+  const icons = {
+    pass: <CheckCircle className="w-3 h-3" />,
+    warning: <AlertTriangle className="w-3 h-3" />,
+    fail: <AlertTriangle className="w-3 h-3" />,
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border ${colors[status]}`}
+    >
+      {icons[status]}
+      {message}
+    </span>
+  );
+};
+
+/**
+ * Single image card with detailed information
+ */
+const ImageInfoCard: React.FC<{
+  image: ArticleImageData;
+  imageUrl: string;
+  isFeatured: boolean;
+  onRemove?: () => void;
+}> = ({ image, imageUrl, isFeatured, onRemove }) => {
+  const [isExpanded, setIsExpanded] = useState(true);
+
+  const specs = image.image_metadata?.image_technical_specs;
+  const resolutionCheck = checkResolution(specs?.width, specs?.height, isFeatured);
+  const fileSizeCheck = checkFileSize(specs?.file_size_bytes, isFeatured);
+  const formatCheck = checkFormat(specs?.format, isFeatured);
+
+  // Overall status
+  const hasIssues =
+    resolutionCheck.status === 'fail' ||
+    fileSizeCheck.status === 'fail' ||
+    formatCheck.status === 'fail';
+  const hasWarnings =
+    resolutionCheck.status === 'warning' ||
+    fileSizeCheck.status === 'warning' ||
+    formatCheck.status === 'warning';
+
+  return (
+    <div
+      className={`border rounded-lg overflow-hidden ${
+        hasIssues
+          ? 'border-red-300 bg-red-50'
+          : hasWarnings
+          ? 'border-amber-300 bg-amber-50'
+          : 'border-gray-200 bg-white'
+      }`}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
+        <div className="flex items-center gap-2">
+          <FileImage className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">
+            {isFeatured ? '特色圖片' : `圖片 #${image.position + 1}`}
+          </span>
+          {hasIssues && (
+            <span className="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded">需修正</span>
+          )}
+          {!hasIssues && hasWarnings && (
+            <span className="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded">建議優化</span>
+          )}
+          {!hasIssues && !hasWarnings && (
+            <span className="text-xs bg-green-500 text-white px-1.5 py-0.5 rounded">符合標準</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1 hover:bg-gray-200 rounded"
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+          {onRemove && (
+            <button
+              type="button"
+              onClick={onRemove}
+              className="p-1 text-red-600 hover:bg-red-100 rounded"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isExpanded && (
+        <div className="p-3 space-y-3">
+          {/* Image preview and metadata side by side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Image preview */}
+            <div className="space-y-2">
+              <img
+                src={imageUrl}
+                alt={image.alt_text || image.caption || '文章圖片'}
+                className="w-full h-40 object-cover rounded border border-gray-200"
+              />
+              {/* Resolution display */}
+              {specs?.width && specs?.height && (
+                <div className="text-center text-xs text-gray-600">
+                  {specs.width} × {specs.height} px
+                  {specs.aspect_ratio && ` (${specs.aspect_ratio})`}
+                </div>
+              )}
+            </div>
+
+            {/* Metadata */}
+            <div className="space-y-2 text-sm">
+              {/* Original URL */}
+              {image.source_url && (
+                <div className="flex items-start gap-2">
+                  <Link2 className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-500 mb-0.5">原始鏈接</div>
+                    <a
+                      href={image.source_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 break-all text-xs flex items-center gap-1"
+                    >
+                      {image.source_url.length > 50
+                        ? `${image.source_url.slice(0, 50)}...`
+                        : image.source_url}
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    </a>
+                  </div>
+                </div>
+              )}
+
+              {/* Caption (圖說) */}
+              <div className="flex items-start gap-2">
+                <Type className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500 mb-0.5">圖說 (Caption)</div>
+                  <div className={`text-xs ${image.caption ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                    {image.caption || '未設置'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Alt Text */}
+              <div className="flex items-start gap-2">
+                <Info className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500 mb-0.5">Alt Text (無障礙)</div>
+                  <div className={`text-xs ${image.alt_text ? 'text-gray-800' : 'text-gray-400 italic'}`}>
+                    {image.alt_text || '未設置'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Standards comparison */}
+          <div className="border-t pt-3">
+            <div className="text-xs font-medium text-gray-600 mb-2 flex items-center gap-1">
+              <Ruler className="w-3 h-3" />
+              大紀元標準對比
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              {/* Resolution */}
+              <div className="p-2 bg-white rounded border">
+                <div className="text-[10px] text-gray-500 mb-1">解析度</div>
+                <div className="text-xs font-mono">
+                  {specs?.width && specs?.height
+                    ? `${specs.width}×${specs.height}`
+                    : '未知'}
+                </div>
+                <StatusBadge status={resolutionCheck.status} message={resolutionCheck.message} />
+              </div>
+
+              {/* File size */}
+              <div className="p-2 bg-white rounded border">
+                <div className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">
+                  <HardDrive className="w-3 h-3" />
+                  文件大小
+                </div>
+                <div className="text-xs font-mono">{formatFileSize(specs?.file_size_bytes)}</div>
+                <StatusBadge status={fileSizeCheck.status} message={fileSizeCheck.message} />
+              </div>
+
+              {/* Format */}
+              <div className="p-2 bg-white rounded border">
+                <div className="text-[10px] text-gray-500 mb-1">格式</div>
+                <div className="text-xs font-mono">{specs?.format || '未知'}</div>
+                <StatusBadge status={formatCheck.status} message={formatCheck.message} />
+              </div>
+            </div>
+          </div>
+
+          {/* Issues summary if any */}
+          {(hasIssues || hasWarnings) && (
+            <div
+              className={`p-2 rounded text-xs ${
+                hasIssues ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+              }`}
+            >
+              <strong>分析結果：</strong>
+              <ul className="mt-1 ml-4 list-disc space-y-0.5">
+                {resolutionCheck.status !== 'pass' && <li>{resolutionCheck.message}</li>}
+                {fileSizeCheck.status !== 'pass' && <li>{fileSizeCheck.message}</li>}
+                {formatCheck.status !== 'pass' && <li>{formatCheck.message}</li>}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * ImageReviewSection Component
  */
 export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
   featuredImage,
   additionalImages,
+  articleImages = [],
   worklistItemId,
   onFeaturedImageChange,
   onAdditionalImagesChange,
@@ -40,19 +453,51 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
     onAdditionalImagesChange(newImages);
   };
 
+  // Get featured image data (position 0)
+  const featuredImageData = articleImages.find((img) => img.position === 0);
+
+  // Get additional images data (position > 0)
+  const additionalImagesData = articleImages
+    .filter((img) => img.position > 0)
+    .sort((a, b) => a.position - b.position);
+
+  // Count issues
+  const totalIssues = articleImages.reduce((count, img) => {
+    const specs = img.image_metadata?.image_technical_specs;
+    const isFeatured = img.position === 0;
+    if (checkResolution(specs?.width, specs?.height, isFeatured).status === 'fail') count++;
+    if (checkFileSize(specs?.file_size_bytes, isFeatured).status === 'fail') count++;
+    if (checkFormat(specs?.format, isFeatured).status === 'fail') count++;
+    return count;
+  }, 0);
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
         <ImageIcon className="w-5 h-5" />
-        图片审核
+        圖片審核
+        <span className="text-sm font-normal text-gray-500">
+          ({articleImages.length} 張圖片)
+        </span>
+        {totalIssues > 0 && (
+          <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">
+            {totalIssues} 個問題
+          </span>
+        )}
       </h3>
 
       {/* Featured Image */}
       <div className="space-y-2">
-        <label className="block text-sm font-medium text-gray-700">
-          特色图片
-        </label>
-        {featuredImage ? (
+        <label className="block text-sm font-medium text-gray-700">特色圖片</label>
+        {featuredImage && featuredImageData ? (
+          <ImageInfoCard
+            image={featuredImageData}
+            imageUrl={featuredImage}
+            isFeatured={true}
+            onRemove={() => onFeaturedImageChange('')}
+          />
+        ) : featuredImage ? (
+          // Legacy display if no article image data
           <div className="relative inline-block">
             <img
               src={featuredImage}
@@ -71,10 +516,10 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
           <div className="w-full max-w-md h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
             <div className="text-center">
               <ImageIcon className="w-12 h-12 mx-auto text-gray-400 mb-2" />
-              <p className="text-sm text-gray-500">暂无特色图片</p>
+              <p className="text-sm text-gray-500">暫無特色圖片</p>
               <Button variant="outline" size="sm" className="mt-2">
                 <Upload className="w-4 h-4 mr-2" />
-                上传图片
+                上傳圖片
               </Button>
             </div>
           </div>
@@ -84,9 +529,22 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
       {/* Additional Images */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          附加图片 ({additionalImages.length})
+          附加圖片 ({additionalImages.length})
         </label>
-        {additionalImages.length > 0 ? (
+        {additionalImagesData.length > 0 ? (
+          <div className="space-y-3">
+            {additionalImagesData.map((imgData, index) => (
+              <ImageInfoCard
+                key={imgData.id}
+                image={imgData}
+                imageUrl={additionalImages[index] || imgData.source_url || ''}
+                isFeatured={false}
+                onRemove={() => handleRemoveAdditionalImage(index)}
+              />
+            ))}
+          </div>
+        ) : additionalImages.length > 0 ? (
+          // Legacy grid display
           <div className="grid grid-cols-3 gap-2">
             {additionalImages.map((url, index) => (
               <div key={index} className="relative">
@@ -106,21 +564,23 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">暂无附加图片</p>
+          <p className="text-sm text-gray-500">暫無附加圖片</p>
         )}
         <Button variant="outline" size="sm">
           <Upload className="w-4 h-4 mr-2" />
-          添加图片
+          添加圖片
         </Button>
       </div>
 
       {/* Image guidelines */}
       <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-        <strong>图片建议：</strong>
+        <strong>大紀元圖片標準：</strong>
         <ul className="mt-1 ml-4 list-disc space-y-1">
-          <li>特色图片建议尺寸：1200×630 像素</li>
+          <li>特色圖片建議尺寸：1200×630 像素 (最低)</li>
+          <li>內文圖片建議尺寸：800×400 像素 (最低)</li>
           <li>支持格式：JPG, PNG, WebP</li>
-          <li>文件大小：建议 &lt; 500KB</li>
+          <li>特色圖片大小：≤ 500KB，內文圖片：≤ 300KB</li>
+          <li>每張圖片需設置圖說 (Caption) 和 Alt Text</li>
         </ul>
       </div>
     </div>
