@@ -1,36 +1,54 @@
 /**
- * PublishPreviewPanel - Final preview before publishing
+ * PublishPreviewPanel - Unified publish preview with content-first layout
  *
- * Phase 11: Simplified Publish Preview
- * - Left: Final content preview (read-only summary)
- * - Right: Publish settings (actions only)
- *
- * Content-related settings (categories, tags, excerpt) are now in ParsingReviewPanel.
- * This panel focuses on:
- * - Final content preview
- * - Publish status/date
- * - Visibility settings
- * - Confirmation dialog
+ * Phase 11.5: Enhanced Publish Preview
+ * - Content-first layout (60% content, 40% metadata)
+ * - Publish readiness checklist
+ * - Full article preview with proper HTML rendering
+ * - Comprehensive metadata summary
+ * - Compact publish settings
  *
  * Layout:
- * ┌───────────────────────┬──────────────────────────┐
- * │ Final Content Preview │ Publish Settings (60%)   │
- * │ (40%)                 │ • Status (publish/draft) │
- * │ • Title               │ • Scheduled time         │
- * │ • Content excerpt     │ • Visibility             │
- * │ • Categories (r/o)    │                          │
- * │ • Tags (r/o)          │ [Confirm Publish] btn    │
- * │ • SEO metadata        │                          │
- * └───────────────────────┴──────────────────────────┘
+ * ┌─────────────────────────────────────────────────────────────────────────────┐
+ * │ 发布预览                                                   [状态: 准备就绪] │
+ * ├─────────────────────────────────────────────────────────────────────────────┤
+ * │ ✓ 标题  ✓ 正文  ✓ SEO  ✓ 分类  ○ 图片  │  4/5 完成   [准备就绪]            │
+ * ├────────────────────────────────────────────┬────────────────────────────────┤
+ * │ 📰 文章预览 (60%)                          │ 📊 元数据概览 (40%)             │
+ * │ ────────────────────────────────────────   │ ──────────────────────────      │
+ * │ [前缀] 主标题 [后缀]                       │ SEO 优化                        │
+ * │ 作者: xxx | 2,345 字                       │ • 标题: xxx                     │
+ * │ ────────────────────────────────────────   │ • 描述: xxx                     │
+ * │                                            │ • 关键词: tag1, tag2            │
+ * │ [完整正文内容，可滚动]                     │ ──────────────────────────      │
+ * │                                            │ 分类与标签                      │
+ * │                                            │ • 主分类: xxx                   │
+ * │                                            │ • 副分类: xxx                   │
+ * │                                            │ • 标签: xxx                     │
+ * │                                            │ ──────────────────────────      │
+ * │                                            │ 文章统计                        │
+ * │                                            │ • 字数: 2,345                   │
+ * │                                            │ • 阅读时间: ~5分钟              │
+ * │                                            │ ──────────────────────────      │
+ * │                                            │ 校对摘要                        │
+ * │                                            │ • 新增: 5 修改: 7 删除: 2       │
+ * ├────────────────────────────────────────────┴────────────────────────────────┤
+ * │ 发布设置: [○ 立即发布] [○ 定时发布] [○ 保存草稿]   可见性: [公开 ▼]         │
+ * ├─────────────────────────────────────────────────────────────────────────────┤
+ * │                                                    [重置设置]  [确认发布 →] │
+ * └─────────────────────────────────────────────────────────────────────────────┘
  */
 
 import React, { useState, useMemo } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
 import { FinalContentPreview } from './FinalContentPreview';
+import { MetadataSummaryPanel } from './MetadataSummaryPanel';
+import { PublishReadinessChecklist, createChecklistItems } from './PublishReadinessChecklist';
 import { PublishSettingsSectionSimplified } from './PublishSettingsSectionSimplified';
 import { PublishConfirmation } from './PublishConfirmation';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
+import { Settings, Send, RotateCcw } from 'lucide-react';
 
 export interface PublishPreviewPanelProps {
   /** Article review data */
@@ -59,34 +77,44 @@ export interface PublishSettings {
 
 /**
  * PublishPreviewPanel Component
+ *
+ * Provides a unified, content-first layout for final publish preview.
  */
 export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   data,
   onPublish,
   isPublishing = false,
 }) => {
-  // Local state for publish settings (simplified - actions only)
+  // Local state for publish settings
   const [publishStatus, setPublishStatus] = useState<'draft' | 'publish' | 'schedule'>('publish');
   const [visibility, setVisibility] = useState<'public' | 'private' | 'password'>('public');
   const [password, setPassword] = useState('');
-  const [publishDate, setPublishDate] = useState<string>(''); // Empty = immediate
-
-  // Show confirmation dialog
+  const [publishDate, setPublishDate] = useState<string>('');
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  // Read categories/tags from data (set in ParsingReviewPanel, read-only here)
+  // Read categories/tags from data (set in ParsingReviewPanel)
   const primaryCategory = data.primary_category || null;
   const secondaryCategories = data.secondary_categories || [];
   const tags = data.tags || [];
   const featuredImage = (data.metadata?.featured_image_path as string) || '';
   const excerpt = (data.metadata?.excerpt as string) || '';
 
-  // Validation: Check if all required fields are present
-  const hasValidContent = Boolean(
-    data.articleReview?.content?.original ||
-    data.articleReview?.content?.suggested ||
-    data.metadata?.proofread_content
-  );
+  // Get content
+  const content = useMemo(() => {
+    return (
+      (data.metadata?.proofread_content as string) ||
+      data.articleReview?.content?.suggested ||
+      data.articleReview?.content?.original ||
+      ''
+    );
+  }, [data.metadata?.proofread_content, data.articleReview?.content]);
+
+  // Validation
+  const hasValidContent = Boolean(content);
+  const hasSeoKeywords = (data.seo_keywords?.length ?? 0) > 0;
+  const hasSeoDescription = Boolean(data.meta_description);
+
   const isReadyToPublish = useMemo(() => {
     if (!data.title || !hasValidContent) return false;
     if (publishStatus === 'schedule' && !publishDate) return false;
@@ -94,6 +122,41 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
     return true;
   }, [data.title, hasValidContent, publishStatus, publishDate, visibility, password]);
 
+  // Checklist items
+  const checklistItems = useMemo(() => {
+    return createChecklistItems({
+      hasTitle: Boolean(data.title),
+      hasContent: hasValidContent,
+      hasSeoKeywords,
+      hasSeoDescription,
+      hasCategory: Boolean(primaryCategory),
+      hasTags: tags.length > 0,
+      hasFeaturedImage: Boolean(featuredImage),
+    });
+  }, [data.title, hasValidContent, hasSeoKeywords, hasSeoDescription, primaryCategory, tags, featuredImage]);
+
+  // Calculate proofreading stats from worklist proofreading_stats
+  const proofreadingStats = useMemo(() => {
+    const stats = data.proofreading_stats;
+    if (stats && stats.total_issues > 0) {
+      return {
+        totalChanges: stats.total_issues,
+        additions: stats.accepted_count || 0,
+        deletions: stats.rejected_count || 0,
+        modifications: stats.modified_count || 0,
+      };
+    }
+    return undefined;
+  }, [data.proofreading_stats]);
+
+  // Calculate character count
+  const charCount = content.length;
+  const wordCount = useMemo(() => {
+    const doc = new DOMParser().parseFromString(content, 'text/html');
+    return (doc.body.textContent || '').length;
+  }, [content]);
+
+  // Handlers
   const handlePublishClick = () => {
     if (!isReadyToPublish) {
       alert('请完成所有必填项');
@@ -108,7 +171,6 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       visibility,
       password: visibility === 'password' ? password : undefined,
       publish_date: publishStatus === 'schedule' ? publishDate : undefined,
-      // Read from data (set in ParsingReviewPanel)
       primary_category: primaryCategory || undefined,
       secondary_categories: secondaryCategories.length > 0 ? secondaryCategories : undefined,
       tags,
@@ -124,14 +186,20 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
     setShowConfirmation(false);
   };
 
-  // Content data for preview (read-only)
+  const handleReset = () => {
+    setPublishStatus('publish');
+    setVisibility('public');
+    setPassword('');
+    setPublishDate('');
+  };
+
+  // Content data for preview
   const contentData = {
     title: data.title || '',
-    content: (data.metadata?.proofread_content as string)
-      || data.articleReview?.content?.suggested
-      || data.articleReview?.content?.original
-      || '',
-    author: data.author || '',
+    titlePrefix: data.title_prefix || null,
+    titleSuffix: data.title_suffix || null,
+    content,
+    author: data.author || data.author_name || '',
     featuredImage,
     seoMetadata: {
       metaDescription: data.meta_description || '',
@@ -142,38 +210,92 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
     tags,
   };
 
+  // Metadata for summary panel
+  const metadataData = {
+    seo: {
+      title: data.title || undefined,
+      description: data.meta_description || undefined,
+      keywords: data.seo_keywords || [],
+      score: data.articleReview?.seo?.score ?? undefined,
+    },
+    categories: {
+      primary: primaryCategory,
+      secondary: secondaryCategories,
+    },
+    tags,
+    stats: {
+      wordCount,
+      charCount,
+    },
+    proofreading: proofreadingStats,
+    featuredImage,
+  };
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+      <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold text-gray-900">发布预览</h3>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-gray-600">
               状态: <strong className="text-blue-600">{data.status}</strong>
             </span>
-            {isReadyToPublish ? (
-              <span className="text-green-600 font-medium">✓ 准备就绪</span>
-            ) : (
-              <span className="text-amber-600 font-medium">⚠️ 需要完善</span>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Main content: 40% + 60% grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-6 overflow-auto">
-        {/* Left column: 40% (2 out of 5 cols) */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="p-6">
-            <FinalContentPreview data={contentData} />
-          </Card>
+      {/* Readiness Checklist */}
+      <div className="mb-4">
+        <PublishReadinessChecklist items={checklistItems} isReady={isReadyToPublish} />
+      </div>
+
+      {/* Main content: 60% + 40% grid */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 overflow-hidden min-h-0">
+        {/* Left column: 60% (3 out of 5 cols) - Article Preview */}
+        <div className="lg:col-span-3 overflow-hidden">
+          <FinalContentPreview data={contentData} maxContentHeight="calc(100vh - 400px)" />
         </div>
 
-        {/* Right column: 60% (3 out of 5 cols) */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Publish settings (simplified - actions only) */}
-          <Card className="p-6">
+        {/* Right column: 40% (2 out of 5 cols) - Metadata Summary */}
+        <div className="lg:col-span-2 overflow-y-auto">
+          <MetadataSummaryPanel
+            seo={metadataData.seo}
+            categories={metadataData.categories}
+            tags={metadataData.tags}
+            stats={metadataData.stats}
+            proofreading={metadataData.proofreading}
+            featuredImage={metadataData.featuredImage}
+          />
+        </div>
+      </div>
+
+      {/* Publish Settings (Collapsible) */}
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setShowSettings(!showSettings)}
+          className="w-full flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+        >
+          <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+            <Settings className="w-4 h-4" />
+            发布设置
+            {publishStatus !== 'publish' && (
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                {publishStatus === 'schedule' ? '定时发布' : '草稿'}
+              </span>
+            )}
+            {visibility !== 'public' && (
+              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                {visibility === 'private' ? '私密' : '密码保护'}
+              </span>
+            )}
+          </span>
+          <span className="text-gray-400">{showSettings ? '▲' : '▼'}</span>
+        </button>
+
+        {showSettings && (
+          <Card className="mt-2 p-4">
             <PublishSettingsSectionSimplified
               publishStatus={publishStatus}
               visibility={visibility}
@@ -185,74 +307,42 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
               onPublishDateChange={setPublishDate}
             />
           </Card>
-
-          {/* Read-only summary of content settings (set in ParsingReviewPanel) */}
-          <Card className="p-6 bg-slate-50">
-            <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              内容设置摘要 (在解析审核中设置)
-            </h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex items-start gap-2">
-                <span className="text-slate-500 w-20 shrink-0">主分类:</span>
-                <span className="text-slate-900 font-medium">
-                  {primaryCategory || <span className="text-amber-600">未设置</span>}
-                </span>
-              </div>
-              {secondaryCategories.length > 0 && (
-                <div className="flex items-start gap-2">
-                  <span className="text-slate-500 w-20 shrink-0">副分类:</span>
-                  <span className="text-slate-900">{secondaryCategories.join(', ')}</span>
-                </div>
-              )}
-              <div className="flex items-start gap-2">
-                <span className="text-slate-500 w-20 shrink-0">标签:</span>
-                <span className="text-slate-900">
-                  {tags.length > 0 ? tags.join(', ') : <span className="text-slate-400">无</span>}
-                </span>
-              </div>
-              {excerpt && (
-                <div className="flex items-start gap-2">
-                  <span className="text-slate-500 w-20 shrink-0">摘要:</span>
-                  <span className="text-slate-700 line-clamp-2">{excerpt}</span>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
+        )}
       </div>
 
       {/* Action buttons */}
-      <div className="mt-6 flex items-center justify-between pt-4 border-t">
+      <div className="mt-4 flex items-center justify-between pt-4 border-t">
         <div className="text-sm text-gray-600">
           {!isReadyToPublish && (
-            <span className="text-amber-600">
-              ⚠️ 请完成所有必填项才能发布
+            <span className="text-amber-600 flex items-center gap-1">
+              <span>⚠️</span>
+              请完成所有必填项才能发布
             </span>
           )}
         </div>
         <div className="flex gap-3">
           <Button
             variant="outline"
-            onClick={() => {
-              // Reset to defaults
-              setPublishStatus('publish');
-              setVisibility('public');
-              setPassword('');
-              setPublishDate('');
-            }}
+            onClick={handleReset}
             disabled={isPublishing}
+            className="flex items-center gap-2"
           >
+            <RotateCcw className="w-4 h-4" />
             重置设置
           </Button>
           <Button
             onClick={handlePublishClick}
             disabled={!isReadyToPublish || isPublishing}
-            className="min-w-32"
+            className="min-w-32 flex items-center gap-2"
           >
-            {isPublishing ? '发布中...' : publishStatus === 'schedule' ? '定时发布' : '立即发布'}
+            <Send className="w-4 h-4" />
+            {isPublishing
+              ? '发布中...'
+              : publishStatus === 'schedule'
+              ? '定时发布'
+              : publishStatus === 'draft'
+              ? '保存草稿'
+              : '立即发布'}
           </Button>
         </div>
       </div>
@@ -265,7 +355,6 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             visibility,
             password: visibility === 'password' ? password : undefined,
             publish_date: publishStatus === 'schedule' ? publishDate : undefined,
-            // Phase 11: Use primary + secondary categories
             primary_category: primaryCategory || undefined,
             secondary_categories: secondaryCategories.length > 0 ? secondaryCategories : undefined,
             tags,

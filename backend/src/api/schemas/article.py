@@ -188,6 +188,39 @@ class ProofreadingDecisionDetail(BaseSchema):
     decided_at: datetime
 
 
+class ArticleMetadataUpdate(BaseSchema):
+    """Schema for PATCH /articles/{id} to update article fields.
+
+    Supports partial updates for:
+    - title: Article title
+    - author: Author name
+    - metadata: Partial metadata (merged with existing, e.g., faq_suggestions)
+    - meta_description: SEO meta description
+    - seo_keywords: SEO keywords list
+    """
+
+    title: str | None = Field(
+        default=None,
+        description="Article title"
+    )
+    author: str | None = Field(
+        default=None,
+        description="Author name"
+    )
+    metadata: dict[str, Any] | None = Field(
+        default=None,
+        description="Partial metadata update (merged with existing)"
+    )
+    meta_description: str | None = Field(
+        default=None,
+        description="SEO meta description"
+    )
+    seo_keywords: list[str] | None = Field(
+        default=None,
+        description="SEO keywords list"
+    )
+
+
 class ArticleReviewResponse(BaseSchema):
     """Complete article review data for ProofreadingReviewPage."""
 

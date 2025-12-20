@@ -96,6 +96,9 @@ export interface WorklistItemDetail extends WorklistItem {
   drive_metadata: Record<string, unknown>;
   proofreading_issues?: ProofreadingIssue[];
   proofreading_stats?: ProofreadingStats;
+
+  /** Article metadata including FAQ suggestions for state persistence */
+  article_metadata?: Record<string, unknown>;
 }
 
 /**
@@ -186,6 +189,18 @@ export interface ProofreadingPosition {
   section?: string;
 }
 
+/**
+ * Warning labels for G-class contextual validation rules.
+ * These flags indicate issues requiring manual verification.
+ */
+export type WarningLabel =
+  | 'manual_verify' // 需手動驗證
+  | 'ai_hallucination' // 可能為AI幻覺
+  | 'geographic_anomaly' // 地理邏輯異常
+  | 'symbol_format' // 符號格式異常
+  | 'sentence_incomplete' // 語句不完整
+  | 'structure_suggestion'; // 結構優化建議
+
 export interface ProofreadingIssue {
   id: string;
   rule_id: string;
@@ -201,6 +216,11 @@ export interface ProofreadingIssue {
   decision_status: DecisionStatus;
   decision_id?: number;
   tags?: string[];
+  /**
+   * Warning label for G-class contextual validation issues
+   * Indicates issues that need manual verification
+   */
+  warning_label?: WarningLabel;
 }
 
 export interface ProofreadingStats {

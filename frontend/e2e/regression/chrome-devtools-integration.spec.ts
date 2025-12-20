@@ -9,7 +9,7 @@
  * - Element inspection
  */
 
-import { test as base, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 import {
   getTestConfig,
   navigateWithRetry,

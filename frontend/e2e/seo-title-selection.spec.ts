@@ -118,7 +118,7 @@ test.describe('SEO Title Selection Feature', () => {
     await expect(textArea).toBeVisible({ timeout: 5000 });
 
     // Verify character counter appears
-    await expect(page.locator('text=/字符數|字元/).first()).toBeVisible();
+    await expect(page.locator('text=/字符數|字元/').first()).toBeVisible();
   });
 
   test('should validate custom SEO Title character count', async ({ page }) => {
@@ -140,7 +140,7 @@ test.describe('SEO Title Selection Feature', () => {
     await textArea.fill(longTitle);
 
     // Warning should appear for titles > 50 chars
-    const warning = page.locator('text=/警告|建議|超過/).first();
+    const warning = page.locator('text=/警告|建議|超過/').first();
     await expect(warning).toBeVisible({ timeout: 3000 });
   });
 
@@ -419,7 +419,7 @@ test.describe('SEO Title Selection - Edge Cases', () => {
     await textArea.fill(veryLongTitle);
 
     // Should show warning about length
-    const warningMsg = page.locator('text=/太長|超過|長度/).first();
+    const warningMsg = page.locator('text=/太長|超過|長度/').first();
     await expect(warningMsg).toBeVisible({ timeout: 3000 });
   });
 });

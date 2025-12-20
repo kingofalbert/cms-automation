@@ -16,6 +16,7 @@ from sqlalchemy.orm import attributes, selectinload
 from src.api.schemas import ProofreadingResponse
 from src.api.schemas.article import (
     ArticleListResponse,
+    ArticleMetadataUpdate,
     ArticleResponse,
     ArticleReviewResponse,
     ContentComparison,
@@ -68,6 +69,79 @@ async def get_article(
 ) -> Article:
     """Get a specific article."""
     article = await _fetch_article(session, article_id)
+    return article
+
+
+@router.patch("/{article_id}", response_model=ArticleResponse)
+async def patch_article(
+    article_id: int,
+    update: ArticleMetadataUpdate,
+    session: AsyncSession = Depends(get_session),
+) -> Article:
+    """Partially update an article's fields.
+
+    FAQ State Persistence (Bug Fix):
+    This endpoint supports saving FAQ suggestions during workflow navigation,
+    preventing data loss when users backtrack from Publish Preview to Parsing stage.
+
+    Supports updating:
+    - title: Article title
+    - author: Author name (stored in author_name)
+    - metadata: Merged with existing article_metadata (not replaced)
+    - meta_description: SEO meta description
+    - seo_keywords: SEO keywords list
+    """
+    article = await _fetch_article(session, article_id)
+    updated_fields = []
+
+    # Update title if provided
+    if update.title is not None:
+        article.title = update.title
+        updated_fields.append("title")
+
+    # Update author_name if provided
+    if update.author is not None:
+        article.author_name = update.author
+        updated_fields.append("author_name")
+
+    # Update meta_description if provided
+    if update.meta_description is not None:
+        article.meta_description = update.meta_description
+        updated_fields.append("meta_description")
+
+    # Update seo_keywords if provided
+    if update.seo_keywords is not None:
+        article.seo_keywords = update.seo_keywords
+        updated_fields.append("seo_keywords")
+
+    # Merge new metadata into existing (preserves other metadata fields)
+    if update.metadata:
+        existing_metadata = article.article_metadata or {}
+        for key, value in update.metadata.items():
+            existing_metadata[key] = value
+        article.article_metadata = existing_metadata
+
+        # Mark JSON field as modified so SQLAlchemy knows to update it
+        attributes.flag_modified(article, "article_metadata")
+        updated_fields.append("metadata")
+
+    if updated_fields:
+        logger.info(
+            "article_patched",
+            article_id=article_id,
+            updated_fields=updated_fields,
+        )
+
+    await session.commit()
+
+    # Reload article with images relationship for response
+    result = await session.execute(
+        select(Article)
+        .where(Article.id == article_id)
+        .options(selectinload(Article.article_images))
+    )
+    article = result.scalar_one()
+
     return article
 
 

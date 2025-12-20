@@ -86,3 +86,10 @@ export type { CategorySelectionCardProps, AICategoryRecommendation } from './Cat
 // Phase 11: Excerpt Review (moved from PublishPreviewPanel)
 export { ExcerptReviewSection } from './ExcerptReviewSection';
 export type { ExcerptReviewSectionProps } from './ExcerptReviewSection';
+
+// Phase 11.5: Enhanced Publish Preview
+export { PublishReadinessChecklist, createChecklistItems } from './PublishReadinessChecklist';
+export type { PublishReadinessChecklistProps, ChecklistItem } from './PublishReadinessChecklist';
+
+export { MetadataSummaryPanel } from './MetadataSummaryPanel';
+export type { MetadataSummaryPanelProps } from './MetadataSummaryPanel';

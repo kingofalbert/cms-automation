@@ -18,7 +18,7 @@
  * - Cleaner visual hierarchy, more content space
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Modal, ModalFooter } from '../ui/Modal';
 import { Button } from '../ui';
 import { ReviewProgressStepper } from './ReviewProgressStepper';
@@ -117,27 +117,143 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
     }
   }, [data?.status, initialTab]);
 
-  // Navigation handlers for stepper and buttons
-  const goToPreviousStep = useCallback(() => {
-    if (activeStep > 0) {
-      setActiveStep(activeStep - 1);
-    }
-  }, [activeStep]);
-
-  const goToNextStep = useCallback(() => {
-    if (activeStep < 2) {
-      setActiveStep(activeStep + 1);
-    }
-  }, [activeStep]);
-
-  const handleStepClick = useCallback((stepId: number) => {
-    setActiveStep(stepId);
-  }, []);
-
   // Track save state
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+
+  // ============================================================
+  // LIFTED STATE: Proofreading Decisions
+  // Fix for state persistence issue - decisions are now managed here
+  // instead of in ProofreadingReviewPanel to survive step navigation
+  // See: docs/STATE_PERSISTENCE_FIX.md
+  // ============================================================
+  const [proofreadingDecisions, setProofreadingDecisions] =
+    useState<Map<string, DecisionPayload>>(new Map());
+
+  // ============================================================
+  // LIFTED STATE: FAQ Data (BUGFIX: FAQ Data Loss on Backtrack)
+  // Fix for FAQ data loss when backtracking from Publish Preview to Parsing
+  // FAQs are now managed here to survive step navigation
+  // Pattern follows proofreading decisions persistence
+  // ============================================================
+  interface FAQItem {
+    question: string;
+    answer: string;
+  }
+  const [parsingFaqs, setParsingFaqs] = useState<FAQItem[]>([]);
+
+  // Restore decisions from backend data when available
+  const existingDecisions = useMemo(() => {
+    return data?.articleReview?.existing_decisions || [];
+  }, [data?.articleReview?.existing_decisions]);
+
+  // Initialize decisions from existing backend data (one-time restore)
+  useEffect(() => {
+    if (existingDecisions.length > 0 && proofreadingDecisions.size === 0) {
+      const restored = new Map<string, DecisionPayload>();
+      existingDecisions.forEach((d) => {
+        restored.set(d.issue_id, {
+          issue_id: d.issue_id,
+          decision_type: d.decision_type as 'accepted' | 'rejected' | 'modified',
+          modified_content: d.modified_content || undefined,
+          feedback_provided: false,
+        });
+      });
+      setProofreadingDecisions(restored);
+    }
+  }, [existingDecisions, proofreadingDecisions.size]);
+
+  // Initialize FAQ data from backend (one-time restore)
+  // This ensures FAQs survive step navigation (backtracking)
+  // Note: article_metadata is from the linked article, not worklist metadata
+  const existingFaqs = useMemo(() => {
+    return (data?.article_metadata?.faq_suggestions as FAQItem[]) || [];
+  }, [data?.article_metadata?.faq_suggestions]);
+
+  useEffect(() => {
+    // Only initialize if we have backend FAQs and local state is empty
+    if (existingFaqs.length > 0 && parsingFaqs.length === 0) {
+      console.log('📥 恢復 FAQ 數據:', existingFaqs.length, '條');
+      setParsingFaqs(existingFaqs);
+    }
+  }, [existingFaqs, parsingFaqs.length]);
+
+  // ============================================================
+  // AUTO-SAVE: Save current step's data before navigation
+  // This ensures decisions are persisted when switching steps
+  // BUGFIX: Now also handles step 0 (parsing/FAQ data)
+  // ============================================================
+  const saveCurrentStepData = useCallback(async (fromStep: number): Promise<boolean> => {
+    try {
+      // Save parsing data (including FAQs) when leaving step 0
+      if (fromStep === 0 && parsingFaqs.length > 0) {
+        setIsSaving(true);
+        console.log('💾 自動保存解析數據 (FAQs):', parsingFaqs.length, '條');
+        await api.patch(`/v1/articles/${articleId}`, {
+          metadata: {
+            faq_suggestions: parsingFaqs,
+          },
+        });
+        console.log('✅ FAQ 數據已自動保存');
+        // Don't refetch here to avoid data race during navigation
+      }
+
+      // Save proofreading decisions when leaving step 1
+      if (fromStep === 1 && proofreadingDecisions.size > 0) {
+        setIsSubmitting(true);
+        const decisionList = Array.from(proofreadingDecisions.values());
+        await worklistAPI.saveReviewDecisions(worklistItemId, {
+          decisions: decisionList.map(d => ({
+            issue_id: d.issue_id,
+            decision_type: d.decision_type,
+            modified_content: d.modified_content,
+            decision_rationale: d.decision_rationale,
+            feedback_provided: d.feedback_provided,
+            feedback_category: d.feedback_category,
+            feedback_notes: d.feedback_notes,
+          })),
+        });
+        console.log('✅ 校對決定已自動保存');
+        // Refetch to sync with backend
+        refetch();
+      }
+      return true;
+    } catch (err) {
+      console.error('❌ 自動保存失敗:', err);
+      // Don't block navigation on save failure, but show warning
+      console.warn('數據將在下次保存時同步');
+      return true; // Allow navigation even on error
+    } finally {
+      setIsSaving(false);
+      setIsSubmitting(false);
+    }
+  }, [proofreadingDecisions, parsingFaqs, worklistItemId, articleId, refetch]);
+
+  // Navigation handlers for stepper and buttons
+  const goToPreviousStep = useCallback(async () => {
+    if (activeStep > 0) {
+      // Auto-save current step before navigating
+      await saveCurrentStepData(activeStep);
+      setActiveStep(activeStep - 1);
+    }
+  }, [activeStep, saveCurrentStepData]);
+
+  const goToNextStep = useCallback(async () => {
+    if (activeStep < 2) {
+      // Auto-save current step before navigating
+      await saveCurrentStepData(activeStep);
+      setActiveStep(activeStep + 1);
+    }
+  }, [activeStep, saveCurrentStepData]);
+
+  const handleStepClick = useCallback(async (stepId: number) => {
+    if (stepId !== activeStep) {
+      // Auto-save current step before navigating
+      await saveCurrentStepData(activeStep);
+      setActiveStep(stepId);
+    }
+  }, [activeStep, saveCurrentStepData]);
 
   // Handle save parsing data
   const handleSaveParsingData = useCallback(async (parsingData: ParsingData) => {
@@ -382,6 +498,9 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
               data={data}
               onSave={handleSaveParsingData}
               isSaving={isSaving}
+              // BUGFIX: Lifted FAQ state for persistence during backtracking
+              faqs={parsingFaqs}
+              onFaqsChange={setParsingFaqs}
             />
           )}
 
@@ -389,8 +508,11 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
           {activeStep === 1 && (
             <ProofreadingReviewPanel
               data={data}
+              decisions={proofreadingDecisions}
+              onDecisionsChange={setProofreadingDecisions}
               onSubmitDecisions={handleSubmitProofreadingDecisions}
               isSubmitting={isSubmitting}
+              onAllDecisionsComplete={goToNextStep}
             />
           )}
 

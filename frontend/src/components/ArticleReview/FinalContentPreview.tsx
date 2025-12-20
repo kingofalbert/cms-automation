@@ -1,21 +1,36 @@
 /**
- * FinalContentPreview - Final content preview before publish
+ * FinalContentPreview - Magazine-style article preview before publish
  *
- * Phase 8.4: Publish Preview Panel
- * - Shows final article as it will appear
- * - Title, author, content, images
- * - SEO metadata preview
- * - Categories and tags
+ * Phase 11.5: Enhanced Publish Preview
+ * - Full article preview with proper HTML rendering
+ * - Title with prefix/suffix support
+ * - Author information
+ * - Complete content (not truncated)
+ * - Clean, magazine-style layout
+ *
+ * Layout:
+ * ┌─────────────────────────────────────────────┐
+ * │ [前缀] 主标题 [后缀]                        │
+ * │ 作者: xxx                                   │
+ * │ ─────────────────────────────────────────── │
+ * │                                             │
+ * │ [完整正文内容，支持滚动]                    │
+ * │                                             │
+ * │                                             │
+ * │                                             │
+ * └─────────────────────────────────────────────┘
  */
 
-import React from 'react';
-import { FileText, User, Hash, Tag as TagIcon, Image as ImageIcon } from 'lucide-react';
-import { Badge } from '../ui';
+import React, { useMemo } from 'react';
+import DOMPurify from 'dompurify';
+import { FileText, User, Newspaper } from 'lucide-react';
 
 export interface FinalContentPreviewProps {
   /** Content data to preview */
   data: {
     title: string;
+    titlePrefix?: string | null;
+    titleSuffix?: string | null;
     content: string;
     author: string;
     featuredImage?: string;
@@ -29,139 +44,166 @@ export interface FinalContentPreviewProps {
     secondaryCategories?: string[];
     tags: string[];
   };
+  /** Maximum height for content area (default: 600px) */
+  maxContentHeight?: string;
 }
 
 /**
  * FinalContentPreview Component
+ *
+ * Displays the final article in a clean, magazine-style layout.
+ * Content is rendered with proper HTML formatting using DOMPurify for security.
  */
-export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({ data }) => {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <FileText className="w-5 h-5 text-gray-600" />
-        <h3 className="text-lg font-semibold text-gray-900">内容预览</h3>
-      </div>
+export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
+  data,
+  maxContentHeight = '600px',
+}) => {
+  // Sanitize HTML content for safe rendering
+  const sanitizedContent = useMemo(() => {
+    return DOMPurify.sanitize(data.content, {
+      ALLOWED_TAGS: [
+        'p',
+        'br',
+        'b',
+        'strong',
+        'i',
+        'em',
+        'u',
+        'span',
+        'div',
+        'h1',
+        'h2',
+        'h3',
+        'h4',
+        'h5',
+        'h6',
+        'ul',
+        'ol',
+        'li',
+        'a',
+        'blockquote',
+        'pre',
+        'code',
+        'img',
+        'figure',
+        'figcaption',
+        'table',
+        'thead',
+        'tbody',
+        'tr',
+        'th',
+        'td',
+        'hr',
+        'sub',
+        'sup',
+        'mark',
+        'small',
+        'del',
+        'ins',
+      ],
+      ALLOWED_ATTR: [
+        'href',
+        'src',
+        'alt',
+        'title',
+        'class',
+        'style',
+        'target',
+        'rel',
+        'id',
+        'width',
+        'height',
+      ],
+    });
+  }, [data.content]);
 
-      {/* Title */}
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-          {data.title || '(无标题)'}
-        </h1>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <User className="w-4 h-4" />
-          <span>{data.author || '(无作者)'}</span>
+  // Build display title with prefix/suffix
+  const displayTitle = useMemo(() => {
+    const parts: string[] = [];
+    if (data.titlePrefix) parts.push(data.titlePrefix);
+    parts.push(data.title || '(无标题)');
+    if (data.titleSuffix) parts.push(data.titleSuffix);
+    return parts.join(' ');
+  }, [data.title, data.titlePrefix, data.titleSuffix]);
+
+  // Calculate word count
+  const wordCount = useMemo(() => {
+    const doc = new DOMParser().parseFromString(data.content, 'text/html');
+    const text = doc.body.textContent || '';
+    return text.length;
+  }, [data.content]);
+
+  return (
+    <div className="h-full flex flex-col bg-white rounded-lg border border-gray-200 overflow-hidden">
+      {/* Header */}
+      <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+          <Newspaper className="w-4 h-4" />
+          <span>文章预览</span>
+        </div>
+        {/* Title */}
+        <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">{displayTitle}</h1>
+        {/* Author line */}
+        <div className="flex items-center gap-4 text-sm text-gray-600">
+          <span className="flex items-center gap-1.5">
+            <User className="w-4 h-4" />
+            {data.author || '(无作者)'}
+          </span>
+          <span className="text-gray-400">|</span>
+          <span className="flex items-center gap-1.5">
+            <FileText className="w-4 h-4" />
+            {wordCount.toLocaleString('zh-CN')} 字
+          </span>
         </div>
       </div>
 
-      {/* Featured Image */}
+      {/* Featured Image (if exists) */}
       {data.featuredImage && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <ImageIcon className="w-4 h-4" />
-            <span className="font-medium">特色图片</span>
-          </div>
-          <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <div className="relative aspect-[16/9] max-h-48 bg-gray-100 rounded-lg overflow-hidden">
             <img
               src={data.featuredImage}
               alt="特色图片"
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f3f4f6" width="400" height="300"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="%236b7280" font-family="sans-serif" font-size="16"%3E图片加载失败%3C/text%3E%3C/svg%3E';
+                (e.target as HTMLImageElement).parentElement!.style.display = 'none';
               }}
             />
           </div>
         </div>
       )}
 
-      {/* Content Preview (truncated) */}
-      <div className="space-y-2">
-        <div className="text-sm font-medium text-gray-700">正文内容</div>
-        <div className="p-3 bg-gray-50 border border-gray-200 rounded max-h-64 overflow-auto">
-          <div
-            className="prose prose-sm max-w-none text-gray-800"
-            dangerouslySetInnerHTML={{
-              __html: data.content.substring(0, 800) + (data.content.length > 800 ? '...' : ''),
-            }}
-          />
-        </div>
-        <div className="text-xs text-gray-500">
-          共 {data.content.length} 字符
-        </div>
+      {/* Content Area - Full Article */}
+      <div
+        className="flex-1 px-6 py-4 overflow-y-auto"
+        style={{ maxHeight: maxContentHeight }}
+      >
+        <article
+          className="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed
+            prose-headings:text-gray-900 prose-headings:font-semibold prose-headings:mt-6 prose-headings:mb-3
+            prose-h1:text-2xl prose-h2:text-xl prose-h3:text-lg
+            prose-p:my-3 prose-p:leading-relaxed prose-p:text-justify
+            prose-ul:my-3 prose-ol:my-3
+            prose-li:my-1
+            prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+            prose-blockquote:border-l-4 prose-blockquote:border-gray-300 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-gray-700
+            prose-img:rounded-lg prose-img:my-4 prose-img:mx-auto
+            prose-figure:my-4 prose-figure:text-center
+            prose-figcaption:text-sm prose-figcaption:text-gray-500
+            prose-table:border-collapse prose-table:w-full
+            prose-th:border prose-th:border-gray-300 prose-th:bg-gray-50 prose-th:p-2
+            prose-td:border prose-td:border-gray-300 prose-td:p-2
+            prose-hr:my-6 prose-hr:border-gray-200
+            prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded
+            prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-lg"
+          dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+        />
       </div>
 
-      {/* Primary Category */}
-      {data.primaryCategory && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <Hash className="w-4 h-4" />
-            <span className="font-medium">主分類 (Primary)</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-              {data.primaryCategory}
-            </Badge>
-          </div>
-        </div>
-      )}
-
-      {/* Secondary Categories */}
-      {data.secondaryCategories && data.secondaryCategories.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <Hash className="w-4 h-4" />
-            <span className="font-medium">副分類 (Secondary)</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {data.secondaryCategories.map((category, idx) => (
-              <Badge key={idx} variant="secondary">
-                {category}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Tags */}
-      {data.tags.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-sm text-gray-700">
-            <TagIcon className="w-4 h-4" />
-            <span className="font-medium">标签</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {data.tags.map((tag, idx) => (
-              <Badge key={idx} variant="info">
-                {tag}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* SEO Metadata */}
-      <div className="space-y-2 pt-4 border-t">
-        <div className="text-sm font-medium text-gray-700">SEO 元数据</div>
-        <div className="space-y-2">
-          <div className="text-xs">
-            <span className="text-gray-600">描述: </span>
-            <span className="text-gray-800">
-              {data.seoMetadata.metaDescription || '(无描述)'}
-            </span>
-          </div>
-          {data.seoMetadata.keywords.length > 0 && (
-            <div className="text-xs">
-              <span className="text-gray-600">关键词: </span>
-              <span className="text-gray-800">
-                {data.seoMetadata.keywords.join(', ')}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Info box */}
-      <div className="p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-        <strong>提示：</strong>这是文章的最终预览。请仔细检查所有内容，确认无误后再发布。
+      {/* Footer */}
+      <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 flex items-center justify-between">
+        <span>预览模式 - 实际发布效果可能因 WordPress 主题而略有不同</span>
+        <span>{data.content.length.toLocaleString('zh-CN')} 字符</span>
       </div>
     </div>
   );

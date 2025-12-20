@@ -85,6 +85,12 @@ class WorklistItemDetailResponse(WorklistItemResponse):
         description="Images extracted from article during parsing"
     )
 
+    # Article metadata (includes FAQ suggestions for state persistence)
+    article_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Article metadata including faq_suggestions for state persistence"
+    )
+
 
 class WorklistStatisticsResponse(BaseSchema):
     """Aggregated worklist statistics."""

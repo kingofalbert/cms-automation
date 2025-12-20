@@ -237,7 +237,20 @@ describe('useArticleReviewData', () => {
   it('should compute hasProofreadingData correctly', async () => {
     const dataWithIssues = {
       ...mockWorklistData,
-      proofreading_issues: [{ type: 'grammar', message: 'Test issue' }],
+      proofreading_issues: [
+        {
+          // API format with required fields for transformation
+          source: 'ai',
+          message: 'Test issue',
+          rule_id: 'test-rule',
+          category: 'grammar',
+          evidence: 'test text',
+          location: { offset: 0 },
+          severity: 'warning',
+          confidence: 0.9,
+          suggestion: 'corrected text',
+        },
+      ],
     };
     // @ts-expect-error - Test mock data doesn't need full ProofreadingIssue type
     vi.mocked(worklistAPI.get).mockResolvedValue(dataWithIssues);

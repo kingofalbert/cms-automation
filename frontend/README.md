@@ -56,6 +56,13 @@ frontend/
   - Playwright E2E testing strategies
   - Common pitfalls and solutions
 
+- **[State Persistence Fix](./docs/STATE_PERSISTENCE_FIX.md)** - Article Review workflow state management
+  - State lifting pattern for proofreading decisions
+  - Auto-save on step navigation
+  - State restoration from backend
+  - Auto-navigation after decision (減少上下文切換)
+  - Completion prompt for workflow closure
+
 ## Development
 
 ### Running Tests

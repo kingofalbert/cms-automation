@@ -33,6 +33,7 @@ import type {
 } from '../services/parsing';
 import { RefreshCw } from 'lucide-react';
 import TitleOptimizationCard from '../components/parsing/TitleOptimizationCard';
+import { SafeHtmlRenderer } from '../components/common/SafeHtmlRenderer';
 
 export default function ArticleParsingPage() {
   const { id } = useParams<{ id: string }>();
@@ -663,11 +664,10 @@ export default function ArticleParsingPage() {
               <CardTitle>正文预览</CardTitle>
             </CardHeader>
             <CardContent>
-              <div
+              <SafeHtmlRenderer
+                html={parsingData.body_html.substring(0, 500) + '...'}
                 className="prose max-w-none"
-                dangerouslySetInnerHTML={{
-                  __html: parsingData.body_html.substring(0, 500) + '...',
-                }}
+                showIssues={true}
               />
               <p className="text-sm text-muted-foreground mt-4">
                 正文长度: {parsingData.body_html.length} 字符

@@ -3,22 +3,23 @@
  *
  * Phase 8.4: Real-time Preview Mode
  * - Shows the final content after applying AI proofreading suggestions
- * - Highlights changes with color coding (green for additions, red strikethrough for deletions)
- * - Provides a clean reading experience for reviewing proofread content
+ * - Supports two view modes:
+ *   1. Rendered HTML (default): Clean WYSIWYG preview for checking final layout
+ *   2. Text with Highlights: Shows word-level changes with color coding
  *
  * Layout:
  * ┌─────────────────────────────────────────────┐
  * │ Preview Header (stats + view options)       │
  * ├─────────────────────────────────────────────┤
  * │ Content Preview                             │
- * │ • Highlighted additions (green)             │
- * │ • Highlighted modifications (yellow)        │
- * │ • Optional: show original inline            │
+ * │ • Rendered mode: Clean HTML preview         │
+ * │ • Highlight mode: Word-level change marks   │
  * └─────────────────────────────────────────────┘
  */
 
 import React, { useState, useMemo } from 'react';
-import { Eye, Type, Highlighter, FileText, Check, X, Edit3 } from 'lucide-react';
+import DOMPurify from 'dompurify';
+import { Eye, Type, Highlighter, FileText, Check, X, Edit3, Code, Monitor } from 'lucide-react';
 import type { DiffStats } from './DiffViewSection';
 
 export interface ProofreadingPreviewSectionProps {
@@ -51,8 +52,24 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
   diffStats,
   wordChanges = [],
 }) => {
+  // View mode: 'rendered' for clean HTML preview, 'text' for highlighted text
+  const [viewMode, setViewMode] = useState<'rendered' | 'text'>('rendered');
   const [showHighlights, setShowHighlights] = useState(true);
   const [showOriginalInline, setShowOriginalInline] = useState(false);
+
+  // Sanitize HTML for safe rendering
+  const sanitizedHtml = useMemo(() => {
+    return DOMPurify.sanitize(proofreadContent, {
+      ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'blockquote', 'pre', 'code', 'img', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'sub', 'sup', 'mark', 'small', 'del', 'ins'],
+      ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style', 'target', 'rel', 'id', 'width', 'height'],
+    });
+  }, [proofreadContent]);
+
+  // Strip HTML tags to get plain text (for text view mode)
+  const plainTextContent = useMemo(() => {
+    const doc = new DOMParser().parseFromString(proofreadContent, 'text/html');
+    return doc.body.textContent || '';
+  }, [proofreadContent]);
 
   // Calculate whether there are changes
   const hasChanges = useMemo(() => {
@@ -116,13 +133,16 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
     return highlights;
   }, [showHighlights, hasChanges, wordChanges, proofreadContent]);
 
-  // Render content with highlights
+  // Render content with highlights (for text view mode)
   const renderHighlightedContent = () => {
+    // Use plain text content for highlighting
+    const textContent = plainTextContent;
+
     if (!showHighlights || !hasChanges || typeof highlightedContent === 'string') {
-      // No highlights - just render the content with proper formatting
+      // No highlights - just render the plain text content
       return (
         <div className="whitespace-pre-wrap break-words leading-relaxed text-gray-800">
-          {proofreadContent}
+          {textContent}
         </div>
       );
     }
@@ -139,13 +159,13 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
       if (highlight.start > lastEnd) {
         elements.push(
           <span key={`text-${index}`}>
-            {proofreadContent.slice(lastEnd, highlight.start)}
+            {textContent.slice(lastEnd, highlight.start)}
           </span>
         );
       }
 
       // Add highlighted text
-      const highlightedText = proofreadContent.slice(highlight.start, highlight.end);
+      const highlightedText = textContent.slice(highlight.start, highlight.end);
       if (highlight.type === 'insert') {
         elements.push(
           <span
@@ -178,16 +198,33 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
     });
 
     // Add remaining text
-    if (lastEnd < proofreadContent.length) {
+    if (lastEnd < textContent.length) {
       elements.push(
-        <span key="text-final">{proofreadContent.slice(lastEnd)}</span>
+        <span key="text-final">{textContent.slice(lastEnd)}</span>
       );
     }
 
     return (
       <div className="whitespace-pre-wrap break-words leading-relaxed text-gray-800">
-        {elements.length > 0 ? elements : proofreadContent}
+        {elements.length > 0 ? elements : textContent}
       </div>
+    );
+  };
+
+  // Render HTML content (for rendered view mode)
+  const renderHtmlContent = () => {
+    return (
+      <div
+        className="prose prose-sm max-w-none text-gray-800 leading-relaxed
+          prose-headings:text-gray-900 prose-headings:font-semibold
+          prose-p:my-2 prose-p:leading-relaxed
+          prose-ul:my-2 prose-ol:my-2
+          prose-li:my-0.5
+          prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+          prose-blockquote:border-l-4 prose-blockquote:border-gray-300 prose-blockquote:pl-4 prose-blockquote:italic
+          prose-img:rounded-lg prose-img:my-4"
+        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      />
     );
   };
 
@@ -213,35 +250,67 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
           预览模式
         </h3>
         <div className="flex items-center gap-2">
-          {/* Highlight toggle */}
-          <button
-            type="button"
-            onClick={() => setShowHighlights(!showHighlights)}
-            className={`px-3 py-1 text-xs rounded-md border flex items-center gap-1 transition-colors ${
-              showHighlights
-                ? 'bg-amber-50 border-amber-300 text-amber-700'
-                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-            }`}
-            title={showHighlights ? '隐藏高亮' : '显示高亮'}
-          >
-            <Highlighter className="w-3 h-3" />
-            高亮
-          </button>
-          {/* Show original inline toggle */}
-          {showHighlights && (
+          {/* View mode toggle: Rendered HTML vs Text with highlights */}
+          <div className="flex items-center border border-gray-200 rounded-md overflow-hidden">
             <button
               type="button"
-              onClick={() => setShowOriginalInline(!showOriginalInline)}
-              className={`px-3 py-1 text-xs rounded-md border flex items-center gap-1 transition-colors ${
-                showOriginalInline
-                  ? 'bg-red-50 border-red-300 text-red-700'
-                  : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+              onClick={() => setViewMode('rendered')}
+              className={`px-3 py-1 text-xs flex items-center gap-1 transition-colors ${
+                viewMode === 'rendered'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
-              title={showOriginalInline ? '隐藏原文' : '显示原文'}
+              title="渲染模式：显示最终排版效果"
             >
-              <Type className="w-3 h-3" />
-              原文
+              <Monitor className="w-3 h-3" />
+              排版
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('text')}
+              className={`px-3 py-1 text-xs flex items-center gap-1 transition-colors ${
+                viewMode === 'text'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+              title="文本模式：显示修改高亮"
+            >
+              <Code className="w-3 h-3" />
+              高亮
+            </button>
+          </div>
+          {/* Highlight options (only in text mode) */}
+          {viewMode === 'text' && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowHighlights(!showHighlights)}
+                className={`px-3 py-1 text-xs rounded-md border flex items-center gap-1 transition-colors ${
+                  showHighlights
+                    ? 'bg-amber-50 border-amber-300 text-amber-700'
+                    : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                }`}
+                title={showHighlights ? '隐藏高亮' : '显示高亮'}
+              >
+                <Highlighter className="w-3 h-3" />
+                高亮
+              </button>
+              {showHighlights && (
+                <button
+                  type="button"
+                  onClick={() => setShowOriginalInline(!showOriginalInline)}
+                  className={`px-3 py-1 text-xs rounded-md border flex items-center gap-1 transition-colors ${
+                    showOriginalInline
+                      ? 'bg-red-50 border-red-300 text-red-700'
+                      : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                  }`}
+                  title={showOriginalInline ? '隐藏原文' : '显示原文'}
+                >
+                  <Type className="w-3 h-3" />
+                  原文
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -258,15 +327,34 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
       {/* Preview content */}
       {hasChanges && (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
+          {/* Mode indicator */}
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+            <span className="text-xs text-gray-500">
+              {viewMode === 'rendered' ? (
+                <>
+                  <Monitor className="w-3 h-3 inline-block mr-1" />
+                  排版预览 - 显示最终效果
+                </>
+              ) : (
+                <>
+                  <Code className="w-3 h-3 inline-block mr-1" />
+                  文本预览 - 显示修改标记
+                </>
+              )}
+            </span>
+            <span className="text-xs text-gray-400">
+              {proofreadContent.length.toLocaleString('zh-CN')} 字符
+            </span>
+          </div>
           {/* Content area */}
           <div className="p-6 bg-white min-h-[200px] max-h-[500px] overflow-y-auto">
-            {renderHighlightedContent()}
+            {viewMode === 'rendered' ? renderHtmlContent() : renderHighlightedContent()}
           </div>
         </div>
       )}
 
-      {/* Legend and stats */}
-      {hasChanges && showHighlights && (
+      {/* Legend and stats (only in text mode with highlights) */}
+      {hasChanges && viewMode === 'text' && showHighlights && (
         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
           <span className="font-medium">图例:</span>
           <span className="flex items-center gap-1">

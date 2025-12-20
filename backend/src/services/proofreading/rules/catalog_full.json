@@ -1,13 +1,13 @@
 {
-  "version": "2025.12.07",
-  "generated_at": "2025-12-07T00:00:00Z",
+  "version": "2025.12.20",
+  "generated_at": "2025-12-20T00:00:00Z",
   "source_documents": [
     "AI 校對規則生成與應用.docx",
     "DJY_Proofreading_Standard_20231108pages.pdf",
     "backend/src/services/proofreading/deterministic_engine.py",
     "backend/src/services/proofreading/rule_specs.py"
   ],
-  "total_rule_count": 405,
+  "total_rule_count": 411,
   "categories": [
     {
       "category": "A",
@@ -393,6 +393,43 @@
           "rule_count": 2,
           "rules": [
             {"rule_id": "F6-006", "summary": "綜合阻斷：若有critical問題發布必須中止", "severity": "critical", "can_auto_fix": false, "blocks_publish": true}
+          ]
+        }
+      ]
+    },
+    {
+      "category": "G",
+      "description": "語境驗證與內容邏輯（Contextual Validation）",
+      "rule_count": 6,
+      "subcategories": [
+        {
+          "subcategory": "G1",
+          "name": "語句完整性",
+          "description": "檢測截斷語句、不完整引語、缺失標點",
+          "rule_count": 2,
+          "rules": [
+            {"rule_id": "G1-001", "summary": "語句完整性檢測：識別截斷或未結束的句子結構", "severity": "warning", "can_auto_fix": false, "blocks_publish": false, "warning_label": "sentence_incomplete"},
+            {"rule_id": "G1-002", "summary": "引號配對檢測：確保引號正確配對", "severity": "warning", "can_auto_fix": false, "blocks_publish": false, "warning_label": "sentence_incomplete"}
+          ]
+        },
+        {
+          "subcategory": "G2",
+          "name": "符號一致性",
+          "description": "確保波浪號、連字符等符號統一使用",
+          "rule_count": 2,
+          "rules": [
+            {"rule_id": "G2-001", "summary": "波浪號一致性：統一使用全角波浪號「～」", "severity": "info", "can_auto_fix": true, "blocks_publish": false, "warning_label": "symbol_format"},
+            {"rule_id": "G2-002", "summary": "符號保留檢測：確保HTML解析不丟失特殊符號", "severity": "warning", "can_auto_fix": false, "blocks_publish": false, "warning_label": "symbol_format"}
+          ]
+        },
+        {
+          "subcategory": "G3",
+          "name": "地理與邏輯驗證",
+          "description": "地理位置邏輯驗證與AI幻覺檢測",
+          "rule_count": 2,
+          "rules": [
+            {"rule_id": "G3-001", "summary": "地理邏輯驗證：檢測不合邏輯的地理表述如「上中西部」", "severity": "error", "can_auto_fix": false, "blocks_publish": false, "warning_label": "geographic_anomaly"},
+            {"rule_id": "G3-002", "summary": "AI幻覺檢測：標記模糊數字、矛盾表述等可能的AI生成錯誤", "severity": "warning", "can_auto_fix": false, "blocks_publish": false, "warning_label": "ai_hallucination"}
           ]
         }
       ]

@@ -17,6 +17,14 @@ Comprehensive E2E tests covering:
 - **Error handling**: Missing data, validation
 - **Performance**: Modal open time, navigation speed
 
+### `state-persistence-workflow.spec.ts`
+State persistence and auto-navigation tests:
+- **State persistence**: Proofreading decisions survive step navigation
+- **Auto-save**: Decisions saved when navigating between steps
+- **Auto-navigation**: Jump to next pending issue after accept/reject
+- **Completion dialog**: Prompt to proceed to publish after all issues processed
+- **Visual regression**: Step navigation maintains UI state
+
 ## Prerequisites
 
 ### 1. Local Development Environment Required

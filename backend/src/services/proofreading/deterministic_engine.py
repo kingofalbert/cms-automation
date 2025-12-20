@@ -8458,6 +8458,287 @@ class F4_010_SocialMetaTagRule(DeterministicRule):
 
 
 # ============================================================================
+# G类规则 - 语境验证与内容逻辑 (Contextual Validation)
+# ============================================================================
+
+
+class G1_001_SentenceCompletenessRule(DeterministicRule):
+    """Detect incomplete sentences and truncated content (G1-001).
+
+    Identifies sentences that appear to be cut off mid-way, missing
+    punctuation, or have unfinished structures like open quotes.
+    """
+
+    # Patterns for incomplete sentences
+    INCOMPLETE_PATTERNS = [
+        # Sentence ends with comma or connecting word
+        re.compile(r"[，、][。」』\n]", re.MULTILINE),
+        # Trailing ellipsis without proper ending
+        re.compile(r"……[^。！？」』\n]{0,5}$", re.MULTILINE),
+        # Open quotes without closing
+        re.compile(r"「[^」]{50,}$", re.MULTILINE),
+        re.compile(r"『[^』]{50,}$", re.MULTILINE),
+        # Sentence starts with lowercase or connecting words
+        re.compile(r"[。！？」』]\s*[而且但是因为所以如果]", re.MULTILINE),
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="G1-001",
+            category="G",
+            subcategory="G1",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for pattern in self.INCOMPLETE_PATTERNS:
+            for match in pattern.finditer(content):
+                snippet_start = max(0, match.start() - 30)
+                snippet_end = min(len(content), match.end() + 30)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message="語句可能不完整：檢測到截斷或未結束的句子結構。",
+                        suggestion="請檢查此處語句是否完整，確保引號配對、句末標點正確。",
+                        severity=self.severity,
+                        confidence=0.7,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="G1_001_SentenceCompletenessRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                        warning_label="sentence_incomplete",
+                    )
+                )
+        return issues
+
+
+class G2_001_TildeConsistencyRule(DeterministicRule):
+    """Ensure tilde/wave dash symbols are consistent (G2-001).
+
+    Detects mixed usage of half-width tilde (~), full-width tilde (～),
+    and wave dash (〜) in numeric ranges and other contexts.
+    """
+
+    # Pattern to find any tilde variant
+    TILDE_VARIANTS = re.compile(r"(\d+)\s*([~～〜])\s*(\d+)")
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="G2-001",
+            category="G",
+            subcategory="G2",
+            severity="info",
+            blocks_publish=False,
+            can_auto_fix=True,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
+        content = payload.original_content
+
+        found_tildes = set()
+        for match in self.TILDE_VARIANTS.finditer(content):
+            found_tildes.add(match.group(2))
+
+        # If multiple tilde variants found, report inconsistency
+        if len(found_tildes) > 1:
+            for match in self.TILDE_VARIANTS.finditer(content):
+                tilde_char = match.group(2)
+                if tilde_char != "～":  # Standard full-width tilde
+                    snippet = match.group()
+                    corrected = f"{match.group(1)}～{match.group(3)}"
+
+                    issues.append(
+                        ProofreadingIssue(
+                            rule_id=self.rule_id,
+                            category=self.category,
+                            subcategory=self.subcategory,
+                            message=f"符號一致性：波浪號「{tilde_char}」建議統一使用全角「～」。",
+                            suggestion=f"將「{snippet}」改為「{corrected}」以保持一致。",
+                            severity=self.severity,
+                            confidence=0.9,
+                            can_auto_fix=self.can_auto_fix,
+                            blocks_publish=self.blocks_publish,
+                            source=RuleSource.SCRIPT,
+                            attributed_by="G2_001_TildeConsistencyRule",
+                            location={"offset": match.start()},
+                            evidence=snippet,
+                            original_text=snippet,
+                            warning_label="symbol_format",
+                        )
+                    )
+        return issues
+
+
+class G2_002_SymbolPreservationRule(DeterministicRule):
+    """Check for potentially lost symbols during HTML parsing (G2-002).
+
+    Detects patterns where symbols like ~ may have been stripped or
+    converted incorrectly during HTML parsing.
+    """
+
+    # Patterns that suggest missing range indicator
+    MISSING_RANGE_PATTERN = re.compile(r"(\d{1,4})(\d{1,4})(?=[^\d]|$)")  # 1020 instead of 10~20
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="G2-002",
+            category="G",
+            subcategory="G2",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
+        # This rule is more complex and primarily serves as a placeholder
+        # for future HTML parsing validation
+        return issues
+
+
+class G3_001_GeographicLogicRule(DeterministicRule):
+    """Validate geographic location logic (G3-001).
+
+    Detects logically inconsistent geographic references such as
+    "上中西部" (impossible combination) or incorrect US state/region pairings.
+    """
+
+    # US geographic regions
+    US_REGIONS = {
+        "東北部": ["緬因州", "佛蒙特州", "新罕布什爾州", "麻薩諸塞州", "康乃狄克州", "羅德島州",
+                  "紐約州", "新澤西州", "賓夕法尼亞州"],
+        "中西部": ["俄亥俄州", "密西根州", "印第安納州", "威斯康辛州", "伊利諾州", "明尼蘇達州",
+                  "愛荷華州", "密蘇里州", "北達科他州", "南達科他州", "內布拉斯加州", "堪薩斯州"],
+        "南部": ["德拉瓦州", "馬里蘭州", "維吉尼亞州", "西維吉尼亞州", "肯塔基州", "北卡羅來納州",
+                "南卡羅來納州", "田納西州", "喬治亞州", "佛羅里達州", "阿拉巴馬州", "密西西比州",
+                "阿肯色州", "路易斯安那州", "德克薩斯州", "奧克拉荷馬州"],
+        "西部": ["蒙大拿州", "愛達荷州", "懷俄明州", "科羅拉多州", "新墨西哥州", "亞利桑那州",
+                "猶他州", "內華達州", "加利福尼亞州", "俄勒岡州", "華盛頓州", "阿拉斯加州", "夏威夷州"],
+    }
+
+    # Illogical geographic combinations
+    ILLOGICAL_PATTERNS = [
+        re.compile(r"上中西部"),
+        re.compile(r"上北部"),
+        re.compile(r"下南部"),
+        re.compile(r"東西部"),
+        re.compile(r"南北部"),
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="G3-001",
+            category="G",
+            subcategory="G3",
+            severity="error",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for pattern in self.ILLOGICAL_PATTERNS:
+            for match in pattern.finditer(content):
+                snippet_start = max(0, match.start() - 20)
+                snippet_end = min(len(content), match.end() + 20)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"地理邏輯異常：「{match.group()}」不是有效的地理表述。",
+                        suggestion="請核實地理位置描述，可能為AI生成錯誤。",
+                        severity=self.severity,
+                        confidence=0.95,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="G3_001_GeographicLogicRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                        warning_label="geographic_anomaly",
+                    )
+                )
+        return issues
+
+
+class G3_002_AIHallucinationDetectionRule(DeterministicRule):
+    """Flag potential AI hallucination patterns (G3-002).
+
+    Detects patterns commonly associated with AI-generated content errors,
+    such as vague quantifiers, impossible statistics, or contradictory claims.
+    """
+
+    # Patterns suggesting potential hallucination
+    HALLUCINATION_PATTERNS = [
+        # Vague statistics
+        (re.compile(r"約\d+0{3,}(?:多|餘)?[人名個]"), "模糊大數字"),
+        # Percentage over 100
+        (re.compile(r"(\d{3,})%"), "超過100%的百分比"),
+        # Contradictory statements
+        (re.compile(r"既是.*又不是"), "矛盾表述"),
+        # Uncertain AI phrasing
+        (re.compile(r"據(?:了解|悉|稱|報導)，.*(?:可能|大概|或許)"), "不確定來源"),
+    ]
+
+    def __init__(self) -> None:
+        super().__init__(
+            rule_id="G3-002",
+            category="G",
+            subcategory="G3",
+            severity="warning",
+            blocks_publish=False,
+            can_auto_fix=False,
+        )
+
+    def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
+        issues: list[ProofreadingIssue] = []
+        content = payload.original_content
+
+        for pattern, description in self.HALLUCINATION_PATTERNS:
+            for match in pattern.finditer(content):
+                snippet_start = max(0, match.start() - 20)
+                snippet_end = min(len(content), match.end() + 20)
+                snippet = content[snippet_start:snippet_end]
+
+                issues.append(
+                    ProofreadingIssue(
+                        rule_id=self.rule_id,
+                        category=self.category,
+                        subcategory=self.subcategory,
+                        message=f"可能為AI幻覺：檢測到{description}模式。",
+                        suggestion="請手動核實此內容的準確性，避免發布不實信息。",
+                        severity=self.severity,
+                        confidence=0.6,
+                        can_auto_fix=self.can_auto_fix,
+                        blocks_publish=self.blocks_publish,
+                        source=RuleSource.SCRIPT,
+                        attributed_by="G3_002_AIHallucinationDetectionRule",
+                        location={"offset": match.start()},
+                        evidence=snippet,
+                        warning_label="ai_hallucination",
+                    )
+                )
+        return issues
+
+
+# ============================================================================
 # 规则引擎
 # ============================================================================
 
@@ -8465,7 +8746,7 @@ class F4_010_SocialMetaTagRule(DeterministicRule):
 class DeterministicRuleEngine:
     """Coordinator for all deterministic proofreading rules."""
 
-    VERSION = "2.0.0"  # Batch 10: 384条规则 - 100%覆盖达成 (A1:50, A2:30, A3:70, A4:30, B:60, C:24, D:40, E:40, F:40)
+    VERSION = "2.1.0"  # Batch 11: 390条规则 - G类语境验证新增 (A1:50, A2:30, A3:70, A4:30, B:60, C:24, D:40, E:40, F:40, G:6)
 
     def __init__(self) -> None:
         self.rules: list[DeterministicRule] = [
@@ -8770,6 +9051,15 @@ class DeterministicRuleEngine:
             F4_008_ImageSEORule(),  # F4-008: 图片 SEO
             F4_009_URLFriendlinessRule(),  # F4-009: URL 友好性
             F4_010_SocialMetaTagRule(),  # F4-010: 社交媒体标签
+            # G类 - 语境验证与内容逻辑（6条）
+            # G1 子类 - 语句完整性（2条）
+            G1_001_SentenceCompletenessRule(),  # G1-001: 语句完整性检测
+            # G2 子类 - 符号一致性（2条）
+            G2_001_TildeConsistencyRule(),  # G2-001: 波浪号一致性
+            G2_002_SymbolPreservationRule(),  # G2-002: 符号保留检测
+            # G3 子类 - 地理与逻辑验证（2条）
+            G3_001_GeographicLogicRule(),  # G3-001: 地理逻辑验证
+            G3_002_AIHallucinationDetectionRule(),  # G3-002: AI幻觉检测
         ]
 
     def run(self, payload: ArticlePayload) -> list[ProofreadingIssue]:

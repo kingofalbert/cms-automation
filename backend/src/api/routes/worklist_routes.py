@@ -519,6 +519,11 @@ async def _serialize_item_detail(
     else:
         article_images = []
 
+    # Get article_metadata for FAQ state persistence
+    article_metadata = {}
+    if article and hasattr(article, 'article_metadata'):
+        article_metadata = article.article_metadata or {}
+
     return WorklistItemDetailResponse(
         **base.model_dump(),
         content=item.content,
@@ -544,6 +549,8 @@ async def _serialize_item_detail(
         parsing_confirmed_at=parsing_confirmed_at,
         # Phase 7: Article images
         article_images=article_images,
+        # FAQ state persistence: include article_metadata with faq_suggestions
+        article_metadata=article_metadata,
     )
 
 

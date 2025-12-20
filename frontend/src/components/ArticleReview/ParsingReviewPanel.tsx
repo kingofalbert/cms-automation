@@ -39,6 +39,14 @@ import type { ArticleReviewData } from '../../hooks/articleReview/useArticleRevi
 import type { SEOTitleSuggestionsData, SelectSEOTitleResponse } from '../../types/api';
 import { api } from '../../services/api-client';
 
+/**
+ * FAQ item structure
+ */
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
 export interface ParsingReviewPanelProps {
   /** Article review data */
   data: ArticleReviewData;
@@ -46,6 +54,14 @@ export interface ParsingReviewPanelProps {
   onSave: (data: ParsingData) => Promise<void>;
   /** Whether save is in progress */
   isSaving?: boolean;
+  /**
+   * BUGFIX: Lifted FAQ state for persistence during backtracking
+   * FAQs are managed by parent (ArticleReviewModal) to survive step navigation
+   * See: docs/STATE_PERSISTENCE_FIX.md
+   */
+  faqs?: FAQItem[];
+  /** Callback when FAQs change */
+  onFaqsChange?: (faqs: FAQItem[]) => void;
 }
 
 /**
@@ -73,6 +89,9 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   data,
   onSave,
   isSaving = false,
+  // BUGFIX: Lifted FAQ state for persistence during backtracking
+  faqs: liftedFaqs,
+  onFaqsChange: onLiftedFaqsChange,
 }) => {
   // Local state for parsing data (editable)
   const initialParsingState = useMemo(() => {
@@ -156,9 +175,23 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   const [metaDescription, setMetaDescription] = useState(initialParsingState.metaDescription);
   const [seoKeywords, setSeoKeywords] = useState<string[]>(initialParsingState.seoKeywords);
   const [tags, setTags] = useState<string[]>(initialParsingState.tags);
-  const [faqSuggestions, setFaqSuggestions] = useState<Array<{ question: string; answer: string }>>(
+
+  // ============================================================
+  // BUGFIX: FAQ State - Use lifted state if available (for backtrack persistence)
+  // Fallback to local state for backwards compatibility
+  // ============================================================
+  const [localFaqSuggestions, setLocalFaqSuggestions] = useState<Array<{ question: string; answer: string }>>(
     initialParsingState.faqSuggestions
   );
+  // Use lifted state if provided, otherwise fall back to local state
+  const faqSuggestions = liftedFaqs ?? localFaqSuggestions;
+  const setFaqSuggestions = useCallback((newFaqs: Array<{ question: string; answer: string }>) => {
+    // Update both local and lifted state
+    setLocalFaqSuggestions(newFaqs);
+    if (onLiftedFaqsChange) {
+      onLiftedFaqsChange(newFaqs);
+    }
+  }, [onLiftedFaqsChange]);
 
   // Phase 8.3: Content comparison source tracking
   const [metaDescriptionSource, setMetaDescriptionSource] = useState<ContentSource>('extracted');
@@ -211,10 +244,14 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
       setMetaDescription(initialParsingState.metaDescription);
       setSeoKeywords(initialParsingState.seoKeywords);
       setTags(initialParsingState.tags);
-      setFaqSuggestions(initialParsingState.faqSuggestions);
+      // BUGFIX: Only reset local FAQ state if lifted state is not provided
+      // This prevents overwriting persisted lifted state during navigation
+      if (!liftedFaqs) {
+        setLocalFaqSuggestions(initialParsingState.faqSuggestions);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialParsingState, isDirty]);
+  }, [initialParsingState, isDirty, liftedFaqs]);
 
   // Fetch SEO Title suggestions and AI FAQ suggestions when component mounts (if articleId exists)
   useEffect(() => {
@@ -578,10 +615,22 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
                 <div className="text-[10px] text-slate-600">元描述</div>
               </div>
               <div className="text-center p-1.5 bg-white rounded border">
-                <div className={`text-base font-bold ${seoKeywords.length >= 5 && seoKeywords.length <= 10 ? 'text-green-600' : 'text-amber-600'}`}>
-                  {seoKeywords.length >= 5 && seoKeywords.length <= 10 ? '✓' : '⚠'}
-                </div>
-                <div className="text-[10px] text-slate-600">关键词</div>
+                {/* Keywords score: Use AI quality score when AI keywords selected, otherwise use count-based */}
+                {keywordsSource === 'ai' && data.articleReview?.seo?.score != null ? (
+                  <>
+                    <div className={`text-base font-bold ${data.articleReview.seo.score >= 0.7 ? 'text-green-600' : data.articleReview.seo.score >= 0.5 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {Math.round(data.articleReview.seo.score * 100)}
+                    </div>
+                    <div className="text-[10px] text-emerald-600">AI优化</div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`text-base font-bold ${seoKeywords.length >= 5 && seoKeywords.length <= 10 ? 'text-green-600' : 'text-amber-600'}`}>
+                      {seoKeywords.length >= 5 && seoKeywords.length <= 10 ? '✓' : '⚠'}
+                    </div>
+                    <div className="text-[10px] text-slate-600">关键词</div>
+                  </>
+                )}
               </div>
               <div className="text-center p-1.5 bg-white rounded border">
                 <div className={`text-base font-bold ${tags.length >= 3 && tags.length <= 6 ? 'text-green-600' : 'text-amber-600'}`}>
@@ -590,10 +639,13 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
                 <div className="text-[10px] text-slate-600">标签</div>
               </div>
               <div className="text-center p-1.5 bg-white rounded border">
+                {/* Total score: Factor in AI quality when using AI keywords */}
                 <div className="text-base font-bold text-blue-600">
                   {Math.round(
                     ((metaDescription.length >= 120 ? 33 : metaDescription.length / 3.6) +
-                    (seoKeywords.length >= 5 ? 33 : seoKeywords.length * 6.6) +
+                    (keywordsSource === 'ai' && data.articleReview?.seo?.score != null
+                      ? data.articleReview.seo.score * 33  // Use AI quality score (0-1) * 33
+                      : (seoKeywords.length >= 5 ? 33 : seoKeywords.length * 6.6)) +
                     (tags.length >= 3 ? 34 : tags.length * 11.3))
                   )}
                 </div>

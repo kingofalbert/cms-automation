@@ -16,6 +16,21 @@ class RuleSource(str, Enum):
     MERGED = "merged"
 
 
+class WarningLabel(str, Enum):
+    """Warning labels for issues requiring manual verification.
+
+    Used by G-class contextual validation rules to flag potential issues
+    that need human review due to AI uncertainty or logical anomalies.
+    """
+
+    MANUAL_VERIFY = "manual_verify"  # 需手動驗證
+    AI_HALLUCINATION = "ai_hallucination"  # 可能為AI幻覺
+    GEOGRAPHIC_ANOMALY = "geographic_anomaly"  # 地理邏輯異常
+    SYMBOL_FORMAT = "symbol_format"  # 符號格式異常
+    SENTENCE_INCOMPLETE = "sentence_incomplete"  # 語句不完整
+    STRUCTURE_SUGGESTION = "structure_suggestion"  # 結構優化建議
+
+
 class ImageMetadata(BaseModel):
     """Metadata for images referenced in an article."""
 
@@ -142,6 +157,12 @@ class ProofreadingIssue(BaseModel):
     evidence: str | None = Field(
         default=None,
         description="Short excerpt or structured data to help reviewers verify",
+    )
+    warning_label: str | None = Field(
+        default=None,
+        description="Warning label for manual verification (G-class rules): "
+        "manual_verify, ai_hallucination, geographic_anomaly, symbol_format, "
+        "sentence_incomplete, structure_suggestion",
     )
 
 
