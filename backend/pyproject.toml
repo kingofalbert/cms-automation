@@ -27,6 +27,7 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 asyncpg = "^0.30.0"
 greenlet = "^3.2.4"
 anthropic = ">=0.40.0"
+openai = "^1.40.0"
 nest-asyncio = "^1.6.0"
 google-auth = "^2.24.0"
 google-auth-oauthlib = "^1.1.0"
@@ -39,6 +40,7 @@ google-cloud-secret-manager = "^2.25.0"
 pillow = "^10.1.0"
 beautifulsoup4 = "^4.12.2"
 lxml = "^4.9.3"
+google-cloud-aiplatform = "^1.74.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"

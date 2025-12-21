@@ -105,6 +105,38 @@ class Settings(BaseSettings):
         description="Maximum tokens for Claude responses (Opus 4.5 supports up to 64K)",
     )
 
+    # OpenAI API Configuration (for GPT-4o vision tasks)
+    OPENAI_API_KEY: str = Field(
+        default="",
+        description="OpenAI API key for GPT-4o vision tasks (image alt text generation)",
+    )
+    OPENAI_MODEL: str = Field(
+        default="gpt-4o",
+        description="OpenAI model to use for vision tasks",
+    )
+
+    # Vertex AI Configuration (for Gemini models)
+    VERTEX_AI_PROJECT: str = Field(
+        default="",
+        description="Google Cloud project ID for Vertex AI",
+    )
+    VERTEX_AI_LOCATION: str = Field(
+        default="us-central1",
+        description="Vertex AI region (us-central1 recommended for Gemini)",
+    )
+    VERTEX_AI_MODEL: str = Field(
+        default="gemini-3.0-flash",
+        description="Gemini model for text/vision tasks (latest Dec 2025)",
+    )
+    VERTEX_AI_IMAGE_MODEL: str = Field(
+        default="imagen-3.0-generate-001",
+        description="Imagen model for image generation",
+    )
+    USE_VERTEX_AI_FOR_VISION: bool = Field(
+        default=False,
+        description="Use Vertex AI (Gemini) instead of OpenAI for vision tasks",
+    )
+
     # Google Drive Storage Configuration
     GOOGLE_DRIVE_CREDENTIALS_PATH: str = Field(
         default="",

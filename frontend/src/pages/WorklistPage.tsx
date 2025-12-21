@@ -62,7 +62,7 @@ export default function WorklistPage() {
         params,
       });
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 60000, // Refresh every 60 seconds (reduced from 30s to save resources)
   });
 
   // Fetch statistics
@@ -80,7 +80,7 @@ export default function WorklistPage() {
     queryFn: async () => {
       return await api.get<DriveSyncStatus>('/v1/worklist/sync-status');
     },
-    refetchInterval: 5000, // Check every 5 seconds
+    refetchInterval: 60000, // Check every 60 seconds (reduced from 5s to save resources)
   });
 
   const selectedItemId = selectedItem?.id;

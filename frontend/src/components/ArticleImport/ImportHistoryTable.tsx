@@ -21,7 +21,7 @@ export const ImportHistoryTable: React.FC = () => {
       );
       return response.data;
     },
-    refetchInterval: 5000, // Refresh every 5 seconds
+    refetchInterval: 30000, // Refresh every 30 seconds (reduced from 5s to save resources)
   });
 
   if (isLoading) {
