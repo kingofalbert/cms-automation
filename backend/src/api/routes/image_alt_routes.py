@@ -15,6 +15,7 @@ from src.models.article_image import ArticleImage
 from src.models.worklist import WorklistItem
 from src.services.image_alt_generator import (
     GenerationMethod,
+    ImageType,
     get_image_alt_generator_service,
 )
 
@@ -70,9 +71,19 @@ class ImageAltSuggestionResponse(BaseModel):
         description="Confidence score for description (0-1)"
     )
 
+    # Image analysis results
+    image_type: str = Field(
+        default="unknown",
+        description="Detected image type: 'infographic' (has embedded text), 'photo' (no text), or 'unknown'"
+    )
+    detected_text: str | None = Field(
+        default=None,
+        description="Text extracted from the image via OCR (only for infographic images)"
+    )
+
     # Generation metadata
     generation_method: str = Field(
-        description="Method used: 'vision', 'context', or 'failed'"
+        description="Method used: 'vision_infographic', 'vision_photo', 'vision', 'context', or 'failed'"
     )
     model_used: str = Field(
         description="AI model used for generation"
@@ -92,13 +103,15 @@ class ImageAltSuggestionResponse(BaseModel):
                 "parsed_alt_text": None,
                 "parsed_caption": "習近平會見外國領導人",
                 "parsed_description": None,
-                "suggested_alt_text": "中國國家主席習近平在北京人民大會堂會見來訪的外國領導人",
+                "suggested_alt_text": "信息圖顯示：「中美貿易戰最新進展」標題，配有兩國國旗和關稅數據圖表",
                 "suggested_alt_text_confidence": 0.95,
-                "suggested_description": "2024年3月15日，中國國家主席習近平在北京人民大會堂北大廳舉行儀式，歡迎來訪的外國領導人，雙方隨後舉行會談討論雙邊關係。",
+                "suggested_description": "信息圖展示中美貿易戰最新進展，包含標題「中美貿易戰最新進展」，下方為兩國國旗圖示，以及關稅變化的折線圖和數據表格。",
                 "suggested_description_confidence": 0.92,
-                "generation_method": "vision",
+                "image_type": "infographic",
+                "detected_text": "中美貿易戰最新進展\n關稅調整時間表\n2024年3月15日生效",
+                "generation_method": "vision_infographic",
                 "model_used": "gpt-4o",
-                "tokens_used": 450,
+                "tokens_used": 650,
                 "error_message": None
             }
         }
@@ -211,6 +224,8 @@ async def generate_image_alt(
         suggested_alt_text_confidence=suggestion.suggested_alt_text_confidence,
         suggested_description=suggestion.suggested_description,
         suggested_description_confidence=suggestion.suggested_description_confidence,
+        image_type=suggestion.image_type.value,
+        detected_text=suggestion.detected_text,
         generation_method=suggestion.generation_method.value,
         model_used=suggestion.model_used,
         tokens_used=suggestion.tokens_used,
@@ -313,6 +328,8 @@ async def generate_all_image_alt(
             suggested_alt_text_confidence=suggestion.suggested_alt_text_confidence,
             suggested_description=suggestion.suggested_description,
             suggested_description_confidence=suggestion.suggested_description_confidence,
+            image_type=suggestion.image_type.value,
+            detected_text=suggestion.detected_text,
             generation_method=suggestion.generation_method.value,
             model_used=suggestion.model_used,
             tokens_used=suggestion.tokens_used,

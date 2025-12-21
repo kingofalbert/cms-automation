@@ -135,8 +135,8 @@ class Settings(BaseSettings):
         description="Imagen model for image generation",
     )
     USE_VERTEX_AI_FOR_VISION: bool = Field(
-        default=False,
-        description="Use Vertex AI (Gemini) instead of OpenAI for vision tasks",
+        default=True,
+        description="Use Vertex AI (Gemini 3.0 Flash) instead of OpenAI for vision tasks - recommended for better OCR and lower cost",
     )
 
     # Google Drive Storage Configuration
