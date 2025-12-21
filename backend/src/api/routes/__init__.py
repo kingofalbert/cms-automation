@@ -8,6 +8,7 @@ from src.api.routes import (
     computer_use,
     debug_routes,
     files_routes,
+    image_alt_routes,
     import_routes,
     monitoring_routes,
     # optimization_monitoring_routes,  # Temporarily disabled - service not available
@@ -50,6 +51,7 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(title_generation_routes.router, tags=["Title Generation"])  # Already has /v1 prefix
     app.include_router(proofreading_routes.router, tags=["Proofreading"])  # Independent proofreading service (body text only) - Already has /v1 prefix
     app.include_router(worklist_routes.router, prefix="/v1", tags=["Worklist"])
+    app.include_router(image_alt_routes.router, tags=["Image Alt Generation"])  # Already has /v1/images prefix
     app.include_router(debug_routes.router, tags=["Debug"])  # Debug endpoints
 
     # Note: proofreading_decisions router already has its own prefix

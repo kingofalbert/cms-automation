@@ -5,7 +5,7 @@
  * Integrates with Supabase Auth for session management.
  */
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { User, Session, AuthError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 
@@ -52,72 +52,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     error: null,
   })
 
-  // Fetch user profile from profiles table
-  // Note: We pass userEmail as a parameter to avoid dependency on state.user
-  // which would cause an infinite re-render loop (fetchProfile -> setState ->
-  // state.user changes -> fetchProfile recreated -> useEffect runs again)
-  const fetchProfile = useCallback(async (userId: string, userEmail?: string): Promise<UserProfile | null> => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, display_name, role')
-        .eq('id', userId)
-        .single()
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true)
 
-      if (error) {
-        console.error('Error fetching profile:', error)
-        return null
-      }
-
-      return {
-        id: data.id,
-        email: userEmail || '',
-        displayName: data.display_name || userEmail || 'User',
-        role: data.role as UserRole,
-      }
-    } catch (err) {
-      console.error('Error in fetchProfile:', err)
-      return null
-    }
-  }, [])  // No dependencies - stable function reference
-
-  // Initialize auth state
+  // Initialize auth state using onAuthStateChange only (avoids lock issues with getSession)
+  // Using direct REST calls for profile fetching to avoid Supabase client lock issues
+  // that can occur with React StrictMode double-mounting
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
-      if (error) {
-        setState(prev => ({ ...prev, loading: false, error }))
-        return
-      }
+    isMountedRef.current = true
 
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id, session.user.email)
-        setState({
-          user: session.user,
-          profile,
-          session,
-          loading: false,
-          error: null,
-        })
-      } else {
-        setState(prev => ({ ...prev, loading: false }))
-      }
-    })
-
-    // Listen for auth changes
+    // Listen for auth changes - this handles INITIAL_SESSION on first load
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event)
+        // Check if component is still mounted before updating state
+        if (!isMountedRef.current) {
+          return
+        }
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          const profile = await fetchProfile(session.user.id, session.user.email)
-          setState({
-            user: session.user,
-            profile,
-            session,
-            loading: false,
-            error: null,
-          })
+        if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session?.user) {
+          // Fetch profile using direct REST call to avoid Supabase client lock issues
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?id=eq.${session.user.id}&select=id,display_name,role`,
+              {
+                headers: {
+                  'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+                  'Authorization': `Bearer ${session.access_token}`,
+                },
+              }
+            )
+
+            if (!isMountedRef.current) return
+
+            if (response.ok) {
+              const data = await response.json()
+              const profileData = data[0]
+
+              if (!isMountedRef.current) return
+
+              const profile = profileData ? {
+                id: profileData.id,
+                email: session.user.email || '',
+                displayName: profileData.display_name || session.user.email || 'User',
+                role: profileData.role as UserRole,
+              } : null
+
+              setState({
+                user: session.user,
+                profile,
+                session,
+                loading: false,
+                error: null,
+              })
+            } else {
+              console.error('Failed to fetch profile:', response.status)
+              setState({
+                user: session.user,
+                profile: null,
+                session,
+                loading: false,
+                error: null,
+              })
+            }
+          } catch (err) {
+            console.error('Error fetching profile:', err)
+            if (isMountedRef.current) {
+              setState({
+                user: session.user,
+                profile: null,
+                session,
+                loading: false,
+                error: null,
+              })
+            }
+          }
         } else if (event === 'SIGNED_OUT') {
           setState({
             user: null,
@@ -128,14 +136,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           })
         } else if (event === 'TOKEN_REFRESHED' && session) {
           setState(prev => ({ ...prev, session }))
+        } else if (event === 'INITIAL_SESSION' && !session) {
+          // No session on initial load
+          setState(prev => ({ ...prev, loading: false }))
         }
       }
     )
 
     return () => {
+      isMountedRef.current = false
       subscription.unsubscribe()
     }
-  }, [fetchProfile])
+  }, [])
 
   // Sign in with email and password
   const signIn = useCallback(async (email: string, password: string) => {

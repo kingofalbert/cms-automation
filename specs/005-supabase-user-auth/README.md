@@ -1,9 +1,42 @@
 # 005: Supabase Authentication & User Management
 
-**狀態:** 📝 待實施 (Planned)  
-**優先級:** High  
-**預估工期:** ~4 個工作日  
-**最後更新:** 2025-02-14
+**狀態:** ✅ 已實施 (Implemented)
+**優先級:** High
+**預估工期:** ~4 個工作日
+**最後更新:** 2025-12-20
+
+---
+
+## ⚠️ 重要更新 (2025-12-20)
+
+### React StrictMode + Supabase Lock Deadlock 修復
+
+在開發模式下發現一個關鍵問題：頁面會卡在 "Loading..." 狀態。
+
+**根本原因：**
+- React StrictMode 會雙重掛載組件
+- Supabase 客戶端使用 `navigator.locks` API 來管理認證狀態
+- 原始的 `getSession()` 調用會獲取一個鎖，但當 React 卸載組件時，孤立的 Promise 永遠不會釋放該鎖
+- 這導致後續的認證操作被阻塞
+
+**解決方案 (`frontend/src/contexts/AuthContext.tsx`)：**
+1. 移除直接的 `getSession()` 調用
+2. 僅依賴 `onAuthStateChange` 的 `INITIAL_SESSION` 事件
+3. 使用直接 REST API 調用來獲取用戶 profile，避免 Supabase 客戶端鎖競爭
+4. 添加 `isMountedRef` 來防止組件卸載後的狀態更新
+
+```typescript
+// 使用直接 REST 調用而非 Supabase 客戶端
+const response = await fetch(
+  `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?id=eq.${session.user.id}&select=id,display_name,role`,
+  {
+    headers: {
+      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+  }
+)
+```
 
 ---
 
@@ -47,6 +80,7 @@
 
 ---
 
-**審批:** 待審批  
-**實施者:** 待指派  
-**審閱者:** 待指派
+**審批:** ✅ 已完成
+**實施者:** Claude Code
+**審閱者:** User
+**實施日期:** 2025-02-14 (初始實施) / 2025-12-20 (StrictMode 修復)

@@ -41,9 +41,15 @@ export SUPABASE_PROJECT_REF="twsbhjmlmspjwfystpti"
 export SUPABASE_URL="https://${SUPABASE_PROJECT_REF}.supabase.co"
 
 # -----------------------------------------------------------------------------
+# Custom Domain Configuration
+# -----------------------------------------------------------------------------
+export CUSTOM_DOMAIN="realbreaking.com"
+export CUSTOM_DOMAIN_URL="https://${CUSTOM_DOMAIN}"
+
+# -----------------------------------------------------------------------------
 # CORS Allowed Origins (for backend configuration)
 # -----------------------------------------------------------------------------
-export CORS_ORIGINS="http://localhost:3000,http://localhost:8000,https://storage.googleapis.com,https://${FRONTEND_BUCKET}.storage.googleapis.com,https://${FRONTEND_BUCKET_ALT}.storage.googleapis.com"
+export CORS_ORIGINS="http://localhost:3000,http://localhost:8000,https://storage.googleapis.com,https://${FRONTEND_BUCKET}.storage.googleapis.com,https://${FRONTEND_BUCKET_ALT}.storage.googleapis.com,https://${CUSTOM_DOMAIN},https://www.${CUSTOM_DOMAIN}"
 
 # -----------------------------------------------------------------------------
 # Helper Functions

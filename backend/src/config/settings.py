@@ -42,6 +42,8 @@ class Settings(BaseSettings):
             "https://storage.googleapis.com",
             "https://cms-automation-frontend-476323.storage.googleapis.com",
             "https://cms-automation-frontend-cmsupload-476323.storage.googleapis.com",
+            "https://realbreaking.com",
+            "https://www.realbreaking.com",
         ],
         description="CORS allowed origins",
     )

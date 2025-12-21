@@ -139,6 +139,45 @@ To disable authentication for development:
 1. Remove or empty `SUPABASE_JWT_SECRET` in `backend/.env`
 2. The middleware will automatically skip auth verification
 
+## Known Issues & Solutions
+
+### React StrictMode + Supabase Lock Deadlock (Fixed 2025-12-20)
+
+**Symptom:** Page stuck on "Loading..." indefinitely in development mode.
+
+**Root Cause:**
+- React StrictMode double-mounts components in development
+- Supabase client uses `navigator.locks` API for auth state management
+- Original `getSession()` call acquires a lock that's never released when React unmounts the component
+- This creates a deadlock where subsequent auth operations are blocked
+
+**Solution Applied in `frontend/src/contexts/AuthContext.tsx`:**
+
+1. **Removed direct `getSession()` call** - This was acquiring locks that weren't released properly
+2. **Rely solely on `onAuthStateChange`** - Uses `INITIAL_SESSION` event for initial auth state
+3. **Use direct REST API for profile fetching** - Avoids Supabase client lock contention
+4. **Added `isMountedRef`** - Prevents state updates after component unmount
+
+```typescript
+// Current implementation uses direct REST call instead of Supabase client
+const response = await fetch(
+  `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/profiles?id=eq.${session.user.id}&select=id,display_name,role`,
+  {
+    headers: {
+      'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+  }
+)
+```
+
+**Why this works:**
+- `onAuthStateChange` fires `INITIAL_SESSION` on page load with the stored session
+- Direct REST calls don't acquire the Supabase client's internal locks
+- The `isMountedRef` prevents orphaned promises from updating state
+
+---
+
 ## Security Notes
 
 1. **Never commit** `.env` files with secrets
