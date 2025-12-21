@@ -391,27 +391,47 @@ class ComputerUseCMSService:
 
         body_preview = body[:500] + "..." if len(body) > 500 else body
 
+        # Validate image metadata before proceeding
         if has_images:
-            # Build detailed image info with position and caption for precise insertion
+            self._validate_image_metadata(article_images, body)
+
+        if has_images:
+            # Build detailed image info with position, caption, and all metadata for precise insertion
             image_lines = []
+            featured_count = sum(1 for img in article_images if img.get('is_featured'))
+
             for idx, img in enumerate(article_images, 1):
                 position = img.get('position', 0)
-                caption = img.get('caption', 'No caption provided')
+                caption = img.get('caption', '')
                 alt_text = img.get('alt_text', caption)  # Use caption as alt if not provided
+                description = img.get('description', '')
                 filename = img.get('filename', f'image_{idx}')
                 local_path = img.get('local_path', '')
                 source_url = img.get('source_url', '')
+                is_featured = img.get('is_featured', False)
+                image_type = img.get('image_type', 'content')
+                detection_method = img.get('detection_method', '')
+
+                # Build featured indicator
+                featured_indicator = " ⭐ [FEATURED/置頂]" if is_featured else ""
+                type_indicator = f" ({image_type})" if image_type else ""
 
                 image_lines.append(
-                    f"  Image {idx}:\n"
+                    f"  Image {idx}{featured_indicator}{type_indicator}:\n"
                     f"    - Filename: {filename}\n"
                     f"    - Insert after paragraph: {position} (0 = before first paragraph, 1 = after first paragraph, etc.)\n"
-                    f"    - Caption/Alt text: {caption[:100]}{'...' if len(caption) > 100 else ''}\n"
+                    f"    - Is Featured (置頂): {'YES' if is_featured else 'NO'}"
+                    + (f" (detected via: {detection_method})" if detection_method and is_featured else "") + "\n"
+                    f"    - Alt Text (替代文字): {alt_text[:120]}{'...' if len(alt_text) > 120 else ''}\n"
+                    f"    - Caption (圖說): {caption[:100]}{'...' if len(caption) > 100 else ''}\n"
+                    f"    - Description (描述): {description[:80]}{'...' if len(description) > 80 else ''}\n"
                     f"    - Local path: {local_path}\n"
                     f"    - Original URL: {source_url[:80]}{'...' if len(str(source_url)) > 80 else ''}"
                 )
 
-            image_info = "\n**Article Images to Upload (with exact positions):**\n" + "\n".join(image_lines)
+            # Add summary header
+            featured_summary = f" ({featured_count} featured)" if featured_count > 0 else ""
+            image_info = f"\n**Article Images to Upload{featured_summary} (with exact positions):**\n" + "\n".join(image_lines)
         else:
             image_info = ""
 
@@ -606,17 +626,36 @@ class ComputerUseCMSService:
             for idx, img in enumerate(article_images, 1):
                 position = img.get('position', 0)
                 caption = img.get('caption', '')
+                alt_text = img.get('alt_text', '')
+                description = img.get('description', '')
                 filename = img.get('filename', f'image_{idx}')
+                is_featured = img.get('is_featured', False)
+                image_type = img.get('image_type', 'content')
 
                 if position == 0:
                     position_desc = "at the very beginning of the article (before the first paragraph)"
                 else:
                     position_desc = f"after paragraph {position}"
 
-                image_insertion_instructions.append(
-                    f"Image {idx} ({filename}): Insert {position_desc}"
-                    + (f" with caption: '{caption[:50]}...'" if caption else "")
-                )
+                # Build detailed instruction for this image
+                img_instruction = f"Image {idx} ({filename})"
+                if is_featured:
+                    img_instruction += " [置頂圖片]"
+                img_instruction += f": Insert {position_desc}"
+
+                # Add metadata details
+                metadata_parts = []
+                if alt_text:
+                    metadata_parts.append(f"Alt: '{alt_text[:60]}...'")
+                if caption:
+                    metadata_parts.append(f"Caption: '{caption[:60]}...'")
+                if description:
+                    metadata_parts.append(f"Desc: '{description[:40]}...'")
+
+                if metadata_parts:
+                    img_instruction += f" | {' | '.join(metadata_parts)}"
+
+                image_insertion_instructions.append(img_instruction)
 
             add_step(
                 "Upload and Insert Article Images at Correct Positions",
@@ -646,10 +685,12 @@ class ComputerUseCMSService:
                     "     - Click 'Select Files' and choose the image file",
                     "     - Wait for upload to complete",
                     "",
-                    "  4. SET IMAGE METADATA (CRITICAL):",
-                    "     - In the right panel of Media Library, set:",
-                    "     - Alt Text (替代文字): Use the provided alt_text or caption",
-                    "     - Caption (圖說): Use the provided caption - this displays below the image",
+                    "  4. SET IMAGE METADATA (CRITICAL FOR SEO):",
+                    "     - In the right panel of Media Library, fill in ALL fields:",
+                    "     - Alt Text (替代文字): Use the provided alt_text - IMPORTANT for accessibility",
+                    "     - Caption (圖說): Use the provided caption - displays below the image",
+                    "     - Description (描述): Use the provided description - stored in Media Library",
+                    "     - If any field is empty in the data, leave it blank or use reasonable default",
                     "",
                     "  5. INSERT THE IMAGE:",
                     "     - Click 'Insert into post' button",
@@ -672,27 +713,55 @@ class ComputerUseCMSService:
         # Set Featured Image step (must be done after uploading images)
         if has_images:
             # Determine which image should be the featured image
-            # Priority: position 0 (before first paragraph) or first image in list
+            # Priority order:
+            # 1. Image explicitly marked as is_featured=True
+            # 2. Image with image_type='featured'
+            # 3. Image at position 0 (before first paragraph)
+            # 4. First image in list (fallback)
             featured_img = next(
-                (img for img in article_images if img.get('position') == 0),
-                article_images[0] if article_images else None
+                (img for img in article_images if img.get('is_featured') is True),
+                next(
+                    (img for img in article_images if img.get('image_type') == 'featured'),
+                    next(
+                        (img for img in article_images if img.get('position') == 0),
+                        article_images[0] if article_images else None
+                    )
+                )
             )
             if featured_img:
                 featured_filename = featured_img.get('filename', 'first uploaded image')
                 featured_alt = featured_img.get('alt_text') or featured_img.get('caption', '')
+                featured_description = featured_img.get('description', '')
+                detection_method = featured_img.get('detection_method', 'position_fallback')
+
+                # Build featured image instructions with all available metadata
+                featured_instructions = [
+                    'In the right sidebar (Document panel), scroll to find "Featured image" section',
+                    'Click on "Set featured image" button',
+                    f'From the Media Library, select the image: "{featured_filename}"',
+                    'If not visible, search for it in the Media Library',
+                ]
+
+                # Add alt text instruction
+                if featured_alt:
+                    featured_instructions.append(f'Set the Alt Text (替代文字) to: "{featured_alt[:150]}"')
+                else:
+                    featured_instructions.append('Set appropriate alt text based on image content')
+
+                # Add description instruction if available
+                if featured_description:
+                    featured_instructions.append(f'Set the Description (描述) to: "{featured_description[:200]}"')
+
+                featured_instructions.extend([
+                    'Click "Set featured image" to confirm',
+                    'Verify the featured image thumbnail appears in the sidebar',
+                    f'Note: Featured image was detected via: {detection_method}',
+                    'Take a screenshot of the Featured Image panel showing the selected image',
+                ])
 
                 add_step(
                     "Set Featured Image (題圖/特色圖片)",
-                    [
-                        'In the right sidebar (Document panel), scroll to find "Featured image" section',
-                        'Click on "Set featured image" button',
-                        f'From the Media Library, select the image: "{featured_filename}"',
-                        'If not visible, search for it in the Media Library',
-                        f'Set the alt text to: "{featured_alt[:100]}..."' if featured_alt else 'Set appropriate alt text based on image content',
-                        'Click "Set featured image" to confirm',
-                        'Verify the featured image thumbnail appears in the sidebar',
-                        'Take a screenshot of the Featured Image panel showing the selected image',
-                    ],
+                    featured_instructions,
                 )
 
         # Set Author step
@@ -967,6 +1036,81 @@ Body Preview: {body_preview}
 Begin the task now and follow the steps carefully."""
 
         return instructions
+
+    def _validate_image_metadata(
+        self,
+        article_images: list[dict[str, Any]],
+        article_body: str,
+    ) -> None:
+        """Validate image metadata and log warnings for potential issues.
+
+        Checks:
+        1. Image positions are within reasonable range
+        2. Featured image is properly marked
+        3. Alt text is present for accessibility
+        4. No duplicate featured images
+
+        Args:
+            article_images: List of image metadata dicts
+            article_body: Article body text (to estimate paragraph count)
+        """
+        if not article_images:
+            return
+
+        # Estimate paragraph count from body text
+        paragraphs = [p.strip() for p in article_body.split('\n\n') if p.strip()]
+        estimated_paragraph_count = len(paragraphs)
+
+        # Check for issues
+        featured_images = [img for img in article_images if img.get('is_featured')]
+        max_position = max(img.get('position', 0) for img in article_images)
+
+        # Log validation results
+        logger.info(
+            "image_metadata_validation",
+            total_images=len(article_images),
+            featured_count=len(featured_images),
+            estimated_paragraphs=estimated_paragraph_count,
+            max_image_position=max_position,
+        )
+
+        # Warn if multiple featured images
+        if len(featured_images) > 1:
+            logger.warning(
+                "multiple_featured_images_detected",
+                featured_count=len(featured_images),
+                featured_filenames=[img.get('filename') for img in featured_images],
+                message="Only the first will be used as the WordPress featured image",
+            )
+
+        # Warn if no featured image
+        if len(featured_images) == 0:
+            logger.warning(
+                "no_featured_image_detected",
+                message="Will use first image (position 0) as featured image",
+            )
+
+        # Warn if image position exceeds paragraph count
+        for idx, img in enumerate(article_images):
+            position = img.get('position', 0)
+            if position > estimated_paragraph_count + 5:  # Allow some margin
+                logger.warning(
+                    "image_position_may_exceed_content",
+                    image_index=idx + 1,
+                    filename=img.get('filename'),
+                    position=position,
+                    estimated_paragraphs=estimated_paragraph_count,
+                    message=f"Image position {position} may be beyond article content",
+                )
+
+            # Warn if alt text is missing
+            if not img.get('alt_text') and not img.get('caption'):
+                logger.warning(
+                    "image_missing_alt_text",
+                    image_index=idx + 1,
+                    filename=img.get('filename'),
+                    message="No alt text or caption - accessibility may be compromised",
+                )
 
     def _execute_tool(
         self,

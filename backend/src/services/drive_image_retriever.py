@@ -165,15 +165,30 @@ class DriveImageRetriever:
                     continue
 
                 # Build complete image metadata for Computer Use
+                # Include all fields needed for proper WordPress publishing
                 image_metadata = {
+                    # Basic file info
                     "filename": filename,
-                    "position": article_image.position,
-                    "caption": article_image.caption or "",
-                    "alt_text": article_image.alt_text or article_image.caption or "",
-                    "description": article_image.description or "",
                     "local_path": str(local_path),
                     "source_url": article_image.source_url or "",
                     "mime_type": self._guess_mime_type(filename),
+
+                    # Position and type classification
+                    "position": article_image.position,
+                    "is_featured": article_image.is_featured,  # 置頂圖片標記
+                    "image_type": article_image.image_type,    # featured/content/inline
+                    "detection_method": article_image.detection_method or "",  # 檢測方式
+
+                    # Text content for SEO/accessibility
+                    "caption": article_image.caption or "",
+                    "alt_text": article_image.alt_text or article_image.caption or "",
+                    "description": article_image.description or "",
+
+                    # Technical metadata (dimensions, format, etc.)
+                    "image_width": article_image.image_width,
+                    "image_height": article_image.image_height,
+                    "file_size_bytes": article_image.file_size_bytes,
+                    "image_format": article_image.image_format,
                 }
 
                 images.append(image_metadata)
@@ -183,8 +198,12 @@ class DriveImageRetriever:
                     "image_prepared_for_upload",
                     filename=filename,
                     position=article_image.position,
+                    is_featured=article_image.is_featured,
+                    image_type=article_image.image_type,
+                    detection_method=article_image.detection_method,
                     has_caption=bool(article_image.caption),
                     has_alt_text=bool(article_image.alt_text),
+                    has_description=bool(article_image.description),
                 )
 
             except Exception as e:
@@ -238,15 +257,30 @@ class DriveImageRetriever:
 
                 # Note: uploaded_files doesn't have position/caption/alt_text
                 # Use index as position and empty strings for text fields
+                # First image (idx=0) is assumed to be featured for legacy compatibility
                 image_metadata = {
+                    # Basic file info
                     "filename": uploaded_file.filename,
-                    "position": idx,  # Use index as fallback position
-                    "caption": "",    # Not available in uploaded_files
-                    "alt_text": "",   # Not available in uploaded_files
-                    "description": "",
                     "local_path": str(local_path),
                     "source_url": uploaded_file.web_view_link or "",
                     "mime_type": uploaded_file.mime_type or self._guess_mime_type(uploaded_file.filename),
+
+                    # Position and type classification (fallback defaults)
+                    "position": idx,  # Use index as fallback position
+                    "is_featured": idx == 0,  # First image assumed featured
+                    "image_type": "featured" if idx == 0 else "content",
+                    "detection_method": "legacy_fallback",
+
+                    # Text content (not available in uploaded_files)
+                    "caption": "",
+                    "alt_text": "",
+                    "description": "",
+
+                    # Technical metadata (not available)
+                    "image_width": None,
+                    "image_height": None,
+                    "file_size_bytes": None,
+                    "image_format": None,
                 }
 
                 images.append(image_metadata)
