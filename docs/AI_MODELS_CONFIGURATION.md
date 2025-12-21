@@ -4,10 +4,10 @@
 
 ## 模型總覽
 
-| 功能 | 默認模型 | 備用模型 | 配置項 |
+| 功能 | 當前使用模型 | 備用模型 | 配置項 |
 |------|----------|----------|--------|
 | 文章解析/校對/SEO | Claude Opus 4.5 | - | `ANTHROPIC_MODEL` |
-| 圖片 OCR/Alt Text | Gemini 3.0 Flash | GPT-4o | `VERTEX_AI_MODEL` / `OPENAI_MODEL` |
+| 圖片 OCR/Alt Text | GPT-4o | Gemini 1.5 Flash (待啟用) | `OPENAI_MODEL` / `VERTEX_AI_MODEL` |
 | 圖片生成 | Imagen 3.0 | - | `VERTEX_AI_IMAGE_MODEL` |
 
 ---
@@ -45,7 +45,7 @@ ANTHROPIC_MAX_TOKENS=16384
 
 ## 2. 圖片 OCR / Alt Text 生成模型
 
-### 主要模型：Gemini 3.0 Flash (Google Vertex AI)
+### 主要模型：GPT-4o (OpenAI) - 當前使用
 
 **用途：**
 - 圖片類型檢測（信息圖 vs 照片）
@@ -55,25 +55,43 @@ ANTHROPIC_MAX_TOKENS=16384
 
 **配置：**
 ```bash
-VERTEX_AI_PROJECT=cmsupload-476323
-VERTEX_AI_LOCATION=us-central1
-VERTEX_AI_MODEL=gemini-3.0-flash
-USE_VERTEX_AI_FOR_VISION=true
+OPENAI_API_KEY=sk-xxx
+OPENAI_MODEL=gpt-4o
+USE_VERTEX_AI_FOR_VISION=false  # 當前設為 false 使用 OpenAI
 ```
 
-**為什麼選擇 Gemini 3.0 Flash：**
-- OCR 準確率比 2.5 版本提升 15%
+**成本估算：**
+- Input: $2.50/1M tokens
+- Output: $10.00/1M tokens
+- 每張圖片約 $0.01-0.03
+
+---
+
+### 備用模型：Gemini 1.5 Flash (Google Vertex AI) - 待啟用
+
+> ⚠️ **注意：** Vertex AI Gemini 目前因權限問題暫時無法使用，系統自動使用 GPT-4o。
+> 需要在 GCP 控制台配置正確的 Vertex AI 權限後才能啟用。
+
+**配置：**
+```bash
+VERTEX_AI_PROJECT=cmsupload-476323
+VERTEX_AI_LOCATION=us-central1
+VERTEX_AI_MODEL=gemini-1.5-flash-002
+USE_VERTEX_AI_FOR_VISION=true  # 設為 true 啟用 Gemini
+```
+
+**為什麼考慮 Gemini：**
+- OCR 準確率優秀
 - 成本比 GPT-4o 便宜約 5 倍
 - 速度快 3 倍
-- 手寫識別能力突破性提升
 - 支持繁體中文
 
-**成本估算：**
+**成本估算（啟用後）：**
 - Input: $0.50/1M tokens
 - Output: $3.00/1M tokens
 - 每張圖片約 $0.001-0.005
 
-### 備用模型：GPT-4o (OpenAI)
+### 備選方案：GPT-4o (OpenAI)
 
 **用途：**
 - 當 Gemini 不可用時自動切換
@@ -120,7 +138,7 @@ VERTEX_AI_IMAGE_MODEL=imagen-3.0-generate-001
   ├─ 檢查 USE_VERTEX_AI_FOR_VISION
   │     │
   │     ├─ true + Vertex AI 可用
-  │     │     └─ 使用 Gemini 3.0 Flash
+  │     │     └─ 使用 Gemini 1.5 Flash（待啟用）
   │     │
   │     └─ false 或 Vertex AI 不可用
   │           └─ 使用 GPT-4o
@@ -159,9 +177,9 @@ OPENAI_MODEL=gpt-4o
 # === Google Vertex AI (Gemini) ===
 VERTEX_AI_PROJECT=cmsupload-476323     # GCP 項目 ID
 VERTEX_AI_LOCATION=us-central1         # 區域
-VERTEX_AI_MODEL=gemini-3.0-flash       # 視覺/OCR 模型
+VERTEX_AI_MODEL=gemini-1.5-flash-002   # 視覺/OCR 模型（待啟用）
 VERTEX_AI_IMAGE_MODEL=imagen-3.0-generate-001  # 圖片生成模型
-USE_VERTEX_AI_FOR_VISION=true          # 是否使用 Gemini 做視覺任務
+USE_VERTEX_AI_FOR_VISION=false         # 當前使用 GPT-4o，設為 true 啟用 Gemini
 ```
 
 ---
@@ -173,36 +191,38 @@ USE_VERTEX_AI_FOR_VISION=true          # 是否使用 Gemini 做視覺任務
 | 模型 | 用途 | 單價 | 月用量 | 月成本 |
 |------|------|------|--------|--------|
 | Claude Opus 4.5 | 文章解析 | ~$0.10/篇 | 1000 篇 | ~$100 |
-| Gemini 3.0 Flash | 圖片 OCR | ~$0.003/張 | 5000 張 | ~$15 |
-| **總計** | | | | **~$115/月** |
+| GPT-4o | 圖片 OCR | ~$0.02/張 | 5000 張 | ~$100 |
+| **總計** | | | | **~$200/月** |
 
-### 如果全部使用 OpenAI
+### 如果啟用 Gemini（待解決權限問題）
 
 | 模型 | 用途 | 單價 | 月用量 | 月成本 |
 |------|------|------|--------|--------|
-| GPT-4 | 文章解析 | ~$0.15/篇 | 1000 篇 | ~$150 |
-| GPT-4o | 圖片 OCR | ~$0.02/張 | 5000 張 | ~$100 |
-| **總計** | | | | **~$250/月** |
+| Claude Opus 4.5 | 文章解析 | ~$0.10/篇 | 1000 篇 | ~$100 |
+| Gemini 1.5 Flash | 圖片 OCR | ~$0.003/張 | 5000 張 | ~$15 |
+| **總計** | | | | **~$115/月** |
 
-**使用 Gemini 節省約 54% 成本**
+**啟用 Gemini 可節省約 42% 成本**
 
 ---
 
 ## 7. 切換模型
 
-### 強制使用 GPT-4o 做圖片 OCR
+### 使用 GPT-4o 做圖片 OCR（當前默認）
 
 ```bash
 # .env
 USE_VERTEX_AI_FOR_VISION=false
 ```
 
-### 強制使用 Gemini 做圖片 OCR（默認）
+### 啟用 Gemini 做圖片 OCR（待解決權限問題）
 
 ```bash
 # .env
 USE_VERTEX_AI_FOR_VISION=true
 ```
+
+> ⚠️ 注意：啟用 Gemini 前需確保 Vertex AI 權限已正確配置
 
 ---
 
@@ -222,7 +242,7 @@ USE_VERTEX_AI_FOR_VISION=true
 **症狀：** 信息圖的文字提取不完整
 
 **解決方案：**
-1. 確認使用 Gemini 3.0 Flash（非 2.5 Thinking）
+1. 確認使用正確的視覺模型（GPT-4o 或 Gemini）
 2. 檢查圖片解析度是否足夠
 3. 考慮增加圖片預處理
 
@@ -232,5 +252,5 @@ USE_VERTEX_AI_FOR_VISION=true
 
 | 日期 | 變更 |
 |------|------|
-| 2025-12-20 | 初始版本：添加 Gemini 3.0 Flash 支持，設為默認 OCR 模型 |
-| 2025-12-20 | 更新圖片類型命名：tocard → infographic, illustration → photo |
+| 2025-12-20 | 初始版本：添加 Gemini 支持，實現圖片類型命名標準化 |
+| 2025-12-21 | 修正：Vertex AI 權限問題，暫時改用 GPT-4o 作為主要 OCR 模型 |

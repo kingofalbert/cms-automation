@@ -127,16 +127,16 @@ class Settings(BaseSettings):
         description="Vertex AI region (us-central1 recommended for Gemini)",
     )
     VERTEX_AI_MODEL: str = Field(
-        default="gemini-3.0-flash",
-        description="Gemini model for text/vision tasks (latest Dec 2025)",
+        default="gemini-1.5-flash-002",
+        description="Gemini model for text/vision tasks (Gemini 1.5 Flash 002 - stable)",
     )
     VERTEX_AI_IMAGE_MODEL: str = Field(
         default="imagen-3.0-generate-001",
         description="Imagen model for image generation",
     )
     USE_VERTEX_AI_FOR_VISION: bool = Field(
-        default=True,
-        description="Use Vertex AI (Gemini 3.0 Flash) instead of OpenAI for vision tasks - recommended for better OCR and lower cost",
+        default=False,
+        description="Use Vertex AI (Gemini) instead of OpenAI for vision tasks. Currently disabled due to Vertex AI permission issues.",
     )
 
     # Google Drive Storage Configuration

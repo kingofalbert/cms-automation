@@ -1,6 +1,6 @@
 """Image Alt Text and Description Generator Service
 
-Uses Gemini 3.0 Flash (default) or GPT-4o vision to generate accurate alt text and descriptions.
+Uses GPT-4o (default) or Gemini vision to generate accurate alt text and descriptions.
 Implements smart detection to distinguish between:
 - Infographic (信息圖): Images with embedded text - requires OCR extraction
 - Photo (照片): Images without text - requires visual description
@@ -85,8 +85,8 @@ class ImageAltGeneratorService:
     """Service for generating image alt text and descriptions using vision AI
 
     Supports two providers:
-    - Gemini 3.0 Flash (default): Better OCR, 5x cheaper, faster
-    - GPT-4o: Fallback option
+    - GPT-4o (default): Reliable, good OCR capability
+    - Gemini (optional): Better OCR, 5x cheaper, faster - requires Vertex AI setup
 
     Implements smart image type detection:
     1. First detect if image contains embedded text (Infographic vs Photo)
