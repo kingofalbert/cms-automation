@@ -32,7 +32,7 @@ class SemanticSimilarityService:
     def __init__(self):
         """初始化服務"""
         settings = get_settings()
-        self.client = AsyncOpenAI(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
         self.embedding_model = "text-embedding-3-small"  # 1536 維度
         self.similarity_threshold = float(settings.SIMILARITY_THRESHOLD)  # 默認 0.85
         self._embedding_cache: dict[str, list[float]] = {}
