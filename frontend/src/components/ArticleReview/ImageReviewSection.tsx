@@ -59,13 +59,13 @@ const EPOCH_TIMES_STANDARDS = {
     minHeight: 630,
     recommendedWidth: 1200,
     recommendedHeight: 630,
-    maxFileSizeKB: 500,
+    maxFileSizeKB: 0,  // 不限制文件大小，允許原圖
     supportedFormats: ['JPEG', 'PNG', 'WebP', 'JPG'],
   },
   contentImage: {
     minWidth: 800,
     minHeight: 400,
-    maxFileSizeKB: 300,
+    maxFileSizeKB: 0,  // 不限制文件大小，允許原圖
     supportedFormats: ['JPEG', 'PNG', 'WebP', 'JPG', 'GIF'],
   },
 };
@@ -200,6 +200,7 @@ const checkResolution = (
 
 /**
  * Check if file size meets standards
+ * When maxFileSizeKB is 0, no limit is applied
  */
 const checkFileSize = (
   bytes?: number,
@@ -214,6 +215,15 @@ const checkFileSize = (
     : EPOCH_TIMES_STANDARDS.contentImage.maxFileSizeKB;
 
   const sizeKB = bytes / 1024;
+  const sizeMB = sizeKB / 1024;
+
+  // If maxKB is 0, no limit - always pass
+  if (maxKB === 0) {
+    if (sizeMB >= 1) {
+      return { status: 'pass', message: `✓ ${sizeMB.toFixed(1)}MB (無大小限制)` };
+    }
+    return { status: 'pass', message: `✓ ${sizeKB.toFixed(0)}KB (無大小限制)` };
+  }
 
   if (sizeKB <= maxKB) {
     return { status: 'pass', message: `✓ 文件大小符合 (≤${maxKB}KB)` };
@@ -890,7 +900,6 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
           <li>特色圖片建議尺寸：1200×630 像素 (最低)</li>
           <li>內文圖片建議尺寸：800×400 像素 (最低)</li>
           <li>支持格式：JPG, PNG, WebP</li>
-          <li>特色圖片大小：≤ 500KB，內文圖片：≤ 300KB</li>
           <li>每張圖片需設置圖說 (Caption) 和 Alt Text</li>
         </ul>
       </div>

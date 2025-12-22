@@ -376,9 +376,9 @@ class ImageProcessorService:
         if width > 4096 or height > 4096:
             warnings.append(f"Image dimensions are large ({width}x{height}px)")
 
-        # Check file size
-        if file_size > 10 * 1024 * 1024:  # 10MB
-            warnings.append(f"File size is large ({file_size / 1024 / 1024:.1f}MB)")
+        # Check file size - only warn for extremely large files (>50MB)
+        if file_size > 50 * 1024 * 1024:  # 50MB
+            warnings.append(f"File size is very large ({file_size / 1024 / 1024:.1f}MB)")
 
         if file_size < 1024:  # 1KB
             warnings.append(f"File size is very small ({file_size} bytes)")

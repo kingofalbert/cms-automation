@@ -136,12 +136,7 @@ class ImageAsset(BaseModel):
         if path.suffix.lower() not in valid_extensions:
             raise ValueError(f'不支持的图片格式: {path.suffix}，支持的格式: {", ".join(valid_extensions)}')
 
-        # 验证文件大小（不超过 10MB）
-        max_size_mb = 10
-        file_size_mb = path.stat().st_size / (1024 * 1024)
-        if file_size_mb > max_size_mb:
-            raise ValueError(f'图片文件过大: {file_size_mb:.2f}MB，最大支持 {max_size_mb}MB')
-
+        # 不限制文件大小，允許上傳原圖
         return str(path.absolute())
 
     @field_validator('keywords')

@@ -65,7 +65,7 @@ class Settings(BaseSettings):
 
     # ==================== 文件上传配置 ====================
     upload_temp_dir: str = Field(default="./uploads/temp", description="上传临时目录")
-    upload_max_size_mb: int = Field(default=10, description="上传最大大小 (MB)")
+    upload_max_size_mb: int = Field(default=100, description="上传最大大小 (MB) - 不限制原圖大小")
     allowed_image_formats: str = Field(default="jpg,jpeg,png,gif,webp,bmp", description="允许的图片格式")
 
     # ==================== FastAPI 服务器配置 ====================
