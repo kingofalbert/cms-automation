@@ -70,16 +70,20 @@ frontend/
 
 ## Key Components
 
-### Image Review Section (Phase 13)
+### Image Review Section (Phase 13) ✅ E2E Verified
 
 Enhanced image review for article parsing with:
+- **Featured Image Detection (置頂圖片)** - Automatic detection using caption keywords, position, or manual override
+- **FeaturedBadge Component** - Shows detection method (自動檢測, 圖說標記, 位置檢測, etc.)
 - Original URL display (Google Drive links)
 - Caption and Alt Text display
-- Resolution comparison with Epoch Times standards
-- File size and format validation
+- Resolution comparison with Epoch Times standards (1200×630 for featured, 800×400 for content)
+- File size and format validation (500KB max for featured, 300KB for content)
 - Issue highlighting (red/yellow/green status badges)
+- Image separation logic (置頂 vs 正文 images)
 
 See: `src/components/ArticleReview/ImageReviewSection.tsx`
+Spec: [`specs/013-enhanced-image-review/README.md`](../specs/013-enhanced-image-review/README.md)
 
 ## Development
 
@@ -147,6 +151,22 @@ Before writing tests, please read our [Testing Best Practices](./docs/TESTING_BE
 ### Tests failing with "Aborting after running 10000 timers"
 
 See [Testing Best Practices - Fake Timers](./docs/TESTING_BEST_PRACTICES.md#vitest-fake-timers-与异步操作)
+
+### Page stuck on "Loading..." in development mode
+
+This issue was fixed on 2025-12-20. The root cause was a deadlock between React StrictMode and Supabase's `navigator.locks` API.
+
+**Symptoms:**
+- Page shows "Loading..." indefinitely
+- No API requests visible in Network tab
+- Console shows "Auth state changed: SIGNED_IN" but nothing after
+
+**Solution:** The `AuthContext.tsx` was updated to:
+1. Remove direct `getSession()` calls
+2. Use `onAuthStateChange` with `INITIAL_SESSION` event only
+3. Fetch profiles using direct REST API instead of Supabase client
+
+See [Supabase Auth Setup Guide](../docs/SUPABASE_AUTH_SETUP.md#react-strictmode--supabase-lock-deadlock-fixed-2025-12-20) for details.
 
 ### CDN cache issues after deployment
 
