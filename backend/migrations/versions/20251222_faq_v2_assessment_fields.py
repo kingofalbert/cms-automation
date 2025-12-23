@@ -17,7 +17,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 
 # revision identifiers, used by Alembic.
 revision = 'faq_v2_assessment'
-down_revision = None  # Will be auto-detected
+down_revision = '20251220_1000'  # add_worklist_synced_at_index
 branch_labels = None
 depends_on = None
 
