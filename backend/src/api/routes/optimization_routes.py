@@ -19,16 +19,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.database import get_session as get_db
+from sqlalchemy import delete
+
 from src.api.schemas.optimization import (
     ApplyCategoryRequest,
     CategoryRecommendationRequest,
     CategoryRecommendationResponse,
+    FAQItem,
     GenerateOptimizationsRequest,
     OptimizationError,
     OptimizationStatusResponse,
     OptimizationsResponse,
     SelectSEOTitleRequest,
     SelectSEOTitleResponse,
+    UpdateFAQsRequest,
+    UpdateFAQsResponse,
 )
 from src.config.settings import get_settings
 from src.models.article import Article
@@ -845,3 +850,157 @@ async def apply_category(
         "source": request.source,
         "updated_at": article.updated_at.isoformat(),
     }
+
+
+# ============================================================================
+# FAQ Update (Phase 13 v2.3)
+# ============================================================================
+
+
+def _generate_faq_html_from_items(faqs: list[FAQItem], disclaimer_required: bool = True) -> str:
+    """Generate FAQ HTML section from FAQ items.
+
+    Args:
+        faqs: List of FAQ items to render
+        disclaimer_required: Whether to add medical disclaimer
+
+    Returns:
+        HTML string for FAQ section
+    """
+    if not faqs:
+        return ""
+
+    html_parts = [
+        '<section class="faq-section" id="faq">',
+        '  <h2>常見問題</h2>',
+        '  <div class="faq-list">',
+    ]
+
+    for i, faq in enumerate(faqs, 1):
+        question = faq.question
+        answer = faq.answer
+        has_warning = faq.safety_warning
+
+        html_parts.append(f'    <div class="faq-item" id="faq-{i}">')
+        html_parts.append(f'      <h3 class="faq-question">Q{i}: {question}</h3>')
+
+        if has_warning:
+            html_parts.append('      <div class="faq-answer faq-warning">')
+            html_parts.append('        <span class="warning-icon">⚠️</span>')
+            html_parts.append(f'        <p>{answer}</p>')
+            html_parts.append('      </div>')
+        else:
+            html_parts.append(f'      <div class="faq-answer"><p>{answer}</p></div>')
+
+        html_parts.append('    </div>')
+
+    html_parts.append('  </div>')
+
+    # Add disclaimer for health articles
+    if disclaimer_required:
+        html_parts.append('  <div class="faq-disclaimer">')
+        html_parts.append('    <p>以上資訊僅供參考，不構成醫療建議。如有健康問題，請諮詢專業醫師。</p>')
+        html_parts.append('  </div>')
+
+    html_parts.append('</section>')
+
+    return '\n'.join(html_parts)
+
+
+@router.put(
+    "/articles/{article_id}/faqs",
+    response_model=UpdateFAQsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Update selected FAQs for an article",
+    description="""Update the FAQs for an article based on user selection.
+
+    This endpoint allows users to:
+    1. Select which AI-generated FAQs to keep
+    2. Edit FAQ content before saving
+    3. Remove unwanted FAQs (pass empty list)
+
+    The faq_html will be regenerated based on the selected FAQs.
+    This ensures that only user-approved FAQs appear in the published article.
+    """,
+)
+async def update_article_faqs(
+    article_id: int,
+    request: UpdateFAQsRequest,
+    db: AsyncSession = Depends(get_db),
+) -> UpdateFAQsResponse:
+    """Update FAQs for an article based on user selection.
+
+    Args:
+        article_id: ID of article
+        request: Update request with selected FAQs
+        db: Database session
+
+    Returns:
+        Response with updated FAQ count and regenerated HTML
+
+    Raises:
+        404: Article not found
+    """
+    from datetime import datetime
+
+    logger.info(f"PUT /articles/{article_id}/faqs - Updating {len(request.faqs)} FAQs")
+
+    # Get article
+    article = await _get_article_or_404(article_id, db)
+
+    # Count existing FAQs
+    stmt = select(ArticleFAQ).where(ArticleFAQ.article_id == article_id)
+    result = await db.execute(stmt)
+    existing_faqs = result.scalars().all()
+    previous_faq_count = len(existing_faqs)
+
+    # Delete existing FAQs
+    stmt = delete(ArticleFAQ).where(ArticleFAQ.article_id == article_id)
+    await db.execute(stmt)
+
+    # Insert new FAQs
+    new_faq_html = None
+    if request.faqs:
+        for i, faq_item in enumerate(request.faqs, 1):
+            new_faq = ArticleFAQ(
+                article_id=article_id,
+                question=faq_item.question,
+                answer=faq_item.answer,
+                question_type=faq_item.question_type,
+                search_intent=faq_item.search_intent,
+                keywords_covered=faq_item.keywords_covered or [],
+                position=i,
+                status="approved",  # User-selected FAQs are automatically approved
+                safety_warning=faq_item.safety_warning,
+            )
+            db.add(new_faq)
+
+        # Regenerate faq_html if requested
+        if request.regenerate_html:
+            # Check if any FAQ has safety warning to determine if disclaimer needed
+            has_safety_warnings = any(f.safety_warning for f in request.faqs)
+            new_faq_html = _generate_faq_html_from_items(
+                request.faqs,
+                disclaimer_required=has_safety_warnings or article.faq_editorial_notes.get("disclaimer_required", False) if article.faq_editorial_notes else has_safety_warnings
+            )
+            article.faq_html = new_faq_html
+    else:
+        # No FAQs selected - clear faq_html
+        article.faq_html = None
+        article.faq_applicable = False
+
+    article.updated_at = datetime.utcnow()
+    await db.commit()
+
+    logger.info(
+        f"Updated FAQs for article {article_id}: "
+        f"{previous_faq_count} -> {len(request.faqs)} FAQs"
+    )
+
+    return UpdateFAQsResponse(
+        article_id=article_id,
+        faq_count=len(request.faqs),
+        faq_html=new_faq_html,
+        previous_faq_count=previous_faq_count,
+        updated_at=article.updated_at.isoformat(),
+    )

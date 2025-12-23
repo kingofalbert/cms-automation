@@ -195,7 +195,19 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
             faq_suggestions: parsingFaqs,
           },
         });
-        console.log('✅ FAQ 數據已自動保存');
+        // Phase 13 v2.3: Also update ArticleFAQ table and regenerate faq_html
+        try {
+          await api.put(`/v1/articles/${articleId}/faqs`, {
+            faqs: parsingFaqs.map(faq => ({
+              question: faq.question,
+              answer: faq.answer,
+            })),
+            regenerate_html: true,
+          });
+          console.log('✅ FAQ 數據已自動保存 (含 faq_html 更新)');
+        } catch (faqErr) {
+          console.warn('FAQ 表更新失敗，但 metadata 已保存:', faqErr);
+        }
         // Don't refetch here to avoid data race during navigation
       }
 
@@ -274,6 +286,28 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         meta_description: parsingData.seo_metadata?.meta_description,
         seo_keywords: parsingData.seo_metadata?.keywords,
       });
+
+      // Phase 13 v2.3: Update ArticleFAQ table and regenerate faq_html
+      // This ensures user-selected FAQs are persisted correctly
+      if (parsingData.faq_suggestions && parsingData.faq_suggestions.length > 0) {
+        try {
+          const faqUpdateResponse = await api.put<{
+            article_id: number;
+            faq_count: number;
+            faq_html: string | null;
+          }>(`/v1/articles/${articleId}/faqs`, {
+            faqs: parsingData.faq_suggestions.map(faq => ({
+              question: faq.question,
+              answer: faq.answer,
+            })),
+            regenerate_html: true,
+          });
+          console.log('FAQ 數據已更新:', faqUpdateResponse.faq_count, '條');
+        } catch (faqErr) {
+          console.error('FAQ 更新失敗:', faqErr);
+          // Don't block the main save on FAQ update failure
+        }
+      }
 
       // Invalidate cache to refetch updated data
       refetch();

@@ -334,3 +334,52 @@ class ApplyCategoryRequest(BaseSchema):
         "ai_recommended",
         description="Source: ai_recommended, user_selected",
     )
+
+
+# ============================================================================
+# FAQ Update Schemas (Phase 13 v2.3)
+# ============================================================================
+
+
+class FAQItem(BaseSchema):
+    """Single FAQ item for update request."""
+
+    question: str = Field(..., min_length=5, max_length=200, description="FAQ question")
+    answer: str = Field(..., min_length=10, max_length=500, description="FAQ answer (40-60 words recommended)")
+    question_type: str | None = Field(None, description="Question type: factual, how_to, comparison, definition, why")
+    search_intent: str | None = Field(None, description="Search intent: informational, navigational, transactional")
+    keywords_covered: list[str] | None = Field(None, description="Keywords covered by this FAQ")
+    safety_warning: bool = Field(False, description="Whether this FAQ contains YMYL safety warning")
+
+
+class UpdateFAQsRequest(BaseSchema):
+    """Request to update selected FAQs for an article.
+
+    This endpoint allows users to:
+    1. Select which AI-generated FAQs to keep
+    2. Edit FAQ content before saving
+    3. Remove unwanted FAQs
+
+    The faq_html will be regenerated based on the selected FAQs.
+    """
+
+    faqs: list[FAQItem] = Field(
+        ...,
+        min_length=0,
+        max_length=10,
+        description="List of FAQs to save (empty list to remove all FAQs)"
+    )
+    regenerate_html: bool = Field(
+        True,
+        description="Whether to regenerate faq_html based on selected FAQs"
+    )
+
+
+class UpdateFAQsResponse(BaseSchema):
+    """Response after updating FAQs."""
+
+    article_id: int = Field(..., description="Article ID")
+    faq_count: int = Field(..., description="Number of FAQs saved")
+    faq_html: str | None = Field(None, description="Regenerated FAQ HTML section")
+    previous_faq_count: int = Field(..., description="Previous number of FAQs")
+    updated_at: str = Field(..., description="Update timestamp")
