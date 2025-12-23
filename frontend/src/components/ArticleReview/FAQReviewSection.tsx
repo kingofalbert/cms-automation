@@ -521,16 +521,16 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
             </div>
           ) : null}
 
-          {/* FAQ guidelines - v2.2 */}
+          {/* FAQ guidelines - v2.3 AI SEO Optimized */}
           {(faqs.length > 0 || hasAiSuggestions) && isApplicable && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-              <strong>FAQ v2.2 優化建議：</strong>
+              <strong>FAQ v2.3 AI搜索優化建議：</strong>
               <ul className="mt-1 ml-4 list-disc space-y-1">
-                <li>建議 3-5 個精準的專業 FAQ，針對讀者真實痛點</li>
-                <li>問題應簡潔明了，模擬用戶真實搜索意圖</li>
-                <li>回答應詳細專業，建議 50-150 字</li>
-                <li>健康類文章請注意標註「健康安全提示」標籤</li>
-                <li>FAQ 將自動加入文章內容，優化 AI 搜索曝光</li>
+                <li>設計 3-5 個問題，使用讀者口語化提問（5W1H）</li>
+                <li>答案控制在 40-60 字，首句直接回答問題</li>
+                <li>確保 Focus Keyword 出現在至少 1 個 FAQ 答案中</li>
+                <li>健康類內容標註「安全提示」，避免絕對化用語</li>
+                <li>FAQ 將自動加入文章內容，提升 AI Overviews 曝光率 3.2x</li>
               </ul>
             </div>
           )}
