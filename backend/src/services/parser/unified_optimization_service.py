@@ -386,114 +386,111 @@ class UnifiedOptimizationService:
 
 ---
 
-### 任务5: FAQ生成（AI搜索优化）❓
+### 任務5: FAQ生成（健康文章專業版 v2.2）❓
 
-根据文章内容生成**8-10个**常见问题和答案，优化在AI搜索引擎中的表现：
+你是一名深耕健康領域多年的專業編輯、SEO專家及資訊架構師，精通Google最新AI搜索（AI Overviews）的抓取邏輯與E-E-A-T評核標準。
 
-**要求**:
-1. 生成8-10个FAQ
-2. 问题类型多样化：事实型、操作型、对比型、定义型
-3. 问题符合真实搜索意图（用户在AI搜索中会问的）
-4. 答案简洁准确（50-150字），基于文章内容，不杜撰
-5. 自然融入主关键词和相关词
+#### 5.1 適配性評估（系統前置判斷）
 
-**输出格式**:
+首先分析文章內容，判斷是否適合增加FAQ區塊：
+
+**適合增加FAQ的文章類型**:
+- 健康養生、中醫保健、營養食療
+- 疾病預防、症狀說明、治療方法
+- 運動健身、穴位按摩、生活保健
+
+**不適合增加FAQ的文章類型**:
+- 突發新聞、時事報導
+- 短篇快訊（<500字）
+- 純圖片/影片內容
+- 廣告推廣類文章
+
+**輸出格式（適配性評估）**:
+```json
+"faq_assessment": {{
+  "is_applicable": true,
+  "reason": "本文為健康養生類深度內容，適合增加FAQ以解答讀者常見疑問",
+  "target_pain_points": ["消除用藥恐懼", "明確適用人群", "了解注意事項"]
+}}
+```
+
+若 `is_applicable` 為 `false`，則 `faqs` 陣列為空。
+
+#### 5.2 FAQ深度撰寫（若適用）
+
+設計**3-5個**問題，遵循以下要求：
+
+**搜索意圖匹配**:
+- 模擬讀者在搜尋框中會輸入的自然語言提問
+- 例如：不是「禁忌症」，而是「哪些人不能吃？」
+- 例如：不是「服用方法」，而是「什麼時候吃最有效？」
+
+**答案自洽性（Self-contained）**:
+- 每個答案必須獨立完整
+- 嚴禁使用「如前所述」、「見上文」或「參考正文」等代詞
+- 確保當該問答被AI搜尋單獨引用時，邏輯依然閉環
+
+**結構化表述**:
+1. **首句定論**: 第一句話必須直接回答核心問題
+2. **補充細節**: 第二、三句話提供證據支持、適用範圍或操作建議
+3. **字數黃金律**: 每個回答總字數控制在**40-60字**之間（最佳AI摘要抓取率）
+
+**信任邊界與醫學安全（YMYL合規）**:
+- 答案為資訊分享，不可替代專業醫療診斷
+- 針對「孕婦、慢性病患者、正在服藥者」等特殊人群，必須給出明確安全警示
+- 避免絕對化用語（「一定」、「100%」），多使用「有助於」、「建議諮詢」、「通常情況下」
+
+**輸出格式**:
 ```json
 "faqs": [
   {{
-    "question": "人工智能在医疗诊断中的准确率有多高？",
-    "answer": "根据最新研究，AI医疗诊断系统在影像分析领域的准确率可达95%以上，部分场景甚至超过人类医生。例如在肺癌早期筛查中，AI系统的准确率比传统方法提升了30-40%。",
+    "question": "哪些人不適合服用這類保健品？",
+    "answer": "孕婦、哺乳期婦女及正在服用抗凝血藥物者不建議使用。慢性病患者如糖尿病、高血壓患者服用前應先諮詢醫師，確認是否與現有藥物產生交互作用。",
     "question_type": "factual",
     "search_intent": "informational",
-    "keywords_covered": ["AI医疗诊断", "准确率", "影像分析"],
-    "confidence": 0.92
+    "keywords_covered": ["禁忌人群", "孕婦", "藥物交互"],
+    "confidence": 0.92,
+    "safety_warning": true
   }},
   {{
-    "question": "医疗AI如何协助医生进行诊断？",
-    "answer": "医疗AI通过分析医学影像、病历数据和检验结果，为医生提供辅助诊断建议。系统可以快速识别病变区域、标注异常指标，并给出可能的诊断方向，帮助医生提高诊断效率和准确性。",
+    "question": "什麼時候吃效果最好？",
+    "answer": "一般建議飯後30分鐘服用，有助於吸收且減少腸胃不適。若為脂溶性成分，搭配含油脂的餐點效果更佳。具體用量請參照產品說明。",
     "question_type": "how_to",
     "search_intent": "informational",
-    "keywords_covered": ["医疗AI", "辅助诊断", "医学影像"],
-    "confidence": 0.88
+    "keywords_covered": ["服用時間", "吸收", "飯後"],
+    "confidence": 0.88,
+    "safety_warning": false
   }},
   {{
-    "question": "AI诊断和传统诊断方法有什么区别？",
-    "answer": "AI诊断依靠深度学习算法处理大量医疗数据，可以7×24小时不间断工作，处理速度快、一致性高。传统诊断依赖医生经验，受个人水平和疲劳度影响。两者结合使用效果最佳。",
-    "question_type": "comparison",
-    "search_intent": "informational",
-    "keywords_covered": ["AI诊断", "传统诊断", "深度学习"],
-    "confidence": 0.85
-  }},
-  {{
-    "question": "什么是医学影像AI识别技术？",
-    "answer": "医学影像AI识别技术是指利用计算机视觉和深度学习算法，自动分析X光、CT、MRI等医学图像，识别病变组织、肿瘤、骨折等异常情况的技术。该技术可大幅提高诊断速度和准确率。",
-    "question_type": "definition",
-    "search_intent": "informational",
-    "keywords_covered": ["医学影像", "AI识别", "计算机视觉"],
-    "confidence": 0.90
-  }},
-  {{
-    "question": "医疗AI技术目前应用在哪些领域？",
-    "answer": "医疗AI主要应用于：1）医学影像诊断（肺癌、乳腺癌筛查）2）病理分析 3）药物研发 4）手术辅助 5）健康管理 6）远程医疗等领域。其中影像诊断是最成熟的应用方向。",
+    "question": "這個方法真的有效嗎？有科學依據嗎？",
+    "answer": "多項研究顯示其活性成分具有抗氧化作用，但效果因人而異。建議持續使用2-4週觀察，如無改善應諮詢專業醫師評估其他方案。",
     "question_type": "factual",
     "search_intent": "informational",
-    "keywords_covered": ["医疗AI", "应用领域", "影像诊断"],
-    "confidence": 0.87
-  }},
-  {{
-    "question": "使用AI进行医疗诊断安全吗？",
-    "answer": "AI医疗诊断系统经过大量数据训练和临床验证，安全性较高。但目前主要作为辅助工具，最终诊断决策仍需由专业医生做出。监管机构对医疗AI产品有严格的认证标准。",
-    "question_type": "factual",
-    "search_intent": "informational",
-    "keywords_covered": ["AI诊断", "安全性", "临床验证"],
-    "confidence": 0.83
-  }},
-  {{
-    "question": "个人医疗数据在AI系统中如何保护？",
-    "answer": "医疗AI系统采用数据加密、去标识化、访问控制等技术保护患者隐私。数据处理遵循GDPR、HIPAA等法规要求。正规医疗机构会签署隐私保护协议，确保数据安全。",
-    "question_type": "how_to",
-    "search_intent": "informational",
-    "keywords_covered": ["医疗数据", "隐私保护", "数据安全"],
-    "confidence": 0.80
-  }},
-  {{
-    "question": "医疗AI未来发展趋势是什么？",
-    "answer": "未来医疗AI将向多模态融合（整合影像、基因、病历等多源数据）、个性化医疗、实时诊断、远程智能医疗等方向发展。预计2030年AI将覆盖80%以上的常规诊断场景。",
-    "question_type": "factual",
-    "search_intent": "informational",
-    "keywords_covered": ["医疗AI", "发展趋势", "个性化医疗"],
-    "confidence": 0.86
-  }},
-  {{
-    "question": "如何选择合适的医疗AI诊断工具？",
-    "answer": "选择医疗AI工具应考虑：1）是否获得监管机构认证 2）临床验证数据是否充分 3）准确率和特异性指标 4）适用病种范围 5）技术支持和更新频率。建议咨询专业医疗机构推荐。",
-    "question_type": "how_to",
-    "search_intent": "transactional",
-    "keywords_covered": ["医疗AI工具", "选择标准", "认证"],
-    "confidence": 0.82
-  }},
-  {{
-    "question": "医生需要学习AI技术知识吗？",
-    "answer": "医生不需要深入掌握AI算法，但应了解AI工具的基本原理、适用场景和局限性，以便正确使用和解读AI诊断结果。很多医学院已将AI医疗相关课程纳入培训体系。",
-    "question_type": "factual",
-    "search_intent": "informational",
-    "keywords_covered": ["医生", "AI知识", "医学教育"],
-    "confidence": 0.78
+    "keywords_covered": ["科學依據", "研究", "效果"],
+    "confidence": 0.85,
+    "safety_warning": false
   }}
-]
+],
+"faq_editorial_notes": {{
+  "longtail_keywords_covered": ["保健品禁忌", "服用時間", "效果多久"],
+  "multimedia_suggestions": ["穴位圖示", "食譜成品照", "運動姿勢示範"],
+  "tone_adjustment_needed": false,
+  "disclaimer_required": true
+}}
 ```
 
 ---
 
-## 📤 最终输出格式
+## 📤 最終輸出格式
 
-请严格按照以下JSON Schema输出所有5个任务的结果：
+請嚴格按照以下JSON Schema輸出所有5個任務的結果：
 
 ```json
 {{
   "title_suggestions": {{
     "suggested_title_sets": [...],
-    "optimization_notes": [...]
+    "optimization_notes": [...],
+    "seo_title_suggestions": {{...}}
   }},
   "seo_keywords": {{
     "focus_keyword": "...",
@@ -510,26 +507,38 @@ class UnifiedOptimizationService:
     "suggested_tags": [...],
     ...
   }},
+  "faq_assessment": {{
+    "is_applicable": true/false,
+    "reason": "說明為何適合/不適合增加FAQ",
+    "target_pain_points": ["痛點1", "痛點2"]
+  }},
   "faqs": [
-    {{"question": "...", "answer": "...", ...}},
-    // ... 8-10个FAQ
-  ]
+    {{"question": "...", "answer": "...", "safety_warning": true/false, ...}},
+    // ... 3-5個FAQ（若適用）
+  ],
+  "faq_editorial_notes": {{
+    "longtail_keywords_covered": [...],
+    "multimedia_suggestions": [...],
+    "tone_adjustment_needed": false,
+    "disclaimer_required": true
+  }}
 }}
 ```
 
 ---
 
-## ⚠️ 重要注意事项
+## ⚠️ 重要注意事項
 
-1. **内容一致性**: 标题、关键词、Meta、Tags、FAQ应相互协调，使用统一的核心概念
-2. **关键词覆盖**: 确保Focus Keyword在标题、Meta Description、FAQ中都有出现
-3. **数据准确**: FAQ答案必须基于文章内容，不得杜撰数据
-4. **长度控制**: 严格遵守各项长度限制
-5. **多样性**: 标题类型多样、FAQ问题类型多样
+1. **內容一致性**: 標題、關鍵詞、Meta、Tags、FAQ應相互協調，使用統一的核心概念
+2. **關鍵詞覆蓋**: 確保Focus Keyword在標題、Meta Description、FAQ中都有出現
+3. **數據準確**: FAQ答案必須基於文章內容，不得杜撰數據
+4. **長度控制**: 嚴格遵守各項長度限制（FAQ答案40-60字）
+5. **YMYL合規**: 健康類FAQ必須包含適當的安全警示和免責聲明
+6. **適配性判斷**: 若文章不適合FAQ，設置 `faq_assessment.is_applicable = false`
 
 ---
 
-现在请完成所有5个优化任务。"""
+現在請完成所有5個優化任務。"""
 
         return prompt
 
@@ -581,11 +590,11 @@ class UnifiedOptimizationService:
             raise ValueError(f"AI response JSON parsing failed: {e}")
 
     async def _store_optimizations(self, article_id: int, result: dict[str, Any]) -> None:
-        """分别存储优化结果到对应的表.
+        """分別存儲優化結果到對應的表.
 
         Args:
             article_id: Article ID
-            result: AI生成的完整结果
+            result: AI生成的完整結果
         """
         logger.info(f"Storing optimizations for article {article_id}")
 
@@ -596,20 +605,37 @@ class UnifiedOptimizationService:
         db_result = await self.db.execute(stmt)
         article = db_result.scalar_one()
 
-        # 1. 存储标题建议到 title_suggestions 表
+        # 1. 存儲標題建議到 title_suggestions 表
         title_data = result.get("title_suggestions", {})
         await self._save_title_suggestions(article_id, article, title_data)
 
-        # 2. 存储SEO建议到 seo_suggestions 表
+        # 2. 存儲SEO建議到 seo_suggestions 表
         seo_keywords = result.get("seo_keywords", {})
         meta_desc = result.get("meta_description", {})
         tags_data = result.get("tags", {})
 
         await self._save_seo_suggestions(article_id, seo_keywords, meta_desc, tags_data)
 
-        # 3. 存储FAQ到 article_faqs 表
+        # 3. 處理FAQ適配性評估 (v2.2)
+        faq_assessment = result.get("faq_assessment", {})
+        faq_applicable = faq_assessment.get("is_applicable", True)
+        faq_editorial_notes = result.get("faq_editorial_notes", {})
+
+        # 存儲FAQ評估到 article
+        article.faq_applicable = faq_applicable
+        article.faq_assessment = faq_assessment
+        article.faq_editorial_notes = faq_editorial_notes
+
+        # 4. 存儲FAQ到 article_faqs 表 (僅當適用時)
         faqs = result.get("faqs", [])
-        await self._save_faqs(article_id, faqs)
+        if faq_applicable and faqs:
+            await self._save_faqs(article_id, faqs)
+            # 生成FAQ HTML區塊
+            faq_html = self._generate_faq_html(faqs, faq_editorial_notes)
+            article.faq_html = faq_html
+            logger.info(f"Generated FAQ HTML for article {article_id}")
+        else:
+            logger.info(f"FAQ not applicable for article {article_id}: {faq_assessment.get('reason', 'N/A')}")
 
         await self.db.commit()
         logger.info(f"Successfully stored all optimizations for article {article_id}")
@@ -705,7 +731,7 @@ class UnifiedOptimizationService:
         logger.info(f"Saved SEO suggestions for article {article_id}")
 
     async def _save_faqs(self, article_id: int, faqs: list[dict]) -> None:
-        """存储FAQ."""
+        """存儲FAQ (v2.2)."""
         from sqlalchemy import delete
 
         # Delete existing FAQs for this article
@@ -731,6 +757,7 @@ class UnifiedOptimizationService:
                 search_intent=search_intent,
                 keywords_covered=faq_data.get("keywords_covered", []),
                 confidence=faq_data.get("confidence"),
+                safety_warning=faq_data.get("safety_warning", False),  # v2.2 YMYL
                 position=position,
                 status="draft",  # String value instead of enum
             )
@@ -738,9 +765,73 @@ class UnifiedOptimizationService:
 
         logger.info(f"Saved {len(faqs)} FAQs for article {article_id}")
 
+    def _generate_faq_html(self, faqs: list[dict], editorial_notes: dict) -> str:
+        """生成FAQ HTML區塊 (常見問題).
+
+        生成可見的FAQ區塊，放置在文章正文底部。
+        包含：
+        1. 標題「常見問題」
+        2. 問答列表
+        3. 免責聲明（如果需要）
+
+        Args:
+            faqs: FAQ數據列表
+            editorial_notes: 編輯備註（包含disclaimer_required）
+
+        Returns:
+            HTML字符串
+        """
+        if not faqs:
+            return ""
+
+        # 開始構建HTML
+        html_parts = [
+            '<section class="faq-section" id="faq">',
+            '  <h2>常見問題</h2>',
+            '  <div class="faq-list">',
+        ]
+
+        for i, faq in enumerate(faqs, 1):
+            question = faq.get("question", "")
+            answer = faq.get("answer", "")
+            has_warning = faq.get("safety_warning", False)
+
+            html_parts.append(f'    <div class="faq-item" data-index="{i}">')
+            html_parts.append(f'      <h3 class="faq-question">Q{i}: {question}</h3>')
+
+            if has_warning:
+                html_parts.append(f'      <div class="faq-answer faq-warning">')
+                html_parts.append(f'        <span class="warning-icon">⚠️</span>')
+                html_parts.append(f'        <p>{answer}</p>')
+                html_parts.append(f'      </div>')
+            else:
+                html_parts.append(f'      <div class="faq-answer">')
+                html_parts.append(f'        <p>{answer}</p>')
+                html_parts.append(f'      </div>')
+
+            html_parts.append('    </div>')
+
+        html_parts.append('  </div>')
+
+        # 添加免責聲明（健康類文章）
+        if editorial_notes.get("disclaimer_required", False):
+            html_parts.append('  <div class="faq-disclaimer">')
+            html_parts.append('    <p><em>免責聲明：本文提供的健康資訊僅供參考，不能替代專業醫療診斷或建議。')
+            html_parts.append('    如有任何健康問題，請諮詢合格的醫療專業人員。</em></p>')
+            html_parts.append('  </div>')
+
+        html_parts.append('</section>')
+
+        return '\n'.join(html_parts)
+
     async def _load_existing_optimizations(self, article_id: int) -> dict[str, Any]:
         """Load existing optimizations from database."""
         from sqlalchemy import select
+
+        # Load article for FAQ assessment fields
+        stmt = select(Article).where(Article.id == article_id)
+        result = await self.db.execute(stmt)
+        article = result.scalar_one_or_none()
 
         # Load title suggestions
         stmt = select(TitleSuggestion).where(TitleSuggestion.article_id == article_id)
@@ -780,6 +871,10 @@ class UnifiedOptimizationService:
                     "tag_strategy": seo_suggestion.tag_strategy if seo_suggestion else None,
                 },
             },
+            "faq_assessment": article.faq_assessment if article else {},
+            "faq_applicable": article.faq_applicable if article else None,
+            "faq_editorial_notes": article.faq_editorial_notes if article else {},
+            "faq_html": article.faq_html if article else None,
             "faqs": [
                 {
                     "question": faq.question,
@@ -788,6 +883,7 @@ class UnifiedOptimizationService:
                     "search_intent": faq.search_intent,  # Already a string
                     "keywords_covered": faq.keywords_covered or [],
                     "confidence": float(faq.confidence) if faq.confidence else None,
+                    "safety_warning": faq.safety_warning,  # v2.2 YMYL
                 }
                 for faq in faqs
             ],

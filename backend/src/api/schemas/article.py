@@ -108,6 +108,12 @@ class ArticleResponse(TimestampSchema):
         description='AI-recommended related articles for internal linking'
     )
 
+    # Phase 13: FAQ v2.2 Assessment Fields
+    faq_applicable: bool | None = Field(default=None, description='Whether FAQ is applicable for this article')
+    faq_assessment: dict | None = Field(default=None, description='FAQ applicability assessment details')
+    faq_editorial_notes: dict | None = Field(default=None, description='FAQ editorial notes')
+    faq_html: str | None = Field(default=None, description='Generated FAQ HTML section')
+
 
 class ArticleListResponse(BaseSchema):
     """Schema for article list response."""

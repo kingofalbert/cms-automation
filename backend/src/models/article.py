@@ -381,6 +381,27 @@ class Article(Base, TimestampMixin):
         comment="Cost in USD for generating all optimizations",
     )
 
+    # FAQ Assessment (v2.2)
+    faq_applicable: Mapped[bool | None] = mapped_column(
+        nullable=True,
+        comment="Whether FAQ is applicable for this article (null=not assessed)",
+    )
+    faq_assessment: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="FAQ applicability assessment details (reason, pain_points)",
+    )
+    faq_editorial_notes: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="FAQ editorial notes (longtail keywords, multimedia suggestions)",
+    )
+    faq_html: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Generated FAQ HTML section for article body",
+    )
+
     # Metadata
     article_metadata: Mapped[dict] = mapped_column(
         JSONB,

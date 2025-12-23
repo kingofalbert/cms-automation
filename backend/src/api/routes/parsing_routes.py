@@ -163,6 +163,12 @@ class ParsedArticleData(BaseModel):
     # Related articles for internal linking (Phase 12)
     related_articles: list[RelatedArticleSchema] = []
 
+    # FAQ v2.2 Assessment Fields (Phase 13)
+    faq_applicable: bool | None = None
+    faq_assessment: dict[str, Any] | None = None
+    faq_html: str | None = None
+    body_html_with_faq: str | None = None  # Combined body + FAQ for publishing
+
     class Config:
         from_attributes = True
 
@@ -387,6 +393,11 @@ async def get_parsing_result(
                 )
             )
 
+    # Build combined body + FAQ for publishing
+    body_html_with_faq = article.body_html or ""
+    if article.faq_html and article.faq_applicable:
+        body_html_with_faq = f"{body_html_with_faq}\n\n{article.faq_html}"
+
     return ParsedArticleData(
         title_prefix=article.title_prefix,
         title_main=article.title_main,
@@ -403,6 +414,11 @@ async def get_parsing_result(
         has_seo_data=bool(article.meta_description or article.seo_keywords),
         images=images,
         related_articles=related_articles,
+        # FAQ v2.2 fields
+        faq_applicable=article.faq_applicable,
+        faq_assessment=article.faq_assessment,
+        faq_html=article.faq_html,
+        body_html_with_faq=body_html_with_faq,
     )
 
 
