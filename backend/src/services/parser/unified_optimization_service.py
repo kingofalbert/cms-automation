@@ -146,6 +146,9 @@ class UnifiedOptimizationService:
         await self.db.commit()
 
         # Build response with metadata
+        faq_assessment = result.get("faq_assessment", {})
+        faq_applicable = faq_assessment.get("is_applicable", True)
+
         return {
             "title_suggestions": result.get("title_suggestions", {}),
             "seo_suggestions": {
@@ -154,6 +157,11 @@ class UnifiedOptimizationService:
                 "tags": result.get("tags", {}),
             },
             "faqs": result.get("faqs", []),
+            # FAQ v2.2 assessment fields
+            "faq_assessment": faq_assessment,
+            "faq_applicable": faq_applicable,
+            "faq_editorial_notes": result.get("faq_editorial_notes", {}),
+            "faq_html": article.faq_html,
             "generation_metadata": {
                 "total_cost_usd": round(cost_usd, 4),
                 "total_tokens": total_tokens,

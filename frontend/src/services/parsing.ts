@@ -67,6 +67,16 @@ export interface ParsedArticleData {
 
   // Related articles for internal linking (Phase 12)
   related_articles: RelatedArticle[];
+
+  // FAQ v2.2 Assessment Fields (Phase 13)
+  faq_applicable?: boolean | null;
+  faq_assessment?: {
+    is_applicable: boolean;
+    reason: string;
+    target_pain_points?: string[];
+  } | null;
+  faq_html?: string | null;
+  body_html_with_faq?: string | null;
 }
 
 /**

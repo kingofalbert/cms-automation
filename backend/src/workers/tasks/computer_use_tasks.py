@@ -224,7 +224,15 @@ async def _publish_article_async(
             publish_mode = "draft" if settings.ENVIRONMENT != "production" else "publish"
 
             # Use body_html if available (cleaned HTML), fallback to body
+            # Append FAQ HTML section if applicable (Phase 13 FAQ v2.2)
             article_body = article.body_html or article.body
+            if article.faq_applicable and article.faq_html:
+                article_body = f"{article_body}\n\n{article.faq_html}"
+                logger.info(
+                    "appended_faq_html_to_body",
+                    article_id=article_id,
+                    faq_html_length=len(article.faq_html),
+                )
 
             # Publish article using hybrid strategy with all taxonomy and metadata
             publish_result = await hybrid_publisher.publish_article(

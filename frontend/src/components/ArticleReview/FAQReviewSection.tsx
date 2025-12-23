@@ -2,8 +2,11 @@
  * FAQReviewSection - AI-Powered FAQ Review and Generation
  *
  * Phase 9.2: AI FAQ Generation for Search Engine Optimization
+ * Phase 13: FAQ v2.2 - Applicability Assessment & YMYL Compliance
  * - AI-generated FAQs optimized for AI search engines (Google SGE, Perplexity, etc.)
  * - Deep semantic analysis of article content
+ * - Applicability assessment (some articles don't need FAQ)
+ * - YMYL safety warnings for health content
  * - Questions based on user search intent and common queries
  * - Rich structured data for FAQ schema markup
  */
@@ -27,6 +30,9 @@ import {
   Brain,
   Search,
   Target,
+  XCircle,
+  ShieldAlert,
+  CheckCircle2,
 } from 'lucide-react';
 
 export interface FAQ {
@@ -41,6 +47,16 @@ export interface AIFAQSuggestion {
   search_intent?: string;
   keywords_covered?: string[];
   confidence?: number;
+  safety_warning?: boolean;  // YMYL safety warning flag (v2.2)
+}
+
+/**
+ * FAQ v2.2 Assessment result
+ */
+export interface FAQAssessment {
+  is_applicable: boolean;
+  reason: string;
+  target_pain_points?: string[];
 }
 
 export interface FAQReviewSectionProps {
@@ -58,6 +74,10 @@ export interface FAQReviewSectionProps {
   onGenerateFaqs?: () => Promise<void>;
   /** Error message */
   error?: string | null;
+  /** FAQ v2.2: Whether FAQ is applicable for this article */
+  faqApplicable?: boolean | null;
+  /** FAQ v2.2: Assessment details */
+  faqAssessment?: FAQAssessment | null;
 }
 
 /**
@@ -99,6 +119,8 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
   onFaqsChange,
   onGenerateFaqs,
   error,
+  faqApplicable,
+  faqAssessment,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [acceptedIndices, setAcceptedIndices] = useState<Set<number>>(new Set());
@@ -167,6 +189,10 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
   const hasAiSuggestions = aiSuggestions.length > 0;
   const unacceptedSuggestions = aiSuggestions.filter((_, i) => !acceptedIndices.has(i));
 
+  // FAQ v2.2: Check applicability
+  const isApplicable = faqApplicable !== false; // null or true means applicable
+  const hasSafetyWarnings = aiSuggestions.some(s => s.safety_warning);
+
   return (
     <div className="space-y-4" data-testid="faq-review-section">
       {/* Header */}
@@ -177,6 +203,25 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
         <div className="flex items-center gap-2">
           <HelpCircle className="w-5 h-5 text-slate-600" />
           <h3 className="text-lg font-semibold text-gray-900">FAQ 建議</h3>
+          {/* FAQ v2.2: Applicability Status */}
+          {faqApplicable === false && (
+            <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600">
+              <XCircle className="w-3 h-3 mr-1" />
+              不適用
+            </Badge>
+          )}
+          {faqApplicable === true && (
+            <Badge variant="success" className="text-xs">
+              <CheckCircle2 className="w-3 h-3 mr-1" />
+              適用
+            </Badge>
+          )}
+          {hasSafetyWarnings && (
+            <Badge variant="warning" className="text-xs bg-amber-100 text-amber-700">
+              <ShieldAlert className="w-3 h-3 mr-1" />
+              健康安全
+            </Badge>
+          )}
           {faqs.length > 0 && (
             <Badge variant="success" className="text-xs">
               {faqs.length} 個
@@ -204,8 +249,28 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
 
       {isExpanded && (
         <div className="space-y-4">
+          {/* FAQ v2.2: Not Applicable Banner */}
+          {faqApplicable === false && faqAssessment && (
+            <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-gray-100 rounded-lg">
+                  <XCircle className="w-5 h-5 text-gray-500" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-700">此文章不適用 FAQ</h4>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {faqAssessment.reason}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    新聞報導、時事評論等類型文章通常不需要 FAQ 區塊。
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* AI FAQ Info Banner - Show only when FAQs are loaded */}
-          {hasAiSuggestions && (
+          {isApplicable && hasAiSuggestions && (
             <div className="p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-purple-100 rounded-lg">
@@ -323,6 +388,12 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
                             {suggestion.confidence && suggestion.confidence > 0.8 && (
                               <Badge variant="success" className="text-xs">
                                 高相關
+                              </Badge>
+                            )}
+                            {suggestion.safety_warning && (
+                              <Badge variant="warning" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                                <ShieldAlert className="w-3 h-3 mr-1" />
+                                健康安全提示
                               </Badge>
                             )}
                           </div>
@@ -450,15 +521,16 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
             </div>
           ) : null}
 
-          {/* FAQ guidelines */}
-          {(faqs.length > 0 || hasAiSuggestions) && (
+          {/* FAQ guidelines - v2.2 */}
+          {(faqs.length > 0 || hasAiSuggestions) && isApplicable && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800">
-              <strong>FAQ 優化建議：</strong>
+              <strong>FAQ v2.2 優化建議：</strong>
               <ul className="mt-1 ml-4 list-disc space-y-1">
+                <li>建議 3-5 個精準的專業 FAQ，針對讀者真實痛點</li>
                 <li>問題應簡潔明了，模擬用戶真實搜索意圖</li>
-                <li>回答應詳細且實用，建議 50-150 字</li>
-                <li>建議添加 6-10 個高質量 FAQ 以提升 AI 搜索曝光</li>
-                <li>覆蓋不同搜索意圖：定義型、操作型、比較型等</li>
+                <li>回答應詳細專業，建議 50-150 字</li>
+                <li>健康類文章請注意標註「健康安全提示」標籤</li>
+                <li>FAQ 將自動加入文章內容，優化 AI 搜索曝光</li>
               </ul>
             </div>
           )}
