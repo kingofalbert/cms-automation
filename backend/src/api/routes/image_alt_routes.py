@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_db
+from src.config.database import get_session
 from src.config.logging import get_logger
 from src.models.article_image import ArticleImage
 from src.models.worklist import WorklistItem
@@ -158,7 +158,7 @@ class BatchImageAltResponse(BaseModel):
 async def generate_image_alt(
     image_id: int,
     request: ImageAltGenerateRequest = ImageAltGenerateRequest(),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ) -> ImageAltSuggestionResponse:
     """Generate alt text and description suggestions for an image"""
 
@@ -245,7 +245,7 @@ async def generate_image_alt(
 async def generate_all_image_alt(
     worklist_item_id: int,
     request: BatchImageAltRequest = BatchImageAltRequest(image_ids=[]),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ) -> BatchImageAltResponse:
     """Generate alt text for all images in a worklist item"""
 
@@ -362,7 +362,7 @@ async def update_image_alt(
     image_id: int,
     alt_text: str | None = Query(default=None, description="New alt text"),
     description: str | None = Query(default=None, description="New description"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_session)
 ) -> dict:
     """Update image alt text and description"""
 
