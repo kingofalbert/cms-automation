@@ -3,7 +3,7 @@
  * Center panel displaying article with highlighted issues.
  */
 
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ProofreadingIssue, DecisionPayload } from '@/types/worklist';
@@ -12,6 +12,24 @@ import { sanitizeHtmlContent } from '@/lib/sanitizeHtml';
 import { DiffView } from './DiffView';
 
 type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
+
+/**
+ * Strip HTML tags from text for plain text display
+ * This prevents HTML tags from showing as raw text in the article view
+ */
+function stripHtmlTags(html: string | undefined | null): string {
+  if (!html) return '';
+  // Step 1: Use DOMParser to strip actual HTML tags and decode entities
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  let text = doc.body.textContent || '';
+  // Step 2: Remove any remaining HTML-like tags (encoded as entities)
+  text = text.replace(/<[^>]*>/g, '');
+  // Step 3: Clean up URLs that might leak through
+  text = text.replace(/https?:\/\/[^\s<>]*/g, '');
+  // Step 4: Normalize whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  return text;
+}
 
 interface ProofreadingArticleContentProps {
   content: string;
@@ -37,12 +55,15 @@ export function ProofreadingArticleContent({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Sanitize content to remove CSS pollution from Google Docs
+  // Then strip HTML tags to prevent them from showing as raw text
   const cleanContent = useMemo(() => {
-    return sanitizeHtmlContent(content, {
+    const sanitized = sanitizeHtmlContent(content, {
       removeStyles: true,
       removeScripts: true,
       convertToText: false,
     });
+    // Strip HTML tags to get plain text for display
+    return stripHtmlTags(sanitized);
   }, [content]);
 
   // Auto-scroll to selected issue when it changes
@@ -65,37 +86,70 @@ export function ProofreadingArticleContent({
   }, [selectedIssue]);
 
   // IMPORTANT: Calculate renderedContent BEFORE early returns to maintain hook order
-  // Render content with issue highlights (used in original and preview modes)
+  // Render content with issue highlights using text search (not position-based)
+  // FIX: Use text search because positions are based on HTML content, not plain text
   const renderedContent = useMemo(() => {
     if (!cleanContent || issues.length === 0) {
       return <p className="whitespace-pre-wrap text-gray-700">{cleanContent}</p>;
     }
 
-    // Sort issues defensively to avoid undefined position errors
-    const sortedIssues = [...issues].sort((a, b) => {
-      const startA =
-        typeof a?.position?.start === 'number' ? a.position.start : Number.MAX_SAFE_INTEGER;
-      const startB =
-        typeof b?.position?.start === 'number' ? b.position.start : Number.MAX_SAFE_INTEGER;
-      return startA - startB;
+    // Build a list of text ranges to highlight
+    // We'll find each issue's original_text within the plain text article content
+    interface HighlightRange {
+      start: number;
+      end: number;
+      issue: ProofreadingIssue;
+    }
+
+    const ranges: HighlightRange[] = [];
+    let searchStartIndex = 0;
+
+    // Find each issue's text within the article content
+    issues.forEach((issue) => {
+      const originalText = stripHtmlTags(issue.original_text);
+      if (!originalText) return;
+
+      // Search for the original text starting from the last found position
+      let foundIndex = cleanContent.indexOf(originalText, searchStartIndex);
+
+      // If not found from current position, try from beginning (for out-of-order issues)
+      if (foundIndex === -1) {
+        foundIndex = cleanContent.indexOf(originalText);
+      }
+
+      if (foundIndex !== -1) {
+        ranges.push({
+          start: foundIndex,
+          end: foundIndex + originalText.length,
+          issue,
+        });
+        searchStartIndex = foundIndex + originalText.length;
+      }
     });
 
+    // Sort ranges by start position
+    ranges.sort((a, b) => a.start - b.start);
+
+    // Remove overlapping ranges (keep the first one)
+    const nonOverlappingRanges: HighlightRange[] = [];
+    let lastEnd = 0;
+    ranges.forEach((range) => {
+      if (range.start >= lastEnd) {
+        nonOverlappingRanges.push(range);
+        lastEnd = range.end;
+      }
+    });
+
+    // Build the rendered content with highlights
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
 
-    sortedIssues.forEach((issue, idx) => {
-      const rawStart = typeof issue.position?.start === 'number' ? issue.position.start : 0;
-      const rawEnd =
-        typeof issue.position?.end === 'number' && issue.position.end >= rawStart
-          ? issue.position.end
-          : rawStart;
-
-      const start = Math.max(0, Math.min(cleanContent.length, rawStart));
-      const end = Math.max(start, Math.min(cleanContent.length, rawEnd));
-
+    nonOverlappingRanges.forEach((range, idx) => {
+      const { start, end, issue } = range;
       const decision = decisions[issue.id];
       const decisionStatus = decision?.decision_type || issue.decision_status;
 
+      // Add text before this issue
       if (start > lastIndex) {
         parts.push(
           <span key={`text-${idx}`} className="whitespace-pre-wrap">
@@ -104,8 +158,9 @@ export function ProofreadingArticleContent({
         );
       }
 
-      const issueText =
-        end > start ? cleanContent.slice(start, end) : issue.original_text || issue.suggested_text || '';
+      // Get display text based on decision status
+      const issueText = cleanContent.slice(start, end);
+      const strippedSuggested = stripHtmlTags(issue.suggested_text);
       const isSelected = selectedIssue?.id === issue.id;
 
       parts.push(
@@ -126,7 +181,7 @@ export function ProofreadingArticleContent({
           title={issue.explanation}
         >
           {viewMode === 'preview' && decisionStatus === 'accepted'
-            ? issue.suggested_text || issueText
+            ? strippedSuggested || issueText
             : viewMode === 'preview' && decision?.modified_content
             ? decision.modified_content
             : issueText}
@@ -136,6 +191,7 @@ export function ProofreadingArticleContent({
       lastIndex = end;
     });
 
+    // Add remaining text after last issue
     if (lastIndex < cleanContent.length) {
       parts.push(
         <span key="text-end" className="whitespace-pre-wrap">

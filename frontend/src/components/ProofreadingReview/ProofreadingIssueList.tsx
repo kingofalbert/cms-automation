@@ -49,6 +49,24 @@ function getCategoryLabel(code: string, locale: string = 'zh'): string {
   return locale.startsWith('en') ? label.en : label.zh;
 }
 
+/**
+ * Strip HTML tags from text for plain text display
+ * This prevents HTML tags from showing as raw text in the issue list
+ */
+function stripHtmlTags(html: string | undefined | null): string {
+  if (!html) return '';
+  // Step 1: Use DOMParser to strip actual HTML tags and decode entities
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  let text = doc.body.textContent || '';
+  // Step 2: Remove any remaining HTML-like tags (encoded as entities)
+  text = text.replace(/<[^>]*>/g, '');
+  // Step 3: Clean up URLs that might leak through
+  text = text.replace(/https?:\/\/[^\s<>]*/g, '');
+  // Step 4: Normalize whitespace
+  text = text.replace(/\s+/g, ' ').trim();
+  return text;
+}
+
 interface ProofreadingIssueListProps {
   issues: ProofreadingIssue[];
   decisions: Record<string, DecisionPayload>;
@@ -393,8 +411,8 @@ const IssueListItem = forwardRef<HTMLDivElement, IssueListItemProps>(
       ? getCategoryLabel(categoryCode, i18n.language)
       : t('proofreading.issueList.uncategorized');
     const originalText =
-      issue.original_text || t('proofreading.issueList.noOriginalText');
-    const suggestedText = issue.suggested_text || originalText;
+      stripHtmlTags(issue.original_text) || t('proofreading.issueList.noOriginalText');
+    const suggestedText = stripHtmlTags(issue.suggested_text) || originalText;
 
     return (
       <div

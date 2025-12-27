@@ -206,34 +206,110 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
   }, [selectedIssue, contentViewMode]);
 
   // Get article content
-  const articleContent = useMemo(() => {
+  // Helper function to strip HTML tags for plain text display
+  // This prevents HTML tags from showing as raw text in the article view
+  const stripHtmlTags = useCallback((html: string): string => {
+    if (!html) return '';
+    // Step 1: Use DOMParser to strip actual HTML tags and decode entities
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    let text = doc.body.textContent || '';
+
+    // Step 2: Remove any remaining HTML-like tags that were encoded as entities
+    // (e.g., &lt;p&gt; becomes <p> after DOMParser decoding, but not as actual tag)
+    // This regex removes anything that looks like an HTML tag: <...>
+    text = text.replace(/<[^>]*>/g, '');
+
+    // Step 3: Clean up URLs and special characters that might have leaked through
+    // Remove URL fragments that might appear due to malformed content
+    text = text.replace(/https?:\/\/[^\s<>]*/g, '');
+
+    // Step 4: Normalize whitespace - collapse multiple spaces/newlines
+    text = text.replace(/\s+/g, ' ').trim();
+
+    return text;
+  }, []);
+
+  // Keep original HTML content for position-based slicing (positions are based on HTML)
+  const articleContentRaw = useMemo(() => {
     return data.articleReview?.content?.original || data.metadata?.body_html as string || '';
   }, [data]);
 
+  // Stripped version for display when no highlighting is needed
+  const articleContent = useMemo(() => {
+    return stripHtmlTags(articleContentRaw);
+  }, [articleContentRaw, stripHtmlTags]);
+
+  // Helper to strip HTML from issue text fields (original_text, suggested_text)
+  // These often contain HTML markup that should be rendered as plain text
+  const stripIssueHtml = useCallback((text: string | undefined | null): string => {
+    if (!text) return '';
+    // Quick check if it contains HTML tags
+    if (!text.includes('<') && !text.includes('>')) return text;
+    return stripHtmlTags(text);
+  }, [stripHtmlTags]);
+
   // Render article content with highlighted issues
+  // FIX: Use text search instead of position-based slicing to avoid HTML parsing issues
   const renderArticleWithHighlights = useMemo(() => {
     if (!articleContent || issues.length === 0) {
       return <p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{articleContent || '无内容'}</p>;
     }
 
-    // Sort issues by position (descending) to insert highlights from end to start
-    const sortedIssues = [...issues].sort((a, b) => {
-      const startA = typeof a?.position?.start === 'number' ? a.position.start : Number.MAX_SAFE_INTEGER;
-      const startB = typeof b?.position?.start === 'number' ? b.position.start : Number.MAX_SAFE_INTEGER;
-      return startA - startB;
+    // Build a list of text ranges to highlight
+    // We'll find each issue's original_text within the plain text article content
+    interface HighlightRange {
+      start: number;
+      end: number;
+      issue: ProofreadingIssue;
+    }
+
+    const ranges: HighlightRange[] = [];
+    let searchStartIndex = 0;
+
+    // Find each issue's text within the article content
+    issues.forEach((issue) => {
+      const originalText = stripIssueHtml(issue.original_text);
+      if (!originalText) return;
+
+      // Search for the original text starting from the last found position
+      // This handles cases where the same text appears multiple times
+      let foundIndex = articleContent.indexOf(originalText, searchStartIndex);
+
+      // If not found from current position, try from beginning (for out-of-order issues)
+      if (foundIndex === -1) {
+        foundIndex = articleContent.indexOf(originalText);
+      }
+
+      if (foundIndex !== -1) {
+        ranges.push({
+          start: foundIndex,
+          end: foundIndex + originalText.length,
+          issue,
+        });
+        // Update search position for next issue
+        searchStartIndex = foundIndex + originalText.length;
+      }
     });
 
+    // Sort ranges by start position
+    ranges.sort((a, b) => a.start - b.start);
+
+    // Remove overlapping ranges (keep the first one)
+    const nonOverlappingRanges: HighlightRange[] = [];
+    let lastEnd = 0;
+    ranges.forEach((range) => {
+      if (range.start >= lastEnd) {
+        nonOverlappingRanges.push(range);
+        lastEnd = range.end;
+      }
+    });
+
+    // Build the rendered content with highlights
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
 
-    sortedIssues.forEach((issue, idx) => {
-      const rawStart = typeof issue.position?.start === 'number' ? issue.position.start : 0;
-      const rawEnd = typeof issue.position?.end === 'number' && issue.position.end >= rawStart
-        ? issue.position.end : rawStart;
-
-      const start = Math.max(0, Math.min(articleContent.length, rawStart));
-      const end = Math.max(start, Math.min(articleContent.length, rawEnd));
-
+    nonOverlappingRanges.forEach((range, idx) => {
+      const { start, end, issue } = range;
       const decision = decisions.get(issue.id);
       const decisionStatus = decision?.decision_type || issue.decision_status;
 
@@ -246,37 +322,30 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
         );
       }
 
-      // Get the original issue text from article content
-      const originalText = end > start
-        ? articleContent.slice(start, end)
-        : issue.original_text || '?';
+      // Get display text based on decision status
+      const originalText = articleContent.slice(start, end);
+      const strippedSuggested = stripIssueHtml(issue.suggested_text);
+      const displayText = decisionStatus === 'accepted'
+        ? (strippedSuggested || originalText)
+        : decisionStatus === 'modified'
+          ? (decision?.modified_content || strippedSuggested || originalText)
+          : originalText;
 
       const isSelected = selectedIssue?.id === issue.id;
 
-      // DISPLAY LOGIC: Show "Current State" not "Deletion Traces"
-      // - Pending: Show original text with severity highlight (clickable to review)
-      // - Accepted: Show SUGGESTED text (green) - this is the "current state" after accepting
-      // - Modified: Show CUSTOM EDITED text (purple) - user's custom modification
-      // - Rejected: Show original text (gray, dimmed) - keeping original means no change
-      const currentDecision = decisions.get(issue.id);
-      const displayText = decisionStatus === 'accepted'
-        ? (issue.suggested_text || originalText)  // Show AI-suggested version
-        : decisionStatus === 'modified'
-          ? (currentDecision?.modified_content || issue.suggested_text || originalText)  // Show custom edit
-          : originalText;  // Show original for pending/rejected
-
       // Get title based on decision status
       const getTitle = () => {
+        const suggText = stripIssueHtml(issue.suggested_text);
         if (decisionStatus === 'accepted') {
-          return `已接受修改: "${issue.original_text}" → "${issue.suggested_text}"`;
+          return `已接受修改: "${originalText}" → "${suggText}"`;
         }
         if (decisionStatus === 'modified') {
-          return `已自定義修改: "${issue.original_text}" → "${currentDecision?.modified_content}"`;
+          return `已自定義修改: "${originalText}" → "${decision?.modified_content}"`;
         }
         return issue.explanation;
       };
 
-      // Add highlighted issue - showing CURRENT STATE, not deletion traces
+      // Add highlighted issue
       parts.push(
         <span
           key={`issue-${issue.id}`}
@@ -285,11 +354,11 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
             isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''
           } ${
             decisionStatus === 'accepted'
-              ? 'bg-green-100 hover:bg-green-200 text-green-800'  // Accepted: show green (current state)
+              ? 'bg-green-100 hover:bg-green-200 text-green-800'
               : decisionStatus === 'modified'
-                ? 'bg-purple-100 hover:bg-purple-200 text-purple-800'  // Modified: show purple (custom edit)
+                ? 'bg-purple-100 hover:bg-purple-200 text-purple-800'
                 : decisionStatus === 'rejected'
-                  ? 'bg-gray-100 text-gray-500'  // Rejected: dimmed original
+                  ? 'bg-gray-100 text-gray-500'
                   : issue.severity === 'critical'
                     ? 'bg-red-100 hover:bg-red-200'
                     : issue.severity === 'warning'
@@ -316,7 +385,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
     }
 
     return <div className="whitespace-pre-wrap text-gray-700 leading-relaxed text-sm">{parts}</div>;
-  }, [articleContent, issues, decisions, selectedIssue]);
+  }, [articleContent, issues, decisions, selectedIssue, stripIssueHtml]);
 
   const stats = data.proofreading_stats || {
     total_issues: 0,
@@ -608,9 +677,9 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                         )}
                       </div>
                       <div className="text-xs text-gray-600 line-clamp-2">
-                        <span className="text-red-600">{issue.original_text?.substring(0, 20)}</span>
+                        <span className="text-red-600">{stripIssueHtml(issue.original_text)?.substring(0, 20)}</span>
                         <span className="text-gray-400 mx-1">→</span>
-                        <span className="text-green-600">{issue.suggested_text?.substring(0, 20)}</span>
+                        <span className="text-green-600">{stripIssueHtml(issue.suggested_text)?.substring(0, 20)}</span>
                       </div>
                     </div>
                     {/* Status indicator */}
