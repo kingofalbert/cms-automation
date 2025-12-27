@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { TitleReviewSection } from '../TitleReviewSection';
 
 describe('TitleReviewSection', () => {
@@ -91,71 +91,33 @@ describe('TitleReviewSection', () => {
     expect(screen.getByText(/标题较长/)).toBeInTheDocument();
   });
 
-  it('should render AI optimization button', () => {
+  // Note: AI optimization button was removed in 2025-12-25 refactor.
+  // Real AI title suggestions are now provided via SEOTitleSelectionCard component.
+  // See: TitleReviewSection.tsx comment at lines 9-13
+
+  it('should show help text pointing to SEO Title section', () => {
     render(<TitleReviewSection {...defaultProps} />);
 
-    const aiButton = screen.getByRole('button', { name: /AI 优化标题/ });
-    expect(aiButton).toBeInTheDocument();
+    // The component now shows a help message directing users to SEOTitleSelectionCard
+    expect(screen.getByText(/需要 AI 标题建议/)).toBeInTheDocument();
+    expect(screen.getByText(/SEO Title 选择/)).toBeInTheDocument();
   });
 
-  it('should disable AI button when no title', () => {
-    render(
-      <TitleReviewSection
-        {...defaultProps}
-        title=""
-      />
-    );
-
-    const aiButton = screen.getByRole('button', { name: /AI 优化标题/ });
-    expect(aiButton).toBeDisabled();
-  });
-
-  it('should show loading state when optimizing', async () => {
+  it('should render reset button when title is modified', () => {
     render(<TitleReviewSection {...defaultProps} />);
 
-    const aiButton = screen.getByRole('button', { name: /AI 优化标题/ });
-    fireEvent.click(aiButton);
-
-    expect(screen.getByText('AI 优化中...')).toBeInTheDocument();
+    // The reset button should be visible when title differs from original
+    const resetButton = screen.getByRole('button', { name: /恢复原始标题/ });
+    expect(resetButton).toBeInTheDocument();
   });
 
-  it('should display AI suggestions after optimization', async () => {
+  it('should reset to original title when reset button clicked', () => {
     render(<TitleReviewSection {...defaultProps} />);
 
-    const aiButton = screen.getByRole('button', { name: /AI 优化标题/ });
-    fireEvent.click(aiButton);
+    const resetButton = screen.getByRole('button', { name: /恢复原始标题/ });
+    fireEvent.click(resetButton);
 
-    // Wait for suggestions to appear (component uses 1000ms timeout)
-    await waitFor(
-      () => {
-        expect(screen.getByText('AI 建议标题')).toBeInTheDocument();
-      },
-      { timeout: 2000 }
-    );
-  });
-
-  it('should apply suggestion when clicked', async () => {
-    render(<TitleReviewSection {...defaultProps} />);
-
-    const aiButton = screen.getByRole('button', { name: /AI 优化标题/ });
-    fireEvent.click(aiButton);
-
-    // Wait for suggestions to appear
-    await waitFor(
-      () => {
-        expect(screen.getByText('AI 建议标题')).toBeInTheDocument();
-      },
-      { timeout: 2000 }
-    );
-
-    const suggestions = screen.getAllByText(/点击使用/);
-    const firstSuggestion = suggestions[0].closest('button');
-
-    expect(firstSuggestion).toBeInTheDocument();
-    if (firstSuggestion) {
-      fireEvent.click(firstSuggestion);
-      expect(mockOnTitleChange).toHaveBeenCalled();
-    }
+    expect(mockOnTitleChange).toHaveBeenCalledWith('Original Article Title');
   });
 
   it('should show title quality indicators', () => {
