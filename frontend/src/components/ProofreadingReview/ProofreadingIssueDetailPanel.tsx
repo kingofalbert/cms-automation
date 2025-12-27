@@ -1,6 +1,8 @@
 /**
  * Proofreading Issue Detail Panel
  * Right sidebar showing issue details and decision actions.
+ *
+ * Spec 014: Uses plain text fields for diff computation when available.
  */
 
 import { useState, useMemo } from 'react';
@@ -9,6 +11,7 @@ import DOMPurify from 'dompurify';
 import { ProofreadingIssue, DecisionPayload, FeedbackCategory } from '@/types/worklist';
 import { ProofreadingDecisionDetail } from '@/types/api';
 import { Button, Input } from '@/components/ui';
+import { stripHtmlTags } from '@/utils/proofreadingPosition';
 import {
   CheckCircle,
   XCircle,
@@ -157,10 +160,13 @@ export function ProofreadingIssueDetailPanel({
   const [contentDisplayMode, setContentDisplayMode] = useState<'rendered' | 'source'>('rendered');
 
   // Compute diff when issue changes
+  // Spec 014: Use plain text versions for cleaner diff comparison
   const diffSegments = useMemo(() => {
     if (!issue) return [];
-    return computeWordDiff(issue.original_text, issue.suggested_text);
-  }, [issue?.original_text, issue?.suggested_text]);
+    const originalPlain = issue.original_text_plain || stripHtmlTags(issue.original_text);
+    const suggestedPlain = issue.suggested_text_plain || stripHtmlTags(issue.suggested_text);
+    return computeWordDiff(originalPlain, suggestedPlain);
+  }, [issue?.original_text, issue?.suggested_text, issue?.original_text_plain, issue?.suggested_text_plain]);
 
   // Filter existing decisions for the current issue
   const issueHistory = issue

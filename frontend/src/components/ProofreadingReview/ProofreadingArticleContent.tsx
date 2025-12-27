@@ -1,6 +1,8 @@
 /**
  * Proofreading Article Content
  * Center panel displaying article with highlighted issues.
+ *
+ * Spec 014: Uses plain_text_position for accurate issue highlighting.
  */
 
 import { useMemo, useEffect, useRef, useCallback } from 'react';
@@ -10,26 +12,13 @@ import { ProofreadingIssue, DecisionPayload } from '@/types/worklist';
 import { cn } from '@/lib/cn';
 import { sanitizeHtmlContent } from '@/lib/sanitizeHtml';
 import { DiffView } from './DiffView';
+import {
+  stripHtmlTags,
+  resolveAllIssuePositions,
+  removeOverlappingRanges,
+} from '@/utils/proofreadingPosition';
 
 type ViewMode = 'original' | 'preview' | 'diff' | 'rendered';
-
-/**
- * Strip HTML tags from text for plain text display
- * This prevents HTML tags from showing as raw text in the article view
- */
-function stripHtmlTags(html: string | undefined | null): string {
-  if (!html) return '';
-  // Step 1: Use DOMParser to strip actual HTML tags and decode entities
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  let text = doc.body.textContent || '';
-  // Step 2: Remove any remaining HTML-like tags (encoded as entities)
-  text = text.replace(/<[^>]*>/g, '');
-  // Step 3: Clean up URLs that might leak through
-  text = text.replace(/https?:\/\/[^\s<>]*/g, '');
-  // Step 4: Normalize whitespace
-  text = text.replace(/\s+/g, ' ').trim();
-  return text;
-}
 
 interface ProofreadingArticleContentProps {
   content: string;
@@ -86,66 +75,23 @@ export function ProofreadingArticleContent({
   }, [selectedIssue]);
 
   // IMPORTANT: Calculate renderedContent BEFORE early returns to maintain hook order
-  // Render content with issue highlights using text search (not position-based)
-  // FIX: Use text search because positions are based on HTML content, not plain text
+  // Spec 014: Use plain_text_position for accurate highlighting with text search fallback
   const renderedContent = useMemo(() => {
     if (!cleanContent || issues.length === 0) {
       return <p className="whitespace-pre-wrap text-gray-700">{cleanContent}</p>;
     }
 
-    // Build a list of text ranges to highlight
-    // We'll find each issue's original_text within the plain text article content
-    interface HighlightRange {
-      start: number;
-      end: number;
-      issue: ProofreadingIssue;
-    }
-
-    const ranges: HighlightRange[] = [];
-    let searchStartIndex = 0;
-
-    // Find each issue's text within the article content
-    issues.forEach((issue) => {
-      const originalText = stripHtmlTags(issue.original_text);
-      if (!originalText) return;
-
-      // Search for the original text starting from the last found position
-      let foundIndex = cleanContent.indexOf(originalText, searchStartIndex);
-
-      // If not found from current position, try from beginning (for out-of-order issues)
-      if (foundIndex === -1) {
-        foundIndex = cleanContent.indexOf(originalText);
-      }
-
-      if (foundIndex !== -1) {
-        ranges.push({
-          start: foundIndex,
-          end: foundIndex + originalText.length,
-          issue,
-        });
-        searchStartIndex = foundIndex + originalText.length;
-      }
-    });
-
-    // Sort ranges by start position
-    ranges.sort((a, b) => a.start - b.start);
-
-    // Remove overlapping ranges (keep the first one)
-    const nonOverlappingRanges: HighlightRange[] = [];
-    let lastEnd = 0;
-    ranges.forEach((range) => {
-      if (range.start >= lastEnd) {
-        nonOverlappingRanges.push(range);
-        lastEnd = range.end;
-      }
-    });
+    // Spec 014: Resolve all issue positions using the new utility functions
+    // This first tries plain_text_position, then falls back to text search
+    const resolvedPositions = resolveAllIssuePositions(issues, cleanContent);
+    const nonOverlappingRanges = removeOverlappingRanges(resolvedPositions);
 
     // Build the rendered content with highlights
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
 
-    nonOverlappingRanges.forEach((range, idx) => {
-      const { start, end, issue } = range;
+    nonOverlappingRanges.forEach(({ issue, position }, idx) => {
+      const { start, end } = position;
       const decision = decisions[issue.id];
       const decisionStatus = decision?.decision_type || issue.decision_status;
 
@@ -160,13 +106,15 @@ export function ProofreadingArticleContent({
 
       // Get display text based on decision status
       const issueText = cleanContent.slice(start, end);
-      const strippedSuggested = stripHtmlTags(issue.suggested_text);
+      // Spec 014: Prefer pre-computed plain text from backend
+      const strippedSuggested = issue.suggested_text_plain || stripHtmlTags(issue.suggested_text);
       const isSelected = selectedIssue?.id === issue.id;
 
       parts.push(
         <span
           key={`issue-${issue.id}`}
           data-issue-id={issue.id}
+          data-position-source={position.source}
           className={cn(
             'cursor-pointer rounded px-1 transition-all',
             isSelected && 'ring-2 ring-blue-500 ring-offset-2',

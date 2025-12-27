@@ -215,6 +215,17 @@ export interface ProofreadingPosition {
 }
 
 /**
+ * Spec 014: Plain text position for accurate frontend highlighting.
+ *
+ * This position is calculated from the plain text content (HTML tags stripped),
+ * solving the HTML/plain-text position mismatch problem.
+ */
+export interface PlainTextPosition {
+  start: number;
+  end: number;
+}
+
+/**
  * Warning labels for G-class contextual validation rules.
  * These flags indicate issues requiring manual verification.
  */
@@ -246,6 +257,24 @@ export interface ProofreadingIssue {
    * Indicates issues that need manual verification
    */
   warning_label?: WarningLabel;
+
+  /**
+   * Spec 014: Plain text position for accurate frontend highlighting.
+   * This is calculated from the HTML content positions by the backend.
+   */
+  plain_text_position?: PlainTextPosition;
+
+  /**
+   * Spec 014: Plain text version of original_text (HTML tags stripped).
+   * Used for display and text search fallback.
+   */
+  original_text_plain?: string;
+
+  /**
+   * Spec 014: Plain text version of suggested_text (HTML tags stripped).
+   * Used for display in the UI.
+   */
+  suggested_text_plain?: string;
 }
 
 export interface ProofreadingStats {

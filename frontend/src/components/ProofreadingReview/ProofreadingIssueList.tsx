@@ -1,6 +1,8 @@
 /**
  * Proofreading Issue List
  * Left sidebar showing all proofreading issues with filtering.
+ *
+ * Spec 014: Uses plain text fields for display when available.
  */
 
 import { useState, useMemo, useEffect, useRef, forwardRef } from 'react';
@@ -27,6 +29,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { stripHtmlTags } from '@/utils/proofreadingPosition';
 
 /**
  * Human-readable category labels for proofreading issue categories
@@ -47,24 +50,6 @@ function getCategoryLabel(code: string, locale: string = 'zh'): string {
   const label = CATEGORY_LABELS[code];
   if (!label) return code;
   return locale.startsWith('en') ? label.en : label.zh;
-}
-
-/**
- * Strip HTML tags from text for plain text display
- * This prevents HTML tags from showing as raw text in the issue list
- */
-function stripHtmlTags(html: string | undefined | null): string {
-  if (!html) return '';
-  // Step 1: Use DOMParser to strip actual HTML tags and decode entities
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  let text = doc.body.textContent || '';
-  // Step 2: Remove any remaining HTML-like tags (encoded as entities)
-  text = text.replace(/<[^>]*>/g, '');
-  // Step 3: Clean up URLs that might leak through
-  text = text.replace(/https?:\/\/[^\s<>]*/g, '');
-  // Step 4: Normalize whitespace
-  text = text.replace(/\s+/g, ' ').trim();
-  return text;
 }
 
 interface ProofreadingIssueListProps {
@@ -410,9 +395,11 @@ const IssueListItem = forwardRef<HTMLDivElement, IssueListItemProps>(
     const categoryLabel = categoryCode
       ? getCategoryLabel(categoryCode, i18n.language)
       : t('proofreading.issueList.uncategorized');
+    // Spec 014: Prefer pre-computed plain text fields from backend
     const originalText =
-      stripHtmlTags(issue.original_text) || t('proofreading.issueList.noOriginalText');
-    const suggestedText = stripHtmlTags(issue.suggested_text) || originalText;
+      issue.original_text_plain || stripHtmlTags(issue.original_text) || t('proofreading.issueList.noOriginalText');
+    const suggestedText =
+      issue.suggested_text_plain || stripHtmlTags(issue.suggested_text) || originalText;
 
     return (
       <div
