@@ -17,6 +17,7 @@
  */
 
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { FileText, Eye, AlertCircle, AlertTriangle, Info, Check, X, CheckCircle, XCircle, Sparkles, Code, GitCompare, Edit3, ShieldAlert, MapPin, Type, FileWarning, Lightbulb } from 'lucide-react';
 import { Button, Badge } from '../ui';
 import { DiffViewSection, type DiffStats } from './DiffViewSection';
@@ -164,6 +165,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
   // Custom edit mode states
   const [isEditing, setIsEditing] = useState(false);
   const [editedText, setEditedText] = useState('');
+  // Comparison view mode: 'rendered' shows formatted HTML, 'source' shows raw HTML tags
+  const [comparisonViewMode, setComparisonViewMode] = useState<'rendered' | 'source'>('rendered');
 
   // Use article review issues if available (richer data with historical context)
   const issues = useMemo(() => {
@@ -779,20 +782,51 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
 
               {/* Comparison: Current State vs Original */}
               <div className="px-4 py-3 border-b border-gray-200">
-                {/* Header with comparison label */}
+                {/* Header with comparison label and view mode toggle */}
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-semibold text-gray-700">新舊對比</span>
-                  <span className="text-xs text-gray-400">點擊查看差異</span>
+                  <button
+                    type="button"
+                    onClick={() => setComparisonViewMode(comparisonViewMode === 'rendered' ? 'source' : 'rendered')}
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+                    title={comparisonViewMode === 'rendered' ? '切換到源碼視圖（查看HTML標籤）' : '切換到渲染視圖（查看格式效果）'}
+                  >
+                    {comparisonViewMode === 'rendered' ? (
+                      <>
+                        <Eye className="w-3 h-3 text-blue-600" />
+                        <span className="text-blue-600">渲染</span>
+                      </>
+                    ) : (
+                      <>
+                        <Code className="w-3 h-3 text-purple-600" />
+                        <span className="text-purple-600">源碼</span>
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 {/* CURRENT STATE (修改後現狀) - Shown prominently first */}
                 <div className="mb-3">
                   <div className="flex items-center gap-1.5 text-xs font-medium text-green-700 mb-1.5">
                     <CheckCircle className="w-3.5 h-3.5" />
-                    修改後（現狀）
+                    修改後（建議）
                   </div>
-                  <div className="rounded-md border-2 border-green-200 bg-green-50 p-3 text-sm text-gray-900 font-medium">
-                    {selectedIssue.suggested_text}
+                  <div className="rounded-md border-2 border-green-200 bg-green-50 p-3 text-sm text-gray-900">
+                    {comparisonViewMode === 'rendered' ? (
+                      <div
+                        className="prose prose-sm max-w-none prose-strong:text-green-800 prose-strong:font-bold"
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(selectedIssue.suggested_text || '', {
+                            ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'span', 'mark', 'del', 'ins', 'sub', 'sup', 'br'],
+                            ALLOWED_ATTR: ['class', 'style'],
+                          }),
+                        }}
+                      />
+                    ) : (
+                      <code className="text-xs font-mono bg-green-100 text-green-800 px-1 py-0.5 rounded break-all whitespace-pre-wrap">
+                        {selectedIssue.suggested_text}
+                      </code>
+                    )}
                   </div>
                 </div>
 
@@ -815,9 +849,30 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                     原始版本
                   </div>
                   <div className="rounded-md border border-gray-200 bg-gray-50 p-2.5 text-sm text-gray-600">
-                    {selectedIssue.original_text}
+                    {comparisonViewMode === 'rendered' ? (
+                      <div
+                        className="prose prose-sm max-w-none prose-strong:text-gray-700 prose-strong:font-bold"
+                        dangerouslySetInnerHTML={{
+                          __html: DOMPurify.sanitize(selectedIssue.original_text || '', {
+                            ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'span', 'mark', 'del', 'ins', 'sub', 'sup', 'br'],
+                            ALLOWED_ATTR: ['class', 'style'],
+                          }),
+                        }}
+                      />
+                    ) : (
+                      <code className="text-xs font-mono bg-gray-100 text-gray-700 px-1 py-0.5 rounded break-all whitespace-pre-wrap">
+                        {selectedIssue.original_text}
+                      </code>
+                    )}
                   </div>
                 </div>
+
+                {/* Helper text for formatting differences */}
+                {comparisonViewMode === 'rendered' && (
+                  <div className="mt-2 text-xs text-gray-400 text-center">
+                    💡 點擊「源碼」查看 HTML 標籤差異（如粗體、斜體等）
+                  </div>
+                )}
               </div>
 
               {/* Explanation */}

@@ -5,6 +5,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import DOMPurify from 'dompurify';
 import { ProofreadingIssue, DecisionPayload, FeedbackCategory } from '@/types/worklist';
 import { ProofreadingDecisionDetail } from '@/types/api';
 import { Button, Input } from '@/components/ui';
@@ -21,6 +22,7 @@ import {
   Clock,
   Columns,
   GitCompareArrows,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -151,6 +153,8 @@ export function ProofreadingIssueDetailPanel({
   const [showFeedback, setShowFeedback] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [comparisonMode, setComparisonMode] = useState<'split' | 'diff'>('split');
+  // Content display mode: 'rendered' shows formatted HTML, 'source' shows raw HTML tags
+  const [contentDisplayMode, setContentDisplayMode] = useState<'rendered' | 'source'>('rendered');
 
   // Compute diff when issue changes
   const diffSegments = useMemo(() => {
@@ -300,32 +304,61 @@ export function ProofreadingIssueDetailPanel({
       {/* Original vs Suggested */}
       <div className="border-b border-gray-200 p-5">
         {/* View Mode Toggle */}
-        <div className="mb-3 flex items-center justify-end gap-1">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          {/* Comparison mode toggle */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setComparisonMode('split')}
+              className={cn(
+                'flex items-center gap-1 rounded-l-md border px-2 py-1 text-xs transition-colors',
+                comparisonMode === 'split'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+              )}
+              title={t('proofreading.issueDetail.splitView', 'Split View')}
+            >
+              <Columns className="h-3 w-3" />
+              <span className="hidden sm:inline">{t('proofreading.issueDetail.splitView', 'Split')}</span>
+            </button>
+            <button
+              onClick={() => setComparisonMode('diff')}
+              className={cn(
+                'flex items-center gap-1 rounded-r-md border-l-0 border px-2 py-1 text-xs transition-colors',
+                comparisonMode === 'diff'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+              )}
+              title={t('proofreading.issueDetail.diffView', 'Diff View')}
+            >
+              <GitCompareArrows className="h-3 w-3" />
+              <span className="hidden sm:inline">{t('proofreading.issueDetail.diffView', 'Diff')}</span>
+            </button>
+          </div>
+
+          {/* Content display mode toggle */}
           <button
-            onClick={() => setComparisonMode('split')}
+            onClick={() => setContentDisplayMode(contentDisplayMode === 'rendered' ? 'source' : 'rendered')}
             className={cn(
-              'flex items-center gap-1 rounded-l-md border px-2 py-1 text-xs transition-colors',
-              comparisonMode === 'split'
+              'flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors',
+              contentDisplayMode === 'rendered'
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+                : 'border-purple-500 bg-purple-50 text-purple-700'
             )}
-            title={t('proofreading.issueDetail.splitView', 'Split View')}
+            title={contentDisplayMode === 'rendered'
+              ? t('proofreading.issueDetail.showSource', '切換到源碼視圖（查看 HTML 標籤）')
+              : t('proofreading.issueDetail.showRendered', '切換到渲染視圖（查看格式效果）')}
           >
-            <Columns className="h-3 w-3" />
-            <span className="hidden sm:inline">{t('proofreading.issueDetail.splitView', 'Split')}</span>
-          </button>
-          <button
-            onClick={() => setComparisonMode('diff')}
-            className={cn(
-              'flex items-center gap-1 rounded-r-md border-l-0 border px-2 py-1 text-xs transition-colors',
-              comparisonMode === 'diff'
-                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-50'
+            {contentDisplayMode === 'rendered' ? (
+              <>
+                <Eye className="h-3 w-3" />
+                <span>渲染</span>
+              </>
+            ) : (
+              <>
+                <Code className="h-3 w-3" />
+                <span>源碼</span>
+              </>
             )}
-            title={t('proofreading.issueDetail.diffView', 'Diff View')}
-          >
-            <GitCompareArrows className="h-3 w-3" />
-            <span className="hidden sm:inline">{t('proofreading.issueDetail.diffView', 'Diff')}</span>
           </button>
         </div>
 
@@ -338,7 +371,21 @@ export function ProofreadingIssueDetailPanel({
                 {t('proofreading.issueDetail.original', 'Original')}
               </div>
               <div className="rounded-md border border-red-100 bg-red-50 p-3 text-sm text-gray-900">
-                {issue.original_text}
+                {contentDisplayMode === 'rendered' ? (
+                  <div
+                    className="prose prose-sm max-w-none prose-strong:text-red-800 prose-strong:font-bold prose-em:italic"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(issue.original_text || '', {
+                        ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'span', 'mark', 'del', 'ins', 'sub', 'sup', 'br'],
+                        ALLOWED_ATTR: ['class', 'style'],
+                      }),
+                    }}
+                  />
+                ) : (
+                  <code className="text-xs font-mono bg-red-100 text-red-800 px-1 py-0.5 rounded break-all whitespace-pre-wrap">
+                    {issue.original_text}
+                  </code>
+                )}
               </div>
             </div>
 
@@ -348,9 +395,30 @@ export function ProofreadingIssueDetailPanel({
                 {t('proofreading.issueDetail.suggested', 'Suggested')}
               </div>
               <div className="rounded-md border border-green-100 bg-green-50 p-3 text-sm text-gray-900">
-                {issue.suggested_text}
+                {contentDisplayMode === 'rendered' ? (
+                  <div
+                    className="prose prose-sm max-w-none prose-strong:text-green-800 prose-strong:font-bold prose-em:italic"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(issue.suggested_text || '', {
+                        ALLOWED_TAGS: ['strong', 'b', 'em', 'i', 'u', 'span', 'mark', 'del', 'ins', 'sub', 'sup', 'br'],
+                        ALLOWED_ATTR: ['class', 'style'],
+                      }),
+                    }}
+                  />
+                ) : (
+                  <code className="text-xs font-mono bg-green-100 text-green-800 px-1 py-0.5 rounded break-all whitespace-pre-wrap">
+                    {issue.suggested_text}
+                  </code>
+                )}
               </div>
             </div>
+
+            {/* Helper hint for formatting differences */}
+            {contentDisplayMode === 'rendered' && (
+              <div className="mt-3 text-xs text-gray-400 text-center">
+                💡 點擊「源碼」查看 HTML 標籤差異（如粗體、斜體等格式標記）
+              </div>
+            )}
           </>
         ) : (
           /* Diff View - Inline diff highlighting */

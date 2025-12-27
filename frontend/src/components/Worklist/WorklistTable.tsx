@@ -1,6 +1,10 @@
 /**
  * Worklist Table component.
  * Displays worklist items in a sortable table with status filtering.
+ *
+ * Feature: View Original Google Doc (2025-12-25)
+ * - Added "View Original" button to open original Google Doc in new window
+ * - Uses drive_metadata.webViewLink or constructs URL from drive_file_id
  */
 
 import { useNavigate } from 'react-router-dom';
@@ -279,61 +283,55 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                         <Eye className="h-4 w-4" />
                       </Button>
 
-                      {/* Parsing Review - Approve/Reject */}
-                      {resolveStatus(item.status) === 'parsing_review' && item.article_id && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/articles/${item.article_id}/parsing`);
-                            }}
-                            aria-label={t('worklist.table.actions.approve')}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: Implement reject action
-                            }}
-                            aria-label={t('worklist.table.actions.reject')}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </>
+                      {/* View Original Google Doc button */}
+                      {(item.drive_metadata?.webViewLink || item.drive_file_id) && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const url = item.drive_metadata?.webViewLink as string
+                              || `https://docs.google.com/document/d/${item.drive_file_id}/edit`;
+                            window.open(url, '_blank', 'noopener,noreferrer');
+                          }}
+                          aria-label={t('worklist.table.actions.viewOriginal')}
+                          title={t('worklist.table.actions.viewOriginal')}
+                        >
+                          <ExternalLink className="h-4 w-4 text-blue-500" />
+                        </Button>
                       )}
 
-                      {/* Proofreading Review - Approve/Reject */}
+                      {/* Parsing Review - Review button */}
+                      {resolveStatus(item.status) === 'parsing_review' && item.article_id && (
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/articles/${item.article_id}/parsing`);
+                          }}
+                          aria-label={t('worklist.table.actions.review')}
+                          title={t('worklist.table.actions.review')}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      )}
+
+                      {/* Proofreading Review - Review button */}
                       {(resolveStatus(item.status) === 'proofreading_review' ||
                         item.status === 'under_review') && item.article_id && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/worklist/${item.id}/review`);
-                            }}
-                            aria-label={t('worklist.table.actions.approve')}
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: Implement reject action
-                            }}
-                            aria-label={t('worklist.table.actions.reject')}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </>
+                        <Button
+                          size="sm"
+                          variant="primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/worklist/${item.id}/review`);
+                          }}
+                          aria-label={t('worklist.table.actions.review')}
+                          title={t('worklist.table.actions.review')}
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
                       )}
 
                       {/* Ready to Publish - Publish button */}

@@ -276,8 +276,9 @@ class ProofreadingDecision(Base, TimestampMixin):
     )
 
     # 决策核心数据
+    # HOTFIX: Use explicit name to match existing database enum type
     decision_type: Mapped[DecisionType] = mapped_column(
-        Enum(DecisionType, values_callable=lambda x: [e.value for e in x]),
+        Enum(DecisionType, name="decision_type_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         index=True,
         comment="决策类型",
@@ -338,8 +339,9 @@ class ProofreadingDecision(Base, TimestampMixin):
         nullable=True,
         comment="反馈备注",
     )
+    # HOTFIX: Use explicit name to match existing database enum type
     feedback_status: Mapped[FeedbackStatus] = mapped_column(
-        Enum(FeedbackStatus, values_callable=lambda x: [e.value for e in x]),
+        Enum(FeedbackStatus, name="feedback_status_enum", values_callable=lambda x: [e.value for e in x]),
         nullable=False,
         default=FeedbackStatus.PENDING,
         index=True,

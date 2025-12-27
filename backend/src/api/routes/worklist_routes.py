@@ -530,6 +530,20 @@ async def _serialize_item_detail(
     if article and hasattr(article, 'article_metadata'):
         article_metadata = article.article_metadata or {}
 
+    # Phase 14: Get extracted FAQs from article
+    extracted_faqs = None
+    extracted_faqs_detection_method = None
+    if article and hasattr(article, 'extracted_faqs'):
+        extracted_faqs = article.extracted_faqs
+        extracted_faqs_detection_method = article.extracted_faqs_detection_method
+
+    # Phase 15: Get category fields from article for auto-save persistence
+    primary_category = None
+    secondary_categories = []
+    if article:
+        primary_category = article.primary_category if hasattr(article, 'primary_category') else None
+        secondary_categories = article.secondary_categories if hasattr(article, 'secondary_categories') else []
+
     return WorklistItemDetailResponse(
         **base.model_dump(),
         content=item.content,
@@ -557,6 +571,12 @@ async def _serialize_item_detail(
         article_images=article_images,
         # FAQ state persistence: include article_metadata with faq_suggestions
         article_metadata=article_metadata,
+        # Phase 14: Extracted FAQs from original article
+        extracted_faqs=extracted_faqs,
+        extracted_faqs_detection_method=extracted_faqs_detection_method,
+        # Phase 15: Category fields for auto-save persistence
+        primary_category=primary_category,
+        secondary_categories=secondary_categories or [],
     )
 
 

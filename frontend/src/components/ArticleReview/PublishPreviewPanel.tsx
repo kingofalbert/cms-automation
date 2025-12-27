@@ -42,7 +42,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
-import { FinalContentPreview } from './FinalContentPreview';
+import { FinalContentPreview, type FAQItem } from './FinalContentPreview';
 import { MetadataSummaryPanel } from './MetadataSummaryPanel';
 import { PublishReadinessChecklist, createChecklistItems } from './PublishReadinessChecklist';
 import { PublishSettingsSectionSimplified } from './PublishSettingsSectionSimplified';
@@ -53,6 +53,8 @@ import { Settings, Send, RotateCcw } from 'lucide-react';
 export interface PublishPreviewPanelProps {
   /** Article review data */
   data: ArticleReviewData;
+  /** FAQs selected by user */
+  faqs?: FAQItem[];
   /** Callback when publish is triggered */
   onPublish: (settings: PublishSettings) => Promise<void>;
   /** Whether publishing is in progress */
@@ -82,6 +84,7 @@ export interface PublishSettings {
  */
 export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   data,
+  faqs = [],
   onPublish,
   isPublishing = false,
 }) => {
@@ -122,6 +125,9 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
     return true;
   }, [data.title, hasValidContent, publishStatus, publishDate, visibility, password]);
 
+  // Check if article has FAQ applicable flag (defaults to true if not set)
+  const faqApplicable = data.articleReview?.faq_applicable ?? true;
+
   // Checklist items
   const checklistItems = useMemo(() => {
     return createChecklistItems({
@@ -132,21 +138,27 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       hasCategory: Boolean(primaryCategory),
       hasTags: tags.length > 0,
       hasFeaturedImage: Boolean(featuredImage),
+      hasFaqs: faqs.length > 0,
+      faqApplicable,
     });
-  }, [data.title, hasValidContent, hasSeoKeywords, hasSeoDescription, primaryCategory, tags, featuredImage]);
+  }, [data.title, hasValidContent, hasSeoKeywords, hasSeoDescription, primaryCategory, tags, featuredImage, faqs.length, faqApplicable]);
 
-  // Calculate proofreading stats from worklist proofreading_stats
+  // Calculate proofreading stats from worklist proofreading_stats (ENHANCED)
   const proofreadingStats = useMemo(() => {
     const stats = data.proofreading_stats;
     if (stats && stats.total_issues > 0) {
       return {
-        totalChanges: stats.total_issues,
-        additions: stats.accepted_count || 0,
-        deletions: stats.rejected_count || 0,
-        modifications: stats.modified_count || 0,
+        totalIssues: stats.total_issues,
+        acceptedCount: stats.accepted_count || 0,
+        rejectedCount: stats.rejected_count || 0,
+        modifiedCount: stats.modified_count || 0,
+        pendingCount: stats.pending_count || 0,
+        criticalCount: stats.critical_count,
+        warningCount: stats.warning_count,
+        infoCount: stats.info_count,
       };
     }
-    return undefined;
+    return null;
   }, [data.proofreading_stats]);
 
   // Calculate character count
@@ -210,10 +222,10 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
     tags,
   };
 
-  // Metadata for summary panel
+  // Metadata for summary panel (ENHANCED with parsing and articleImages)
   const metadataData = {
     seo: {
-      title: data.title || undefined,
+      title: data.seo_title || data.title || undefined,
       description: data.meta_description || undefined,
       keywords: data.seo_keywords || [],
       score: data.articleReview?.seo?.score ?? undefined,
@@ -229,6 +241,19 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
     },
     proofreading: proofreadingStats,
     featuredImage,
+    // NEW: Parsing confirmation data
+    parsing: {
+      title: data.title || '',
+      titlePrefix: data.title_prefix || null,
+      titleSuffix: data.title_suffix || null,
+      seoTitle: data.seo_title || null,
+      authorName: data.author_name || data.author || null,
+      authorLine: data.author_line || null,
+      parsingConfirmed: data.parsing_confirmed || false,
+      parsingConfirmedAt: data.parsing_confirmed_at || null,
+    },
+    // NEW: Article images
+    articleImages: data.article_images || [],
   };
 
   return (
@@ -254,10 +279,10 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 overflow-hidden min-h-0">
         {/* Left column: 60% (3 out of 5 cols) - Article Preview */}
         <div className="lg:col-span-3 overflow-hidden">
-          <FinalContentPreview data={contentData} maxContentHeight="calc(100vh - 400px)" />
+          <FinalContentPreview data={contentData} faqs={faqs} maxContentHeight="calc(100vh - 400px)" />
         </div>
 
-        {/* Right column: 40% (2 out of 5 cols) - Metadata Summary */}
+        {/* Right column: 40% (2 out of 5 cols) - Metadata Summary (ENHANCED) */}
         <div className="lg:col-span-2 overflow-y-auto">
           <MetadataSummaryPanel
             seo={metadataData.seo}
@@ -266,6 +291,8 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             stats={metadataData.stats}
             proofreading={metadataData.proofreading}
             featuredImage={metadataData.featuredImage}
+            parsing={metadataData.parsing}
+            articleImages={metadataData.articleImages}
           />
         </div>
       </div>

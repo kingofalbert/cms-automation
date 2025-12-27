@@ -402,6 +402,18 @@ class Article(Base, TimestampMixin):
         comment="Generated FAQ HTML section for article body",
     )
 
+    # Extracted FAQs from original article (Phase 14: FAQ Comparison)
+    extracted_faqs: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="FAQs extracted from existing article HTML (e.g., marked with 【FAQ開始】)",
+    )
+    extracted_faqs_detection_method: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="How extracted FAQs were detected: text_markers, html_comment, css_class, etc.",
+    )
+
     # Metadata
     article_metadata: Mapped[dict] = mapped_column(
         JSONB,

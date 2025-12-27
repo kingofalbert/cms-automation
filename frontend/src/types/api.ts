@@ -822,6 +822,9 @@ export interface ArticleReviewResponse {
   // FAQ proposals
   faq_proposals: FAQProposal[];
 
+  // FAQ applicability (Phase 13 v2.2)
+  faq_applicable?: boolean | null;
+
   // Paragraph suggestions
   paragraph_suggestions: ParagraphSuggestion[];
 

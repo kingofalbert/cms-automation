@@ -15,6 +15,7 @@ from typing import Any
 
 from anthropic import AsyncAnthropic
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -98,8 +99,12 @@ async def _build_optimizations_response(
     result = await db.execute(stmt)
     seo_suggestion = result.scalar_one_or_none()
 
-    # Load FAQs
-    stmt = select(ArticleFAQ).where(ArticleFAQ.article_id == article_id).order_by(ArticleFAQ.position)
+    # Load FAQs - ONLY return DRAFT FAQs as AI suggestions
+    # APPROVED FAQs are user-selected and stored separately in article metadata
+    stmt = select(ArticleFAQ).where(
+        ArticleFAQ.article_id == article_id,
+        ArticleFAQ.status == "draft"
+    ).order_by(ArticleFAQ.position)
     result = await db.execute(stmt)
     faqs = result.scalars().all()
 
@@ -858,45 +863,63 @@ async def apply_category(
 
 
 def _generate_faq_html_from_items(faqs: list[FAQItem], disclaimer_required: bool = True) -> str:
-    """Generate FAQ HTML section from FAQ items.
+    """Generate FAQ HTML section with Schema.org Microdata from FAQ items.
+
+    Creates a visible FAQ section with embedded Schema.org FAQPage markup,
+    which satisfies Google's requirement that structured data must match
+    visible content on the page.
 
     Args:
         faqs: List of FAQ items to render
         disclaimer_required: Whether to add medical disclaimer
 
     Returns:
-        HTML string for FAQ section
+        HTML string for FAQ section with Schema.org Microdata
     """
     if not faqs:
         return ""
 
+    # Helper function to escape HTML
+    def escape_html(text: str) -> str:
+        return (
+            text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+            .replace("'", "&#x27;")
+        )
+
     html_parts = [
-        '<section class="faq-section" id="faq">',
-        '  <h2>常見問題</h2>',
+        # FAQPage schema wrapper - Google requires visible content to match structured data
+        '<section class="faq-section" id="faq" itemscope itemtype="https://schema.org/FAQPage">',
+        '  <h2 class="faq-title">常見問題</h2>',
         '  <div class="faq-list">',
     ]
 
     for i, faq in enumerate(faqs, 1):
-        question = faq.question
-        answer = faq.answer
+        question = escape_html(faq.question)
+        answer = escape_html(faq.answer)
         has_warning = faq.safety_warning
 
-        html_parts.append(f'    <div class="faq-item" id="faq-{i}">')
-        html_parts.append(f'      <h3 class="faq-question">Q{i}: {question}</h3>')
+        # Each Q&A pair with Schema.org Question/Answer markup
+        html_parts.append(f'    <div class="faq-item" id="faq-{i}" itemscope itemprop="mainEntity" itemtype="https://schema.org/Question">')
+        html_parts.append(f'      <h3 class="faq-question" itemprop="name">{question}</h3>')
 
         if has_warning:
-            html_parts.append('      <div class="faq-answer faq-warning">')
+            html_parts.append('      <div class="faq-answer faq-warning" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">')
             html_parts.append('        <span class="warning-icon">⚠️</span>')
-            html_parts.append(f'        <p>{answer}</p>')
+            html_parts.append(f'        <p itemprop="text">{answer}</p>')
             html_parts.append('      </div>')
         else:
-            html_parts.append(f'      <div class="faq-answer"><p>{answer}</p></div>')
+            html_parts.append('      <div class="faq-answer" itemscope itemprop="acceptedAnswer" itemtype="https://schema.org/Answer">')
+            html_parts.append(f'        <p itemprop="text">{answer}</p>')
+            html_parts.append('      </div>')
 
         html_parts.append('    </div>')
 
     html_parts.append('  </div>')
 
-    # Add disclaimer for health articles
+    # Add disclaimer for health articles (outside schema markup)
     if disclaimer_required:
         html_parts.append('  <div class="faq-disclaimer">')
         html_parts.append('    <p>以上資訊僅供參考，不構成醫療建議。如有健康問題，請諮詢專業醫師。</p>')
@@ -954,11 +977,15 @@ async def update_article_faqs(
     existing_faqs = result.scalars().all()
     previous_faq_count = len(existing_faqs)
 
-    # Delete existing FAQs
-    stmt = delete(ArticleFAQ).where(ArticleFAQ.article_id == article_id)
+    # BUGFIX: Only delete APPROVED FAQs, keep DRAFT (original AI suggestions) intact
+    # This ensures AI suggestions are preserved when user saves their selection
+    stmt = delete(ArticleFAQ).where(
+        ArticleFAQ.article_id == article_id,
+        ArticleFAQ.status == "approved"
+    )
     await db.execute(stmt)
 
-    # Insert new FAQs
+    # Insert new FAQs as approved
     new_faq_html = None
     if request.faqs:
         for i, faq_item in enumerate(request.faqs, 1):
@@ -1003,4 +1030,96 @@ async def update_article_faqs(
         faq_html=new_faq_html,
         previous_faq_count=previous_faq_count,
         updated_at=article.updated_at.isoformat(),
+    )
+
+
+# ============================================================================
+# FAQ Render Preview (for preview before saving)
+# ============================================================================
+
+
+class RenderFAQsRequest(BaseModel):
+    """Request model for FAQ HTML preview rendering."""
+
+    faqs: list[FAQItem] = Field(
+        ...,
+        description="List of FAQs to render",
+    )
+    include_disclaimer: bool = Field(
+        default=True,
+        description="Whether to include medical disclaimer",
+    )
+    section_title: str = Field(
+        default="常見問題",
+        description="Title for the FAQ section",
+    )
+
+
+class RenderFAQsResponse(BaseModel):
+    """Response model for FAQ HTML preview rendering."""
+
+    faq_html: str = Field(
+        ...,
+        description="Generated FAQ HTML with Schema.org Microdata",
+    )
+    faq_count: int = Field(
+        ...,
+        description="Number of FAQs rendered",
+    )
+    schema_type: str = Field(
+        default="FAQPage",
+        description="Schema.org type used",
+    )
+
+
+@router.post(
+    "/articles/faqs/render",
+    response_model=RenderFAQsResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Preview FAQ HTML without saving",
+    description="""Generate FAQ HTML with Schema.org Microdata for preview.
+
+    This endpoint allows users to:
+    1. Preview how FAQs will look before saving
+    2. Test different FAQ combinations
+    3. Get the HTML for external use
+
+    **No database changes are made** - this is purely for preview/rendering.
+
+    The generated HTML includes:
+    - Schema.org FAQPage Microdata (for Google rich snippets)
+    - Visible FAQ section (required by Google's structured data policy)
+    - Optional medical disclaimer
+    """,
+)
+async def render_faqs_preview(
+    request: RenderFAQsRequest,
+) -> RenderFAQsResponse:
+    """Render FAQ HTML for preview without saving to database.
+
+    Args:
+        request: Render request with FAQs to preview
+
+    Returns:
+        Response with generated FAQ HTML
+    """
+    logger.info(f"POST /articles/faqs/render - Rendering {len(request.faqs)} FAQs for preview")
+
+    if not request.faqs:
+        return RenderFAQsResponse(
+            faq_html="",
+            faq_count=0,
+            schema_type="FAQPage",
+        )
+
+    # Generate FAQ HTML with Schema.org Microdata
+    faq_html = _generate_faq_html_from_items(
+        request.faqs,
+        disclaimer_required=request.include_disclaimer,
+    )
+
+    return RenderFAQsResponse(
+        faq_html=faq_html,
+        faq_count=len(request.faqs),
+        schema_type="FAQPage",
     )

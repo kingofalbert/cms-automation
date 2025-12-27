@@ -8,7 +8,75 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+
+#### View Original Google Doc Feature (2025-12-25)
+
+Added ability for operators to open the original Google Doc in a new browser window during article review.
+
+**Problem Solved:**
+- During parsing and proofreading stages, operators could not see the original Google Doc content
+- This made it difficult to verify if AI suggestions were accurate or reasonable
+- Operators had to manually search for the source document in Google Drive
+
+**Implementation:**
+1. **ArticleReviewModal Header Button**
+   - Added "查看原文" button in the modal header (always visible during review)
+   - Uses `drive_metadata.webViewLink` from worklist item data
+   - Opens in new browser window with `target="_blank"`
+
+2. **WorklistTable Row Button**
+   - Added "View Original" button (ExternalLink icon) in the table actions column
+   - Uses `webViewLink` if available, falls back to constructing URL from `drive_file_id`
+   - Allows quick access from the worklist without opening the review modal
+
+**Files Changed:**
+- `frontend/src/components/ArticleReview/ArticleReviewModal.tsx` - Added header button
+- `frontend/src/components/Worklist/WorklistTable.tsx` - Added row action button
+- `frontend/src/types/worklist.ts` - Added `drive_metadata` to `WorklistItem`
+- `frontend/src/i18n/locales/zh-TW.json` - Added translation key
+- `frontend/src/i18n/locales/en-US.json` - Added translation key
+
 ### Fixed
+
+#### Placeholder UI Cleanup (2025-12-25)
+
+Removed or fixed non-functional placeholder UI elements across the application.
+
+**Changes:**
+
+1. **WorklistTable - Removed Non-functional Reject Buttons**
+   - Removed reject buttons from parsing_review and proofreading_review status rows
+   - These buttons had no implementation (just empty TODO comments)
+   - Review buttons remain functional and navigate to appropriate review pages
+
+2. **TitleReviewSection - Removed Mock AI Optimization**
+   - Removed fake "AI 优化标题" button that returned hardcoded mock suggestions
+   - Added helpful text pointing users to real AI suggestions in SEOTitleSelectionCard
+   - Added "reset to original" functionality for title editing
+
+3. **ArticleSEOConfirmationPage - Implemented Real API**
+   - Connected the confirm button to actual `seoAPI.update()` endpoint
+   - Meta description now saves to database
+   - Added error handling with visual feedback
+   - Tags and FAQs stored in `manual_overrides` for future use
+
+4. **ProofreadingRulesSection - Added "Coming Soon" State**
+   - Replaced hidden/empty content with explicit "統計功能開發中" notice
+   - Clear explanation that statistics APIs are not yet implemented
+   - Quick action buttons still functional for rule management
+
+5. **Added Toast Notifications**
+   - ContentComparisonCard: Shows "已複製到剪貼簿" on copy
+   - ParsingReviewPanel: Shows success/error toast for SEO Title selection
+
+**Files Changed:**
+- `frontend/src/components/Worklist/WorklistTable.tsx`
+- `frontend/src/components/ArticleReview/TitleReviewSection.tsx`
+- `frontend/src/pages/ArticleSEOConfirmationPage.tsx`
+- `frontend/src/components/Settings/ProofreadingRulesSection.tsx`
+- `frontend/src/components/ArticleReview/ContentComparisonCard.tsx`
+- `frontend/src/components/ArticleReview/ParsingReviewPanel.tsx`
 
 #### React StrictMode + Supabase Auth Lock Deadlock (2025-12-20)
 

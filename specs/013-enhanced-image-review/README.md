@@ -332,6 +332,50 @@ gsutil -m rsync -r -d dist/ gs://cms-automation-frontend-cmsupload-476323/
 - [Preview WYSIWYG Design Spec](../../frontend/docs/PREVIEW_WYSIWYG_DESIGN_SPEC.md)
 - [User Experience Analysis](../../用户体验完整分析.md)
 
+## Future Directions
+
+### Manual Image Upload Feature (Planned)
+
+**Status**: Not Implemented - Placeholder buttons removed (2025-12-25)
+
+**Background**: The original UI included "添加圖片" (Add Image) and "上傳圖片" (Upload Image) buttons as placeholders. These have been removed as the current workflow relies entirely on automatic image extraction from Google Docs.
+
+**Future Requirements** (when manual image upload is needed):
+
+1. **Use Cases**
+   - Supplement missing images not extracted from Google Doc
+   - Replace low-quality images that don't meet Epoch Times standards
+   - Add editorial images not present in original document
+   - Upload images from local computer
+
+2. **Frontend Components Needed**
+   - Image upload modal/dialog with drag-drop support
+   - Image preview before upload
+   - Metadata input (Caption, Alt Text)
+   - Option to set as Featured or Content image
+   - Integration with existing `ImageUploadWidget` and `DragDropZone` components
+
+3. **Backend API Endpoints Needed**
+   ```
+   POST /v1/articles/{article_id}/images/upload
+   - Accept: multipart/form-data
+   - Fields: file, caption, alt_text, is_featured
+   - Process: Validate → Upload to GCS → Create article_images record
+   - Return: ArticleImageResponse
+
+   POST /v1/articles/{article_id}/images/from-url
+   - Accept: JSON { url, caption, alt_text, is_featured }
+   - Process: Download → Validate → Upload to GCS → Create record
+   - Return: ArticleImageResponse
+   ```
+
+4. **Integration Points**
+   - AI Alt Text generation for uploaded images
+   - Epoch Times standard validation (resolution, file size, format)
+   - Featured image detection and constraint (only one per article)
+
+**Priority**: Low - Current Google Doc parsing provides all necessary images
+
 ---
 
-**Last Updated**: 2025-12-20
+**Last Updated**: 2025-12-25

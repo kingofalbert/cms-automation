@@ -20,6 +20,10 @@ from src.config.wordpress_taxonomy import (
     get_primary_categories,
     get_category_hierarchy,
 )
+from src.services.parser.faq_extractor import (
+    FAQExtractor,
+    get_faq_extractor,
+)
 from src.services.parser.featured_image_detector import (
     FeaturedImageDetector,
     get_featured_image_detector,
@@ -566,6 +570,27 @@ class ArticleParserService:
             # Clean metadata sections from body_html before creating ParsedArticle
             cleaned_body_html = _clean_metadata_sections_from_body(parsed_data["body_html"])
 
+            # Extract existing FAQs from the body HTML (if any are marked)
+            faq_extractor = get_faq_extractor()
+            faq_result = faq_extractor.extract(cleaned_body_html)
+
+            extracted_faqs = None
+            extracted_faqs_detection_method = None
+
+            if faq_result.found and faq_result.faqs:
+                logger.info(
+                    f"Extracted {len(faq_result.faqs)} existing FAQs using {faq_result.detection_method}"
+                )
+                extracted_faqs = [faq.to_dict() for faq in faq_result.faqs]
+                extracted_faqs_detection_method = faq_result.detection_method
+
+                # Remove the FAQ section from body_html to avoid duplication
+                if faq_result.raw_html:
+                    cleaned_body_html = faq_extractor.remove_faq_section(
+                        cleaned_body_html, faq_result.raw_html
+                    )
+                    logger.info("Removed extracted FAQ section from body_html")
+
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
                 title_prefix=parsed_data.get("title_prefix"),
@@ -593,6 +618,9 @@ class ArticleParserService:
                 proofreading_issues=parsed_data.get("proofreading_issues"),
                 proofreading_stats=parsed_data.get("proofreading_stats"),
                 faqs=parsed_data.get("faqs"),
+                # Extracted FAQs from existing article content
+                extracted_faqs=extracted_faqs,
+                extracted_faqs_detection_method=extracted_faqs_detection_method,
                 parsing_method="ai",
                 parsing_confidence=0.95,  # AI has high confidence
             )
@@ -1061,6 +1089,28 @@ Process the above {content_type} and return the complete JSON response:"""
             # Clean metadata sections from body_html
             cleaned_body_html = _clean_metadata_sections_from_body(body_html)
 
+            # Extract existing FAQs from the body HTML (if any are marked)
+            faq_extractor = get_faq_extractor()
+            faq_result = faq_extractor.extract(cleaned_body_html)
+
+            extracted_faqs = None
+            extracted_faqs_detection_method = None
+
+            if faq_result.found and faq_result.faqs:
+                logger.info(
+                    f"[Heuristic] Extracted {len(faq_result.faqs)} existing FAQs "
+                    f"using {faq_result.detection_method}"
+                )
+                extracted_faqs = [faq.to_dict() for faq in faq_result.faqs]
+                extracted_faqs_detection_method = faq_result.detection_method
+
+                # Remove the FAQ section from body_html to avoid duplication
+                if faq_result.raw_html:
+                    cleaned_body_html = faq_extractor.remove_faq_section(
+                        cleaned_body_html, faq_result.raw_html
+                    )
+                    logger.info("[Heuristic] Removed extracted FAQ section from body_html")
+
             # Construct parsed article
             parsed_article = ParsedArticle(
                 title_prefix=title_data.get("prefix"),
@@ -1076,6 +1126,9 @@ Process the above {content_type} and return the complete JSON response:"""
                 seo_keywords=seo_data.get("keywords", []),
                 tags=seo_data.get("tags", []),
                 images=images,
+                # Extracted FAQs from existing article content
+                extracted_faqs=extracted_faqs,
+                extracted_faqs_detection_method=extracted_faqs_detection_method,
                 parsing_method="heuristic",
                 parsing_confidence=0.7,  # Heuristic has lower confidence than AI
             )

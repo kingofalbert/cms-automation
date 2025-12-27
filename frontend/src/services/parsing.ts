@@ -77,6 +77,18 @@ export interface ParsedArticleData {
   } | null;
   faq_html?: string | null;
   body_html_with_faq?: string | null;
+
+  // Phase 14: Extracted FAQs from original article (for comparison with AI-generated)
+  extracted_faqs?: ExtractedFAQ[] | null;
+  extracted_faqs_detection_method?: string | null;
+}
+
+/**
+ * Extracted FAQ from original article HTML.
+ */
+export interface ExtractedFAQ {
+  question: string;
+  answer: string;
 }
 
 /**

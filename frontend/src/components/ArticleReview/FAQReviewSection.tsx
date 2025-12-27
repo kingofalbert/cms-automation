@@ -11,7 +11,7 @@
  * - Rich structured data for FAQ schema markup
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '../ui';
 import { Textarea } from '../ui/Textarea';
 import { Input } from '../ui/Input';
@@ -33,6 +33,7 @@ import {
   XCircle,
   ShieldAlert,
   CheckCircle2,
+  FileText,
 } from 'lucide-react';
 
 export interface FAQ {
@@ -59,6 +60,14 @@ export interface FAQAssessment {
   target_pain_points?: string[];
 }
 
+/**
+ * Extracted FAQ from original article HTML
+ */
+export interface ExtractedFAQ {
+  question: string;
+  answer: string;
+}
+
 export interface FAQReviewSectionProps {
   /** Article ID for API calls */
   articleId?: number | null;
@@ -66,6 +75,10 @@ export interface FAQReviewSectionProps {
   faqs: FAQ[];
   /** AI-generated FAQ suggestions */
   aiSuggestions?: AIFAQSuggestion[];
+  /** Extracted FAQs from original article HTML */
+  extractedFaqs?: ExtractedFAQ[];
+  /** How extracted FAQs were detected */
+  extractedFaqsDetectionMethod?: string | null;
   /** Whether AI generation is in progress */
   isGenerating?: boolean;
   /** Callback when FAQs change */
@@ -115,6 +128,8 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
   articleId,
   faqs,
   aiSuggestions = [],
+  extractedFaqs = [],
+  extractedFaqsDetectionMethod,
   isGenerating = false,
   onFaqsChange,
   onGenerateFaqs,
@@ -123,10 +138,40 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
   faqAssessment,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [acceptedIndices, setAcceptedIndices] = useState<Set<number>>(new Set());
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editQuestion, setEditQuestion] = useState('');
   const [editAnswer, setEditAnswer] = useState('');
+
+  // BUGFIX: Compute which AI suggestions are already saved in faqs
+  // This prevents showing AI suggestions that are already accepted/saved
+  const computeAcceptedIndices = useMemo(() => {
+    const accepted = new Set<number>();
+    aiSuggestions.forEach((suggestion, index) => {
+      // Check if this AI suggestion is already in the saved faqs (by question text match)
+      const isAlreadySaved = faqs.some(
+        faq => faq.question.trim() === suggestion.question.trim()
+      );
+      if (isAlreadySaved) {
+        accepted.add(index);
+      }
+    });
+    return accepted;
+  }, [aiSuggestions, faqs]);
+
+  // Track additional indices accepted during this session
+  const [sessionAcceptedIndices, setSessionAcceptedIndices] = useState<Set<number>>(new Set());
+
+  // Combine pre-saved and session-accepted indices
+  const acceptedIndices = useMemo(() => {
+    const combined = new Set(computeAcceptedIndices);
+    sessionAcceptedIndices.forEach(idx => combined.add(idx));
+    return combined;
+  }, [computeAcceptedIndices, sessionAcceptedIndices]);
+
+  // Reset session accepted indices when aiSuggestions change (new article)
+  useEffect(() => {
+    setSessionAcceptedIndices(new Set());
+  }, [aiSuggestions]);
 
   // Handle add empty FAQ
   const handleAddFaq = () => {
@@ -150,7 +195,7 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
   // Accept AI suggestion
   const handleAcceptSuggestion = (suggestion: AIFAQSuggestion, index: number) => {
     onFaqsChange([...faqs, { question: suggestion.question, answer: suggestion.answer }]);
-    setAcceptedIndices(new Set([...acceptedIndices, index]));
+    setSessionAcceptedIndices(new Set([...sessionAcceptedIndices, index]));
   };
 
   // Accept all AI suggestions
@@ -162,7 +207,10 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
         .map(s => ({ question: s.question, answer: s.answer })),
     ];
     onFaqsChange(newFaqs);
-    setAcceptedIndices(new Set(aiSuggestions.map((_, i) => i)));
+    // Mark all as accepted in session
+    const allIndices = new Set<number>();
+    aiSuggestions.forEach((_, i) => allIndices.add(i));
+    setSessionAcceptedIndices(allIndices);
   };
 
   // Copy to clipboard
@@ -180,7 +228,7 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
   // Save edited suggestion
   const handleSaveEdit = (index: number) => {
     onFaqsChange([...faqs, { question: editQuestion, answer: editAnswer }]);
-    setAcceptedIndices(new Set([...acceptedIndices, index]));
+    setSessionAcceptedIndices(new Set([...sessionAcceptedIndices, index]));
     setEditingIndex(null);
     setEditQuestion('');
     setEditAnswer('');
@@ -188,6 +236,71 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
 
   const hasAiSuggestions = aiSuggestions.length > 0;
   const unacceptedSuggestions = aiSuggestions.filter((_, i) => !acceptedIndices.has(i));
+
+  // Phase 14: Track accepted extracted FAQs
+  const [extractedAcceptedIndices, setExtractedAcceptedIndices] = useState<Set<number>>(new Set());
+
+  // Compute which extracted FAQs are already saved in faqs
+  const computeExtractedAcceptedIndices = useMemo(() => {
+    const accepted = new Set<number>();
+    extractedFaqs.forEach((extracted, index) => {
+      const isAlreadySaved = faqs.some(
+        faq => faq.question.trim() === extracted.question.trim()
+      );
+      if (isAlreadySaved) {
+        accepted.add(index);
+      }
+    });
+    return accepted;
+  }, [extractedFaqs, faqs]);
+
+  // Combine pre-saved and session-accepted extracted indices
+  const allExtractedAcceptedIndices = useMemo(() => {
+    const combined = new Set(computeExtractedAcceptedIndices);
+    extractedAcceptedIndices.forEach(idx => combined.add(idx));
+    return combined;
+  }, [computeExtractedAcceptedIndices, extractedAcceptedIndices]);
+
+  // Reset extracted accepted indices when extractedFaqs change
+  useEffect(() => {
+    setExtractedAcceptedIndices(new Set());
+  }, [extractedFaqs]);
+
+  const hasExtractedFaqs = extractedFaqs.length > 0;
+  const unacceptedExtractedFaqs = extractedFaqs.filter((_, i) => !allExtractedAcceptedIndices.has(i));
+
+  // Accept extracted FAQ
+  const handleAcceptExtractedFaq = (faq: ExtractedFAQ, index: number) => {
+    onFaqsChange([...faqs, { question: faq.question, answer: faq.answer }]);
+    setExtractedAcceptedIndices(new Set([...extractedAcceptedIndices, index]));
+  };
+
+  // Accept all extracted FAQs
+  const handleAcceptAllExtracted = () => {
+    const newFaqs = [
+      ...faqs,
+      ...extractedFaqs
+        .filter((_, i) => !allExtractedAcceptedIndices.has(i))
+        .map(f => ({ question: f.question, answer: f.answer })),
+    ];
+    onFaqsChange(newFaqs);
+    const allIndices = new Set<number>();
+    extractedFaqs.forEach((_, i) => allIndices.add(i));
+    setExtractedAcceptedIndices(allIndices);
+  };
+
+  // Get detection method label
+  const getDetectionMethodLabel = (method?: string | null): string => {
+    const methods: Record<string, string> = {
+      text_markers: '文字標記',
+      html_comment_markers: 'HTML註釋',
+      css_class_markers: 'CSS類名',
+      id_markers: 'ID標記',
+      header_detection: '標題識別',
+      structured_div: '結構化DIV',
+    };
+    return methods[method || ''] || method || '自動識別';
+  };
 
   // FAQ v2.2: Check applicability
   const isApplicable = faqApplicable !== false; // null or true means applicable
@@ -225,6 +338,12 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
           {faqs.length > 0 && (
             <Badge variant="success" className="text-xs">
               {faqs.length} 個
+            </Badge>
+          )}
+          {hasExtractedFaqs && unacceptedExtractedFaqs.length > 0 && (
+            <Badge variant="default" className="text-xs bg-amber-100 text-amber-700">
+              <FileText className="w-3 h-3 mr-1" />
+              {unacceptedExtractedFaqs.length} 原文
             </Badge>
           )}
           {hasAiSuggestions && unacceptedSuggestions.length > 0 && (
@@ -307,6 +426,101 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
             <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* Phase 14: Extracted FAQs from Original Article */}
+          {hasExtractedFaqs && unacceptedExtractedFaqs.length > 0 && (
+            <div className="space-y-3">
+              <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-amber-100 rounded-lg">
+                    <FileText className="w-5 h-5 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-amber-900">原文 FAQ 已識別</h4>
+                    <p className="text-sm text-amber-700 mt-1">
+                      從原始文章中識別到 {extractedFaqs.length} 個 FAQ。
+                      {extractedFaqsDetectionMethod && (
+                        <span className="ml-1 text-amber-600">
+                          (識別方式: {getDetectionMethodLabel(extractedFaqsDetectionMethod)})
+                        </span>
+                      )}
+                    </p>
+                    {unacceptedExtractedFaqs.length > 0 && (
+                      <div className="flex items-center gap-2 mt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAcceptAllExtracted();
+                          }}
+                          className="border-amber-300 text-amber-700 hover:bg-amber-100"
+                        >
+                          <Check className="w-4 h-4 mr-1" />
+                          使用全部原文 FAQ ({unacceptedExtractedFaqs.length})
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Extracted FAQ List */}
+              <div className="flex items-center gap-2 text-sm font-medium text-amber-700">
+                <FileText className="w-4 h-4" />
+                原文中的 FAQ
+              </div>
+              {extractedFaqs.map((faq, index) => {
+                if (allExtractedAcceptedIndices.has(index)) return null;
+
+                return (
+                  <div
+                    key={`extracted-${index}`}
+                    className="p-4 border-2 border-amber-200 bg-amber-50/50 rounded-lg space-y-3 hover:border-amber-300 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-amber-700">
+                          原Q{index + 1}
+                        </span>
+                        <Badge variant="outline" className="text-xs bg-white border-amber-200">
+                          <FileText className="w-3 h-3 mr-1" />
+                          原文識別
+                        </Badge>
+                      </div>
+                      <button
+                        onClick={() => handleCopy(`${faq.question}\n${faq.answer}`)}
+                        className="p-1.5 hover:bg-amber-100 rounded"
+                        title="複製"
+                      >
+                        <Copy className="w-3.5 h-3.5 text-amber-500" />
+                      </button>
+                    </div>
+
+                    <div className="pl-6">
+                      <p className="text-sm font-medium text-gray-900 mb-2">
+                        {faq.question}
+                      </p>
+                      <p className="text-sm text-gray-600 bg-white p-2 rounded border border-amber-100">
+                        {faq.answer}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t border-amber-100">
+                      <Button
+                        size="sm"
+                        onClick={() => handleAcceptExtractedFaq(faq, index)}
+                        className="bg-amber-500 hover:bg-amber-600 text-white"
+                      >
+                        <Check className="w-4 h-4 mr-1" />
+                        使用此 FAQ
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
 

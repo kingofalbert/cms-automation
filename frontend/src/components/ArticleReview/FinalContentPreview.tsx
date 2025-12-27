@@ -23,7 +23,12 @@
 
 import React, { useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import { FileText, User, Newspaper } from 'lucide-react';
+import { FileText, User, Newspaper, HelpCircle } from 'lucide-react';
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
 
 export interface FinalContentPreviewProps {
   /** Content data to preview */
@@ -44,6 +49,8 @@ export interface FinalContentPreviewProps {
     secondaryCategories?: string[];
     tags: string[];
   };
+  /** FAQ items to display at the end of content */
+  faqs?: FAQItem[];
   /** Maximum height for content area (default: 600px) */
   maxContentHeight?: string;
 }
@@ -56,6 +63,7 @@ export interface FinalContentPreviewProps {
  */
 export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
   data,
+  faqs = [],
   maxContentHeight = '600px',
 }) => {
   // Sanitize HTML content for safe rendering
@@ -71,6 +79,7 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
         'u',
         'span',
         'div',
+        'section',
         'h1',
         'h2',
         'h3',
@@ -198,6 +207,36 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
             prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-lg"
           dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         />
+
+        {/* FAQ Section - Schema.org FAQPage format preview */}
+        {faqs.length > 0 && (
+          <section className="mt-8 pt-6 border-t border-gray-200">
+            <div className="flex items-center gap-2 mb-4">
+              <HelpCircle className="w-5 h-5 text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-900">常見問題</h2>
+              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                {faqs.length} 個 FAQ
+              </span>
+            </div>
+            <div className="space-y-4">
+              {faqs.map((faq, index) => (
+                <div
+                  key={index}
+                  className="bg-gray-50 rounded-lg p-4 border border-gray-100"
+                >
+                  <h3 className="font-medium text-gray-900 mb-2 flex items-start gap-2">
+                    <span className="text-blue-600 font-bold">Q{index + 1}:</span>
+                    <span>{faq.question}</span>
+                  </h3>
+                  <p className="text-gray-700 pl-7">{faq.answer}</p>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-gray-500 italic">
+              * 此 FAQ 區塊將以 Schema.org FAQPage 格式發布，支持 Google 搜索富摘要
+            </p>
+          </section>
+        )}
       </div>
 
       {/* Footer */}

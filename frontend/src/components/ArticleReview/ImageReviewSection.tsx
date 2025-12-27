@@ -13,7 +13,6 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '../ui';
 import {
   Image as ImageIcon,
-  Upload,
   X,
   ExternalLink,
   AlertTriangle,
@@ -837,10 +836,7 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
             <div className="text-center">
               <ImageIcon className="w-12 h-12 mx-auto text-gray-400 mb-2" />
               <p className="text-sm text-gray-500">暫無特色圖片</p>
-              <Button variant="outline" size="sm" className="mt-2">
-                <Upload className="w-4 h-4 mr-2" />
-                上傳圖片
-              </Button>
+              {/* Note: Image upload button removed - manual upload is a future feature */}
             </div>
           </div>
         )}
@@ -887,10 +883,7 @@ export const ImageReviewSection: React.FC<ImageReviewSectionProps> = ({
         ) : (
           <p className="text-sm text-gray-500">暫無附加圖片</p>
         )}
-        <Button variant="outline" size="sm">
-          <Upload className="w-4 h-4 mr-2" />
-          添加圖片
-        </Button>
+        {/* Note: "添加圖片" button removed - manual image upload is a future feature */}
       </div>
 
       {/* Image guidelines */}

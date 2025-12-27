@@ -244,6 +244,15 @@ class ArticleMetadataUpdate(BaseSchema):
         default=None,
         description="SEO keywords list"
     )
+    # Phase 15: Category fields for auto-save
+    primary_category: str | None = Field(
+        default=None,
+        description="WordPress primary category (主分類)"
+    )
+    secondary_categories: list[str] | None = Field(
+        default=None,
+        description="WordPress secondary categories (副分類)"
+    )
 
 
 class ArticleReviewResponse(BaseSchema):

@@ -93,3 +93,16 @@ export type { PublishReadinessChecklistProps, ChecklistItem } from './PublishRea
 
 export { MetadataSummaryPanel } from './MetadataSummaryPanel';
 export type { MetadataSummaryPanelProps } from './MetadataSummaryPanel';
+
+// Phase 16: Enhanced Publish Preview Components - Re-enabling one by one for testing
+export { GoogleSearchPreview } from './GoogleSearchPreview';
+export type { GoogleSearchPreviewProps } from './GoogleSearchPreview';
+
+export { ParsingConfirmationSection } from './ParsingConfirmationSection';
+export type { ParsingConfirmationSectionProps } from './ParsingConfirmationSection';
+
+export { ProofreadingSummarySection } from './ProofreadingSummarySection';
+export type { ProofreadingSummarySectionProps, ProofreadingSummaryStats } from './ProofreadingSummarySection';
+
+export { ArticleImagesList } from './ArticleImagesList';
+export type { ArticleImagesListProps, ArticleImage } from './ArticleImagesList';

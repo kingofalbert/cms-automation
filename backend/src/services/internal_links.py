@@ -22,10 +22,12 @@ class RelatedArticleMatch(BaseModel):
     title_main: str | None = None
     url: str
     excerpt: str | None = None
+    category: str | None = None  # P1: 文章分類
     similarity: float
     match_type: str
     ai_keywords: list[str] = Field(default_factory=list)
     matched_keywords: list[str] | None = None
+    category_match: bool | None = None  # P1: 是否與源文章同分類
 
 
 class MatchResult(BaseModel):
@@ -102,8 +104,10 @@ class InternalLinkService:
     async def match_related_articles(
         self,
         title: str,
+        focus_keyword: str | None = None,
         keywords: list[str] | None = None,
         content: str | None = None,
+        category: str | None = None,
         article_id: str | None = None,
         limit: int = DEFAULT_LIMIT,
         title_threshold: float = 0.7,
@@ -113,8 +117,10 @@ class InternalLinkService:
 
         Args:
             title: Article title for semantic matching.
+            focus_keyword: Primary keyword with highest weight (P2).
             keywords: Optional SEO keywords to enhance matching.
             content: Optional content excerpt for deep matching.
+            category: Optional category for boosting same-category matches.
             article_id: Optional article ID to exclude (avoid self-matching).
             limit: Maximum number of matches to return.
             title_threshold: Minimum similarity threshold (0-1).
@@ -146,6 +152,9 @@ class InternalLinkService:
                 "title_threshold": title_threshold,
             }
 
+            if focus_keyword:
+                payload["focus_keyword"] = focus_keyword.strip()
+
             if keywords:
                 payload["keywords"] = [k.strip() for k in keywords if k.strip()]
 
@@ -156,6 +165,9 @@ class InternalLinkService:
 
             if article_id:
                 payload["article_id"] = article_id
+
+            if category:
+                payload["category"] = category
 
             # Make API request
             url = f"{self.supabase_url}{self.MATCH_ENDPOINT}"
@@ -198,10 +210,12 @@ class InternalLinkService:
                         title_main=match_data.get("title_main"),
                         url=match_data["url"],
                         excerpt=match_data.get("excerpt"),
+                        category=match_data.get("category"),
                         similarity=match_data["similarity"],
                         match_type=match_data["match_type"],
                         ai_keywords=match_data.get("ai_keywords", []),
                         matched_keywords=match_data.get("matched_keywords"),
+                        category_match=match_data.get("category_match"),
                     )
                     matches.append(match)
                 except Exception as e:

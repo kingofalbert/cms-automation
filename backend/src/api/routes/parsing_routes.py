@@ -169,6 +169,10 @@ class ParsedArticleData(BaseModel):
     faq_html: str | None = None
     body_html_with_faq: str | None = None  # Combined body + FAQ for publishing
 
+    # Phase 14: Extracted FAQs from original article (for comparison with AI-generated)
+    extracted_faqs: list[dict[str, Any]] | None = None
+    extracted_faqs_detection_method: str | None = None
+
     class Config:
         from_attributes = True
 
@@ -419,6 +423,9 @@ async def get_parsing_result(
         faq_assessment=article.faq_assessment,
         faq_html=article.faq_html,
         body_html_with_faq=body_html_with_faq,
+        # Phase 14: Extracted FAQs for comparison
+        extracted_faqs=article.extracted_faqs,
+        extracted_faqs_detection_method=article.extracted_faqs_detection_method,
     )
 
 

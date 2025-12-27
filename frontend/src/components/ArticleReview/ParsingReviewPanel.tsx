@@ -21,7 +21,7 @@
  * └─────────────────────┴───────────────────────────────────────────┘
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Card } from '../ui';
 import { Button } from '../ui';
 import { TitleReviewSection } from './TitleReviewSection';
@@ -34,6 +34,7 @@ import { TagsComparisonCard, TagSource } from './TagsComparisonCard';
 import { FAQReviewSection, type AIFAQSuggestion } from './FAQReviewSection';
 import { CategorySelectionCard, type AICategoryRecommendation, type AISecondaryCategoryRecommendation } from './CategorySelectionCard';
 import { ExcerptReviewSection } from './ExcerptReviewSection';
+import { toast } from 'sonner';
 import type { SuggestedTag, RelatedArticle } from '../../types/api';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import type { SEOTitleSuggestionsData, SelectSEOTitleResponse } from '../../types/api';
@@ -80,19 +81,37 @@ export interface ParsingData {
     question: string;
     answer: string;
   }>;
+  // Phase 15: Additional fields for complete auto-save
+  tags?: string[];
+  primary_category?: string | null;
+  secondary_categories?: string[];
+  excerpt?: string;
+}
+
+/**
+ * Imperative handle for ParsingReviewPanel
+ * Allows parent to get current data without triggering a save
+ */
+export interface ParsingReviewPanelHandle {
+  /** Get all current parsing data for auto-save */
+  getCurrentData: () => ParsingData;
+  /** Check if there are unsaved changes */
+  isDirty: () => boolean;
+  /** Reset dirty flag after successful auto-save */
+  resetDirty: () => void;
 }
 
 /**
  * ParsingReviewPanel Component
  */
-export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
+export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingReviewPanelProps>(({
   data,
   onSave,
   isSaving = false,
   // BUGFIX: Lifted FAQ state for persistence during backtracking
   faqs: liftedFaqs,
   onFaqsChange: onLiftedFaqsChange,
-}) => {
+}, ref) => {
   // Local state for parsing data (editable)
   const initialParsingState = useMemo(() => {
     const metadata = data.metadata;
@@ -131,6 +150,10 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           : (data as any).tags) || [],
       faqSuggestions:
         (metadata?.faq_suggestions as Array<{ question: string; answer: string }>) || [],
+      // Phase 15: Add category and excerpt to initial state for sync
+      primaryCategory: (data as any).primary_category || null,
+      secondaryCategories: (data as any).secondary_categories || [],
+      excerpt: (metadata?.excerpt as string) || '',
     };
   }, [data]);
 
@@ -244,6 +267,10 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
       setMetaDescription(initialParsingState.metaDescription);
       setSeoKeywords(initialParsingState.seoKeywords);
       setTags(initialParsingState.tags);
+      // Phase 15: Sync category and excerpt fields
+      setPrimaryCategory(initialParsingState.primaryCategory);
+      setSecondaryCategories(initialParsingState.secondaryCategories);
+      setExcerpt(initialParsingState.excerpt);
       // BUGFIX: Only reset local FAQ state if lifted state is not provided
       // This prevents overwriting persisted lifted state during navigation
       if (!liftedFaqs) {
@@ -385,6 +412,29 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
     fetchOptimizations();
   }, [data.article_id, primaryCategory]);
 
+  // Phase 15: Expose imperative handle for auto-save
+  useImperativeHandle(ref, () => ({
+    getCurrentData: (): ParsingData => ({
+      title,
+      author,
+      featured_image_path: featuredImage,
+      additional_images: additionalImages,
+      seo_metadata: {
+        meta_description: metaDescription,
+        keywords: seoKeywords,
+      },
+      faq_suggestions: faqSuggestions,
+      // Phase 15: Include all fields for complete auto-save
+      tags,
+      primary_category: primaryCategory,
+      secondary_categories: secondaryCategories,
+      excerpt,
+    }),
+    isDirty: () => isDirty,
+    // Phase 15: Reset dirty flag after auto-save so sync useEffect can update state
+    resetDirty: () => setIsDirty(false),
+  }), [title, author, featuredImage, additionalImages, metaDescription, seoKeywords, faqSuggestions, tags, primaryCategory, secondaryCategories, excerpt, isDirty]);
+
   const handleSave = async () => {
     const parsingData: ParsingData = {
       title,
@@ -396,6 +446,11 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
         keywords: seoKeywords,
       },
       faq_suggestions: faqSuggestions,
+      // Phase 15: Include all fields
+      tags,
+      primary_category: primaryCategory,
+      secondary_categories: secondaryCategories,
+      excerpt,
     };
 
     await onSave(parsingData);
@@ -475,34 +530,112 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
   const handleSeoTitleSelectionSuccess = (response: SelectSEOTitleResponse) => {
     setCurrentSeoTitle(response.seo_title);
     setSeoTitleSource(response.seo_title_source);
-    // TODO: Show success toast notification
-    console.log('SEO Title selected successfully:', response);
+    toast.success('SEO Title 已保存');
   };
 
   // Handle SEO Title selection error
   const handleSeoTitleSelectionError = (error: Error) => {
-    // TODO: Show error toast notification
-    console.error('Failed to select SEO Title:', error);
+    toast.error(`SEO Title 保存失敗: ${error.message}`);
   };
+
+  // Phase 15: Calculate completion progress for Proposal C
+  const progressItems = useMemo(() => {
+    const items = [
+      { label: '標題', completed: !!title.trim(), required: true },
+      { label: 'SEO標題', completed: !!currentSeoTitle, required: true },
+      { label: '作者', completed: !!author.trim(), required: true },
+      { label: '元描述', completed: metaDescription.length >= 50, required: false },
+      { label: '關鍵詞', completed: seoKeywords.length >= 3, required: false },
+      { label: '主分類', completed: !!primaryCategory, required: false },
+      { label: '標籤', completed: tags.length >= 2, required: false },
+    ];
+    const completedCount = items.filter(i => i.completed).length;
+    const requiredCompleted = items.filter(i => i.required && i.completed).length;
+    const requiredTotal = items.filter(i => i.required).length;
+    return { items, completedCount, total: items.length, requiredCompleted, requiredTotal };
+  }, [title, currentSeoTitle, author, metaDescription, seoKeywords, primaryCategory, tags]);
+
+  // Phase 15: Collapsible section state for bottom content
+  const [isBottomExpanded, setIsBottomExpanded] = useState(true);
 
   return (
     <div className="h-full flex flex-col">
-      {/* Dirty indicator */}
-      {isDirty && (
-        <div className="mb-4 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-          <p className="text-sm text-amber-800">
-            ⚠️ 您有未保存的更改。请记得保存或按 Ctrl+S。
-          </p>
+      {/* Phase 15: Progress Indicator (Proposal C) */}
+      <div className="mb-4 px-4 py-3 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-lg">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-700">解析審核進度</span>
+            <span className="text-xs text-slate-500">
+              ({progressItems.requiredCompleted}/{progressItems.requiredTotal} 必填項)
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-semibold ${
+              progressItems.completedCount === progressItems.total
+                ? 'text-green-600'
+                : progressItems.requiredCompleted === progressItems.requiredTotal
+                  ? 'text-blue-600'
+                  : 'text-amber-600'
+            }`}>
+              {Math.round((progressItems.completedCount / progressItems.total) * 100)}%
+            </span>
+            {isDirty && (
+              <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">未保存</span>
+            )}
+          </div>
         </div>
-      )}
+        {/* Progress bar */}
+        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all duration-300 ${
+              progressItems.completedCount === progressItems.total
+                ? 'bg-green-500'
+                : progressItems.requiredCompleted === progressItems.requiredTotal
+                  ? 'bg-blue-500'
+                  : 'bg-amber-500'
+            }`}
+            style={{ width: `${(progressItems.completedCount / progressItems.total) * 100}%` }}
+          />
+        </div>
+        {/* Progress items mini-status */}
+        <div className="flex flex-wrap gap-2 mt-2">
+          {progressItems.items.map((item, idx) => (
+            <span
+              key={idx}
+              className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                item.completed
+                  ? 'bg-green-100 text-green-700'
+                  : item.required
+                    ? 'bg-red-100 text-red-700'
+                    : 'bg-slate-100 text-slate-600'
+              }`}
+            >
+              {item.completed ? '✓' : item.required ? '○' : '○'} {item.label}
+              {item.required && <span className="text-red-500">*</span>}
+            </span>
+          ))}
+        </div>
+      </div>
 
       {/* Main content: 3-column grid (33% + 34% + 33%) */}
       <div
         className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-auto"
         data-testid="parsing-review-grid"
       >
-        {/* Left column: 33% (4 out of 12 cols) - Title, SEO Title, Author */}
+        {/* Left column: 33% (4 out of 12 cols) - 基礎信息 (必填) */}
         <div className="lg:col-span-4 space-y-4">
+          {/* Phase 15: Column Header */}
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">基礎信息</h3>
+              <p className="text-xs text-red-500">必填項</p>
+            </div>
+          </div>
           {/* Title Review */}
           <Card className="p-4" data-testid="parsing-title-card">
             <TitleReviewSection
@@ -541,28 +674,22 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
               }}
             />
           </Card>
-
-          {/* Image Review */}
-          <Card className="p-4" data-testid="parsing-image-card">
-            <ImageReviewSection
-              featuredImage={featuredImage}
-              additionalImages={additionalImages}
-              articleImages={(data as any).article_images || []}
-              worklistItemId={data.id}
-              onFeaturedImageChange={(url) => {
-                setFeaturedImage(url);
-                markDirty();
-              }}
-              onAdditionalImagesChange={(urls) => {
-                setAdditionalImages(urls);
-                markDirty();
-              }}
-            />
-          </Card>
         </div>
 
-        {/* Center column: 34% (4 out of 12 cols) - SEO Optimization */}
+        {/* Center column: 34% (4 out of 12 cols) - SEO優化 (建議) */}
         <div className="lg:col-span-4 space-y-4">
+          {/* Phase 15: Column Header */}
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">SEO 優化</h3>
+              <p className="text-xs text-purple-600">建議填寫</p>
+            </div>
+          </div>
           {/* Meta Description Comparison */}
           <ContentComparisonCard
             title="元描述 (Meta Description)"
@@ -656,8 +783,20 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           </Card>
         </div>
 
-        {/* Right column: 33% (4 out of 12 cols) - Categories & Tags */}
+        {/* Right column: 33% (4 out of 12 cols) - 分類與標籤 (可選) */}
         <div className="lg:col-span-4 space-y-4">
+          {/* Phase 15: Column Header */}
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-200">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+              <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">分類與標籤</h3>
+              <p className="text-xs text-emerald-600">可選項</p>
+            </div>
+          </div>
           {/* Category Selection with AI Recommendation */}
           <CategorySelectionCard
             aiRecommendation={aiCategoryRecommendation || undefined}
@@ -711,128 +850,196 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
           />
         </div>
 
-        {/* Bottom row: FAQ (full width) */}
-        <div className="lg:col-span-12 space-y-4">
-          {/* AI FAQ Proposals (if available from article review) */}
-          {data.articleReview?.faq_proposals && data.articleReview.faq_proposals.length > 0 && (
-            <Card className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-              <h4 className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+        {/* Phase 15: Collapsible Bottom Section - Image & FAQ (Proposal C) */}
+        <div className="lg:col-span-12">
+          {/* Collapsible Header */}
+          <button
+            onClick={() => setIsBottomExpanded(!isBottomExpanded)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors mb-4"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                AI 建议：FAQ Schema ({data.articleReview.faq_proposals.length} 个提案)
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {data.articleReview.faq_proposals.map((proposal, idx) => (
-                  <div key={idx} className="p-3 bg-white rounded border border-purple-200">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold text-purple-700">
-                        提案 #{idx + 1} - {proposal.schema_type}
-                      </span>
-                      {proposal.score !== null && proposal.score !== undefined && (
-                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                          评分: {Math.round(proposal.score * 100)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      {proposal.questions.map((q, qIdx) => (
-                        <div key={qIdx} className="text-xs">
-                          <p className="font-medium text-gray-900">Q{qIdx + 1}: {q.question}</p>
-                          <p className="text-gray-600 ml-4 mt-1">A: {q.answer}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
               </div>
-            </Card>
-          )}
-
-          {/* FAQ Review - AI FAQs are auto-generated during parsing */}
-          <Card className="p-4" data-testid="parsing-faq-card">
-            <FAQReviewSection
-              articleId={data.article_id}
-              faqs={faqSuggestions}
-              aiSuggestions={aiFaqSuggestions}
-              isGenerating={isGeneratingFaqs}
-              error={faqError}
-              onFaqsChange={(faqs) => {
-                setFaqSuggestions(faqs);
-                markDirty();
-              }}
-            />
-          </Card>
-
-          {/* Phase 12: Related Articles for Internal Linking */}
-          {data.articleReview?.related_articles && data.articleReview.related_articles.length > 0 && (
-            <Card className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200" data-testid="related-articles-card">
-              <h4 className="text-sm font-semibold text-emerald-900 mb-3 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-                相關文章推薦 ({data.articleReview.related_articles.length} 篇)
-                <span className="ml-auto text-xs text-emerald-600 font-normal">
-                  用於內部鏈接優化 SEO
+              <div className="text-left">
+                <h3 className="text-sm font-semibold text-amber-900">更多選項</h3>
+                <p className="text-xs text-amber-700">圖片審核 & FAQ 建議</p>
+              </div>
+              {/* Quick stats */}
+              <div className="flex items-center gap-2 ml-4">
+                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                  圖片 {((data as any).article_images || []).length}
                 </span>
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {data.articleReview.related_articles.map((article, idx) => (
-                  <div key={article.article_id} className="p-3 bg-white rounded-lg border border-emerald-200 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <span className="text-xs font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
-                        #{idx + 1}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                          article.match_type === 'semantic'
-                            ? 'bg-purple-100 text-purple-700'
-                            : article.match_type === 'content'
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-amber-100 text-amber-700'
-                        }`}>
-                          {article.match_type === 'semantic' ? '語義匹配' : article.match_type === 'content' ? '內容匹配' : '關鍵詞匹配'}
-                        </span>
-                        <span className="text-xs font-semibold text-emerald-700">
-                          {Math.round(article.similarity * 100)}%
-                        </span>
-                      </div>
-                    </div>
-                    <h5 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
-                      {article.title_main || article.title}
-                    </h5>
-                    {article.excerpt && (
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-2">
-                        {article.excerpt}
-                      </p>
-                    )}
-                    {article.ai_keywords && article.ai_keywords.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-2">
-                        {article.ai_keywords.slice(0, 3).map((keyword, kIdx) => (
-                          <span key={kIdx} className="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
-                            {keyword}
-                          </span>
-                        ))}
-                        {article.ai_keywords.length > 3 && (
-                          <span className="text-[10px] text-gray-400">+{article.ai_keywords.length - 3}</span>
-                        )}
-                      </div>
-                    )}
-                    <a
-                      href={article.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-emerald-600 hover:text-emerald-800 hover:underline flex items-center gap-1"
-                    >
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      查看原文
-                    </a>
-                  </div>
-                ))}
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                  FAQ {faqSuggestions.length}
+                </span>
+                {aiFaqSuggestions.length > 0 && (
+                  <span className="text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">
+                    AI建議 {aiFaqSuggestions.length}
+                  </span>
+                )}
               </div>
-            </Card>
+            </div>
+            <svg
+              className={`w-5 h-5 text-amber-600 transition-transform duration-200 ${isBottomExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* Collapsible Content */}
+          {isBottomExpanded && (
+            <div className="space-y-4">
+              {/* Two-column layout for Image and FAQ */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Image Review */}
+                <Card className="p-4" data-testid="parsing-image-card">
+                  <ImageReviewSection
+                    featuredImage={featuredImage}
+                    additionalImages={additionalImages}
+                    articleImages={(data as any).article_images || []}
+                    worklistItemId={data.id}
+                    onFeaturedImageChange={(url) => {
+                      setFeaturedImage(url);
+                      markDirty();
+                    }}
+                    onAdditionalImagesChange={(urls) => {
+                      setAdditionalImages(urls);
+                      markDirty();
+                    }}
+                  />
+                </Card>
+
+                {/* FAQ Review */}
+                <Card className="p-4" data-testid="parsing-faq-card">
+                  <FAQReviewSection
+                    articleId={data.article_id}
+                    faqs={faqSuggestions}
+                    aiSuggestions={aiFaqSuggestions}
+                    extractedFaqs={data.extracted_faqs || []}
+                    extractedFaqsDetectionMethod={data.extracted_faqs_detection_method}
+                    isGenerating={isGeneratingFaqs}
+                    error={faqError}
+                    onFaqsChange={(faqs) => {
+                      setFaqSuggestions(faqs);
+                      markDirty();
+                    }}
+                  />
+                </Card>
+              </div>
+
+              {/* AI FAQ Proposals (if available from article review) */}
+              {data.articleReview?.faq_proposals && data.articleReview.faq_proposals.length > 0 && (
+                <Card className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+                  <h4 className="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI 建议：FAQ Schema ({data.articleReview.faq_proposals.length} 个提案)
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {data.articleReview.faq_proposals.map((proposal, idx) => (
+                      <div key={idx} className="p-3 bg-white rounded border border-purple-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-purple-700">
+                            提案 #{idx + 1} - {proposal.schema_type}
+                          </span>
+                          {proposal.score !== null && proposal.score !== undefined && (
+                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                              评分: {Math.round(proposal.score * 100)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          {proposal.questions.map((q, qIdx) => (
+                            <div key={qIdx} className="text-xs">
+                              <p className="font-medium text-gray-900">Q{qIdx + 1}: {q.question}</p>
+                              <p className="text-gray-600 ml-4 mt-1">A: {q.answer}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {/* Phase 12: Related Articles for Internal Linking */}
+              {data.articleReview?.related_articles && data.articleReview.related_articles.length > 0 && (
+                <Card className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200" data-testid="related-articles-card">
+                  <h4 className="text-sm font-semibold text-emerald-900 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    相關文章推薦 ({data.articleReview.related_articles.length} 篇)
+                    <span className="ml-auto text-xs text-emerald-600 font-normal">
+                      用於內部鏈接優化 SEO
+                    </span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {data.articleReview.related_articles.map((article, idx) => (
+                      <div key={article.article_id} className="p-3 bg-white rounded-lg border border-emerald-200 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <span className="text-xs font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">
+                            #{idx + 1}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                              article.match_type === 'semantic'
+                                ? 'bg-purple-100 text-purple-700'
+                                : article.match_type === 'content'
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {article.match_type === 'semantic' ? '語義匹配' : article.match_type === 'content' ? '內容匹配' : '關鍵詞匹配'}
+                            </span>
+                            <span className="text-xs font-semibold text-emerald-700">
+                              {Math.round(article.similarity * 100)}%
+                            </span>
+                          </div>
+                        </div>
+                        <h5 className="text-sm font-medium text-gray-900 line-clamp-2 mb-2">
+                          {article.title_main || article.title}
+                        </h5>
+                        {article.excerpt && (
+                          <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                            {article.excerpt}
+                          </p>
+                        )}
+                        {article.ai_keywords && article.ai_keywords.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {article.ai_keywords.slice(0, 3).map((keyword, kIdx) => (
+                              <span key={kIdx} className="text-[10px] px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                {keyword}
+                              </span>
+                            ))}
+                            {article.ai_keywords.length > 3 && (
+                              <span className="text-[10px] text-gray-400">+{article.ai_keywords.length - 3}</span>
+                            )}
+                          </div>
+                        )}
+                        <a
+                          href={article.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-emerald-600 hover:text-emerald-800 hover:underline flex items-center gap-1"
+                        >
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          查看原文
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -872,6 +1079,6 @@ export const ParsingReviewPanel: React.FC<ParsingReviewPanelProps> = ({
       </div>
     </div>
   );
-};
+});
 
 ParsingReviewPanel.displayName = 'ParsingReviewPanel';

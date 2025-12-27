@@ -7,7 +7,7 @@
  * - Auto-selects appropriate step based on article status
  *
  * Architecture:
- * - Header: Title + Close button
+ * - Header: Title + "View Original" button + Close button
  * - ReviewProgressStepper: Visual workflow progress + clickable navigation
  * - Content: Direct panel rendering based on current step
  * - Footer: Navigation buttons (Previous, Save Draft, Next/Publish)
@@ -16,13 +16,19 @@
  * - Removed duplicate navigation (Tabs were redundant with Stepper)
  * - Users can click Stepper circles OR use bottom buttons to navigate
  * - Cleaner visual hierarchy, more content space
+ *
+ * Feature: View Original Google Doc (2025-12-25)
+ * - Added "查看原文" button in header to open original Google Doc in new window
+ * - Uses drive_metadata.webViewLink from worklist item
+ * - Allows operators to compare AI suggestions with original content
  */
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef, Component, ErrorInfo, ReactNode } from 'react';
 import { Modal, ModalFooter } from '../ui/Modal';
 import { Button } from '../ui';
+import { ExternalLink, AlertTriangle, RefreshCw } from 'lucide-react';
 import { ReviewProgressStepper } from './ReviewProgressStepper';
-import { ParsingReviewPanel, ParsingData } from './ParsingReviewPanel';
+import { ParsingReviewPanel, ParsingData, type ParsingReviewPanelHandle } from './ParsingReviewPanel';
 import { ProofreadingReviewPanel } from './ProofreadingReviewPanel';
 import { PublishPreviewPanel, PublishSettings } from './PublishPreviewPanel';
 import { useArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
@@ -31,6 +37,68 @@ import { useKeyboardShortcuts } from '../../hooks/articleReview/useKeyboardShort
 import { worklistAPI } from '../../services/worklist';
 import { api } from '../../services/api-client';
 import type { WorklistStatus, DecisionPayload } from '../../types/worklist';
+
+/**
+ * StepErrorBoundary - Isolates errors in individual step panels
+ * Prevents external errors (like browser extension issues) from crashing the entire modal
+ */
+interface StepErrorBoundaryProps {
+  children: ReactNode;
+  stepName: string;
+  onRetry?: () => void;
+}
+
+interface StepErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class StepErrorBoundary extends Component<StepErrorBoundaryProps, StepErrorBoundaryState> {
+  constructor(props: StepErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): Partial<StepErrorBoundaryState> {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error(`[StepErrorBoundary] Error in ${this.props.stepName}:`, error, errorInfo);
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+    this.props.onRetry?.();
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center h-96 p-8">
+          <AlertTriangle className="w-16 h-16 text-amber-500 mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            {this.props.stepName}加載出錯
+          </h3>
+          <p className="text-gray-600 mb-4 text-center max-w-md">
+            此步驟遇到了問題。這可能是由瀏覽器擴展引起的。
+            請嘗試禁用瀏覽器擴展後重試。
+          </p>
+          {this.state.error && (
+            <p className="text-xs text-gray-400 mb-4 font-mono">
+              {this.state.error.message}
+            </p>
+          )}
+          <Button onClick={this.handleRetry} className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4" />
+            重試
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export interface ArticleReviewModalProps {
   /** Whether the modal is open */
@@ -97,6 +165,9 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
     isOpen
   );
 
+  // Phase 15: Ref for accessing ParsingReviewPanel's current data
+  const parsingPanelRef = useRef<ParsingReviewPanelHandle>(null);
+
   // Workflow state machine (cast string to WorklistStatus if needed)
   const { canGoPrevious, canGoNext, saveProgress } =
     useReviewWorkflow(data?.status as WorklistStatus | undefined);
@@ -128,8 +199,15 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   // instead of in ProofreadingReviewPanel to survive step navigation
   // See: docs/STATE_PERSISTENCE_FIX.md
   // ============================================================
-  const [proofreadingDecisions, setProofreadingDecisions] =
+  const [proofreadingDecisions, setProofreadingDecisionsState] =
     useState<Map<string, DecisionPayload>>(new Map());
+
+  // DEBUG wrapper for tracking decision changes
+  const setProofreadingDecisions = useCallback((newDecisions: Map<string, DecisionPayload>) => {
+    console.log('🔧 setProofreadingDecisions 被調用 - 新決定數量:', newDecisions.size);
+    console.log('🔧 新決定內容:', Array.from(newDecisions.entries()));
+    setProofreadingDecisionsState(newDecisions);
+  }, []);
 
   // ============================================================
   // LIFTED STATE: FAQ Data (BUGFIX: FAQ Data Loss on Backtrack)
@@ -181,40 +259,78 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
 
   // ============================================================
   // AUTO-SAVE: Save current step's data before navigation
-  // This ensures decisions are persisted when switching steps
-  // BUGFIX: Now also handles step 0 (parsing/FAQ data)
+  // This ensures all data is persisted when switching steps
+  // Phase 15: Now saves ALL parsing fields, not just FAQs
   // ============================================================
   const saveCurrentStepData = useCallback(async (fromStep: number): Promise<boolean> => {
     try {
-      // Save parsing data (including FAQs) when leaving step 0
-      if (fromStep === 0 && parsingFaqs.length > 0) {
-        setIsSaving(true);
-        console.log('💾 自動保存解析數據 (FAQs):', parsingFaqs.length, '條');
-        await api.patch(`/v1/articles/${articleId}`, {
-          metadata: {
-            faq_suggestions: parsingFaqs,
-          },
-        });
-        // Phase 13 v2.3: Also update ArticleFAQ table and regenerate faq_html
-        try {
-          await api.put(`/v1/articles/${articleId}/faqs`, {
-            faqs: parsingFaqs.map(faq => ({
-              question: faq.question,
-              answer: faq.answer,
-            })),
-            regenerate_html: true,
+      // Phase 15: Save ALL parsing data when leaving step 0
+      if (fromStep === 0) {
+        // Get current data from ParsingReviewPanel via ref
+        const currentData = parsingPanelRef.current?.getCurrentData();
+        const isDirty = parsingPanelRef.current?.isDirty() ?? false;
+
+        // Only save if there's data and it's dirty (or has FAQs to sync)
+        if (currentData && (isDirty || parsingFaqs.length > 0)) {
+          setIsSaving(true);
+          console.log('💾 自動保存解析數據:', {
+            title: currentData.title?.slice(0, 20),
+            author: currentData.author?.slice(0, 20),
+            faqCount: currentData.faq_suggestions?.length || 0,
+            tagsCount: currentData.tags?.length || 0,
+            primaryCategory: currentData.primary_category,
           });
-          console.log('✅ FAQ 數據已自動保存 (含 faq_html 更新)');
-        } catch (faqErr) {
-          console.warn('FAQ 表更新失敗，但 metadata 已保存:', faqErr);
+
+          // Save all parsing data to article
+          await api.patch(`/v1/articles/${articleId}`, {
+            title: currentData.title,
+            author: currentData.author,
+            meta_description: currentData.seo_metadata?.meta_description,
+            seo_keywords: currentData.seo_metadata?.keywords,
+            metadata: {
+              featured_image_path: currentData.featured_image_path,
+              additional_images: currentData.additional_images,
+              faq_suggestions: currentData.faq_suggestions || parsingFaqs,
+              // Phase 15: Include all new fields
+              tags: currentData.tags,
+              excerpt: currentData.excerpt,
+            },
+            // Phase 15: Save categories
+            primary_category: currentData.primary_category,
+            secondary_categories: currentData.secondary_categories,
+          });
+
+          // Phase 13 v2.3: Also update ArticleFAQ table and regenerate faq_html
+          const faqsToSave = currentData.faq_suggestions || parsingFaqs;
+          if (faqsToSave.length > 0) {
+            try {
+              await api.put(`/v1/articles/${articleId}/faqs`, {
+                faqs: faqsToSave.map(faq => ({
+                  question: faq.question,
+                  answer: faq.answer,
+                })),
+                regenerate_html: true,
+              });
+              console.log('✅ 解析數據已自動保存 (含 FAQ 和 faq_html 更新)');
+            } catch (faqErr) {
+              console.warn('FAQ 表更新失敗，但其他數據已保存:', faqErr);
+            }
+          } else {
+            console.log('✅ 解析數據已自動保存');
+          }
+          // Phase 15: Reset dirty flag and refetch to sync with backend after auto-save
+          parsingPanelRef.current?.resetDirty();
+          refetch();
         }
-        // Don't refetch here to avoid data race during navigation
       }
 
       // Save proofreading decisions when leaving step 1
+      console.log('🔍 saveCurrentStepData - fromStep:', fromStep, ', proofreadingDecisions.size:', proofreadingDecisions.size);
       if (fromStep === 1 && proofreadingDecisions.size > 0) {
+        console.log('✅ 條件滿足，開始保存校對決定...');
         setIsSubmitting(true);
         const decisionList = Array.from(proofreadingDecisions.values());
+        console.log('📤 決定列表:', decisionList);
         await worklistAPI.saveReviewDecisions(worklistItemId, {
           decisions: decisionList.map(d => ({
             issue_id: d.issue_id,
@@ -243,27 +359,46 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   }, [proofreadingDecisions, parsingFaqs, worklistItemId, articleId, refetch]);
 
   // Navigation handlers for stepper and buttons
+  // Wrapped in try-catch to prevent browser extension errors from crashing the app
   const goToPreviousStep = useCallback(async () => {
     if (activeStep > 0) {
-      // Auto-save current step before navigating
-      await saveCurrentStepData(activeStep);
-      setActiveStep(activeStep - 1);
+      try {
+        // Auto-save current step before navigating
+        await saveCurrentStepData(activeStep);
+        setActiveStep(activeStep - 1);
+      } catch (err) {
+        console.error('[Navigation] Error navigating to previous step:', err);
+        // Still allow navigation even if save failed
+        setActiveStep(activeStep - 1);
+      }
     }
   }, [activeStep, saveCurrentStepData]);
 
   const goToNextStep = useCallback(async () => {
     if (activeStep < 2) {
-      // Auto-save current step before navigating
-      await saveCurrentStepData(activeStep);
-      setActiveStep(activeStep + 1);
+      try {
+        // Auto-save current step before navigating
+        await saveCurrentStepData(activeStep);
+        setActiveStep(activeStep + 1);
+      } catch (err) {
+        console.error('[Navigation] Error navigating to next step:', err);
+        // Still allow navigation even if save failed
+        setActiveStep(activeStep + 1);
+      }
     }
   }, [activeStep, saveCurrentStepData]);
 
   const handleStepClick = useCallback(async (stepId: number) => {
     if (stepId !== activeStep) {
-      // Auto-save current step before navigating
-      await saveCurrentStepData(activeStep);
-      setActiveStep(stepId);
+      try {
+        // Auto-save current step before navigating
+        await saveCurrentStepData(activeStep);
+        setActiveStep(stepId);
+      } catch (err) {
+        console.error('[Navigation] Error navigating to step', stepId, ':', err);
+        // Still allow navigation even if save failed
+        setActiveStep(stepId);
+      }
     }
   }, [activeStep, saveCurrentStepData]);
 
@@ -275,6 +410,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       console.log('Saving parsing data:', parsingData);
 
       // Save to article metadata via PATCH endpoint
+      // BUGFIX: Include primary_category and secondary_categories
       await api.patch(`/v1/articles/${articleId}`, {
         title: parsingData.title,
         author: parsingData.author,
@@ -282,9 +418,14 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
           featured_image_path: parsingData.featured_image_path,
           additional_images: parsingData.additional_images,
           faq_suggestions: parsingData.faq_suggestions,
+          tags: parsingData.tags,
+          excerpt: parsingData.excerpt,
         },
         meta_description: parsingData.seo_metadata?.meta_description,
         seo_keywords: parsingData.seo_metadata?.keywords,
+        // BUGFIX: Save categories (was missing before)
+        primary_category: parsingData.primary_category,
+        secondary_categories: parsingData.secondary_categories,
       });
 
       // Phase 13 v2.3: Update ArticleFAQ table and regenerate faq_html
@@ -392,22 +533,36 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   }, [refetch, onClose, articleId, worklistItemId]);
 
   // Handle save draft (Ctrl+S)
+  // BUGFIX: Now saves step-specific data (FAQs, proofreading decisions) in addition to workflow progress
   const handleSaveDraft = useCallback(async () => {
+    setIsSaving(true);
     try {
+      // Save current step's data (FAQs for step 0, decisions for step 1)
+      await saveCurrentStepData(activeStep);
+      // Also save workflow progress
       await saveProgress();
-      // TODO: Show success toast
-      console.log('Draft saved successfully');
+      console.log('Draft saved successfully (including step data)');
     } catch (err) {
-      // TODO: Show error toast
       console.error('Failed to save draft:', err);
+    } finally {
+      setIsSaving(false);
     }
-  }, [saveProgress]);
+  }, [saveProgress, saveCurrentStepData, activeStep]);
 
-  // Handle close (Esc)
-  const handleClose = useCallback(() => {
-    // TODO: Check for unsaved changes
+  // Handle close (Esc) - Auto-save current step data before closing
+  const handleClose = useCallback(async () => {
+    // Phase 15: Auto-save current step data before closing modal
+    // This ensures proofreading decisions and other data are not lost
+    console.log('🔍 handleClose 被調用 - activeStep:', activeStep, ', proofreadingDecisions.size:', proofreadingDecisions.size);
+    console.log('🔍 proofreadingDecisions 內容:', Array.from(proofreadingDecisions.entries()));
+    try {
+      await saveCurrentStepData(activeStep);
+      console.log('✅ 關閉前自動保存完成');
+    } catch (err) {
+      console.warn('關閉前自動保存失敗，但仍會關閉:', err);
+    }
     onClose();
-  }, [onClose]);
+  }, [onClose, saveCurrentStepData, activeStep, proofreadingDecisions]);
 
   // Setup keyboard shortcuts
   useKeyboardShortcuts({
@@ -492,6 +647,19 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-semibold text-gray-900">文章审核</h2>
           <span className="text-sm text-gray-500">#{worklistItemId}</span>
+          {/* View Original Google Doc Button */}
+          {typeof data.drive_metadata?.webViewLink === 'string' && (
+            <a
+              href={data.drive_metadata.webViewLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition-colors"
+              title="在新窗口中打开原始 Google Doc"
+            >
+              <ExternalLink className="w-4 h-4" />
+              查看原文
+            </a>
+          )}
           {data.title && (
             <span className="text-sm text-gray-700 font-medium max-w-md truncate">
               {data.title}
@@ -529,6 +697,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
           {/* Step 0: 解析审核 (Parsing Review) */}
           {activeStep === 0 && (
             <ParsingReviewPanel
+              ref={parsingPanelRef}
               data={data}
               onSave={handleSaveParsingData}
               isSaving={isSaving}
@@ -551,12 +720,16 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
           )}
 
           {/* Step 2: 发布预览 (Publish Preview) */}
+          {/* Wrapped in StepErrorBoundary to isolate potential browser extension errors */}
           {activeStep === 2 && (
-            <PublishPreviewPanel
-              data={data}
-              onPublish={handlePublish}
-              isPublishing={isPublishing}
-            />
+            <StepErrorBoundary stepName="發布預覽" onRetry={refetch}>
+              <PublishPreviewPanel
+                data={data}
+                faqs={parsingFaqs}
+                onPublish={handlePublish}
+                isPublishing={isPublishing}
+              />
+            </StepErrorBoundary>
           )}
         </div>
       </div>

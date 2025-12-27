@@ -242,6 +242,16 @@ class ParsedArticle(BaseModel):
         description="AI-generated FAQ list (6-8 questions)",
     )
 
+    # Extracted FAQs from existing article content
+    extracted_faqs: list[dict[str, Any]] | None = Field(
+        None,
+        description="FAQs extracted from existing article HTML (e.g., marked with <!--FAQ-START-->)",
+    )
+    extracted_faqs_detection_method: str | None = Field(
+        None,
+        description="How extracted FAQs were detected: html_comment_markers, css_class_markers, etc.",
+    )
+
     # Phase 12: Internal Link Recommendations
     related_articles: list[RelatedArticle] = Field(
         default_factory=list,

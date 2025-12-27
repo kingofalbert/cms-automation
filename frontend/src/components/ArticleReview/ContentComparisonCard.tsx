@@ -24,6 +24,7 @@
  */
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Card } from '../ui';
 import { Badge } from '../ui';
 import { Button } from '../ui';
@@ -153,7 +154,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
 
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content);
-    // TODO: Show toast notification
+    toast.success('已複製到剪貼簿');
   };
 
   const handleSaveCustom = () => {

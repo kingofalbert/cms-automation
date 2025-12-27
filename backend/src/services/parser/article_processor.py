@@ -201,6 +201,15 @@ class ArticleProcessingService:
         # Note: parsing_confirmed remains False until user confirms
         # parsing_confirmed_at and parsing_confirmed_by will be set by API endpoint
 
+        # Phase 14: Store extracted FAQs (from original article HTML)
+        if parsed_article.extracted_faqs:
+            article.extracted_faqs = parsed_article.extracted_faqs
+            article.extracted_faqs_detection_method = parsed_article.extracted_faqs_detection_method
+            logger.debug(
+                f"Stored {len(parsed_article.extracted_faqs)} extracted FAQs "
+                f"(method: {parsed_article.extracted_faqs_detection_method})"
+            )
+
         logger.debug(f"Updated article {article_id} with parsed data (including tags, categories, SEO fields)")
 
         # Phase 7.5: Save AI-generated FAQs to article_faqs table

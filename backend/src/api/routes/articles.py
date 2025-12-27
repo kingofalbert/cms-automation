@@ -90,6 +90,8 @@ async def patch_article(
     - metadata: Merged with existing article_metadata (not replaced)
     - meta_description: SEO meta description
     - seo_keywords: SEO keywords list
+    - primary_category: WordPress primary category (Phase 15)
+    - secondary_categories: WordPress secondary categories (Phase 15)
     """
     article = await _fetch_article(session, article_id)
     updated_fields = []
@@ -113,6 +115,16 @@ async def patch_article(
     if update.seo_keywords is not None:
         article.seo_keywords = update.seo_keywords
         updated_fields.append("seo_keywords")
+
+    # Phase 15: Update primary_category if provided
+    if update.primary_category is not None:
+        article.primary_category = update.primary_category
+        updated_fields.append("primary_category")
+
+    # Phase 15: Update secondary_categories if provided
+    if update.secondary_categories is not None:
+        article.secondary_categories = update.secondary_categories
+        updated_fields.append("secondary_categories")
 
     # Merge new metadata into existing (preserves other metadata fields)
     if update.metadata:
@@ -635,17 +647,22 @@ async def refresh_related_articles(
     """Refresh related articles for an existing article without full re-parsing.
 
     This endpoint calls the Supabase match-internal-links Edge Function to find
-    semantically related articles based on the article's title and SEO keywords.
+    semantically related articles based on the article's title, SEO keywords,
+    and content (for deep matching).
 
     Phase 12: Internal Link Integration
+    Phase 12.1: Enhanced matching with content-based deep matching
     """
+    import re
     from src.services.internal_links import get_internal_link_service
 
     article = await _fetch_article(session, article_id)
 
-    # Get title and keywords for matching
+    # Get title, keywords, focus keyword, and category for matching
     title = article.title_main or article.title or ""
     keywords = article.seo_keywords or []
+    focus_keyword = article.focus_keyword  # P2: 核心關鍵詞（權重最高）
+    category = article.primary_category  # P1: 用於分類加權
 
     if not title:
         raise HTTPException(
@@ -653,17 +670,35 @@ async def refresh_related_articles(
             detail="Article does not have a title for matching",
         )
 
+    # P0: Extract plain text content for deep matching
+    content_text = None
+    if article.body_html:
+        # Strip HTML tags to get plain text
+        plain_text = re.sub(r'<[^>]+>', ' ', article.body_html)
+        # Normalize whitespace
+        plain_text = re.sub(r'\s+', ' ', plain_text).strip()
+        # Take first 2000 characters for embedding (balance between quality and cost)
+        if len(plain_text) > 100:  # Only use if meaningful content
+            content_text = plain_text[:2000]
+
     logger.info(
         f"Refreshing related articles for article {article_id}: "
-        f"title='{title[:50]}...', keywords={len(keywords)}"
+        f"title='{title[:50]}...', focus_keyword={focus_keyword}, "
+        f"keywords={len(keywords)}, content_length={len(content_text) if content_text else 0}, "
+        f"category={category}"
     )
 
     try:
-        # Call internal link service
+        # Call internal link service with enhanced matching
         service = get_internal_link_service()
         result = await service.match_related_articles(
             title=title,
+            focus_keyword=focus_keyword,       # P2: Pass focus keyword for highest weight
             keywords=keywords,
+            content=content_text,              # P0: Pass content for deep matching
+            category=category,                 # P1: Pass category for boosting
+            include_content_match=True,        # P0: Enable content-based matching
+            title_threshold=0.3,               # P1+P3: Optimized for mixed scoring strategy
             limit=5,
         )
 
@@ -795,14 +830,15 @@ async def get_article_review_data(
                     ))
 
     # Build existing decisions list
+    # HOTFIX: Use correct field names from ProofreadingDecision model
     existing_decisions = [
         ProofreadingDecisionDetail(
-            issue_id=d.issue_id,
-            decision_type=d.decision_type,
-            rationale=d.rationale,
+            issue_id=d.suggestion_id,  # Model uses suggestion_id, not issue_id
+            decision_type=d.decision_type.value,  # Convert enum to string
+            rationale=d.decision_rationale,  # Model uses decision_rationale
             modified_content=d.modified_content,
-            reviewer=d.reviewer or "unknown",
-            decided_at=d.created_at,
+            reviewer=str(d.decided_by) if d.decided_by else "unknown",  # Model uses decided_by (int)
+            decided_at=d.decided_at,  # Use decided_at, not created_at
         )
         for d in decisions
     ]

@@ -22,7 +22,7 @@ import { Button } from '../components/ui';
 import { Badge } from '../components/ui';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Skeleton } from '../components/ui';
-import { parsingAPI } from '../services';
+import { parsingAPI, seoAPI } from '../services';
 import type {
   OptimizationsResponse,
   FAQData,
@@ -77,20 +77,30 @@ export default function ArticleSEOConfirmationPage() {
     }
   }, [optimizationsData]);
 
-  // Mutation: Confirm SEO (placeholder for now)
+  // Mutation: Confirm SEO - saves meta description and stores tags/FAQs in manual_overrides
   const confirmSEOMutation = useMutation({
     mutationFn: async () => {
-      // TODO: Implement API endpoint to save confirmed SEO data
-      console.log('Confirming SEO with:', {
-        metaDescription: metaDescriptionValue,
-        tags: selectedTags,
-        faqs,
+      // Use the SEO API to save confirmed data
+      const response = await seoAPI.update(articleId, {
+        meta_description: metaDescriptionValue,
+        // Store additional data in manual_overrides for future use
+        manual_overrides: {
+          confirmed_tags: selectedTags,
+          confirmed_faqs: faqs,
+          confirmed_at: new Date().toISOString(),
+        },
       });
-      return Promise.resolve();
+      return response;
     },
     onSuccess: () => {
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: ['seo', articleId] });
       // Navigate to next step or back to worklist
       navigate('/worklist');
+    },
+    onError: (error) => {
+      console.error('Failed to save SEO confirmation:', error);
+      // Error is shown via Alert component below
     },
   });
 
@@ -495,7 +505,16 @@ export default function ArticleSEOConfirmationPage() {
 
       {/* Confirm Button */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
+          {/* Show error if mutation failed */}
+          {confirmSEOMutation.isError && (
+            <Alert variant="destructive">
+              <AlertDescription>
+                保存失败: {(confirmSEOMutation.error as Error)?.message || '未知错误'}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Button
             onClick={handleConfirm}
             disabled={confirmSEOMutation.isPending}
@@ -507,7 +526,7 @@ export default function ArticleSEOConfirmationPage() {
               : '✓ 确认 SEO 和 FAQ 设置'}
           </Button>
           <p className="text-sm text-muted-foreground text-center mt-2">
-            确认后将保存所有 SEO 设置，可以继续发布流程
+            确认后将保存 Meta Description 到数据库，可以继续发布流程
           </p>
         </CardContent>
       </Card>

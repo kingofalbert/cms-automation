@@ -23,6 +23,7 @@ import {
   Image as ImageIcon,
   Tag,
   AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
 
 export interface ChecklistItem {
@@ -136,8 +137,10 @@ export const createChecklistItems = (data: {
   hasCategory: boolean;
   hasTags: boolean;
   hasFeaturedImage: boolean;
+  hasFaqs?: boolean;
+  faqApplicable?: boolean; // Whether FAQ is applicable for this article type
 }): ChecklistItem[] => {
-  return [
+  const items: ChecklistItem[] = [
     {
       id: 'title',
       label: '标题',
@@ -181,6 +184,19 @@ export const createChecklistItems = (data: {
       icon: <ImageIcon className="w-3 h-3" />,
     },
   ];
+
+  // Only show FAQ check if FAQ is applicable for this article type
+  if (data.faqApplicable !== false) {
+    items.push({
+      id: 'faq',
+      label: 'FAQ',
+      completed: data.hasFaqs ?? false,
+      required: false, // FAQ is optional but recommended
+      icon: <HelpCircle className="w-3 h-3" />,
+    });
+  }
+
+  return items;
 };
 
 PublishReadinessChecklist.displayName = 'PublishReadinessChecklist';

@@ -45,6 +45,19 @@ export interface WorklistNote extends Record<string, unknown> {
   resolved?: boolean;
 }
 
+/**
+ * Article image information for Phase 16 enhanced preview.
+ */
+export interface ArticleImageInfo {
+  id?: number;
+  image_url: string;
+  alt_text?: string | null;
+  ai_alt_text?: string | null;
+  position?: number;
+  filename?: string;
+  source_url?: string;
+}
+
 export interface WorklistItem {
   id: number;
   drive_file_id: string;
@@ -60,6 +73,8 @@ export interface WorklistItem {
   tags?: string[];
   categories?: string[];
   article_status?: string | null;
+  /** Google Drive metadata including webViewLink for opening original doc */
+  drive_metadata?: Record<string, unknown>;
 }
 
 export interface WorklistStatusHistoryEntry {
@@ -86,6 +101,12 @@ export interface WorklistItemDetail extends WorklistItem {
   parsing_confirmed?: boolean;
   parsing_confirmed_at?: string | null;
 
+  // Phase 16: SEO Title for Google Preview
+  seo_title?: string | null;
+
+  // Phase 16: Article Images with Alt Text
+  article_images?: ArticleImageInfo[];
+
   // Phase 11: WordPress Category Taxonomy
   /** Primary category (主分類) - determines URL structure */
   primary_category?: string | null;
@@ -99,6 +120,10 @@ export interface WorklistItemDetail extends WorklistItem {
 
   /** Article metadata including FAQ suggestions for state persistence */
   article_metadata?: Record<string, unknown>;
+
+  /** Phase 14: Extracted FAQs from original article HTML */
+  extracted_faqs?: Array<{ question: string; answer: string }>;
+  extracted_faqs_detection_method?: string | null;
 }
 
 /**

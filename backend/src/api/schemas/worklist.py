@@ -91,6 +91,26 @@ class WorklistItemDetailResponse(WorklistItemResponse):
         description="Article metadata including faq_suggestions for state persistence"
     )
 
+    # Phase 14: Extracted FAQs from original article
+    extracted_faqs: list[dict[str, str]] | None = Field(
+        default=None,
+        description="FAQs extracted from original article HTML"
+    )
+    extracted_faqs_detection_method: str | None = Field(
+        default=None,
+        description="How extracted FAQs were detected: text_markers, html_comment, css_class, etc."
+    )
+
+    # Phase 15: Category fields for auto-save persistence
+    primary_category: str | None = Field(
+        default=None,
+        description="WordPress primary category (主分類)"
+    )
+    secondary_categories: list[str] = Field(
+        default_factory=list,
+        description="WordPress secondary categories (副分類)"
+    )
+
 
 class WorklistStatisticsResponse(BaseSchema):
     """Aggregated worklist statistics."""

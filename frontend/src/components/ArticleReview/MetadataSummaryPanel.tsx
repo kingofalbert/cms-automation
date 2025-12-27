@@ -1,33 +1,16 @@
 /**
  * MetadataSummaryPanel - Comprehensive metadata overview for publish preview
  *
- * Phase 11.5: Enhanced Publish Preview
+ * Phase 16: Enhanced Publish Preview
+ * - Google search preview (NEW)
+ * - Parsing confirmation details (NEW)
+ * - Proofreading summary with proper stats (ENHANCED)
  * - SEO metadata (title, description, keywords)
  * - Categories (primary + secondary)
  * - Tags
- * - Article statistics
- * - Proofreading summary
- *
- * Layout:
- * ┌─────────────────────────────────┐
- * │ 📊 SEO 优化                     │
- * │ ──────────────────────────────  │
- * │ 标题: xxx                       │
- * │ 描述: xxx                       │
- * │ 关键词: tag1, tag2, tag3        │
- * ├─────────────────────────────────┤
- * │ 📁 分类与标签                   │
- * │ ──────────────────────────────  │
- * │ 主分类: xxx                     │
- * │ 副分类: xxx, xxx                │
- * │ 标签: tag1, tag2                │
- * ├─────────────────────────────────┤
- * │ 📈 文章统计                     │
- * │ ──────────────────────────────  │
- * │ 字数: 2,345                     │
- * │ 阅读时间: ~5分钟                │
- * │ 校对修改: 12处                  │
- * └─────────────────────────────────┘
+ * - Article statistics (unified word/char count)
+ * - Article images list (NEW)
+ * - Featured image removed (shown in main preview only)
  */
 
 import React from 'react';
@@ -38,13 +21,36 @@ import {
   BarChart3,
   Clock,
   FileText,
-  Edit3,
-  Check,
-  X,
   AlertCircle,
-  Sparkles,
 } from 'lucide-react';
 import { Badge } from '../ui';
+// Phase 16: All components enabled
+import { GoogleSearchPreview } from './GoogleSearchPreview';
+import { ParsingConfirmationSection } from './ParsingConfirmationSection';
+import { ProofreadingSummarySection } from './ProofreadingSummarySection';
+import { ArticleImagesList } from './ArticleImagesList';
+
+// Phase 16: Type definitions moved here temporarily for interface compatibility
+export interface ProofreadingSummaryStats {
+  totalIssues: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  modifiedCount: number;
+  pendingCount: number;
+  criticalCount?: number;
+  warningCount?: number;
+  infoCount?: number;
+}
+
+export interface ArticleImage {
+  id?: number;
+  image_url: string;
+  alt_text?: string | null;
+  ai_alt_text?: string | null;
+  position?: number;
+  filename?: string;
+  source_url?: string;
+}
 
 export interface MetadataSummaryPanelProps {
   /** SEO data */
@@ -68,15 +74,23 @@ export interface MetadataSummaryPanelProps {
     readingTimeMinutes?: number;
     paragraphCount?: number;
   };
-  /** Proofreading summary */
-  proofreading?: {
-    totalChanges: number;
-    additions: number;
-    deletions: number;
-    modifications: number;
-  };
-  /** Featured image URL */
+  /** Proofreading summary - ENHANCED */
+  proofreading?: ProofreadingSummaryStats | null;
+  /** Featured image URL - NO LONGER DISPLAYED HERE (shown in main preview) */
   featuredImage?: string;
+  /** NEW: Parsing confirmation data */
+  parsing?: {
+    title: string;
+    titlePrefix?: string | null;
+    titleSuffix?: string | null;
+    seoTitle?: string | null;
+    authorName?: string | null;
+    authorLine?: string | null;
+    parsingConfirmed?: boolean;
+    parsingConfirmedAt?: string | null;
+  };
+  /** NEW: Article images */
+  articleImages?: ArticleImage[];
 }
 
 /**
@@ -89,13 +103,40 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
   stats,
   proofreading,
   featuredImage,
+  parsing,
+  articleImages,
 }) => {
   // Calculate reading time if not provided
   const readingTime = stats.readingTimeMinutes ?? Math.ceil(stats.wordCount / 200);
 
   return (
     <div className="space-y-4">
-      {/* SEO Section */}
+      {/* 1. Google Search Preview (NEW) */}
+      <GoogleSearchPreview
+        seoTitle={seo.title}
+        articleTitle={parsing?.title || seo.title || ''}
+        metaDescription={seo.description}
+        primaryCategory={categories.primary}
+      />
+
+      {/* 2. Parsing Confirmation Section (NEW) */}
+      {parsing && (
+        <ParsingConfirmationSection
+          title={parsing.title}
+          titlePrefix={parsing.titlePrefix}
+          titleSuffix={parsing.titleSuffix}
+          seoTitle={parsing.seoTitle}
+          authorName={parsing.authorName}
+          authorLine={parsing.authorLine}
+          parsingConfirmed={parsing.parsingConfirmed}
+          parsingConfirmedAt={parsing.parsingConfirmedAt}
+        />
+      )}
+
+      {/* 3. Proofreading Summary (NEW component) */}
+      <ProofreadingSummarySection stats={proofreading} />
+
+      {/* 4. SEO Section */}
       <div className="p-4 bg-white border border-gray-200 rounded-lg">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
           <Search className="w-4 h-4 text-blue-600" />
@@ -115,20 +156,6 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
           )}
         </h4>
         <div className="space-y-2.5">
-          {/* SEO Title */}
-          <div>
-            <div className="text-xs text-gray-500 mb-0.5">SEO 标题</div>
-            <div className="text-sm text-gray-900">
-              {seo.title || <span className="text-gray-400 italic">使用文章标题</span>}
-            </div>
-          </div>
-          {/* Meta Description */}
-          <div>
-            <div className="text-xs text-gray-500 mb-0.5">Meta 描述</div>
-            <div className="text-sm text-gray-900 line-clamp-2">
-              {seo.description || <span className="text-gray-400 italic">未设置</span>}
-            </div>
-          </div>
           {/* Keywords */}
           <div>
             <div className="text-xs text-gray-500 mb-1">关键词 ({seo.keywords.length})</div>
@@ -151,7 +178,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
         </div>
       </div>
 
-      {/* Categories & Tags Section */}
+      {/* 5. Categories & Tags Section */}
       <div className="p-4 bg-white border border-gray-200 rounded-lg">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
           <FolderTree className="w-4 h-4 text-purple-600" />
@@ -212,13 +239,19 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
         </div>
       </div>
 
-      {/* Statistics Section */}
+      {/* 6. Statistics Section (Enhanced with word count) */}
       <div className="p-4 bg-white border border-gray-200 rounded-lg">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
           <BarChart3 className="w-4 h-4 text-green-600" />
           文章统计
         </h4>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="p-2 bg-gray-50 rounded text-center">
+            <div className="text-lg font-semibold text-gray-900">
+              {stats.wordCount.toLocaleString('zh-CN')}
+            </div>
+            <div className="text-xs text-gray-500">字數</div>
+          </div>
           <div className="p-2 bg-gray-50 rounded text-center">
             <div className="text-lg font-semibold text-gray-900">
               {stats.charCount.toLocaleString('zh-CN')}
@@ -229,71 +262,18 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
             </div>
           </div>
           <div className="p-2 bg-gray-50 rounded text-center">
-            <div className="text-lg font-semibold text-gray-900">~{readingTime}分钟</div>
+            <div className="text-lg font-semibold text-gray-900">~{readingTime}分</div>
             <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
               <Clock className="w-3 h-3" />
-              阅读时间
+              阅读
             </div>
           </div>
         </div>
       </div>
 
-      {/* Proofreading Summary */}
-      {proofreading && proofreading.totalChanges > 0 && (
-        <div className="p-4 bg-white border border-gray-200 rounded-lg">
-          <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
-            <Sparkles className="w-4 h-4 text-amber-600" />
-            校对摘要
-          </h4>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="p-2 bg-green-50 rounded">
-              <div className="text-base font-semibold text-green-700">{proofreading.additions}</div>
-              <div className="text-xs text-green-600 flex items-center justify-center gap-0.5">
-                <Check className="w-3 h-3" />
-                新增
-              </div>
-            </div>
-            <div className="p-2 bg-amber-50 rounded">
-              <div className="text-base font-semibold text-amber-700">
-                {proofreading.modifications}
-              </div>
-              <div className="text-xs text-amber-600 flex items-center justify-center gap-0.5">
-                <Edit3 className="w-3 h-3" />
-                修改
-              </div>
-            </div>
-            <div className="p-2 bg-red-50 rounded">
-              <div className="text-base font-semibold text-red-700">{proofreading.deletions}</div>
-              <div className="text-xs text-red-600 flex items-center justify-center gap-0.5">
-                <X className="w-3 h-3" />
-                删除
-              </div>
-            </div>
-          </div>
-          <div className="mt-2 text-center text-xs text-gray-500">
-            共 {proofreading.totalChanges} 处修改
-          </div>
-        </div>
-      )}
-
-      {/* Featured Image Preview */}
-      {featuredImage && (
-        <div className="p-4 bg-white border border-gray-200 rounded-lg">
-          <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
-            <Check className="w-4 h-4 text-green-600" />
-            特色图片
-          </h4>
-          <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
-            <img
-              src={featuredImage}
-              alt="特色图片"
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          </div>
-        </div>
+      {/* 7. Article Images List (NEW) */}
+      {articleImages && articleImages.length > 0 && (
+        <ArticleImagesList images={articleImages} />
       )}
     </div>
   );
