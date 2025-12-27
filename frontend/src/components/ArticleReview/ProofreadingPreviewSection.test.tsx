@@ -239,6 +239,106 @@ describe('ProofreadingPreviewSection', () => {
       );
       expect(screen.getByText('预览模式')).toBeInTheDocument();
     });
+
+    it('should handle undefined originalContent', () => {
+      render(
+        <ProofreadingPreviewSection
+          // @ts-expect-error - Testing undefined content
+          originalContent={undefined}
+          proofreadContent="有內容"
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
+
+    it('should handle undefined proofreadContent', () => {
+      render(
+        <ProofreadingPreviewSection
+          originalContent="有內容"
+          // @ts-expect-error - Testing undefined content
+          proofreadContent={undefined}
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
+
+    it('should handle both contents being undefined', () => {
+      render(
+        <ProofreadingPreviewSection
+          // @ts-expect-error - Testing undefined content
+          originalContent={undefined}
+          // @ts-expect-error - Testing undefined content
+          proofreadContent={undefined}
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
+
+    it('should handle null originalContent', () => {
+      render(
+        <ProofreadingPreviewSection
+          // @ts-expect-error - Testing null content
+          originalContent={null}
+          proofreadContent="有內容"
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
+
+    it('should handle null proofreadContent', () => {
+      render(
+        <ProofreadingPreviewSection
+          originalContent="有內容"
+          // @ts-expect-error - Testing null content
+          proofreadContent={null}
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
+
+    it('should handle content with HTML tags (for rendered mode)', () => {
+      const htmlContent = '<p>這是<strong>粗體</strong>文字</p>';
+      const modifiedHtml = '<p>這是<strong>加粗</strong>文字</p>';
+
+      render(
+        <ProofreadingPreviewSection
+          originalContent={htmlContent}
+          proofreadContent={modifiedHtml}
+        />
+      );
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
+
+    it('should handle content with emoji', () => {
+      const emojiContent = '健康飲食 🥗 很重要';
+      const modifiedEmoji = '健康飲食 🥗🍎 非常重要';
+
+      render(
+        <ProofreadingPreviewSection
+          originalContent={emojiContent}
+          proofreadContent={modifiedEmoji}
+        />
+      );
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
+
+    it('should handle content with only whitespace changes', () => {
+      const original = '這是 一段 文字';
+      const modified = '這是  一段  文字';
+
+      render(
+        <ProofreadingPreviewSection
+          originalContent={original}
+          proofreadContent={modified}
+        />
+      );
+      expect(screen.getByText('预览模式')).toBeInTheDocument();
+    });
   });
 
   describe('Word Changes Integration', () => {

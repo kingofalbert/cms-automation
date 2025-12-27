@@ -156,8 +156,8 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
   const calculatedStats = useMemo(() => {
     if (diffStats) return diffStats;
 
-    const originalLines = originalContent.split('\n').length;
-    const suggestedLines = proofreadContent.split('\n').length;
+    const originalLines = (originalContent || '').split('\n').length;
+    const suggestedLines = (proofreadContent || '').split('\n').length;
 
     // Simple estimation (backend provides more accurate stats)
     return {
@@ -241,8 +241,8 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
       {hasChanges && (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <ReactDiffViewer
-            oldValue={originalContent}
-            newValue={proofreadContent}
+            oldValue={originalContent || ''}
+            newValue={proofreadContent || ''}
             splitView={viewMode === 'split'}
             showDiffOnly={false}
             useDarkTheme={false}
@@ -264,7 +264,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         <div className="p-2 bg-gray-50 rounded-lg text-center">
           <div className="text-gray-500 mb-0.5">原始</div>
           <div className="font-medium text-gray-900">
-            {formatNumber(originalContent.length)} 字符
+            {formatNumber((originalContent || '').length)} 字符
           </div>
           <div className="text-gray-400 text-[10px]">
             {formatNumber(calculatedStats.original_lines)} 行
@@ -273,7 +273,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         <div className="p-2 bg-gray-50 rounded-lg text-center">
           <div className="text-gray-500 mb-0.5">校对后</div>
           <div className="font-medium text-gray-900">
-            {formatNumber(proofreadContent.length)} 字符
+            {formatNumber((proofreadContent || '').length)} 字符
           </div>
           <div className="text-gray-400 text-[10px]">
             {formatNumber(calculatedStats.suggested_lines)} 行

@@ -325,6 +325,93 @@ describe('DiffViewSection', () => {
       );
       expect(screen.getByText('有修改')).toBeInTheDocument();
     });
+
+    it('should handle undefined originalContent', () => {
+      render(
+        <DiffViewSection
+          // @ts-expect-error - Testing undefined content
+          originalContent={undefined}
+          proofreadContent="有內容"
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('对比视图')).toBeInTheDocument();
+    });
+
+    it('should handle undefined proofreadContent', () => {
+      render(
+        <DiffViewSection
+          originalContent="有內容"
+          // @ts-expect-error - Testing undefined content
+          proofreadContent={undefined}
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('对比视图')).toBeInTheDocument();
+    });
+
+    it('should handle both contents being undefined', () => {
+      render(
+        <DiffViewSection
+          // @ts-expect-error - Testing undefined content
+          originalContent={undefined}
+          // @ts-expect-error - Testing undefined content
+          proofreadContent={undefined}
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('对比视图')).toBeInTheDocument();
+    });
+
+    it('should handle null originalContent', () => {
+      render(
+        <DiffViewSection
+          // @ts-expect-error - Testing null content
+          originalContent={null}
+          proofreadContent="有內容"
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('对比视图')).toBeInTheDocument();
+    });
+
+    it('should handle null proofreadContent', () => {
+      render(
+        <DiffViewSection
+          originalContent="有內容"
+          // @ts-expect-error - Testing null content
+          proofreadContent={null}
+        />
+      );
+      // Should render without crashing
+      expect(screen.getByText('对比视图')).toBeInTheDocument();
+    });
+
+    it('should handle content with HTML tags', () => {
+      const htmlContent = '<p>這是<strong>粗體</strong>文字</p>';
+      const modifiedHtml = '<p>這是<strong>加粗</strong>文字</p>';
+
+      render(
+        <DiffViewSection
+          originalContent={htmlContent}
+          proofreadContent={modifiedHtml}
+        />
+      );
+      expect(screen.getByText('有修改')).toBeInTheDocument();
+    });
+
+    it('should handle content with emoji', () => {
+      const emojiContent = '健康飲食 🥗 很重要';
+      const modifiedEmoji = '健康飲食 🥗🍎 非常重要';
+
+      render(
+        <DiffViewSection
+          originalContent={emojiContent}
+          proofreadContent={modifiedEmoji}
+        />
+      );
+      expect(screen.getByText('有修改')).toBeInTheDocument();
+    });
   });
 
   describe('Accessibility', () => {

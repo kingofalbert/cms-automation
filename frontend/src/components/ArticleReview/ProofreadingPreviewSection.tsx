@@ -59,7 +59,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
 
   // Sanitize HTML for safe rendering
   const sanitizedHtml = useMemo(() => {
-    return DOMPurify.sanitize(proofreadContent, {
+    return DOMPurify.sanitize(proofreadContent || '', {
       ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'span', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'a', 'blockquote', 'pre', 'code', 'img', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr', 'sub', 'sup', 'mark', 'small', 'del', 'ins'],
       ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style', 'target', 'rel', 'id', 'width', 'height'],
     });
@@ -67,7 +67,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
 
   // Strip HTML tags to get plain text (for text view mode)
   const plainTextContent = useMemo(() => {
-    const doc = new DOMParser().parseFromString(proofreadContent, 'text/html');
+    const doc = new DOMParser().parseFromString(proofreadContent || '', 'text/html');
     return doc.body.textContent || '';
   }, [proofreadContent]);
 
@@ -78,8 +78,9 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
 
   // Generate highlighted content with word-level changes
   const highlightedContent = useMemo(() => {
+    const safeProofreadContent = proofreadContent || '';
     if (!showHighlights || !hasChanges || wordChanges.length === 0) {
-      return proofreadContent;
+      return safeProofreadContent;
     }
 
     // Create a map of positions to highlight in the suggested content
@@ -95,7 +96,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
       return text.match(/[\u4e00-\u9fff]+|[a-zA-Z0-9]+|[^\s\w]|\s+/g) || [];
     };
 
-    const suggestedTokens = tokenize(proofreadContent);
+    const suggestedTokens = tokenize(safeProofreadContent);
 
     // Calculate character positions from token positions
     let charPos = 0;
@@ -343,7 +344,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
               )}
             </span>
             <span className="text-xs text-gray-400">
-              {proofreadContent.length.toLocaleString('zh-CN')} 字符
+              {(proofreadContent || '').length.toLocaleString('zh-CN')} 字符
             </span>
           </div>
           {/* Content area */}
@@ -381,10 +382,10 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
             <FileText className="w-3 h-3" /> 字数
           </div>
           <div className="font-medium text-gray-900">
-            {proofreadContent.length.toLocaleString('zh-CN')}
+            {(proofreadContent || '').length.toLocaleString('zh-CN')}
           </div>
           <div className="text-gray-400 text-[10px]">
-            {proofreadContent.split('\n').length} 行
+            {(proofreadContent || '').split('\n').length} 行
           </div>
         </div>
         <div className="p-2 bg-green-50 rounded-lg text-center">
