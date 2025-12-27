@@ -276,14 +276,16 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       </div>
 
       {/* Main content: 60% + 40% grid with proper flex heights */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-0">
+      {/* FIXED: Added min-h-[400px] to prevent grid collapse, removed problematic min-h-0 */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[400px]">
         {/* Left column: 60% (3 out of 5 cols) - Article Preview */}
-        <div className="lg:col-span-3 flex flex-col min-h-0 h-full">
+        {/* FIXED: Removed min-h-0 that was causing height collapse */}
+        <div className="lg:col-span-3 flex flex-col h-full">
           <FinalContentPreview data={contentData} faqs={faqs} flexHeight={true} />
         </div>
 
         {/* Right column: 40% (2 out of 5 cols) - Metadata Summary (ENHANCED) */}
-        <div className="lg:col-span-2 overflow-y-auto min-h-0">
+        <div className="lg:col-span-2 overflow-y-auto">
           <MetadataSummaryPanel
             seo={metadataData.seo}
             categories={metadataData.categories}

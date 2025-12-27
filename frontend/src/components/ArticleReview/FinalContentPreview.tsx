@@ -194,8 +194,10 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
       )}
 
       {/* Content Area - Full Article (flex-based height for responsive layouts) */}
+      {/* FIXED: Changed min-h-0 to min-h-[200px] to prevent height collapse */}
+      {/* The flex-1 allows expansion, min-h ensures minimum readable area */}
       <div
-        className={`px-6 py-4 overflow-y-auto ${flexHeight ? 'flex-1 min-h-0' : ''}`}
+        className={`px-6 py-4 overflow-y-auto ${flexHeight ? 'flex-1 min-h-[200px]' : ''}`}
         style={!flexHeight && maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
       >
         <article
