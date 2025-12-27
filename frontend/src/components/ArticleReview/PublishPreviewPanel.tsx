@@ -257,7 +257,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-0 flex-1">
       {/* Header */}
       <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
         <div className="flex items-center justify-between">
@@ -275,15 +275,15 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
         <PublishReadinessChecklist items={checklistItems} isReady={isReadyToPublish} />
       </div>
 
-      {/* Main content: 60% + 40% grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 overflow-hidden min-h-0">
+      {/* Main content: 60% + 40% grid with proper flex heights */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-0">
         {/* Left column: 60% (3 out of 5 cols) - Article Preview */}
-        <div className="lg:col-span-3 overflow-hidden">
-          <FinalContentPreview data={contentData} faqs={faqs} maxContentHeight="calc(100vh - 400px)" />
+        <div className="lg:col-span-3 flex flex-col min-h-0 h-full">
+          <FinalContentPreview data={contentData} faqs={faqs} flexHeight={true} />
         </div>
 
         {/* Right column: 40% (2 out of 5 cols) - Metadata Summary (ENHANCED) */}
-        <div className="lg:col-span-2 overflow-y-auto">
+        <div className="lg:col-span-2 overflow-y-auto min-h-0">
           <MetadataSummaryPanel
             seo={metadataData.seo}
             categories={metadataData.categories}

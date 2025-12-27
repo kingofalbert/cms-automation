@@ -537,7 +537,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
   };
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-gray-50 min-h-0 flex-1">
       {/* Header with stats */}
       <div className="px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between">

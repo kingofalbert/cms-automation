@@ -559,7 +559,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
   const [isBottomExpanded, setIsBottomExpanded] = useState(true);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col min-h-0 flex-1">
       {/* Phase 15: Progress Indicator (Proposal C) */}
       <div className="mb-4 px-4 py-3 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-lg">
         <div className="flex items-center justify-between mb-2">

@@ -51,8 +51,18 @@ export interface FinalContentPreviewProps {
   };
   /** FAQ items to display at the end of content */
   faqs?: FAQItem[];
-  /** Maximum height for content area (default: 600px) */
+  /**
+   * Maximum height for content area
+   * @deprecated Use flexHeight=true for responsive layouts
+   * Default: 'none' (no max height, fills available space)
+   */
   maxContentHeight?: string;
+  /**
+   * Enable flex-based height (fills parent container)
+   * When true, component expands to fill available vertical space
+   * Default: true
+   */
+  flexHeight?: boolean;
 }
 
 /**
@@ -64,7 +74,8 @@ export interface FinalContentPreviewProps {
 export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
   data,
   faqs = [],
-  maxContentHeight = '600px',
+  maxContentHeight,
+  flexHeight = true,
 }) => {
   // Sanitize HTML content for safe rendering
   const sanitizedContent = useMemo(() => {
@@ -182,10 +193,10 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
         </div>
       )}
 
-      {/* Content Area - Full Article */}
+      {/* Content Area - Full Article (flex-based height for responsive layouts) */}
       <div
-        className="flex-1 px-6 py-4 overflow-y-auto"
-        style={{ maxHeight: maxContentHeight }}
+        className={`px-6 py-4 overflow-y-auto ${flexHeight ? 'flex-1 min-h-0' : ''}`}
+        style={!flexHeight && maxContentHeight ? { maxHeight: maxContentHeight } : undefined}
       >
         <article
           className="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed
