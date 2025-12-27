@@ -16,6 +16,14 @@ from src.services.parser.models import (
     ParsingError,
     ParsingResult,
 )
+from src.services.parser.html_utils import (
+    strip_html_tags,
+    calculate_plain_text_position,
+    find_text_position_in_plain,
+    validate_position,
+    process_issue_positions,
+    Position,
+)
 
 __all__ = [
     # Services
@@ -30,4 +38,11 @@ __all__ = [
     "ImageMetadata",
     "ParsingResult",
     "ParsingError",
+    # HTML utilities (Spec 014)
+    "strip_html_tags",
+    "calculate_plain_text_position",
+    "find_text_position_in_plain",
+    "validate_position",
+    "process_issue_positions",
+    "Position",
 ]

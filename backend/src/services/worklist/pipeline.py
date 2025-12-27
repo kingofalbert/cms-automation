@@ -22,6 +22,11 @@ from src.services.proofreading import (
     ProofreadingResult,
 )
 from src.services.parser import ArticleParserService
+from src.services.parser.html_utils import (
+    strip_html_tags,
+    calculate_plain_text_position,
+    find_text_position_in_plain,
+)
 from src.services.worklist.diff_generator import generate_content_diff, generate_word_diff
 
 logger = get_logger(__name__)
@@ -389,11 +394,20 @@ class WorklistPipelineService:
 
         Phase 8.4: Enhanced to save suggested_content and diff structure
         for the comparison view in ProofreadingReviewPanel.
+
+        Spec 014: Enriches issues with plain text positions for accurate
+        frontend highlighting of duplicate text occurrences.
         """
-        # Save proofreading issues
-        article.proofreading_issues = [
-            issue.model_dump(mode="json") for issue in result.issues
-        ]
+        # Convert issues to dicts and enrich with plain text positions
+        html_content = article.body or ""
+        issues_data = [issue.model_dump(mode="json") for issue in result.issues]
+
+        # Spec 014: Enrich issues with plain_text_position for accurate frontend highlighting
+        enriched_issues = self._enrich_issues_with_plain_text_positions(
+            issues_data, html_content
+        )
+
+        article.proofreading_issues = enriched_issues
         article.critical_issues_count = result.statistics.blocking_issue_count
 
         # Phase 8.4: Save AI suggested content for diff view
@@ -416,6 +430,98 @@ class WorklistPipelineService:
         metadata = dict(article.article_metadata or {})
         metadata["proofreading"] = result.model_dump(mode="json")
         article.article_metadata = metadata
+
+    def _enrich_issues_with_plain_text_positions(
+        self,
+        issues: list[dict[str, Any]],
+        html_content: str,
+    ) -> list[dict[str, Any]]:
+        """Enrich proofreading issues with plain text positions.
+
+        Spec 014: This method adds plain_text_position, original_text_plain,
+        and suggested_text_plain to each issue for accurate frontend highlighting.
+
+        The problem: AI returns positions based on HTML content, but the frontend
+        displays plain text (without HTML tags). This causes position mismatches.
+
+        Solution: Calculate plain text positions from HTML positions, and provide
+        plain text versions of original/suggested text for fallback text search.
+
+        Args:
+            issues: List of issue dicts from ProofreadingResult
+            html_content: The HTML content the issues reference
+
+        Returns:
+            List of enriched issue dicts with plain text position fields
+        """
+        if not html_content:
+            return issues
+
+        # Pre-compute plain text content for text search fallback
+        plain_content = strip_html_tags(html_content)
+        search_start_index = 0
+
+        for issue in issues:
+            try:
+                # 1. Add plain text versions of text fields
+                original_text = issue.get("original_text")
+                if original_text:
+                    issue["original_text_plain"] = strip_html_tags(original_text)
+
+                suggestion = issue.get("suggestion")
+                if suggestion:
+                    issue["suggested_text_plain"] = strip_html_tags(suggestion)
+
+                # 2. Calculate plain text position
+                location = issue.get("location")
+                if location and isinstance(location, dict):
+                    html_start = location.get("start")
+                    html_end = location.get("end")
+
+                    if html_start is not None and html_end is not None:
+                        try:
+                            plain_pos = calculate_plain_text_position(
+                                html_content, html_start, html_end
+                            )
+                            issue["plain_text_position"] = plain_pos.to_dict()
+                            logger.debug(
+                                "issue_plain_text_position_calculated",
+                                html_pos=f"{html_start}-{html_end}",
+                                plain_pos=f"{plain_pos.start}-{plain_pos.end}",
+                            )
+                        except ValueError as e:
+                            logger.warning(
+                                "issue_position_calculation_failed",
+                                error=str(e),
+                                location=location,
+                            )
+
+                # 3. Fallback: Use text search if position not set
+                if "plain_text_position" not in issue:
+                    search_text = issue.get("original_text_plain")
+                    if search_text:
+                        found_pos = find_text_position_in_plain(
+                            plain_content, search_text, search_start_index
+                        )
+                        if found_pos:
+                            issue["plain_text_position"] = found_pos.to_dict()
+                            # Update search start for sequential issues
+                            search_start_index = found_pos.end
+                            logger.debug(
+                                "issue_position_found_by_text_search",
+                                text=search_text[:30],
+                                position=found_pos.to_dict(),
+                            )
+
+            except Exception as e:
+                logger.warning(
+                    "issue_enrichment_failed",
+                    issue_id=issue.get("rule_id"),
+                    error=str(e),
+                )
+                continue
+
+        return issues
 
     async def _record_status_history(
         self,

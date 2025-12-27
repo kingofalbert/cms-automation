@@ -114,6 +114,17 @@ class ArticlePayload(BaseModel):
     )
 
 
+class PlainTextPosition(BaseModel):
+    """Position coordinates in plain text content.
+
+    Used for accurate highlighting in the frontend where HTML tags are stripped.
+    Part of Spec 014: Proofreading Position Accuracy Improvement.
+    """
+
+    start: int = Field(ge=0, description="Start offset in plain text (0-indexed)")
+    end: int = Field(ge=0, description="End offset in plain text (exclusive)")
+
+
 class ProofreadingIssue(BaseModel):
     """Single rule violation returned by AI or deterministic engine."""
 
@@ -163,6 +174,25 @@ class ProofreadingIssue(BaseModel):
         description="Warning label for manual verification (G-class rules): "
         "manual_verify, ai_hallucination, geographic_anomaly, symbol_format, "
         "sentence_incomplete, structure_suggestion",
+    )
+
+    # Spec 014: Plain text position fields for accurate frontend highlighting
+    # These fields solve the HTML/plain-text position mismatch problem
+    plain_text_position: PlainTextPosition | None = Field(
+        default=None,
+        description="Position in plain text content (without HTML tags). "
+        "Used by frontend for accurate highlighting. "
+        "Takes precedence over location field when available.",
+    )
+    original_text_plain: str | None = Field(
+        default=None,
+        description="Plain text version of original_text (HTML tags stripped). "
+        "Used for text search fallback when plain_text_position is unavailable.",
+    )
+    suggested_text_plain: str | None = Field(
+        default=None,
+        description="Plain text version of suggestion (HTML tags stripped). "
+        "Used for display in frontend preview mode.",
     )
 
 
