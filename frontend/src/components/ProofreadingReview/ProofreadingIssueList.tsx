@@ -15,6 +15,7 @@ import {
   IssueEngine,
 } from '@/types/worklist';
 import { Button, Input } from '@/components/ui';
+import { Tooltip } from 'antd';
 import {
   AlertCircle,
   AlertTriangle,
@@ -33,14 +34,15 @@ import { stripHtmlTags } from '@/utils/proofreadingPosition';
 
 /**
  * Human-readable category labels for proofreading issue categories
+ * With descriptions for tooltips
  */
-const CATEGORY_LABELS: Record<string, { zh: string; en: string }> = {
-  T: { zh: '錯字', en: 'Typo' },
-  P: { zh: '標點', en: 'Punctuation' },
-  S: { zh: '結構', en: 'Structure' },
-  C: { zh: '一致性', en: 'Consistency' },
-  G: { zh: '文法', en: 'Grammar' },
-  W: { zh: '用詞', en: 'Word Choice' },
+const CATEGORY_LABELS: Record<string, { zh: string; en: string; desc_zh: string; desc_en: string }> = {
+  T: { zh: '錯字', en: 'Typo', desc_zh: '拼寫錯誤或字形錯誤', desc_en: 'Spelling or character errors' },
+  P: { zh: '標點', en: 'Punctuation', desc_zh: '標點符號使用問題', desc_en: 'Punctuation usage issues' },
+  S: { zh: '結構', en: 'Structure', desc_zh: '句子或段落結構問題', desc_en: 'Sentence or paragraph structure issues' },
+  C: { zh: '一致性', en: 'Consistency', desc_zh: '用詞或格式不一致', desc_en: 'Inconsistent wording or formatting' },
+  G: { zh: '文法', en: 'Grammar', desc_zh: '語法規則錯誤', desc_en: 'Grammar rule violations' },
+  W: { zh: '用詞', en: 'Word Choice', desc_zh: '詞語選擇或搭配問題', desc_en: 'Word selection or collocation issues' },
 };
 
 /**
@@ -50,6 +52,15 @@ function getCategoryLabel(code: string, locale: string = 'zh'): string {
   const label = CATEGORY_LABELS[code];
   if (!label) return code;
   return locale.startsWith('en') ? label.en : label.zh;
+}
+
+/**
+ * Get tooltip description for a category code
+ */
+function getCategoryDescription(code: string, locale: string = 'zh'): string {
+  const label = CATEGORY_LABELS[code];
+  if (!label) return '';
+  return locale.startsWith('en') ? label.desc_en : label.desc_zh;
 }
 
 interface ProofreadingIssueListProps {
@@ -387,14 +398,32 @@ interface IssueListItemProps {
   onCheckChange: () => void;
 }
 
+/**
+ * Category Badge with Tooltip
+ */
+function CategoryBadge({ code, locale }: { code: string; locale: string }) {
+  const label = getCategoryLabel(code, locale);
+  const description = getCategoryDescription(code, locale);
+
+  if (!code) {
+    return <span className="text-gray-400">—</span>;
+  }
+
+  return (
+    <Tooltip title={description} placement="top">
+      <span className="inline-flex cursor-help items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-200">
+        <span className="font-bold text-slate-500">{code}</span>
+        <span className="text-slate-600">{label}</span>
+      </span>
+    </Tooltip>
+  );
+}
+
 const IssueListItem = forwardRef<HTMLDivElement, IssueListItemProps>(
   ({ issue, index, isSelected, isChecked, decision, onClick, onCheckChange }, ref) => {
     const { t, i18n } = useTranslation();
     const decisionStatus = decision?.decision_type || issue.decision_status;
     const categoryCode = issue.rule_category || '';
-    const categoryLabel = categoryCode
-      ? getCategoryLabel(categoryCode, i18n.language)
-      : t('proofreading.issueList.uncategorized');
     // Spec 014: Prefer pre-computed plain text fields from backend
     const originalText =
       issue.original_text_plain || stripHtmlTags(issue.original_text) || t('proofreading.issueList.noOriginalText');
@@ -438,8 +467,9 @@ const IssueListItem = forwardRef<HTMLDivElement, IssueListItemProps>(
         {/* Issue Content */}
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex items-center gap-2 text-xs font-medium text-gray-500">
-            <span>
-              #{index} · {categoryLabel}
+            <span className="flex items-center gap-1.5">
+              #{index}
+              <CategoryBadge code={categoryCode} locale={i18n.language} />
             </span>
             {/* Engine Badge */}
             {issue.engine === 'ai' ? (

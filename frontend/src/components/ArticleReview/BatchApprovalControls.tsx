@@ -8,6 +8,7 @@
  */
 
 import React, { useMemo } from 'react';
+import { toast } from 'sonner';
 import { Button } from '../ui';
 import { CheckSquare, XSquare, Filter } from 'lucide-react';
 import type { ProofreadingIssue, DecisionPayload } from '../../types/worklist';
@@ -57,11 +58,23 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
   const handleBatchAccept = (issueList: ProofreadingIssue[]) => {
     const ids = issueList.map((i) => i.id);
     onBatchDecision(ids, 'accepted');
+
+    // Show toast feedback
+    const remaining = pendingIssues.length - ids.length;
+    toast.success(`已接受 ${ids.length} 個問題`, {
+      description: remaining > 0 ? `還有 ${remaining} 個待處理` : '所有問題已處理完成！',
+    });
   };
 
   const handleBatchReject = (issueList: ProofreadingIssue[]) => {
     const ids = issueList.map((i) => i.id);
     onBatchDecision(ids, 'rejected');
+
+    // Show toast feedback
+    const remaining = pendingIssues.length - ids.length;
+    toast.success(`已拒絕 ${ids.length} 個問題`, {
+      description: remaining > 0 ? `還有 ${remaining} 個待處理` : '所有問題已處理完成！',
+    });
   };
 
   return (

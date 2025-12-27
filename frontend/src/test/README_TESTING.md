@@ -8,9 +8,11 @@
 2. [運行測試](#運行測試)
 3. [編寫測試](#編寫測試)
 4. [測試類型](#測試類型)
-5. [最佳實踐](#最佳實踐)
-6. [測試覆蓋率](#測試覆蓋率)
-7. [常見問題](#常見問題)
+5. [視覺測試 (E2E)](#視覺測試-e2e)
+6. [邊緣情況測試](#邊緣情況測試)
+7. [最佳實踐](#最佳實踐)
+8. [測試覆蓋率](#測試覆蓋率)
+9. [常見問題](#常見問題)
 
 ## 測試架構
 
@@ -383,6 +385,227 @@ describe('ArticleForm Integration', () => {
   });
 });
 ```
+
+## 視覺測試 (E2E)
+
+本項目使用 Playwright 進行端對端視覺測試，確保 UI 在各種狀態和視口下正確顯示。
+
+### 技術棧
+
+- **Playwright**: 瀏覽器自動化測試框架
+- **Visual Test Helpers**: 自定義視覺測試輔助函數
+
+### 目錄結構
+
+```
+frontend/e2e/
+├── visual/
+│   ├── worklist.visual.spec.ts       # 首頁視覺測試
+│   ├── article-review.visual.spec.ts # 文章審核視覺測試
+│   ├── proofreading.visual.spec.ts   # 校對審核視覺測試
+│   └── settings.visual.spec.ts       # 設定頁視覺測試
+├── edge-cases/
+│   ├── empty-states.spec.ts          # 空狀態測試
+│   ├── error-handling.spec.ts        # 錯誤處理測試
+│   ├── batch-operations.spec.ts      # 批量操作測試
+│   ├── navigation-flow.spec.ts       # 導航流程測試
+│   ├── responsive.spec.ts            # 響應式測試
+│   └── extreme-data.spec.ts          # 極端數據測試
+└── utils/
+    ├── test-helpers.ts               # 基礎測試輔助函數
+    └── visual-test-helpers.ts        # 視覺測試輔助函數
+```
+
+### 運行視覺測試
+
+```bash
+# 運行所有 E2E 測試
+npx playwright test
+
+# 運行視覺測試
+npx playwright test e2e/visual/
+
+# 運行邊緣情況測試
+npx playwright test e2e/edge-cases/
+
+# 運行特定測試文件
+npx playwright test e2e/visual/worklist.visual.spec.ts
+
+# 以 UI 模式運行
+npx playwright test --ui
+
+# 對本地開發環境測試
+TEST_LOCAL=1 npx playwright test
+```
+
+### 視覺測試輔助函數
+
+```typescript
+import {
+  VIEWPORTS,           // 預設視口尺寸
+  waitForAnimations,   // 等待動畫完成
+  captureScreenshot,   // 截圖保存
+  expectToast,         // 驗證 Toast 通知
+  verifyEmptyState,    // 驗證空狀態顯示
+  testResponsive,      // 響應式測試輔助
+} from '../utils/visual-test-helpers';
+
+// 預設視口
+const viewports = {
+  mobile: { width: 320, height: 568 },
+  tablet: { width: 768, height: 1024 },
+  desktop: { width: 1280, height: 800 },
+  desktopLarge: { width: 1920, height: 1080 },
+  desktopUltrawide: { width: 2560, height: 1440 },
+};
+```
+
+### 視覺測試示例
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { VIEWPORTS, waitForAnimations, captureScreenshot } from '../utils/visual-test-helpers';
+
+test.describe('Worklist Page Visual Tests', () => {
+  test('should display dashboard correctly on mobile', async ({ page }) => {
+    await page.setViewportSize(VIEWPORTS.mobile);
+    await page.goto(BASE_URL);
+    await waitForAnimations(page);
+
+    await expect(page.locator('text=CMS Automation System')).toBeVisible();
+    await captureScreenshot(page, 'worklist-mobile');
+  });
+});
+```
+
+## 邊緣情況測試
+
+邊緣情況測試覆蓋各種非正常使用場景，確保應用的健壯性。
+
+### 測試類別
+
+#### 1. 空狀態測試 (empty-states.spec.ts)
+
+測試數據為空時的 UI 表現：
+- 無文章時的列表顯示
+- 無校對問題時的面板
+- 無 AI 建議時的 SEO 區塊
+- 搜索無結果時的提示
+
+```typescript
+test('should display appropriate message when filtering returns no results', async ({ page }) => {
+  const searchInput = page.locator('input[placeholder*="Search"]');
+  await searchInput.fill('xyznonexistent123');
+  await waitForAnimations(page);
+
+  const noResultsIndicator = page.locator('text=/No articles|沒有文章/i');
+  if (await noResultsIndicator.count() > 0) {
+    await expect(noResultsIndicator.first()).toBeVisible();
+  }
+});
+```
+
+#### 2. 錯誤處理測試 (error-handling.spec.ts)
+
+測試各種錯誤場景：
+- API 500 錯誤
+- 網絡超時
+- 無效 JSON 響應
+- Session 過期
+
+```typescript
+test('should handle API failure gracefully', async ({ page }) => {
+  await page.route('**/api/**', (route) => {
+    route.fulfill({ status: 500, body: JSON.stringify({ error: 'Server Error' }) });
+  });
+
+  await page.goto(BASE_URL);
+  // 驗證應用不崩潰，顯示錯誤信息
+});
+```
+
+#### 3. 批量操作測試 (batch-operations.spec.ts)
+
+測試批量接受/拒絕功能：
+- Toast 反饋顯示
+- 快速連續點擊防護
+- 狀態更新正確性
+- 空狀態處理
+
+```typescript
+test('should show toast when accepting all issues', async ({ page }) => {
+  // 導航到校對面板
+  const acceptAllButton = page.locator('button:has-text("全部接受")');
+  await acceptAllButton.click();
+
+  // 驗證 Toast 顯示
+  await expectToast(page, /已接受.*個問題/);
+});
+```
+
+#### 4. 響應式測試 (responsive.spec.ts)
+
+測試不同視口尺寸：
+- 手機 (320px)
+- 平板 (768px)
+- 桌面 (1280px)
+- 超寬屏 (2560px)
+- 動態視口調整
+
+```typescript
+test('should stack panels on mobile', async ({ page }) => {
+  await page.setViewportSize(VIEWPORTS.mobile);
+  // 驗證移動端布局適應
+});
+```
+
+#### 5. 極端數據測試 (extreme-data.spec.ts)
+
+測試極端數據場景：
+- 超長標題 (100+ 字符)
+- 大量問題 (50+)
+- 特殊字符和 Unicode
+- HTML 注入防護
+
+```typescript
+test('should handle unicode characters in search', async ({ page }) => {
+  const testCases = ['日本語テスト', '한국어 테스트', 'emoji 🎉 test'];
+
+  for (const text of testCases) {
+    await searchInput.fill(text);
+    await waitForAnimations(page);
+    // 驗證應用不崩潰
+  }
+});
+```
+
+#### 6. 導航流程測試 (navigation-flow.spec.ts)
+
+測試導航和工作流：
+- 步驟切換數據持久性
+- Modal 關閉後狀態保存
+- 瀏覽器返回按鈕處理
+- 快速導航切換
+
+```typescript
+test('should preserve data when switching steps', async ({ page }) => {
+  // 在步驟 1 輸入數據
+  // 切換到步驟 2
+  // 返回步驟 1
+  // 驗證數據仍然存在
+});
+```
+
+### 測試優先級
+
+| 優先級 | 測試類別 | 描述 |
+|--------|----------|------|
+| 高 | 錯誤處理 | 確保應用不會因錯誤崩潰 |
+| 高 | 空狀態 | 確保空數據時的用戶體驗 |
+| 中 | 批量操作 | 確保核心功能正常 |
+| 中 | 響應式 | 確保多設備兼容性 |
+| 低 | 極端數據 | 邊界情況覆蓋 |
+| 低 | 導航流程 | 工作流完整性 |
 
 ## 最佳實踐
 
