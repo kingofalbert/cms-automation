@@ -402,24 +402,25 @@ async def save_review_decisions(
 
 def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
     """Convert ORM worklist item to schema."""
-    # Calculate word count and reading time from content
-    content = item.content or ""
-    word_count = len(content.split()) if content else 0
-    # Average reading speed: ~200 words per minute for Chinese text
-    estimated_reading_time = max(1, round(word_count / 200)) if word_count > 0 else None
-
-    # Merge computed stats into metadata
+    # Start with existing drive_metadata
     metadata = dict(item.drive_metadata or {})
-    metadata["word_count"] = word_count
-    if estimated_reading_time is not None:
-        metadata["estimated_reading_time"] = estimated_reading_time
 
-    # Try to get quality_score from linked article if available
-    article = getattr(item, "article", None)
-    if article:
-        quality_score = getattr(article, "quality_score", None)
-        if quality_score is not None:
-            metadata["quality_score"] = quality_score
+    # Try to calculate word count from content if loaded
+    # Note: content may be deferred in list queries for performance
+    try:
+        from sqlalchemy.orm.attributes import instance_state
+        state = instance_state(item)
+        # Check if content is loaded (not deferred)
+        if "content" not in state.unloaded:
+            content = item.content or ""
+            if content:
+                word_count = len(content.split())
+                metadata["word_count"] = word_count
+                # Average reading speed: ~200 words per minute for Chinese text
+                metadata["estimated_reading_time"] = max(1, round(word_count / 200))
+    except Exception:
+        # If we can't access content, leave word_count as-is from drive_metadata
+        pass
 
     return WorklistItemResponse(
         id=item.id,
