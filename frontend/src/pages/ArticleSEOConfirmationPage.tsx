@@ -337,7 +337,7 @@ export default function ArticleSEOConfirmationPage() {
                 </span>
                 {seoSuggestions.meta_description.meta_description_score && (
                   <Badge variant="info">
-                    评分: {seoSuggestions.meta_description.meta_description_score}/10
+                    评分: {seoSuggestions.meta_description.meta_description_score}/100
                   </Badge>
                 )}
               </div>

@@ -328,17 +328,23 @@ export default function ArticleParsingPage() {
                 </div>
               )}
 
-              {parsingData.author_name && (
+              {(parsingData.author_name || parsingData.author_line) && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
                     作者
                   </label>
-                  <p className="mt-1">{parsingData.author_name}</p>
-                  {parsingData.author_line && (
-                    <p className="text-sm text-muted-foreground">
-                      {parsingData.author_line}
-                    </p>
-                  )}
+                  {/* Show author_name if available, otherwise show author_line */}
+                  <p className="mt-1">
+                    {parsingData.author_name || parsingData.author_line}
+                  </p>
+                  {/* Only show author_line as secondary info if it's different from author_name */}
+                  {parsingData.author_line &&
+                    parsingData.author_name &&
+                    parsingData.author_line !== parsingData.author_name && (
+                      <p className="text-sm text-muted-foreground">
+                        {parsingData.author_line}
+                      </p>
+                    )}
                 </div>
               )}
 
