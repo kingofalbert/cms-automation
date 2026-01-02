@@ -317,7 +317,19 @@ class Article(Base, TimestampMixin):
         comment='SEO Title 來源：extracted/ai_generated/user_input/migrated',
     )
 
-    # Parsing confirmation workflow
+    # Parsing workflow
+    parsing_method: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=True,
+        comment="Parsing method used: 'ai' or 'heuristic'",
+    )
+
+    parsing_confidence: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+        comment="Confidence score of parsing (0.0-1.0)",
+    )
+
     parsing_confirmed: Mapped[bool] = mapped_column(
         nullable=False,
         default=False,

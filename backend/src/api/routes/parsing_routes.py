@@ -412,8 +412,8 @@ async def get_parsing_result(
         body_html=article.body_html or "",
         meta_description=article.meta_description,
         seo_keywords=article.seo_keywords or [],
-        parsing_method="unknown",  # TODO: Store this in Article model
-        parsing_confidence=0.0,  # TODO: Store this in Article model
+        parsing_method=article.parsing_method or "unknown",
+        parsing_confidence=article.parsing_confidence or 0.0,
         parsing_confirmed=article.parsing_confirmed,
         has_seo_data=bool(article.meta_description or article.seo_keywords),
         images=images,

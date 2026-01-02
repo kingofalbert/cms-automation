@@ -402,6 +402,25 @@ async def save_review_decisions(
 
 def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
     """Convert ORM worklist item to schema."""
+    # Calculate word count and reading time from content
+    content = item.content or ""
+    word_count = len(content.split()) if content else 0
+    # Average reading speed: ~200 words per minute for Chinese text
+    estimated_reading_time = max(1, round(word_count / 200)) if word_count > 0 else None
+
+    # Merge computed stats into metadata
+    metadata = dict(item.drive_metadata or {})
+    metadata["word_count"] = word_count
+    if estimated_reading_time is not None:
+        metadata["estimated_reading_time"] = estimated_reading_time
+
+    # Try to get quality_score from linked article if available
+    article = getattr(item, "article", None)
+    if article:
+        quality_score = getattr(article, "quality_score", None)
+        if quality_score is not None:
+            metadata["quality_score"] = quality_score
+
     return WorklistItemResponse(
         id=item.id,
         drive_file_id=item.drive_file_id,
@@ -409,7 +428,7 @@ def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
         status=item.status.value if hasattr(item.status, "value") else item.status,
         author=item.author,
         article_id=item.article_id,
-        metadata=item.drive_metadata or {},
+        metadata=metadata,
         notes=item.notes or [],
         synced_at=item.synced_at,
         created_at=item.created_at,

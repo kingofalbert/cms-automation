@@ -170,6 +170,10 @@ class ArticleProcessingService:
         article.meta_description = parsed_article.meta_description
         article.seo_keywords = parsed_article.seo_keywords
 
+        # Store parsing metadata
+        article.parsing_method = parsed_article.parsing_method
+        article.parsing_confidence = parsed_article.parsing_confidence
+
         # Store taxonomy fields (tags, categories)
         if parsed_article.tags:
             article.tags = parsed_article.tags
