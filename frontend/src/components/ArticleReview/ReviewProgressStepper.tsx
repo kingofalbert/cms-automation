@@ -43,7 +43,7 @@ const STEPS: Step[] = [
   {
     id: 2,
     label: '上稿預覽',
-    description: '最終預覽和上稿',
+    description: '最終預覽和上稿設置',
   },
 ];
 
