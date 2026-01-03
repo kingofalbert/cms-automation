@@ -485,6 +485,11 @@ class GoogleDriveSyncService:
                 # Skip CSS/style patterns
                 if line.startswith('.') or line.startswith('#') or '{' in line or '}' in line:
                     continue
+                # Skip author/byline patterns (e.g., "文 / xxx 編譯 / xxx", "記者xxx報導")
+                if re.match(r'^文\s*[/／]', line) or '編譯' in line or '翻譯' in line:
+                    continue
+                if re.match(r'^(記者|作者|撰文|文字)', line):
+                    continue
                 # Skip very short or very long lines
                 if len(line) >= 10 and len(line) <= 200:
                     title = line[:500]
