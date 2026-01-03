@@ -51,9 +51,9 @@
       "proofreading": "校對中",
       "proofreading_review": "校對審核中",
       "under_review": "審核中",
-      "ready_to_publish": "待發布",
-      "publishing": "發布中",
-      "published": "已發布",
+      "ready_to_publish": "待上稿",
+      "publishing": "上稿中",
+      "published": "已上稿",
       "failed": "需處理"
     },
     "statusDescriptions": {
@@ -62,9 +62,9 @@
       "parsing_review": "AI 解析完成，請審核內容準確性",
       "proofreading": "AI 和腳本正在分析內容問題",
       "proofreading_review": "校對完成，請審核並接受/拒絕建議",
-      "ready_to_publish": "所有檢查通過，可以發布到 WordPress",
-      "publishing": "正在發布到 WordPress，請稍候",
-      "published": "成功發布到 WordPress",
+      "ready_to_publish": "所有檢查通過，可以上稿到 WordPress",
+      "publishing": "正在上稿到 WordPress，請稍候",
+      "published": "已成功上稿到 WordPress（草稿）",
       "failed": "處理過程中發生錯誤，請查看錯誤日誌"
     },
     "actions": {
@@ -72,7 +72,7 @@
       "edit": "編輯",
       "approve": "核准",
       "reject": "拒絕",
-      "publish": "發布到 WordPress",
+      "publish": "上稿",
       "retry": "重試",
       "openUrl": "開啟文章"
     },
@@ -81,8 +81,8 @@
       "syncFailed": "同步失敗",
       "statusChanged": "狀態變更成功",
       "statusChangeFailed": "狀態變更失敗",
-      "publishSubmitted": "發布任務已提交",
-      "publishFailed": "發布失敗"
+      "publishSubmitted": "上稿任務已提交",
+      "publishFailed": "上稿失敗"
     },
     "errors": {
       "title": "同步錯誤",
@@ -134,22 +134,22 @@
         "viewOriginal": "查看原文",
         "approve": "核准",
         "reject": "拒絕",
-        "publish": "發布",
+        "publish": "上稿",
         "retry": "重試",
         "openUrl": "開啟"
       }
     },
     "statisticsCards": {
       "wordsLabel": "{{count}} 字",
-      "readyHint": "可立即發布",
+      "readyHint": "可立即上稿",
       "avgCycle": "平均週期",
-      "cycleHint": "從進件到發布",
+      "cycleHint": "從進件到上稿",
       "noCycleData": "暫無數據",
       "hours": "{{hours}} 小時",
       "daysHours": "{{days}} 天 {{hours}} 小時",
       "avgQuality": "平均品質",
       "qualityHint": "滿分 100",
-      "publishedHint": "已完成發布流程"
+      "publishedHint": "已完成上稿流程"
     },
     "drawer": {
       "title": "工作清單詳情",
@@ -183,7 +183,7 @@
       "statusChangeTitle": "狀態變更",
       "notePlaceholder": "新增備註（可選）",
       "changeTo": "變更為",
-      "publish": "發布到 WordPress"
+      "publish": "上稿"
     }
   },
   "settings": {
@@ -316,10 +316,10 @@
       "monthlyLimitLabel": "每月限額 (USD)",
       "monthlyLimitHelper": "每月允許的最高花費",
       "perTaskLimitLabel": "單任務限額 (USD)",
-      "perTaskLimitHelper": "每個發布任務允許的最高花費",
+      "perTaskLimitHelper": "每個上稿任務允許的最高花費",
       "alertThresholdLabel": "預警門檻 (%)",
       "alertThresholdHelper": "達到此百分比時發送預警",
-      "autoPauseLabel": "達到限額後自動暫停發布"
+      "autoPauseLabel": "達到限額後自動暫停上稿"
     },
     "screenshot": {
       "title": "截圖保留策略",
@@ -411,7 +411,7 @@
     "accordion": {
       "provider": {
         "title": "上傳設定",
-        "subtitle": "設定 Playwright、Computer Use 與 Hybrid 發布流程"
+        "subtitle": "設定 Playwright、Computer Use 與 Hybrid 上稿流程"
       },
       "cms": {
         "title": "WordPress 設定",
@@ -560,8 +560,8 @@
     }
   },
   "publishTasks": {
-    "title": "發布任務監控",
-    "subtitle": "即時查看所有文章發布任務的執行情況",
+    "title": "上稿任務監控",
+    "subtitle": "即時查看所有文章上稿任務的執行情況",
     "stats": {
       "total": "總任務數",
       "completed": "已完成",
@@ -573,14 +573,14 @@
       "providerLabel": "Provider 篩選",
       "statusOptions": {
         "all": "全部狀態",
-        "idle": "待發布",
+        "idle": "待上稿",
         "pending": "等待中",
         "initializing": "初始化",
         "logging_in": "登入中",
         "creating_post": "建立文章",
         "uploading_images": "上傳圖片",
         "configuring_seo": "設定 SEO",
-        "publishing": "發布中",
+        "publishing": "上稿中",
         "completed": "已完成",
         "failed": "失敗"
       },
@@ -593,8 +593,8 @@
     },
     "table": {
       "loading": "載入任務中...",
-      "emptyTitle": "暫無發布任務",
-      "emptyDescription": "發布文章後，任務記錄會顯示在這裡",
+      "emptyTitle": "暫無上稿任務",
+      "emptyDescription": "上稿文章後，任務記錄會顯示在這裡",
       "columns": {
         "article": "文章標題",
         "provider": "Provider",
@@ -606,14 +606,14 @@
       }
     },
     "statusLabels": {
-      "idle": "待發布",
+      "idle": "待上稿",
       "pending": "等待中",
       "initializing": "初始化",
       "logging_in": "登入中",
       "creating_post": "建立文章",
       "uploading_images": "上傳圖片",
       "configuring_seo": "設定 SEO",
-      "publishing": "發布中",
+      "publishing": "上稿中",
       "completed": "已完成",
       "failed": "失敗"
     },
@@ -641,8 +641,8 @@
     "currentStep": {
       "steps": "{{completed}} / {{total}} 步驟",
       "progressLabel": "進度",
-      "completed": "文章已成功發布！",
-      "failed": "發布失敗，請重試。"
+      "completed": "文章已成功上稿！",
+      "failed": "上稿失敗，請重試。"
     },
     "messages": {
       "retrySubmitted": "重試請求已送出",
@@ -651,7 +651,7 @@
   },
   "providerComparison": {
     "title": "Provider 性能對比",
-    "subtitle": "分析並比較不同發布 Provider 的指標",
+    "subtitle": "分析並比較不同上稿 Provider 的指標",
     "loading": "載入中...",
     "noData": "暫無數據",
     "timeRange": {
@@ -727,32 +727,32 @@
       "creating_post": "建立文章",
       "uploading_images": "上傳圖片",
       "configuring_seo": "設定 SEO",
-      "publishing": "發布中",
+      "publishing": "上稿中",
       "idle": "空閒"
     }
   },
   "publishing": {
     "actions": {
-      "publishToWordPress": "發布到 WordPress",
+      "publishToWordPress": "上稿到 WordPress",
       "cancel": "取消",
       "next": "下一步",
-      "confirm": "確認發布",
-      "publishing": "發布中...",
+      "confirm": "確認上稿",
+      "publishing": "上稿中...",
       "done": "完成",
       "close": "關閉",
-      "retry": "重試發布",
+      "retry": "重試上稿",
       "contactSupport": "聯繫支援",
-      "continuePublishing": "繼續發布",
+      "continuePublishing": "繼續上稿",
       "viewArticle": "查看文章"
     },
     "messages": {
-      "publishFailed": "發布失敗：{{message}}"
+      "publishFailed": "上稿失敗：{{message}}"
     },
     "providerDialog": {
-      "title": "選擇發布 Provider"
+      "title": "選擇上稿 Provider"
     },
     "providerSelector": {
-      "label": "發布 Provider",
+      "label": "上稿 Provider",
       "recommendedBadge": "推薦",
       "metrics": {
         "cost": "成本 / 篇",
@@ -781,7 +781,7 @@
         },
         "computer_use": {
           "name": "Computer Use",
-          "description": "AI 驅動的智慧發布",
+          "description": "AI 驅動的智慧上稿",
           "features": [
             "可適應動態頁面",
             "處理複雜場景",
@@ -810,9 +810,9 @@
       }
     },
     "confirmation": {
-      "title": "確認發布",
+      "title": "確認上稿",
       "articleInfo": "文章資訊",
-      "publishSettings": "發布設定",
+      "publishSettings": "上稿設定",
       "fields": {
         "title": "標題",
         "wordCount": "字數",
@@ -820,14 +820,14 @@
         "provider": "Provider",
         "estimatedTime": "預計時長",
         "estimatedCost": "預計成本",
-        "publishMode": "發布方式",
-        "publishImmediately": "立即發布",
+        "publishMode": "上稿方式",
+        "publishImmediately": "草稿模式",
         "categories": "分類",
         "tags": "標籤",
         "seoEnabled": "已啟用 SEO 最佳化"
       },
       "wordCountValue": "~{{count}} 字",
-      "warning": "發布後文章會立即上線至 WordPress，請確認內容無誤後再繼續。"
+      "warning": "上稿後文章會上傳到 WordPress 作為草稿，由最終審稿編輯在 WordPress 後台審核後再發布。"
     }
   },
   "navigation": {
