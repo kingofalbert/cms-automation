@@ -43,10 +43,10 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                AI 建议：元描述优化
+                AI 建議：元描述優化
                 {meta.score !== null && meta.score !== undefined && (
                   <Badge variant="info" className="ml-2">
-                    评分: {Math.round(meta.score * 100)}
+                    評分: {Math.round(meta.score * 100)}
                   </Badge>
                 )}
               </h4>
@@ -58,7 +58,7 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
                 </p>
                 <div className="p-2 bg-white rounded border border-gray-200">
                   <p className="text-sm text-gray-700">
-                    {meta.original || '未设置'}
+                    {meta.original || '未設置'}
                   </p>
                 </div>
               </div>
@@ -72,7 +72,7 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
               <div className="mb-3">
                 <p className="text-xs text-blue-700 font-medium mb-1 flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" />
-                  AI 建议 ({meta.length_suggested} 字符)
+                  AI 建議 ({meta.length_suggested} 字符)
                 </p>
                 <div className="p-2 bg-blue-100 rounded border border-blue-300">
                   <p className="text-sm text-gray-900 font-medium">
@@ -84,7 +84,7 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
               {/* Reasoning */}
               {meta.reasoning && (
                 <div className="p-2 bg-white/50 rounded border border-blue-100">
-                  <p className="text-xs text-gray-600 font-medium mb-1">💡 优化理由：</p>
+                  <p className="text-xs text-gray-600 font-medium mb-1">💡 優化理由：</p>
                   <p className="text-xs text-gray-700">{meta.reasoning}</p>
                 </div>
               )}
@@ -98,8 +98,8 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
                       : 'text-amber-600'
                   }`}>
                     {meta.length_suggested >= 120 && meta.length_suggested <= 160
-                      ? '✓ 长度符合 SEO 最佳实践 (120-160)'
-                      : '⚠ 建议长度为 120-160 字符'}
+                      ? '✓ 長度符合 SEO 最佳實踐 (120-160)'
+                      : '⚠ 建議長度為 120-160 字符'}
                   </p>
                 </div>
               )}
@@ -117,10 +117,10 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                AI 建议：SEO 关键词优化
+                AI 建議：SEO 關鍵詞優化
                 {seo.score !== null && seo.score !== undefined && (
                   <Badge variant="success" className="ml-2">
-                    评分: {Math.round(seo.score * 100)}
+                    評分: {Math.round(seo.score * 100)}
                   </Badge>
                 )}
               </h4>
@@ -129,7 +129,7 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
               {seo.original_keywords.length > 0 && (
                 <div className="mb-3">
                   <p className="text-xs text-gray-600 mb-1">
-                    原始关键词 ({seo.original_keywords.length})
+                    原始關鍵詞 ({seo.original_keywords.length})
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {seo.original_keywords.map((keyword, idx) => (
@@ -150,7 +150,7 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
               <div className="mb-3">
                 <p className="text-xs text-green-700 font-medium mb-1 flex items-center gap-1">
                   <TrendingUp className="w-3 h-3" />
-                  AI 建议关键词 ({seo.suggested_keywords.length})
+                  AI 建議關鍵詞 ({seo.suggested_keywords.length})
                 </p>
                 <div className="flex flex-wrap gap-1 p-2 bg-green-100 rounded border border-green-300">
                   {seo.suggested_keywords.map((keyword, idx) => (
@@ -164,7 +164,7 @@ export const SEOComparisonCard: React.FC<SEOComparisonCardProps> = ({
               {/* Reasoning */}
               {seo.reasoning && (
                 <div className="p-2 bg-white/50 rounded border border-green-100">
-                  <p className="text-xs text-gray-600 font-medium mb-1">💡 优化理由：</p>
+                  <p className="text-xs text-gray-600 font-medium mb-1">💡 優化理由：</p>
                   <p className="text-xs text-gray-700">{seo.reasoning}</p>
                 </div>
               )}

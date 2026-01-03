@@ -131,9 +131,9 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
       >
         <div className="flex items-center gap-2">
           <Tag className="w-5 h-5 text-slate-600" />
-          <h3 className="font-semibold text-slate-900">SEO 关键词</h3>
+          <h3 className="font-semibold text-slate-900">SEO 關鍵詞</h3>
           <Badge variant="secondary" className="text-xs">
-            {activeKeywords.length} 个
+            {activeKeywords.length} 個
           </Badge>
         </div>
         <button className="p-1 hover:bg-slate-200 rounded transition-colors">
@@ -163,14 +163,14 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
               <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50/80">
                 <div className="flex items-center gap-2">
                   <Tag className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-slate-700">文档提取</span>
+                  <span className="text-sm font-medium text-slate-700">文檔提取</span>
                 </div>
                 <span
                   className={`text-xs px-2 py-0.5 rounded ${
                     statusColors[getCountStatus(extractedKeywords?.length || 0)]
                   }`}
                 >
-                  {extractedKeywords?.length || 0} 个
+                  {extractedKeywords?.length || 0} 個
                 </span>
               </div>
 
@@ -196,7 +196,7 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
                     })}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400 italic">未提取到关键词</p>
+                  <p className="text-sm text-slate-400 italic">未提取到關鍵詞</p>
                 )}
               </div>
 
@@ -222,14 +222,14 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
                 <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm font-medium text-emerald-700">AI 优化建议</span>
+                    <span className="text-sm font-medium text-emerald-700">AI 優化建議</span>
                   </div>
                   <span
                     className={`text-xs px-2 py-0.5 rounded ${
                       statusColors[getCountStatus(aiSuggestedKeywords?.length || 0)]
                     }`}
                   >
-                    {aiSuggestedKeywords?.length || 0} 个
+                    {aiSuggestedKeywords?.length || 0} 個
                   </span>
                 </div>
 
@@ -268,7 +268,7 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
           {/* Diff summary (if both sources exist) */}
           {hasExtracted && hasAi && (keywordDiff.added.length > 0 || keywordDiff.removed.length > 0) && (
             <div className="mb-4 p-3 bg-slate-50 rounded-lg border">
-              <p className="text-xs font-medium text-slate-600 mb-2">变更摘要:</p>
+              <p className="text-xs font-medium text-slate-600 mb-2">變更摘要:</p>
               <div className="flex flex-wrap gap-2 text-xs">
                 {keywordDiff.added.length > 0 && (
                   <span className="text-green-600">
@@ -305,7 +305,7 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-3 border-t">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">当前选择:</span>
+              <span className="text-xs text-slate-500">當前選擇:</span>
               <div className="flex gap-1">
                 <button
                   onClick={() => handleSelectSource('extracted')}
@@ -315,7 +315,7 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  文档提取
+                  文檔提取
                 </button>
                 {hasAi && (
                   <>
@@ -327,7 +327,7 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      AI优化
+                      AI優化
                     </button>
                     <button
                       onClick={() => handleSelectSource('custom')}

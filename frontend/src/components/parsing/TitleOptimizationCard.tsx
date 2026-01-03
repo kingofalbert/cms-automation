@@ -77,7 +77,7 @@ function CharacterCount({ count, min, max }: { count: number; min: number; max: 
   return (
     <span className={`text-xs font-mono ${color}`}>
       {count} 字符
-      {!isGood && ` (建议: ${min}-${max})`}
+      {!isGood && ` (建議: ${min}-${max})`}
     </span>
   );
 }
@@ -120,32 +120,32 @@ export default function TitleOptimizationCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>标题优化建议</CardTitle>
+        <CardTitle>標題優化建議</CardTitle>
         <CardDescription>
-          AI 生成了 {suggestions.length} 个优化方案，选择最适合的标题或手动编辑
+          AI 生成了 {suggestions.length} 個優化方案，選擇最適合的標題或手動編輯
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Original Title */}
         <div className="border-l-4 border-gray-300 pl-4 py-2 bg-gray-50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">原始标题</span>
-            <Badge variant="default">当前使用</Badge>
+            <span className="text-sm font-medium text-gray-700">原始標題</span>
+            <Badge variant="default">當前使用</Badge>
           </div>
           <p className="text-lg font-semibold text-gray-900">{original.full}</p>
           {(original.prefix || original.suffix) && (
             <div className="mt-2 text-xs text-gray-600 space-y-1">
               {original.prefix && (
                 <div>
-                  <span className="font-medium">前缀:</span> {original.prefix}
+                  <span className="font-medium">前綴:</span> {original.prefix}
                 </div>
               )}
               <div>
-                <span className="font-medium">主标题:</span> {original.main}
+                <span className="font-medium">主標題:</span> {original.main}
               </div>
               {original.suffix && (
                 <div>
-                  <span className="font-medium">副标题:</span> {original.suffix}
+                  <span className="font-medium">副標題:</span> {original.suffix}
                 </div>
               )}
             </div>
@@ -157,7 +157,7 @@ export default function TitleOptimizationCard({
           <Alert>
             <AlertDescription className="flex items-center gap-2">
               <span className="animate-spin">⏳</span>
-              正在生成 AI 优化建议... (预计 20-30 秒)
+              正在生成 AI 優化建議... (預計 20-30 秒)
             </AlertDescription>
           </Alert>
         )}
@@ -166,7 +166,7 @@ export default function TitleOptimizationCard({
         {!isGenerating && suggestions.length > 0 && (
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-gray-900">
-              优化方案 ({suggestions.length})
+              優化方案 ({suggestions.length})
             </h4>
 
             {suggestions.map((option, index) => {
@@ -203,14 +203,14 @@ export default function TitleOptimizationCard({
                             variant={isSelected ? 'primary' : 'outline'}
                             onClick={() => onSelect?.(option.id)}
                           >
-                            {isSelected ? '✓ 已选择' : '选择'}
+                            {isSelected ? '✓ 已選擇' : '選擇'}
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleEditClick(option)}
                           >
-                            编辑
+                            編輯
                           </Button>
                         </>
                       )}
@@ -243,7 +243,7 @@ export default function TitleOptimizationCard({
                       <div className="grid grid-cols-3 gap-2 text-xs">
                         {option.title_prefix && (
                           <div>
-                            <span className="font-medium text-gray-600">前缀:</span>
+                            <span className="font-medium text-gray-600">前綴:</span>
                             <p className="mt-1 text-gray-800">{option.title_prefix}</p>
                             <CharacterCount
                               count={option.character_count.prefix}
@@ -253,7 +253,7 @@ export default function TitleOptimizationCard({
                           </div>
                         )}
                         <div className={option.title_prefix ? '' : 'col-span-2'}>
-                          <span className="font-medium text-gray-600">主标题:</span>
+                          <span className="font-medium text-gray-600">主標題:</span>
                           <p className="mt-1 text-gray-800">{option.title_main}</p>
                           <CharacterCount
                             count={option.character_count.main}
@@ -263,7 +263,7 @@ export default function TitleOptimizationCard({
                         </div>
                         {option.title_suffix && (
                           <div>
-                            <span className="font-medium text-gray-600">副标题:</span>
+                            <span className="font-medium text-gray-600">副標題:</span>
                             <p className="mt-1 text-gray-800">{option.title_suffix}</p>
                             <CharacterCount
                               count={option.character_count.suffix}
@@ -278,7 +278,7 @@ export default function TitleOptimizationCard({
                     <div className="space-y-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          前缀 (可选, 2-6字符)
+                          前綴 (可選, 2-6字符)
                         </label>
                         <input
                           type="text"
@@ -292,7 +292,7 @@ export default function TitleOptimizationCard({
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          主标题 * (15-30字符)
+                          主標題 * (15-30字符)
                         </label>
                         <input
                           type="text"
@@ -306,7 +306,7 @@ export default function TitleOptimizationCard({
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          副标题 (可选, 4-12字符)
+                          副標題 (可選, 4-12字符)
                         </label>
                         <input
                           type="text"
@@ -325,7 +325,7 @@ export default function TitleOptimizationCard({
                   {!isEditing && (
                     <div className="mt-3 pt-3 border-t space-y-2">
                       <div>
-                        <span className="text-xs font-semibold text-gray-700">优势:</span>
+                        <span className="text-xs font-semibold text-gray-700">優勢:</span>
                         <ul className="mt-1 space-y-1">
                           {option.strengths.map((strength, idx) => (
                             <li key={idx} className="text-xs text-gray-600 flex items-start gap-1">
@@ -336,7 +336,7 @@ export default function TitleOptimizationCard({
                         </ul>
                       </div>
                       <div className="text-xs text-gray-600">
-                        <span className="font-semibold">推荐理由:</span> {option.recommendation}
+                        <span className="font-semibold">推薦理由:</span> {option.recommendation}
                       </div>
                     </div>
                   )}
@@ -350,7 +350,7 @@ export default function TitleOptimizationCard({
         {!isGenerating && notes.length > 0 && (
           <Alert>
             <AlertDescription>
-              <p className="font-semibold mb-2">📝 优化建议</p>
+              <p className="font-semibold mb-2">📝 優化建議</p>
               <ul className="space-y-1 text-sm">
                 {notes.map((note, idx) => (
                   <li key={idx}>{note}</li>

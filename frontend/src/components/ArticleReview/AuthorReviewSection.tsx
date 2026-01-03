@@ -35,7 +35,7 @@ export const AuthorReviewSection: React.FC<AuthorReviewSectionProps> = ({
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <User className="w-5 h-5" />
-          作者审核
+          作者審核
         </h3>
         {isModified && (
           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
@@ -55,18 +55,18 @@ export const AuthorReviewSection: React.FC<AuthorReviewSectionProps> = ({
       {/* Current author input */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          当前作者
+          當前作者
         </label>
         <Input
           type="text"
           value={author}
           onChange={(e) => onAuthorChange(e.target.value)}
-          placeholder="输入作者名称"
+          placeholder="輸入作者名稱"
           className="w-full"
         />
         {!author && (
           <p className="text-xs text-amber-600">
-            ⚠️ 建议填写作者信息以增强文章可信度
+            ⚠️ 建議填寫作者信息以增強文章可信度
           </p>
         )}
       </div>
@@ -75,7 +75,7 @@ export const AuthorReviewSection: React.FC<AuthorReviewSectionProps> = ({
       <div className="space-y-2">
         <div className="text-xs text-gray-500">常用作者</div>
         <div className="flex flex-wrap gap-2">
-          {['编辑部', '管理员', '匿名'].map((commonAuthor) => (
+          {['編輯部', '管理員', '匿名'].map((commonAuthor) => (
             <button
               key={commonAuthor}
               type="button"

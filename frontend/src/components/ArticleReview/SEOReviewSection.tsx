@@ -61,7 +61,7 @@ export const SEOReviewSection: React.FC<SEOReviewSectionProps> = ({
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
         <Search className="w-5 h-5" />
-        SEO 优化
+        SEO 優化
       </h3>
 
       {/* Meta Description */}
@@ -75,26 +75,26 @@ export const SEOReviewSection: React.FC<SEOReviewSectionProps> = ({
         <Textarea
           value={metaDescription}
           onChange={(e) => onMetaDescriptionChange(e.target.value)}
-          placeholder="输入元描述，用于搜索引擎结果展示"
+          placeholder="輸入元描述，用於搜索引擎結果展示"
           rows={4}
           className="w-full"
         />
         {!isDescriptionGood && (
           <p className="text-xs text-amber-600">
             {descriptionLength < 120
-              ? `⚠️ 建议至少 120 字符 (还需 ${120 - descriptionLength} 字符)`
-              : '⚠️ 建议不超过 160 字符以避免截断'}
+              ? `⚠️ 建議至少 120 字符 (還需 ${120 - descriptionLength} 字符)`
+              : '⚠️ 建議不超過 160 字符以避免截斷'}
           </p>
         )}
         {isDescriptionGood && (
-          <p className="text-xs text-green-600">✓ 长度合适</p>
+          <p className="text-xs text-green-600">✓ 長度合適</p>
         )}
       </div>
 
       {/* Keywords */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          关键词 ({keywords.length})
+          關鍵詞 ({keywords.length})
         </label>
         <div className="flex gap-2">
           <Input
@@ -102,7 +102,7 @@ export const SEOReviewSection: React.FC<SEOReviewSectionProps> = ({
             value={keywordInput}
             onChange={(e) => setKeywordInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="输入关键词后按 Enter"
+            placeholder="輸入關鍵詞後按 Enter"
             className="flex-1"
           />
           <button
@@ -136,28 +136,28 @@ export const SEOReviewSection: React.FC<SEOReviewSectionProps> = ({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">暂无关键词</p>
+          <p className="text-sm text-gray-500">暫無關鍵詞</p>
         )}
       </div>
 
       {/* SEO Score */}
       <div className="p-3 bg-gray-50 rounded-lg">
-        <div className="text-sm font-medium text-gray-700 mb-2">SEO 评分</div>
+        <div className="text-sm font-medium text-gray-700 mb-2">SEO 評分</div>
         <div className="space-y-2 text-xs">
           <div className="flex items-center justify-between">
-            <span>元描述长度</span>
+            <span>元描述長度</span>
             <span className={isDescriptionGood ? 'text-green-600' : 'text-amber-600'}>
-              {isDescriptionGood ? '✓ 良好' : '⚠ 需优化'}
+              {isDescriptionGood ? '✓ 良好' : '⚠ 需優化'}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span>关键词数量</span>
+            <span>關鍵詞數量</span>
             <span className={keywords.length >= 3 && keywords.length <= 10 ? 'text-green-600' : 'text-amber-600'}>
-              {keywords.length >= 3 && keywords.length <= 10 ? '✓ 良好' : '⚠ 需优化'}
+              {keywords.length >= 3 && keywords.length <= 10 ? '✓ 良好' : '⚠ 需優化'}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span>整体评分</span>
+            <span>整體評分</span>
             <span className="font-medium text-green-600">75/100</span>
           </div>
         </div>

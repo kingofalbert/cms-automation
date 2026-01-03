@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import type { SuggestedTag } from '../../types/api';
 
-export type TagSource = 'extracted' | 'ai' | 'merged' | 'custom';
+export type TagSource = 'extracted' | 'ai' | 'custom';
 
 export interface TagsComparisonCardProps {
   /** Tags extracted from document */
@@ -113,13 +113,13 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
         <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-violet-50 to-purple-50 border-b">
           <div className="flex items-center gap-2">
             <Hash className="w-5 h-5 text-violet-600" />
-            <h3 className="font-semibold text-slate-900">内部标签 (Tags)</h3>
-            <Badge variant="secondary" className="text-xs">0 个</Badge>
+            <h3 className="font-semibold text-slate-900">內部標籤 (Tags)</h3>
+            <Badge variant="secondary" className="text-xs">0 個</Badge>
           </div>
         </div>
         <div className="p-4 text-center text-slate-500">
-          <p className="text-sm">暂无标签数据</p>
-          <p className="text-xs mt-1">标签将在 AI 优化后生成</p>
+          <p className="text-sm">暫無標籤數據</p>
+          <p className="text-xs mt-1">標籤將在 AI 優化後生成</p>
         </div>
       </Card>
     );
@@ -131,8 +131,9 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
       tags = extractedTags;
     } else if (source === 'ai') {
       tags = aiTagNames;
-    } else if (source === 'merged') {
-      tags = mergedTags;
+    } else if (source === 'custom') {
+      // Custom defaults to AI suggested tags
+      tags = aiTagNames;
     } else {
       tags = activeTags;
     }
@@ -164,12 +165,12 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
       >
         <div className="flex items-center gap-2">
           <Hash className="w-5 h-5 text-violet-600" />
-          <h3 className="font-semibold text-slate-900">内部标签 (Tags)</h3>
+          <h3 className="font-semibold text-slate-900">內部標籤 (Tags)</h3>
           <Badge variant="secondary" className="text-xs">
-            {activeTags.length} 个
+            {activeTags.length} 個
           </Badge>
           <span className="text-xs text-slate-500 ml-2">
-            WordPress 内部导航分类
+            WordPress 內部導航分類
           </span>
         </div>
         <button className="p-1 hover:bg-violet-200 rounded transition-colors">
@@ -198,14 +199,14 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
               <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50/80">
                 <div className="flex items-center gap-2">
                   <Hash className="w-4 h-4 text-violet-600" />
-                  <span className="text-sm font-medium text-slate-700">文档提取</span>
+                  <span className="text-sm font-medium text-slate-700">文檔提取</span>
                 </div>
                 <span
                   className={`text-xs px-2 py-0.5 rounded ${
                     statusColors[getCountStatus(extractedTags?.length || 0)]
                   }`}
                 >
-                  {extractedTags?.length || 0} 个
+                  {extractedTags?.length || 0} 個
                 </span>
               </div>
 
@@ -234,7 +235,7 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
                     })}
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-400 italic">文档中未提取到标签</p>
+                  <p className="text-sm text-slate-400 italic">文檔中未提取到標籤</p>
                 )}
               </div>
 
@@ -259,14 +260,14 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
                 <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-purple-50 to-fuchsia-50">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-purple-600" />
-                    <span className="text-sm font-medium text-purple-700">AI 推荐</span>
+                    <span className="text-sm font-medium text-purple-700">AI 推薦</span>
                   </div>
                   <span
                     className={`text-xs px-2 py-0.5 rounded ${
                       statusColors[getCountStatus(aiSuggestedTags?.length || 0)]
                     }`}
                   >
-                    {aiSuggestedTags?.length || 0} 个
+                    {aiSuggestedTags?.length || 0} 個
                   </span>
                 </div>
 
@@ -286,8 +287,8 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
                               ? 'bg-green-50 text-green-700 border-green-200 font-medium'
                               : getTagTypeColor(tagData.type)
                           }`}
-                          title={`相关度: ${Math.round(tagData.relevance * 100)}%${
-                            tagData.existing ? ' | 已存在' : ' | 新标签'
+                          title={`相關度: ${Math.round(tagData.relevance * 100)}%${
+                            tagData.existing ? ' | 已存在' : ' | 新標籤'
                           }${tagData.article_count ? ` | ${tagData.article_count}篇文章` : ''}`}
                         >
                           {isAdded && <Plus className="w-3 h-3" />}
@@ -315,7 +316,7 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
           {/* Diff summary (if both sources exist) */}
           {hasExtracted && hasAi && (tagDiff.added.length > 0 || tagDiff.removed.length > 0) && (
             <div className="mb-4 p-3 bg-slate-50 rounded-lg border">
-              <p className="text-xs font-medium text-slate-600 mb-2">变更摘要:</p>
+              <p className="text-xs font-medium text-slate-600 mb-2">變更摘要:</p>
               <div className="flex flex-wrap gap-2 text-xs">
                 {tagDiff.added.length > 0 && (
                   <span className="text-green-600">
@@ -342,7 +343,7 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
               <div className="flex items-start gap-2">
                 <span className="text-lg">🎯</span>
                 <div>
-                  <p className="text-xs font-medium text-purple-800 mb-1">AI 标签策略</p>
+                  <p className="text-xs font-medium text-purple-800 mb-1">AI 標籤策略</p>
                   <p className="text-sm text-purple-700">{aiStrategy}</p>
                 </div>
               </div>
@@ -352,7 +353,7 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
           {/* Tag type legend */}
           {hasAi && (
             <div className="mb-4 p-2 bg-slate-50 rounded border text-xs">
-              <span className="text-slate-500 mr-3">标签类型:</span>
+              <span className="text-slate-500 mr-3">標籤類型:</span>
               <span className="inline-flex items-center gap-1 mr-3">
                 <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                 主要
@@ -363,7 +364,7 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
               </span>
               <span className="inline-flex items-center gap-1">
                 <TrendingUp className="w-3 h-3 text-orange-500" />
-                热门
+                熱門
               </span>
             </div>
           )}
@@ -371,7 +372,7 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-3 border-t">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">当前选择:</span>
+              <span className="text-xs text-slate-500">當前選擇:</span>
               <div className="flex gap-1">
                 <button
                   onClick={() => handleSelectSource('extracted')}
@@ -381,7 +382,7 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  文档提取
+                  文檔提取
                 </button>
                 {hasAi && (
                   <>
@@ -393,24 +394,24 @@ export const TagsComparisonCard: React.FC<TagsComparisonCardProps> = ({
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      AI推荐
+                      AI推薦
                     </button>
                     <button
-                      onClick={() => handleSelectSource('merged')}
+                      onClick={() => handleSelectSource('custom')}
                       className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                        selectedSource === 'merged'
+                        selectedSource === 'custom'
                           ? 'bg-fuchsia-500 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      合并全部 ({mergedTags.length})
+                      自定義
                     </button>
                   </>
                 )}
               </div>
             </div>
             <div className="text-xs text-slate-400">
-              建议 {optimalCount[0]}-{optimalCount[1]} 个标签
+              建議 {optimalCount[0]}-{optimalCount[1]} 個標籤
             </div>
           </div>
         </div>

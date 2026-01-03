@@ -47,7 +47,7 @@ export const TitleReviewSection: React.FC<TitleReviewSectionProps> = ({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">标题审核</h3>
+        <h3 className="text-lg font-semibold text-gray-900">標題審核</h3>
         {isModified && (
           <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
             已修改
@@ -60,14 +60,14 @@ export const TitleReviewSection: React.FC<TitleReviewSectionProps> = ({
         <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-xs text-gray-500 mb-1">原始标题</div>
+              <div className="text-xs text-gray-500 mb-1">原始標題</div>
               <div className="text-sm text-gray-700">{originalTitle}</div>
             </div>
             <button
               type="button"
               onClick={handleResetToOriginal}
               className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 rounded transition-colors"
-              title="恢复原始标题"
+              title="恢復原始標題"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
@@ -78,7 +78,7 @@ export const TitleReviewSection: React.FC<TitleReviewSectionProps> = ({
       {/* Current title input */}
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          当前标题
+          當前標題
           <span className="ml-2 text-xs text-gray-500">
             ({title.length} 字符)
           </span>
@@ -87,12 +87,12 @@ export const TitleReviewSection: React.FC<TitleReviewSectionProps> = ({
           type="text"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
-          placeholder="输入文章标题"
+          placeholder="輸入文章標題"
           className="w-full"
         />
         {title.length > 60 && (
           <p className="text-xs text-amber-600">
-            ⚠️ 标题较长，建议保持在 60 字符以内以优化 SEO
+            ⚠️ 標題較長，建議保持在 60 字符以內以優化 SEO
           </p>
         )}
       </div>
@@ -101,25 +101,25 @@ export const TitleReviewSection: React.FC<TitleReviewSectionProps> = ({
       {title && (
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div className="p-2 bg-gray-50 rounded text-center">
-            <div className="text-gray-500">长度</div>
+            <div className="text-gray-500">長度</div>
             <div className={`font-medium ${title.length > 60 ? 'text-amber-600' : 'text-green-600'}`}>
-              {title.length <= 60 ? '✓ 良好' : '⚠ 过长'}
+              {title.length <= 60 ? '✓ 良好' : '⚠ 過長'}
             </div>
           </div>
           <div className="p-2 bg-gray-50 rounded text-center">
-            <div className="text-gray-500">可读性</div>
+            <div className="text-gray-500">可讀性</div>
             <div className="font-medium text-green-600">✓ 良好</div>
           </div>
           <div className="p-2 bg-gray-50 rounded text-center">
             <div className="text-gray-500">SEO</div>
-            <div className="font-medium text-green-600">✓ 优化</div>
+            <div className="font-medium text-green-600">✓ 優化</div>
           </div>
         </div>
       )}
 
       {/* Help text pointing to SEO Title section */}
       <p className="text-xs text-gray-500">
-        💡 需要 AI 标题建议？请查看下方的「SEO Title 选择」区块
+        💡 需要 AI 標題建議？請查看下方的「SEO Title 選擇」區塊
       </p>
     </div>
   );

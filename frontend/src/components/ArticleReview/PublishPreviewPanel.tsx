@@ -170,7 +170,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   // Handlers
   const handlePublishClick = () => {
     if (!isReadyToPublish) {
-      alert('请完成所有必填项');
+      alert('請完成所有必填項');
       return;
     }
     setShowConfirmation(true);
@@ -354,7 +354,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             className="flex items-center gap-2"
           >
             <RotateCcw className="w-4 h-4" />
-            重置设置
+            重置設置
           </Button>
           <Button
             onClick={handlePublishClick}

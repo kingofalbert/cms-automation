@@ -140,7 +140,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
       <div className="p-4 bg-white border border-gray-200 rounded-lg">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
           <Search className="w-4 h-4 text-blue-600" />
-          SEO 优化
+          SEO 優化
           {seo.score != null && (
             <span
               className={`ml-auto text-xs px-2 py-0.5 rounded-full ${
@@ -158,7 +158,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
         <div className="space-y-2.5">
           {/* Keywords */}
           <div>
-            <div className="text-xs text-gray-500 mb-1">关键词 ({seo.keywords.length})</div>
+            <div className="text-xs text-gray-500 mb-1">關鍵詞 ({seo.keywords.length})</div>
             {seo.keywords.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
                 {seo.keywords.map((keyword, idx) => (
@@ -172,7 +172,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
                 ))}
               </div>
             ) : (
-              <span className="text-sm text-gray-400 italic">未设置</span>
+              <span className="text-sm text-gray-400 italic">未設置</span>
             )}
           </div>
         </div>
@@ -182,12 +182,12 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
       <div className="p-4 bg-white border border-gray-200 rounded-lg">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
           <FolderTree className="w-4 h-4 text-purple-600" />
-          分类与标签
+          分類與標籤
         </h4>
         <div className="space-y-2.5">
           {/* Primary Category */}
           <div>
-            <div className="text-xs text-gray-500 mb-1">主分类</div>
+            <div className="text-xs text-gray-500 mb-1">主分類</div>
             {categories.primary ? (
               <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
                 {categories.primary}
@@ -195,7 +195,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
             ) : (
               <span className="text-sm text-amber-600 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                未设置
+                未設置
               </span>
             )}
           </div>
@@ -203,7 +203,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
           {categories.secondary.length > 0 && (
             <div>
               <div className="text-xs text-gray-500 mb-1">
-                副分类 ({categories.secondary.length})
+                副分類 ({categories.secondary.length})
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {categories.secondary.map((cat, idx) => (
@@ -218,7 +218,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
           <div>
             <div className="text-xs text-gray-500 mb-1 flex items-center gap-1">
               <Tag className="w-3 h-3" />
-              标签 ({tags.length})
+              標籤 ({tags.length})
             </div>
             {tags.length > 0 ? (
               <div className="flex flex-wrap gap-1.5">
@@ -233,7 +233,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
                 ))}
               </div>
             ) : (
-              <span className="text-sm text-gray-400 italic">无标签</span>
+              <span className="text-sm text-gray-400 italic">無標籤</span>
             )}
           </div>
         </div>
@@ -243,7 +243,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
       <div className="p-4 bg-white border border-gray-200 rounded-lg">
         <h4 className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-3">
           <BarChart3 className="w-4 h-4 text-green-600" />
-          文章统计
+          文章統計
         </h4>
         <div className="grid grid-cols-3 gap-2">
           <div className="p-2 bg-gray-50 rounded text-center">
@@ -265,7 +265,7 @@ export const MetadataSummaryPanel: React.FC<MetadataSummaryPanelProps> = ({
             <div className="text-lg font-semibold text-gray-900">~{readingTime}分</div>
             <div className="text-xs text-gray-500 flex items-center justify-center gap-1">
               <Clock className="w-3 h-3" />
-              阅读
+              閱讀
             </div>
           </div>
         </div>

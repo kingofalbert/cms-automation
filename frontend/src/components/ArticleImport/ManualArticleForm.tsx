@@ -16,7 +16,7 @@ import type { Article } from '@/types/api';
 import type { ArticleImportRequest } from '@/types/article';
 
 const articleSchema = z.object({
-  title: z.string().min(1, '标题不能为空').max(200, '标题最多 200 字符'),
+  title: z.string().min(1, '標題不能為空').max(200, '標題最多 200 字符'),
   excerpt: z.string().max(500, '摘要最多 500 字符').optional(),
   tags: z.string().optional(),
   categories: z.string().optional(),
@@ -78,18 +78,18 @@ export const ManualArticleForm: React.FC = () => {
       return response.data;
     },
     onSuccess: (data) => {
-      alert(`文章创建成功！ID: ${data.id}`);
+      alert(`文章創建成功！ID: ${data.id}`);
       handleReset();
     },
     onError: (error) => {
       const message = error.response?.data?.message ?? error.message;
-      alert(`创建失败: ${message}`);
+      alert(`創建失敗: ${message}`);
     },
   });
 
   const onSubmit = (data: ArticleFormData) => {
     if (!content || content.trim() === '') {
-      alert('文章内容不能为空');
+      alert('文章內容不能為空');
       return;
     }
 
@@ -119,8 +119,8 @@ export const ManualArticleForm: React.FC = () => {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       {/* Title */}
       <Input
-        label="文章标题"
-        placeholder="输入文章标题"
+        label="文章標題"
+        placeholder="輸入文章標題"
         error={errors.title?.message}
         fullWidth
         required
@@ -130,9 +130,9 @@ export const ManualArticleForm: React.FC = () => {
       {/* Excerpt */}
       <Textarea
         label="摘要"
-        placeholder="输入文章摘要（可选）"
+        placeholder="輸入文章摘要（可選）"
         error={errors.excerpt?.message}
-        helperText="用于 SEO 和文章列表展示"
+        helperText="用於 SEO 和文章列表展示"
         fullWidth
         rows={3}
         maxCharacters={500}
@@ -143,32 +143,32 @@ export const ManualArticleForm: React.FC = () => {
       {/* Content */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          文章内容 <span className="text-error-500">*</span>
+          文章內容 <span className="text-error-500">*</span>
         </label>
         <RichTextEditor
           content={content}
           onChange={setContent}
-          placeholder="开始撰写您的文章..."
+          placeholder="開始撰寫您的文章..."
           minHeight="400px"
         />
       </div>
 
       {/* Tags */}
       <Input
-        label="标签"
-        placeholder="输入标签，用逗号分隔（例如：技术, AI, 自动化）"
+        label="標籤"
+        placeholder="輸入標籤，用逗號分隔（例如：技術, AI, 自動化）"
         error={errors.tags?.message}
-        helperText="用逗号分隔多个标签"
+        helperText="用逗號分隔多個標籤"
         fullWidth
         {...register('tags')}
       />
 
       {/* Categories */}
       <Input
-        label="分类"
-        placeholder="输入分类，用逗号分隔（例如：技术, 教程）"
+        label="分類"
+        placeholder="輸入分類，用逗號分隔（例如：技術, 教程）"
         error={errors.categories?.message}
-        helperText="用逗号分隔多个分类"
+        helperText="用逗號分隔多個分類"
         fullWidth
         {...register('categories')}
       />
@@ -176,7 +176,7 @@ export const ManualArticleForm: React.FC = () => {
       {/* Images */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          图片上传
+          圖片上傳
         </label>
         <ImageUploadWidget images={images} onChange={setImages} maxImages={10} />
       </div>
@@ -191,10 +191,10 @@ export const ManualArticleForm: React.FC = () => {
           {importMutation.isPending ? (
             <>
               <Spinner size="sm" variant="white" className="mr-2" />
-              创建中...
+              創建中...
             </>
           ) : (
-            '创建文章'
+            '創建文章'
           )}
         </Button>
         <Button

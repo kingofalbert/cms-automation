@@ -59,12 +59,12 @@ export const KeywordEditor: React.FC<KeywordEditorProps> = ({
       {/* Focus Keyword */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700">
-          焦点关键词 <span className="text-red-500">*</span>
+          焦點關鍵詞 <span className="text-red-500">*</span>
         </label>
         <Input
           value={focusKeyword}
           onChange={(e) => onFocusKeywordChange(e.target.value)}
-          placeholder="输入主要关键词"
+          placeholder="輸入主要關鍵詞"
           fullWidth
         />
         {focusKeyword && (
@@ -72,7 +72,7 @@ export const KeywordEditor: React.FC<KeywordEditorProps> = ({
             <span className="text-gray-600">密度:</span>
             {getDensityBadge(focusKeyword)}
             <span className="text-gray-500 text-xs">
-              (建议 1-2.5%)
+              (建議 1-2.5%)
             </span>
           </div>
         )}
@@ -81,7 +81,7 @@ export const KeywordEditor: React.FC<KeywordEditorProps> = ({
       {/* Additional Keywords */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700">
-          辅助关键词
+          輔助關鍵詞
         </label>
 
         <div className="flex gap-2">
@@ -89,7 +89,7 @@ export const KeywordEditor: React.FC<KeywordEditorProps> = ({
             value={newKeyword}
             onChange={(e) => setNewKeyword(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="输入辅助关键词，按回车添加"
+            placeholder="輸入輔助關鍵詞，按回車添加"
             className="flex-1"
           />
           <button

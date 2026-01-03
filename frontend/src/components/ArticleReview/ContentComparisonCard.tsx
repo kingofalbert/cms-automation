@@ -178,7 +178,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
           <h3 className="font-semibold text-slate-900">{title}</h3>
           {selectedSource !== 'extracted' && (
             <Badge variant="info" className="text-xs">
-              {selectedSource === 'ai' ? 'AI优化' : '自定义'}
+              {selectedSource === 'ai' ? 'AI優化' : '自定義'}
             </Badge>
           )}
         </div>
@@ -209,7 +209,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
               <div className="flex items-center justify-between px-3 py-2 border-b bg-slate-50/80">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-slate-700">文档提取</span>
+                  <span className="text-sm font-medium text-slate-700">文檔提取</span>
                   <span className="text-xs text-slate-500">({extractedLength} 字)</span>
                 </div>
                 <button
@@ -218,7 +218,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                     handleCopy(extractedContent);
                   }}
                   className="p-1 hover:bg-slate-200 rounded"
-                  title="复制"
+                  title="複製"
                 >
                   <Copy className="w-3.5 h-3.5 text-slate-400" />
                 </button>
@@ -231,7 +231,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                     {extractedContent}
                   </p>
                 ) : (
-                  <p className="text-sm text-slate-400 italic">未提取到内容</p>
+                  <p className="text-sm text-slate-400 italic">未提取到內容</p>
                 )}
               </div>
 
@@ -272,7 +272,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                 <div className="flex items-center justify-between px-3 py-2 border-b bg-gradient-to-r from-emerald-50 to-teal-50">
                   <div className="flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm font-medium text-emerald-700">AI 优化建议</span>
+                    <span className="text-sm font-medium text-emerald-700">AI 優化建議</span>
                     <span className="text-xs text-emerald-600">({aiLength} 字)</span>
                   </div>
                   <button
@@ -281,7 +281,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                       handleCopy(aiSuggestedContent || '');
                     }}
                     className="p-1 hover:bg-emerald-100 rounded"
-                    title="复制"
+                    title="複製"
                   >
                     <Copy className="w-3.5 h-3.5 text-emerald-500" />
                   </button>
@@ -325,7 +325,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
               <div className="flex items-start gap-2">
                 <span className="text-lg">💡</span>
                 <div>
-                  <p className="text-xs font-medium text-amber-800 mb-1">AI 优化理由</p>
+                  <p className="text-xs font-medium text-amber-800 mb-1">AI 優化理由</p>
                   <p className="text-sm text-amber-700">{aiReasoning}</p>
                 </div>
               </div>
@@ -335,7 +335,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
           {/* Action buttons */}
           <div className="flex items-center justify-between pt-3 border-t">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">当前选择:</span>
+              <span className="text-xs text-slate-500">當前選擇:</span>
               <div className="flex gap-1">
                 <button
                   onClick={() => handleSelectSource('extracted')}
@@ -345,7 +345,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  文档提取
+                  文檔提取
                 </button>
                 {hasAi && (
                   <button
@@ -356,7 +356,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
-                    AI优化
+                    AI優化
                   </button>
                 )}
                 <button
@@ -376,7 +376,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
-                  自定义
+                  自定義
                 </button>
               </div>
             </div>
@@ -386,14 +386,14 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
           {isEditing && (
             <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-purple-800">自定义编辑</span>
+                <span className="text-sm font-medium text-purple-800">自定義編輯</span>
                 <span className="text-xs text-purple-600">{editValue.length} 字</span>
               </div>
               <textarea
                 value={editValue}
                 onChange={(e) => setEditValue(e.target.value)}
                 className="w-full h-32 p-3 text-sm border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-400 focus:border-purple-400"
-                placeholder="输入自定义内容..."
+                placeholder="輸入自定義內容..."
               />
               <div className="flex justify-end gap-2 mt-2">
                 <Button
@@ -408,7 +408,7 @@ export const ContentComparisonCard: React.FC<ContentComparisonCardProps> = ({
                   onClick={handleSaveCustom}
                   className="bg-purple-500 hover:bg-purple-600"
                 >
-                  应用
+                  應用
                 </Button>
               </div>
             </div>

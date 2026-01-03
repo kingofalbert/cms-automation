@@ -733,7 +733,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              SEO 评分概览
+              SEO 評分概覽
             </h4>
             <div className="grid grid-cols-4 gap-2">
               <div className="text-center p-1.5 bg-white rounded border">
@@ -749,14 +749,14 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
                     <div className={`text-base font-bold ${data.articleReview.seo.score >= 0.7 ? 'text-green-600' : data.articleReview.seo.score >= 0.5 ? 'text-amber-600' : 'text-red-600'}`}>
                       {Math.round(data.articleReview.seo.score * 100)}
                     </div>
-                    <div className="text-[10px] text-emerald-600">AI优化</div>
+                    <div className="text-[10px] text-emerald-600">AI優化</div>
                   </>
                 ) : (
                   <>
                     <div className={`text-base font-bold ${seoKeywords.length >= 5 && seoKeywords.length <= 10 ? 'text-green-600' : 'text-amber-600'}`}>
                       {seoKeywords.length >= 5 && seoKeywords.length <= 10 ? '✓' : '⚠'}
                     </div>
-                    <div className="text-[10px] text-slate-600">关键词</div>
+                    <div className="text-[10px] text-slate-600">關鍵詞</div>
                   </>
                 )}
               </div>
@@ -764,7 +764,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
                 <div className={`text-base font-bold ${tags.length >= 3 && tags.length <= 6 ? 'text-green-600' : 'text-amber-600'}`}>
                   {tags.length >= 3 && tags.length <= 6 ? '✓' : '⚠'}
                 </div>
-                <div className="text-[10px] text-slate-600">标签</div>
+                <div className="text-[10px] text-slate-600">標籤</div>
               </div>
               <div className="text-center p-1.5 bg-white rounded border">
                 {/* Total score: Factor in AI quality when using AI keywords */}
@@ -777,7 +777,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
                     (tags.length >= 3 ? 34 : tags.length * 11.3))
                   )}
                 </div>
-                <div className="text-[10px] text-slate-600">总分</div>
+                <div className="text-[10px] text-slate-600">總分</div>
               </div>
             </div>
           </Card>
@@ -940,7 +940,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
-                    AI 建议：FAQ Schema ({data.articleReview.faq_proposals.length} 个提案)
+                    AI 建議：FAQ Schema ({data.articleReview.faq_proposals.length} 個提案)
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                     {data.articleReview.faq_proposals.map((proposal, idx) => (
@@ -951,7 +951,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
                           </span>
                           {proposal.score !== null && proposal.score !== undefined && (
                             <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                              评分: {Math.round(proposal.score * 100)}
+                              評分: {Math.round(proposal.score * 100)}
                             </span>
                           )}
                         </div>
@@ -1073,7 +1073,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
             onClick={handleSave}
             disabled={!isDirty || isSaving}
           >
-            {isSaving ? '保存中...' : '保存解析数据'}
+            {isSaving ? '保存中...' : '保存解析數據'}
           </Button>
         </div>
       </div>

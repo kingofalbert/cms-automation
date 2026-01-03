@@ -188,7 +188,7 @@ export default function ArticleParsingPage() {
   };
 
   const handleRemoveImage = (imageId: number) => {
-    if (confirm('确定要删除这张图片吗？')) {
+    if (confirm('確定要刪除這張圖片嗎？')) {
       reviewImageMutation.mutate({
         imageId,
         action: 'remove',
@@ -220,7 +220,7 @@ export default function ArticleParsingPage() {
         <div>
           <h1 className="text-3xl font-bold">文章解析</h1>
           <p className="text-muted-foreground">
-            提取文章结构化数据 (标题、作者、正文、SEO、图片)
+            提取文章結構化數據 (標題、作者、正文、SEO、圖片)
           </p>
         </div>
         <Button variant="outline" onClick={() => navigate('/worklist')}>
@@ -232,9 +232,9 @@ export default function ArticleParsingPage() {
       {!parsingData && !isLoading && (
         <Card>
           <CardHeader>
-            <CardTitle>开始解析</CardTitle>
+            <CardTitle>開始解析</CardTitle>
             <CardDescription>
-              选择解析模式并开始提取文章数据
+              選擇解析模式並開始提取文章數據
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -249,7 +249,7 @@ export default function ArticleParsingPage() {
                 variant={parseMode === 'heuristic' ? 'primary' : 'outline'}
                 onClick={() => setParseMode('heuristic')}
               >
-                启发式模式 (快速)
+                啟發式模式 (快速)
               </Button>
             </div>
 
@@ -258,13 +258,13 @@ export default function ArticleParsingPage() {
               disabled={parseMutation.isPending}
               className="w-full"
             >
-              {parseMutation.isPending ? '解析中...' : '开始解析'}
+              {parseMutation.isPending ? '解析中...' : '開始解析'}
             </Button>
 
             {parseMutation.isError && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  解析失败: {(parseMutation.error as Error).message}
+                  解析失敗: {(parseMutation.error as Error).message}
                 </AlertDescription>
               </Alert>
             )}
@@ -274,7 +274,7 @@ export default function ArticleParsingPage() {
                 <AlertDescription>
                   ✅ 解析成功! 方法: {parseMutation.data.parsing_method}, 置信度:{' '}
                   {((parseMutation.data.parsing_confidence || 0) * 100).toFixed(0)}%,
-                  图片: {parseMutation.data.images_processed}
+                  圖片: {parseMutation.data.images_processed}
                 </AlertDescription>
               </Alert>
             )}
@@ -296,12 +296,12 @@ export default function ArticleParsingPage() {
           {/* Title & Author */}
           <Card>
             <CardHeader>
-              <CardTitle>标题与作者</CardTitle>
+              <CardTitle>標題與作者</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium text-muted-foreground">
-                  完整标题
+                  完整標題
                 </label>
                 <p className="text-2xl font-bold mt-1">
                   {parsingData.full_title}
@@ -311,7 +311,7 @@ export default function ArticleParsingPage() {
               {parsingData.title_prefix && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
-                    标题前缀
+                    標題前綴
                   </label>
                   <Badge variant="secondary" className="mt-1">
                     {parsingData.title_prefix}
@@ -322,7 +322,7 @@ export default function ArticleParsingPage() {
               {parsingData.title_suffix && (
                 <div>
                   <label className="text-sm font-medium text-muted-foreground">
-                    副标题
+                    副標題
                   </label>
                   <p className="mt-1">{parsingData.title_suffix}</p>
                 </div>
@@ -357,7 +357,7 @@ export default function ArticleParsingPage() {
                   {(parsingData.parsing_confidence * 100).toFixed(0)}%
                 </Badge>
                 {parsingData.parsing_confirmed && (
-                  <Badge variant="default">✓ 已确认</Badge>
+                  <Badge variant="default">✓ 已確認</Badge>
                 )}
               </div>
             </CardContent>
@@ -371,17 +371,17 @@ export default function ArticleParsingPage() {
                   <div className="text-center py-4">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
                     <p className="text-sm font-medium">
-                      正在后台生成 AI 优化建议...
+                      正在後台生成 AI 優化建議...
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      这通常需要 20-30 秒，生成完成后会自动显示
+                      這通常需要 20-30 秒，生成完成後會自動顯示
                     </p>
                   </div>
                 ) : parsingData.parsing_confirmed ? (
                   <Alert>
                     <AlertDescription>
-                      💡 提示：AI 优化建议将在解析确认后自动生成。
-                      如需重新生成，请点击下方按钮。
+                      💡 提示：AI 優化建議將在解析確認後自動生成。
+                      如需重新生成，請點擊下方按鈕。
                     </AlertDescription>
                     <Button
                       onClick={handleGenerateOptimizations}
@@ -391,13 +391,13 @@ export default function ArticleParsingPage() {
                     >
                       {generateOptimizationsMutation.isPending
                         ? '正在生成...'
-                        : '🔄 重新生成优化建议'}
+                        : '🔄 重新生成優化建議'}
                     </Button>
                   </Alert>
                 ) : (
                   <Alert>
                     <AlertDescription>
-                      💡 提示：确认解析结果后，系统将自动生成 AI 优化建议（标题、SEO、FAQ）
+                      💡 提示：確認解析結果後，系統將自動生成 AI 優化建議（標題、SEO、FAQ）
                     </AlertDescription>
                   </Alert>
                 )}
@@ -438,10 +438,10 @@ export default function ArticleParsingPage() {
                     className="w-full"
                     size="lg"
                   >
-                    下一步: 审核 SEO 和 FAQ →
+                    下一步: 審核 SEO 和 FAQ →
                   </Button>
                   <p className="text-sm text-muted-foreground text-center mt-2">
-                    查看和编辑 AI 生成的 SEO 关键词、Meta Description、标签和 FAQ
+                    查看和編輯 AI 生成的 SEO 關鍵詞、Meta Description、標籤和 FAQ
                   </p>
                 </CardContent>
               </Card>
@@ -452,7 +452,7 @@ export default function ArticleParsingPage() {
           {parsingData.has_seo_data && (
             <Card>
               <CardHeader>
-                <CardTitle>SEO 元数据</CardTitle>
+                <CardTitle>SEO 元數據</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {parsingData.meta_description && (
@@ -462,7 +462,7 @@ export default function ArticleParsingPage() {
                     </label>
                     <p className="mt-1">{parsingData.meta_description}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      长度: {parsingData.meta_description.length} 字符
+                      長度: {parsingData.meta_description.length} 字符
                     </p>
                   </div>
                 )}
@@ -470,7 +470,7 @@ export default function ArticleParsingPage() {
                 {parsingData.seo_keywords.length > 0 && (
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">
-                      关键词
+                      關鍵詞
                     </label>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {parsingData.seo_keywords.map((keyword, idx) => (
@@ -489,7 +489,7 @@ export default function ArticleParsingPage() {
           {parsingData.images.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>图片 ({parsingData.images.length})</CardTitle>
+                <CardTitle>圖片 ({parsingData.images.length})</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -510,7 +510,7 @@ export default function ArticleParsingPage() {
                                 type="text"
                                 value={newCaption}
                                 onChange={(e) => setNewCaption(e.target.value)}
-                                placeholder="输入新标题"
+                                placeholder="輸入新標題"
                                 className="w-full px-3 py-2 border rounded"
                               />
                               <div className="flex gap-2">
@@ -532,7 +532,7 @@ export default function ArticleParsingPage() {
                             </div>
                           ) : (
                             <p className="text-sm text-muted-foreground mt-1">
-                              {image.caption || '(无标题)'}
+                              {image.caption || '(無標題)'}
                             </p>
                           )}
                         </div>
@@ -545,7 +545,7 @@ export default function ArticleParsingPage() {
                               setNewCaption(image.caption || '');
                             }}
                           >
-                            编辑标题
+                            編輯標題
                           </Button>
                           <Button
                             size="sm"
@@ -553,7 +553,7 @@ export default function ArticleParsingPage() {
                             onClick={() => handleRemoveImage(image.id)}
                             disabled={reviewImageMutation.isPending}
                           >
-                            删除
+                            刪除
                           </Button>
                         </div>
                       </div>
@@ -667,7 +667,7 @@ export default function ArticleParsingPage() {
           {/* Body Preview */}
           <Card>
             <CardHeader>
-              <CardTitle>正文预览</CardTitle>
+              <CardTitle>正文預覽</CardTitle>
             </CardHeader>
             <CardContent>
               <SafeHtmlRenderer
@@ -676,7 +676,7 @@ export default function ArticleParsingPage() {
                 showIssues={true}
               />
               <p className="text-sm text-muted-foreground mt-4">
-                正文长度: {parsingData.body_html.length} 字符
+                正文長度: {parsingData.body_html.length} 字符
               </p>
             </CardContent>
           </Card>
@@ -692,11 +692,11 @@ export default function ArticleParsingPage() {
                   size="lg"
                 >
                   {confirmMutation.isPending
-                    ? '确认中...'
-                    : '✓ 确认解析结果并生成 AI 优化建议'}
+                    ? '確認中...'
+                    : '✓ 確認解析結果並生成 AI 優化建議'}
                 </Button>
                 <p className="text-sm text-muted-foreground text-center mt-2">
-                  确认后将自动生成标题优化、SEO关键词和FAQ建议
+                  確認後將自動生成標題優化、SEO關鍵詞和FAQ建議
                 </p>
               </CardContent>
             </Card>
