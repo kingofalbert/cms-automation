@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import re
 from datetime import datetime
+import html
 from html.parser import HTMLParser
 from typing import Any
 
@@ -465,14 +466,18 @@ class GoogleDriveSyncService:
         title = None
         body = content.strip()
 
-        # Strategy 1: Try to extract from HTML <h1> tag
-        h1_match = re.search(r'<h1[^>]*>(.*?)</h1>', content, re.IGNORECASE | re.DOTALL)
-        if h1_match:
-            # Remove HTML tags from h1 content
-            h1_text = re.sub(r'<[^>]+>', '', h1_match.group(1)).strip()
-            if h1_text and len(h1_text) >= 5:
-                title = h1_text[:500]
-                logger.info("google_drive_title_extracted_from_h1", title=title)
+        # Strategy 1: Try to extract from HTML heading tags (h1, h2, h3)
+        for heading_tag in ['h1', 'h2', 'h3']:
+            heading_match = re.search(rf'<{heading_tag}[^>]*>(.*?)</{heading_tag}>', content, re.IGNORECASE | re.DOTALL)
+            if heading_match:
+                # Remove HTML tags from heading content and decode HTML entities
+                heading_text = re.sub(r'<[^>]+>', '', heading_match.group(1)).strip()
+                heading_text = html.unescape(heading_text)  # Decode HTML entities like &#24863;
+                # Skip if it looks like a meta description (too long)
+                if heading_text and len(heading_text) >= 5 and len(heading_text) <= 100:
+                    title = heading_text[:500]
+                    logger.info("google_drive_title_extracted_from_heading", title=title, tag=heading_tag)
+                    break
 
         # Strategy 2: Look for first meaningful paragraph (10-200 chars)
         if not title:
