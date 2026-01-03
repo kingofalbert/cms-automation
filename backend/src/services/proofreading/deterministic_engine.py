@@ -1711,12 +1711,19 @@ class B3_005_BookTitleQuoteMixRule(DeterministicRule):
 
 
 class B4_003_ParenthesisSpacingRule(DeterministicRule):
-    """Check parenthesis spacing (B4-003)."""
+    """Check parenthesis spacing (B4-003).
 
-    # 括号前有空格
+    NOTE: This rule now excludes English names/text in parentheses.
+    In Chinese-English mixed text, it's correct to have a space before
+    parentheses containing English text (e.g., "利奧·巴博塔 (Leo Babauta)").
+    """
+
+    # 括号前有空格 - 但排除括号内是英文的情况
     SPACE_BEFORE_PAREN = re.compile(r"\s+[（(]")
     # 括号后有空格（中文环境）
     SPACE_AFTER_PAREN = re.compile(r"[）)]\s+(?=[\u4e00-\u9fff])")
+    # 检测括号内是否主要是英文（用于排除英文名字等情况）
+    ENGLISH_IN_PAREN = re.compile(r"[（(]([A-Za-z][A-Za-z\s\.\-\']+)[）)]")
 
     def __init__(self) -> None:
         super().__init__(
@@ -1728,12 +1735,64 @@ class B4_003_ParenthesisSpacingRule(DeterministicRule):
             can_auto_fix=True,
         )
 
+    def _is_english_content_in_paren(self, content: str, paren_pos: int) -> bool:
+        """Check if the parenthesis at given position contains English text.
+
+        Args:
+            content: The full content string
+            paren_pos: Position of the opening parenthesis
+
+        Returns:
+            True if the parenthesis contains primarily English text (like names)
+        """
+        # Find the matching closing parenthesis
+        open_char = content[paren_pos] if paren_pos < len(content) else ''
+        if open_char not in '（(':
+            return False
+
+        close_char = '）' if open_char == '（' else ')'
+
+        # Find the end of this parenthesis pair
+        depth = 1
+        end_pos = paren_pos + 1
+        while end_pos < len(content) and depth > 0:
+            if content[end_pos] in '（(':
+                depth += 1
+            elif content[end_pos] in '）)':
+                depth -= 1
+            end_pos += 1
+
+        if depth != 0:
+            return False
+
+        # Extract content inside parentheses
+        inner_content = content[paren_pos + 1:end_pos - 1].strip()
+
+        # Check if content is primarily English (contains English letters and
+        # has few or no Chinese characters)
+        english_chars = len([c for c in inner_content if c.isascii() and c.isalpha()])
+        chinese_chars = len([c for c in inner_content if '\u4e00' <= c <= '\u9fff'])
+
+        # If more than 50% English letters and at least 2 letters, consider it English content
+        total_alpha = english_chars + chinese_chars
+        if total_alpha > 0 and english_chars >= 2:
+            return english_chars / total_alpha > 0.5
+
+        return False
+
     def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
         issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
         # Check space before parenthesis
         for match in self.SPACE_BEFORE_PAREN.finditer(content):
+            paren_pos = match.end() - 1  # Position of the opening parenthesis
+
+            # Skip if the parenthesis contains English text (like names)
+            # This is correct formatting for Chinese-English mixed text
+            if self._is_english_content_in_paren(content, paren_pos):
+                continue
+
             snippet_start = max(0, match.start() - 10)
             snippet_end = min(len(content), match.end() + 10)
             snippet = content[snippet_start:snippet_end]
@@ -1756,8 +1815,26 @@ class B4_003_ParenthesisSpacingRule(DeterministicRule):
                 )
             )
 
-        # Check space after parenthesis
+        # Check space after parenthesis (only when followed by Chinese)
         for match in self.SPACE_AFTER_PAREN.finditer(content):
+            # Find the opening parenthesis for this closing one
+            close_pos = match.start()
+
+            # Search backwards for the matching opening parenthesis
+            depth = 1
+            open_pos = close_pos - 1
+            while open_pos >= 0 and depth > 0:
+                if content[open_pos] in '）)':
+                    depth += 1
+                elif content[open_pos] in '（(':
+                    depth -= 1
+                open_pos -= 1
+            open_pos += 1  # Adjust to the actual opening position
+
+            # Skip if the parenthesis contains English text
+            if open_pos >= 0 and self._is_english_content_in_paren(content, open_pos):
+                continue
+
             snippet_start = max(0, match.start() - 10)
             snippet_end = min(len(content), match.end() + 10)
             snippet = content[snippet_start:snippet_end]
