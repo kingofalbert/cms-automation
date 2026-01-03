@@ -6,11 +6,14 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from bs4 import BeautifulSoup
+
 from src.services.proofreading.models import (
     ArticlePayload,
     ProofreadingIssue,
     RuleSource,
 )
+from src.services.parser.html_utils import strip_html_tags
 from src.services.proofreading.rule_specs import (
     A4_INFORMAL_SPECS,
     D_TRANSLATION_SPECS,
@@ -7027,14 +7030,30 @@ class F2_003_ParagraphLengthRule(DeterministicRule):
         issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
-        # 按双换行符分段
-        paragraphs = content.split("\n\n")
+        # Fix: Properly extract paragraphs from HTML content
+        # Use BeautifulSoup to parse HTML and extract paragraph text
+        soup = BeautifulSoup(content, "html.parser")
+
+        # Extract text from <p> tags as paragraphs
+        # Also consider other block elements that might contain paragraph-like content
+        paragraphs = []
+        for tag in soup.find_all(['p', 'div']):
+            # Get text content, stripping nested tags
+            text = tag.get_text(strip=True)
+            if text and len(text) > 10:  # Skip empty or very short elements
+                paragraphs.append(text)
+
+        # If no HTML paragraphs found, fall back to double-newline splitting
+        # (for plain text content)
+        if not paragraphs:
+            paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
 
         for i, para in enumerate(paragraphs):
-            # 计算段落中文字符数
+            # 计算段落中文字符数 (count actual Chinese characters, not HTML tags)
             chinese_chars = len([c for c in para if "\u4e00" <= c <= "\u9fff"])
             if chinese_chars > self.MAX_PARAGRAPH_LENGTH:
-                snippet = para[:50] + "..." if len(para) > 50 else para
+                # Strip HTML from snippet for cleaner display
+                snippet = strip_html_tags(para[:80]) + "..." if len(para) > 80 else strip_html_tags(para)
                 issues.append(
                     ProofreadingIssue(
                         rule_id=self.rule_id,
@@ -7788,14 +7807,29 @@ class F3_005_DuplicateContentRule(DeterministicRule):
         issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
-        # 将内容分段
-        paragraphs = [p.strip() for p in content.split('\n\n') if p.strip() and not p.strip().startswith('#')]
+        # Fix: Properly extract paragraphs from HTML content
+        # Use BeautifulSoup to parse HTML and extract paragraph text
+        soup = BeautifulSoup(content, "html.parser")
+
+        # Extract text from <p> tags as paragraphs
+        paragraphs = []
+        for tag in soup.find_all(['p', 'div']):
+            text = tag.get_text(strip=True)
+            # Skip empty, very short, or heading-like elements
+            if text and len(text) > 10 and not text.startswith('#'):
+                paragraphs.append(text)
+
+        # If no HTML paragraphs found, fall back to double-newline splitting
+        if not paragraphs:
+            paragraphs = [p.strip() for p in content.split('\n\n') if p.strip() and not p.strip().startswith('#')]
 
         # 检查重复段落
         seen = {}
         for i, para in enumerate(paragraphs):
             if len(para) > 50:  # 只检查较长的段落
                 if para in seen:
+                    # Strip HTML from evidence for cleaner display
+                    evidence = strip_html_tags(para[:100]) if len(para) > 100 else strip_html_tags(para)
                     issues.append(
                         ProofreadingIssue(
                             rule_id=self.rule_id,
@@ -7810,7 +7844,7 @@ class F3_005_DuplicateContentRule(DeterministicRule):
                             source=RuleSource.SCRIPT,
                             attributed_by="F3_005_DuplicateContentRule",
                             location={},
-                            evidence=para[:100],
+                            evidence=evidence,
                         )
                     )
                     break  # 只报告第一个重复
