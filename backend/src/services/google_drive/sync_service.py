@@ -461,36 +461,49 @@ class GoogleDriveSyncService:
                 )
                 # Fall back to plain text parsing
 
-        # Fallback: Use file name as title if available, otherwise extract from content
-        if file_name:
-            # Use Google Drive file name as title (most reliable)
-            title = file_name[:500]
-            body = content.strip()
-        else:
-            # Extract from content as last resort
-            lines = [line.strip() for line in content.splitlines()]
+        # Fallback: Extract title from content first, then use file_name as last resort
+        title = None
+        body = content.strip()
+
+        # Strategy 1: Try to extract from HTML <h1> tag
+        h1_match = re.search(r'<h1[^>]*>(.*?)</h1>', content, re.IGNORECASE | re.DOTALL)
+        if h1_match:
+            # Remove HTML tags from h1 content
+            h1_text = re.sub(r'<[^>]+>', '', h1_match.group(1)).strip()
+            if h1_text and len(h1_text) >= 5:
+                title = h1_text[:500]
+                logger.info("google_drive_title_extracted_from_h1", title=title)
+
+        # Strategy 2: Look for first meaningful paragraph (10-200 chars)
+        if not title:
+            # Remove HTML tags and get text content
+            text_content = re.sub(r'<[^>]+>', '\n', content)
+            lines = [line.strip() for line in text_content.splitlines()]
             lines = [line for line in lines if line]
 
-            if not lines:
-                title = "Untitled Document"
-                body = ""
-            else:
-                # Try to find a reasonable title (skip CSS/style lines)
-                title = "Untitled Document"
-                title_line_idx = 0
+            for line in lines:
+                # Skip CSS/style patterns
+                if line.startswith('.') or line.startswith('#') or '{' in line or '}' in line:
+                    continue
+                # Skip very short or very long lines
+                if len(line) >= 10 and len(line) <= 200:
+                    title = line[:500]
+                    logger.info("google_drive_title_extracted_from_content", title=title)
+                    break
 
-                # Skip lines that look like CSS/style code
-                for idx, line in enumerate(lines):
-                    # Skip lines with CSS patterns
-                    if line.startswith('.') or line.startswith('#') or '{' in line or '}' in line:
-                        continue
-                    # Found a potential title
-                    if len(line) > 0:
-                        title = line[:500]
-                        title_line_idx = idx
-                        break
+        # Strategy 3: Use file name as last resort (but clean it up)
+        if not title and file_name:
+            # Remove common file prefixes like dates, IDs (e.g., "20250103-12345-")
+            cleaned_name = re.sub(r'^\d{6,8}[-_]?', '', file_name)  # Remove date prefix
+            cleaned_name = re.sub(r'^\d+[-_]', '', cleaned_name)    # Remove ID prefix
+            cleaned_name = re.sub(r'\.(docx?|gdoc|txt|html?)$', '', cleaned_name, flags=re.IGNORECASE)  # Remove extension
+            title = cleaned_name.strip() if cleaned_name.strip() else file_name
+            title = title[:500]
+            logger.info("google_drive_title_from_filename", title=title, original_filename=file_name)
 
-                body = "\n".join(lines[title_line_idx + 1:]) if len(lines) > title_line_idx + 1 else ""
+        # Final fallback
+        if not title:
+            title = "Untitled Document"
 
         return {
             "title": title,
