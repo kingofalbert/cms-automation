@@ -22,6 +22,7 @@ import { FileText, Eye, AlertCircle, AlertTriangle, Info, Check, X, CheckCircle,
 import { Button, Badge } from '../ui';
 import { DiffViewSection, type DiffStats } from './DiffViewSection';
 import { ProofreadingPreviewSection, type WordChange } from './ProofreadingPreviewSection';
+import { FinalPreviewSection } from './FinalPreviewSection';
 import { BatchApprovalControls } from './BatchApprovalControls';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import type { ProofreadingIssue, DecisionPayload, IssueSeverity, WarningLabel } from '../../types/worklist';
@@ -346,24 +347,30 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
       };
 
       // Add highlighted issue
+      // For accepted/modified: show subtle underline (closer to final effect)
+      // For pending/rejected: show background highlight
+      const isResolved = decisionStatus === 'accepted' || decisionStatus === 'modified';
+
       parts.push(
         <span
           key={`issue-${issue.id}`}
           data-issue-id={issue.id}
-          className={`cursor-pointer rounded px-0.5 transition-all inline ${
-            isSelected ? 'ring-2 ring-blue-500 ring-offset-1' : ''
+          className={`cursor-pointer transition-all inline ${
+            isSelected ? 'ring-2 ring-blue-500 ring-offset-1 rounded' : ''
           } ${
-            decisionStatus === 'accepted'
-              ? 'bg-green-100 hover:bg-green-200 text-green-800'
-              : decisionStatus === 'modified'
-                ? 'bg-purple-100 hover:bg-purple-200 text-purple-800'
-                : decisionStatus === 'rejected'
-                  ? 'bg-gray-100 text-gray-500'
+            isResolved
+              ? // Resolved: subtle underline, text appears natural
+                decisionStatus === 'accepted'
+                  ? 'border-b-2 border-green-400 hover:bg-green-50'
+                  : 'border-b-2 border-purple-400 hover:bg-purple-50'
+              : // Unresolved: background highlight
+                decisionStatus === 'rejected'
+                  ? 'bg-gray-100 text-gray-500 line-through rounded px-0.5'
                   : issue.severity === 'critical'
-                    ? 'bg-red-100 hover:bg-red-200'
+                    ? 'bg-red-100 hover:bg-red-200 rounded px-0.5'
                     : issue.severity === 'warning'
-                      ? 'bg-amber-100 hover:bg-amber-200'
-                      : 'bg-blue-100 hover:bg-blue-200'
+                      ? 'bg-amber-100 hover:bg-amber-200 rounded px-0.5'
+                      : 'bg-blue-100 hover:bg-blue-200 rounded px-0.5'
           }`}
           onClick={() => setSelectedIssue(issue)}
           title={getTitle()}
@@ -747,17 +754,18 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                   onClick={() => setContentViewMode('preview')}
                   className={`px-3 py-1.5 text-sm font-medium flex items-center justify-center gap-1.5 border-l border-gray-200 transition-colors ${
                     contentViewMode === 'preview'
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-emerald-600 text-white'
                       : 'bg-white text-gray-700 hover:bg-gray-50'
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  預覽
+                  最終效果
                 </button>
               </div>
               {/* Legend for article view */}
               {contentViewMode === 'article' && (
-                <div className="flex items-center gap-3 text-xs text-gray-500">
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span className="text-gray-400">待處理:</span>
                   <span className="flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-red-100 border border-red-200"></span>
                     嚴重
@@ -769,6 +777,16 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                   <span className="flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span>
                     資訊
+                  </span>
+                  <span className="text-gray-300">|</span>
+                  <span className="text-gray-400">已處理:</span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-4 border-b-2 border-green-400"></span>
+                    接受
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-4 border-b-2 border-purple-400"></span>
+                    自訂
                   </span>
                 </div>
               )}
@@ -799,11 +817,11 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                 hasDiffData={!!data.articleReview?.content?.changes}
               />
             ) : (
-              <ProofreadingPreviewSection
-                originalContent={data.articleReview?.content?.original || ''}
-                proofreadContent={data.articleReview?.content?.suggested || (data.metadata?.proofread_content as string) || data.articleReview?.content?.original || ''}
-                diffStats={data.articleReview?.content?.changes?.stats as DiffStats | undefined}
-                wordChanges={data.articleReview?.content?.changes?.word_changes as WordChange[] | undefined}
+              <FinalPreviewSection
+                title={data.title}
+                originalContent={data.articleReview?.content?.original || data.metadata?.body_html as string || ''}
+                issues={issues}
+                decisions={decisions}
               />
             )}
           </div>

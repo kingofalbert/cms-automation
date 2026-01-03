@@ -54,6 +54,10 @@ export type { ProofreadingIssuesSectionProps } from './ProofreadingIssuesSection
 export { BatchApprovalControls } from './BatchApprovalControls';
 export type { BatchApprovalControlsProps } from './BatchApprovalControls';
 
+// Phase 8.7: WYSIWYG Final Effect Preview
+export { FinalPreviewSection } from './FinalPreviewSection';
+export type { FinalPreviewSectionProps } from './FinalPreviewSection';
+
 export { PublishPreviewPanel } from './PublishPreviewPanel';
 export type { PublishPreviewPanelProps, PublishSettings } from './PublishPreviewPanel';
 
