@@ -101,6 +101,12 @@ class WorklistItemDetailResponse(WorklistItemResponse):
         description="How extracted FAQs were detected: text_markers, html_comment, css_class, etc."
     )
 
+    # AI-generated FAQs from unified optimization
+    ai_faqs: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="AI-generated FAQ suggestions from article_faqs table"
+    )
+
     # Phase 15: Category fields for auto-save persistence
     primary_category: str | None = Field(
         default=None,

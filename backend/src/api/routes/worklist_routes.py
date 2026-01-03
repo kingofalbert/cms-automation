@@ -26,7 +26,7 @@ from src.api.schemas import (
 )
 from src.config.database import get_session
 from src.config.logging import get_logger
-from src.models import Article, ProofreadingDecision, WorklistItem
+from src.models import Article, ArticleFAQ, ProofreadingDecision, WorklistItem
 from src.services.worklist import WorklistService
 
 logger = get_logger(__name__)
@@ -557,6 +557,29 @@ async def _serialize_item_detail(
         extracted_faqs = article.extracted_faqs
         extracted_faqs_detection_method = article.extracted_faqs_detection_method
 
+    # Load AI-generated FAQs from article_faqs table
+    ai_faqs = None
+    if article:
+        faq_stmt = select(ArticleFAQ).where(ArticleFAQ.article_id == article.id).order_by(ArticleFAQ.position)
+        faq_result = await session.execute(faq_stmt)
+        faq_records = faq_result.scalars().all()
+        if faq_records:
+            ai_faqs = [
+                {
+                    "id": faq.id,
+                    "question": faq.question,
+                    "answer": faq.answer,
+                    "question_type": faq.question_type,
+                    "search_intent": faq.search_intent,
+                    "keywords_covered": faq.keywords_covered or [],
+                    "confidence": faq.confidence,
+                    "position": faq.position,
+                    "status": faq.status,
+                    "safety_warning": faq.safety_warning,
+                }
+                for faq in faq_records
+            ]
+
     # Phase 15: Get category fields from article for auto-save persistence
     primary_category = None
     secondary_categories = []
@@ -594,6 +617,8 @@ async def _serialize_item_detail(
         # Phase 14: Extracted FAQs from original article
         extracted_faqs=extracted_faqs,
         extracted_faqs_detection_method=extracted_faqs_detection_method,
+        # AI-generated FAQs from article_faqs table
+        ai_faqs=ai_faqs,
         # Phase 15: Category fields for auto-save persistence
         primary_category=primary_category,
         secondary_categories=secondary_categories or [],
