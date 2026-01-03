@@ -490,8 +490,12 @@ class GoogleDriveSyncService:
                     continue
                 if re.match(r'^(記者|作者|撰文|文字)', line):
                     continue
-                # Skip very short or very long lines
-                if len(line) >= 10 and len(line) <= 200:
+                # Skip image captions (圖說, 圖片來源, 圖:)
+                if re.match(r'^(圖說|圖片來源|圖\s*[：:]|圖/)', line):
+                    continue
+                # Skip lines that look like descriptions (too long, > 80 chars typically)
+                # Good titles are usually 10-80 characters
+                if len(line) >= 10 and len(line) <= 80:
                     title = line[:500]
                     logger.info("google_drive_title_extracted_from_content", title=title)
                     break
