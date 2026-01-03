@@ -6,6 +6,7 @@
  */
 
 // Category hierarchy: Primary Category -> Secondary Categories
+// Updated 2026-01-03: New category structure from DJY Health website menu
 export const CATEGORY_HIERARCHY: Record<string, string[]> = {
   // 食療養生 - Food Therapy & Health Preservation
   "食療養生": [
@@ -16,70 +17,50 @@ export const CATEGORY_HIERARCHY: Record<string, string[]> = {
     "清肺潤喉",
     "祛濕排毒",
     "健腎健脾",
-    "茶 & 湯",
     "四季養生",
-    "保健品",
     "養肝養胃",
-    "改善記憶力",
   ],
 
   // 中醫寶典 - Traditional Chinese Medicine
   "中醫寶典": [
+    "中醫保健",
     "經絡調理",
     "整合醫學",
-    "延緩衰老",
-    "中醫理療",
-    "中醫保健",
     "中醫減肥",
     "中草藥",
   ],
 
-  // 心靈正念 - Mindfulness & Mental Health
-  "心靈正念": [
-    "正念冥想",
-    "正念飲食",
-    "感恩筆記",
-    "心靈療癒",
-    "正念社交",
-    "正念消費",
-  ],
-
-  // 醫師專欄 - Doctor's Column
-  "醫師專欄": [],
-
-  // 健康新聞 - Health News
-  "健康新聞": [],
+  // 心靈正念 - Mindfulness & Mental Health (no subcategories)
+  "心靈正念": [],
 
   // 健康生活 - Healthy Living
   "健康生活": [
-    "運動養生",
     "居家樂活",
+    "運動養生",
     "抗老減重",
     "人生健康站",
+    "改善記憶力",
   ],
 
-  // 醫療科技 - Medical Technology
-  "醫療科技": [],
+  // 病症查詢 - Disease Lookup (no subcategories)
+  "病症查詢": [],
 
-  // 精選內容 - Featured Content
-  "精選內容": [
-    "特別報導",
-    "必備指南",
-    "原創系列",
+  // 健康專題 - Health Topics
+  "健康專題": [
+    "糖尿病教育專區",
   ],
 
-  // 診室外的醫話 - Doctor's Stories Outside the Clinic
-  "診室外的醫話": [],
+  // 醫師專欄 - Doctor's Column (no subcategories)
+  "醫師專欄": [],
 
-  // 每日呵護 - Daily Care
-  "每日呵護": [
-    "今晚睡得好",
-    "健康小任務",
-    "一念舒心",
-    "每週一穴",
-    "今日一方",
-    "節氣與生活",
-    "每日一靜心",
+  // 更多 - More
+  "更多": [
+    "健康新聞",
+    "健康圖解",
+    "醫療科技",
+    "療癒故事",
+    "直播",
+    "精選內容",
   ],
 };
 

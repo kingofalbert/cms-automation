@@ -13,7 +13,7 @@ To update the category list:
 from typing import Final
 
 # DJY Health website category hierarchy (繁體中文)
-# Based on: DJY Health內容表3.0.xlsx - 網站類別 sheet
+# Updated 2026-01-03: New category structure from DJY Health website menu
 CATEGORY_HIERARCHY: Final[dict[str, list[str]]] = {
     # 食療養生 - Food Therapy & Health Preservation
     "食療養生": [
@@ -24,70 +24,50 @@ CATEGORY_HIERARCHY: Final[dict[str, list[str]]] = {
         "清肺潤喉",
         "祛濕排毒",
         "健腎健脾",
-        "茶 & 湯",
         "四季養生",
-        "保健品",
         "養肝養胃",
-        "改善記憶力",
     ],
 
     # 中醫寶典 - Traditional Chinese Medicine
     "中醫寶典": [
+        "中醫保健",
         "經絡調理",
         "整合醫學",
-        "延緩衰老",
-        "中醫理療",
-        "中醫保健",
         "中醫減肥",
         "中草藥",
     ],
 
-    # 心靈正念 - Mindfulness & Mental Health
-    "心靈正念": [
-        "正念冥想",
-        "正念飲食",
-        "感恩筆記",
-        "心靈療癒",
-        "正念社交",
-        "正念消費",
-    ],
-
-    # 醫師專欄 - Doctor's Column (no subcategories listed in source)
-    "醫師專欄": [],
-
-    # 健康新聞 - Health News (no subcategories listed in source)
-    "健康新聞": [],
+    # 心靈正念 - Mindfulness & Mental Health (no subcategories)
+    "心靈正念": [],
 
     # 健康生活 - Healthy Living
     "健康生活": [
-        "運動養生",
         "居家樂活",
+        "運動養生",
         "抗老減重",
         "人生健康站",
+        "改善記憶力",
     ],
 
-    # 醫療科技 - Medical Technology (no subcategories listed in source)
-    "醫療科技": [],
+    # 病症查詢 - Disease Lookup (no subcategories)
+    "病症查詢": [],
 
-    # 精選內容 - Featured Content
-    "精選內容": [
-        "特別報導",
-        "必備指南",
-        "原創系列",
+    # 健康專題 - Health Topics
+    "健康專題": [
+        "糖尿病教育專區",
     ],
 
-    # 診室外的醫話 - Doctor's Stories Outside the Clinic (no subcategories)
-    "診室外的醫話": [],
+    # 醫師專欄 - Doctor's Column (no subcategories)
+    "醫師專欄": [],
 
-    # 每日呵護 - Daily Care (special daily content section)
-    "每日呵護": [
-        "今晚睡得好",
-        "健康小任務",
-        "一念舒心",
-        "每週一穴",
-        "今日一方",
-        "節氣與生活",
-        "每日一靜心",
+    # 更多 - More (contains various content types)
+    "更多": [
+        "健康新聞",
+        "健康圖解",
+        "醫療科技",
+        "療癒故事",
+        "直播",
+        "精選內容",
     ],
 }
 
@@ -102,10 +82,10 @@ for primary, secondaries in CATEGORY_HIERARCHY.items():
 
 # Keywords to category mapping for quick matching
 # Used as hints before AI classification
+# Updated 2026-01-03: Adjusted for new category structure
 KEYWORD_CATEGORY_HINTS: Final[dict[str, str]] = {
     # 食療養生 keywords
     "血糖": "食療養生",
-    "糖尿病": "食療養生",
     "助眠": "食療養生",
     "失眠": "食療養生",
     "補血": "食療養生",
@@ -116,7 +96,7 @@ KEYWORD_CATEGORY_HINTS: Final[dict[str, str]] = {
     "養胃": "食療養生",
     "茶": "食療養生",
     "湯": "食療養生",
-    "保健品": "食療養生",
+    "四季養生": "食療養生",
 
     # 中醫寶典 keywords
     "中醫": "中醫寶典",
@@ -134,8 +114,6 @@ KEYWORD_CATEGORY_HINTS: Final[dict[str, str]] = {
     "冥想": "心靈正念",
     "靜心": "心靈正念",
     "心靈": "心靈正念",
-    "療癒": "心靈正念",
-    "感恩": "心靈正念",
     "心理健康": "心靈正念",
 
     # 健康生活 keywords
@@ -144,18 +122,26 @@ KEYWORD_CATEGORY_HINTS: Final[dict[str, str]] = {
     "減重": "健康生活",
     "健身": "健康生活",
     "居家": "健康生活",
+    "記憶力": "健康生活",
 
-    # 醫療科技 keywords
-    "AI醫療": "醫療科技",
-    "醫療科技": "醫療科技",
-    "基因": "醫療科技",
-    "新藥": "醫療科技",
+    # 病症查詢 keywords
+    "症狀": "病症查詢",
+    "病症": "病症查詢",
+    "疾病": "病症查詢",
 
-    # 健康新聞 keywords
-    "疫情": "健康新聞",
-    "疫苗": "健康新聞",
-    "病毒": "健康新聞",
-    "研究": "健康新聞",
+    # 健康專題 keywords
+    "糖尿病": "健康專題",
+
+    # 更多 keywords (健康新聞, 醫療科技 now under 更多)
+    "疫情": "更多",
+    "疫苗": "更多",
+    "病毒": "更多",
+    "研究": "更多",
+    "AI醫療": "更多",
+    "醫療科技": "更多",
+    "基因": "更多",
+    "新藥": "更多",
+    "療癒故事": "更多",
 }
 
 

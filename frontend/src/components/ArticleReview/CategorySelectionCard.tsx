@@ -32,20 +32,14 @@ import {
   FolderTree,
   Folders,
 } from 'lucide-react';
+import { CATEGORY_HIERARCHY, PRIMARY_CATEGORIES, getSecondaryCategories } from '../../config/wordpressTaxonomy';
 
-// WordPress category options (matching backend)
-const CATEGORY_OPTIONS = [
-  { id: 'food-therapy', name: '食療養生', slug: 'food-therapy' },
-  { id: 'tcm', name: '中醫寶典', slug: 'tcm' },
-  { id: 'mindfulness', name: '心靈正念', slug: 'mindfulness' },
-  { id: 'doctor-column', name: '醫師專欄', slug: 'doctor-column' },
-  { id: 'health-news', name: '健康新聞', slug: 'health-news' },
-  { id: 'healthy-living', name: '健康生活', slug: 'healthy-living' },
-  { id: 'medical-tech', name: '醫療科技', slug: 'medical-tech' },
-  { id: 'featured', name: '精選內容', slug: 'featured' },
-  { id: 'doctor-stories', name: '診室外的醫話', slug: 'doctor-stories' },
-  { id: 'daily-care', name: '每日呵護', slug: 'daily-care' },
-];
+// WordPress category options derived from CATEGORY_HIERARCHY
+const CATEGORY_OPTIONS = PRIMARY_CATEGORIES.map((name, index) => ({
+  id: `category-${index}`,
+  name,
+  slug: name,
+}));
 
 export interface AICategoryRecommendation {
   category: string;
@@ -130,19 +124,39 @@ export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
 
   // Handle secondary category toggle
   const handleSecondaryToggle = (category: string) => {
-    // Cannot select primary category as secondary
-    if (category === primaryCategory) return;
-
     const newSecondaries = secondaryCategories.includes(category)
       ? secondaryCategories.filter((c) => c !== category)
       : [...secondaryCategories, category];
     onSecondaryCategoriesChange(newSecondaries);
   };
 
-  // Get available secondary categories (exclude primary)
+  // Get available secondary categories based on selected primary category
   const availableSecondaryCategories = useMemo(() => {
-    return CATEGORY_OPTIONS.filter((c) => c.name !== primaryCategory);
+    if (!primaryCategory) return [];
+    const secondaries = getSecondaryCategories(primaryCategory);
+    return secondaries.map((name, index) => ({
+      id: `secondary-${index}`,
+      name,
+      slug: name,
+    }));
   }, [primaryCategory]);
+
+  // Check if primary category has secondary categories
+  const hasSecondaryCategories = availableSecondaryCategories.length > 0;
+
+  // Clear secondary categories when primary category changes
+  useEffect(() => {
+    if (primaryCategory && secondaryCategories.length > 0) {
+      // Filter out any secondary categories that are not valid for the new primary
+      const validSecondaries = getSecondaryCategories(primaryCategory);
+      const filteredSecondaries = secondaryCategories.filter((c) =>
+        validSecondaries.includes(c)
+      );
+      if (filteredSecondaries.length !== secondaryCategories.length) {
+        onSecondaryCategoriesChange(filteredSecondaries);
+      }
+    }
+  }, [primaryCategory, secondaryCategories, onSecondaryCategoriesChange]);
 
   // Confidence color based on score
   const getConfidenceColor = (confidence: number): string => {
@@ -273,7 +287,8 @@ export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
         </div>
       </div>
 
-      {/* Secondary Categories Section */}
+      {/* Secondary Categories Section - Only show if primary has subcategories */}
+      {hasSecondaryCategories && (
       <div>
         {/* Header */}
         <div
@@ -282,7 +297,7 @@ export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
         >
           <div className="flex items-center gap-2">
             <Folders className="w-5 h-5 text-slate-600" />
-            <h3 className="font-medium text-slate-700">副分類 (Secondary Categories)</h3>
+            <h3 className="font-medium text-slate-700">二級分類 (Sub Categories)</h3>
             <span className="text-xs text-slate-400">可選</span>
           </div>
           <button className="p-1 hover:bg-slate-200 rounded transition-colors">
@@ -298,7 +313,7 @@ export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
         {isSecondaryExpanded && (
           <div className="p-4">
             <p className="text-xs text-slate-500 mb-3">
-              讓文章同時出現在其他分類列表頁面（可多選，最多3個）
+              選擇「{primaryCategory}」的二級分類（可多選，最多3個）
             </p>
 
             {/* AI Recommendations for Secondary Categories */}
@@ -395,12 +410,13 @@ export const CategorySelectionCard: React.FC<CategorySelectionCardProps> = ({
             </div>
             {secondaryCategories.length > 0 && (
               <p className="mt-2 text-xs text-slate-500">
-                已選 {secondaryCategories.length}/3 個副分類
+                已選 {secondaryCategories.length}/3 個二級分類
               </p>
             )}
           </div>
         )}
       </div>
+      )}
     </Card>
   );
 };
