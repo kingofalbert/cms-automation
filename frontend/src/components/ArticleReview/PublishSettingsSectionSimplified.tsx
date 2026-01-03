@@ -1,21 +1,19 @@
 /**
- * PublishSettingsSectionSimplified - Simplified publish settings (actions only)
+ * PublishSettingsSectionSimplified - Simplified upload settings
  *
- * Phase 11: Moved content-related settings to ParsingReviewPanel
+ * Phase 12: Clarified "上稿" workflow
+ * - Articles are ALWAYS uploaded as DRAFT to WordPress
+ * - Final publishing is done by editors in WordPress admin
+ * - Only visibility settings are configurable (for when article is eventually published)
+ *
  * This component now only handles:
- * - Publish status: draft/publish/schedule
- * - Publish date (for scheduled)
- * - Visibility: public/private/password
+ * - Visibility: public/private/password (applied when published in WP)
  *
- * Removed (now in ParsingReviewPanel):
- * - Primary/Secondary categories
- * - Tags
- * - Featured image
- * - Excerpt
+ * NOTE: "上稿" means upload to WordPress as draft, NOT publish
  */
 
 import React from 'react';
-import { Calendar, Eye, Lock, Send } from 'lucide-react';
+import { Eye, Lock, Upload, Info } from 'lucide-react';
 
 export interface PublishSettingsSectionSimplifiedProps {
   publishStatus: 'draft' | 'publish' | 'schedule';
@@ -32,72 +30,39 @@ export interface PublishSettingsSectionSimplifiedProps {
  * PublishSettingsSectionSimplified Component
  */
 export const PublishSettingsSectionSimplified: React.FC<PublishSettingsSectionSimplifiedProps> = ({
-  publishStatus,
   visibility,
   password,
-  publishDate,
-  onPublishStatusChange,
   onVisibilityChange,
   onPasswordChange,
-  onPublishDateChange,
 }) => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Send className="w-5 h-5 text-blue-600" />
-        <h3 className="text-lg font-semibold text-gray-900">发布设置</h3>
+        <Upload className="w-5 h-5 text-blue-600" />
+        <h3 className="text-lg font-semibold text-gray-900">上稿設置</h3>
       </div>
 
-      {/* Publish Status */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          发布状态
-        </label>
-        <div className="grid grid-cols-3 gap-2">
-          {(['publish', 'draft', 'schedule'] as const).map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => onPublishStatusChange(status)}
-              className={`px-4 py-3 text-sm rounded-lg border-2 transition-all ${
-                publishStatus === status
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-md'
-                  : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
-              }`}
-            >
-              {status === 'publish' && '立即发布'}
-              {status === 'draft' && '保存草稿'}
-              {status === 'schedule' && '定时发布'}
-            </button>
-          ))}
+      {/* Info Banner - Explains what "上稿" means */}
+      <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-medium mb-1">什麼是「上稿」？</p>
+            <ul className="list-disc list-inside space-y-1 text-blue-700">
+              <li>文章將上傳到 WordPress 並保存為<strong>草稿</strong></li>
+              <li>文章<strong>不會</strong>直接發布到網站</li>
+              <li>最終審稿編輯可在 WordPress 後台審核後再發布</li>
+            </ul>
+          </div>
         </div>
       </div>
 
-      {/* Publish Date (only for schedule) */}
-      {publishStatus === 'schedule' && (
-        <div className="space-y-2 p-4 bg-amber-50 rounded-lg border border-amber-200">
-          <label className="text-sm font-medium text-amber-800 flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            定时发布时间 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            value={publishDate}
-            onChange={(e) => onPublishDateChange(e.target.value)}
-            className="w-full px-3 py-2 border border-amber-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
-          />
-          {!publishDate && (
-            <p className="text-xs text-amber-600">请选择发布时间</p>
-          )}
-        </div>
-      )}
-
-      {/* Visibility */}
+      {/* Visibility - For when article is eventually published */}
       <div className="space-y-3">
         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
           <Eye className="w-4 h-4" />
-          可见性
+          可見性設置
+          <span className="text-xs text-gray-500 font-normal">（發布時生效）</span>
         </label>
         <div className="grid grid-cols-3 gap-2">
           {(['public', 'private', 'password'] as const).map((vis) => (
@@ -111,12 +76,15 @@ export const PublishSettingsSectionSimplified: React.FC<PublishSettingsSectionSi
                   : 'bg-white text-gray-700 border-gray-200 hover:border-green-300 hover:bg-green-50'
               }`}
             >
-              {vis === 'public' && '公开'}
+              {vis === 'public' && '公開'}
               {vis === 'private' && '私密'}
-              {vis === 'password' && '密码保护'}
+              {vis === 'password' && '密碼保護'}
             </button>
           ))}
         </div>
+        <p className="text-xs text-gray-500">
+          此設置將在 WordPress 後台最終發布時套用
+        </p>
       </div>
 
       {/* Password (only for password visibility) */}
@@ -124,39 +92,35 @@ export const PublishSettingsSectionSimplified: React.FC<PublishSettingsSectionSi
         <div className="space-y-2 p-4 bg-purple-50 rounded-lg border border-purple-200">
           <label className="text-sm font-medium text-purple-800 flex items-center gap-2">
             <Lock className="w-4 h-4" />
-            访问密码 <span className="text-red-500">*</span>
+            訪問密碼 <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
-            placeholder="设置访问密码"
+            placeholder="設置訪問密碼"
             className="w-full px-3 py-2 border border-purple-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
           />
           {!password && (
-            <p className="text-xs text-purple-600">请设置访问密码</p>
+            <p className="text-xs text-purple-600">請設置訪問密碼</p>
           )}
         </div>
       )}
 
       {/* Summary Info */}
       <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-        <h4 className="text-sm font-medium text-slate-700 mb-2">发布摘要</h4>
+        <h4 className="text-sm font-medium text-slate-700 mb-2">上稿摘要</h4>
         <div className="space-y-1 text-sm text-slate-600">
           <p>
-            <span className="text-slate-500">状态：</span>
-            <span className="font-medium">
-              {publishStatus === 'publish' && '立即发布'}
-              {publishStatus === 'draft' && '保存为草稿'}
-              {publishStatus === 'schedule' && `定时发布 ${publishDate || '(未设置)'}`}
-            </span>
+            <span className="text-slate-500">上稿模式：</span>
+            <span className="font-medium text-green-600">草稿（不發布）</span>
           </p>
           <p>
-            <span className="text-slate-500">可见性：</span>
+            <span className="text-slate-500">可見性：</span>
             <span className="font-medium">
-              {visibility === 'public' && '公开'}
+              {visibility === 'public' && '公開'}
               {visibility === 'private' && '私密'}
-              {visibility === 'password' && '密码保护'}
+              {visibility === 'password' && '密碼保護'}
             </span>
           </p>
         </div>

@@ -1,16 +1,14 @@
 /**
- * PublishPreviewPanel - Unified publish preview with content-first layout
+ * PublishPreviewPanel - Upload preview with content-first layout
  *
- * Phase 11.5: Enhanced Publish Preview
- * - Content-first layout (60% content, 40% metadata)
- * - Publish readiness checklist
- * - Full article preview with proper HTML rendering
- * - Comprehensive metadata summary
- * - Compact publish settings
+ * Phase 12: Clarified "上稿" workflow
+ * - Articles are ALWAYS uploaded as DRAFT to WordPress
+ * - Final publishing is done by editors in WordPress admin
+ * - "上稿" = Upload to WP as draft, NOT publish
  *
  * Layout:
  * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │ 发布预览                                                   [状态: 准备就绪] │
+ * │ 上稿預覽                                            [状态: ready_to_publish] │
  * ├─────────────────────────────────────────────────────────────────────────────┤
  * │ ✓ 标题  ✓ 正文  ✓ SEO  ✓ 分类  ○ 图片  │  4/5 完成   [准备就绪]            │
  * ├────────────────────────────────────────────┬────────────────────────────────┤
@@ -28,14 +26,13 @@
  * │                                            │ ──────────────────────────      │
  * │                                            │ 文章统计                        │
  * │                                            │ • 字数: 2,345                   │
- * │                                            │ • 阅读时间: ~5分钟              │
  * │                                            │ ──────────────────────────      │
  * │                                            │ 校对摘要                        │
  * │                                            │ • 新增: 5 修改: 7 删除: 2       │
  * ├────────────────────────────────────────────┴────────────────────────────────┤
- * │ 发布设置: [○ 立即发布] [○ 定时发布] [○ 保存草稿]   可见性: [公开 ▼]         │
+ * │ 上稿設置: [草稿模式]   可見性: [公開 ▼]                                     │
  * ├─────────────────────────────────────────────────────────────────────────────┤
- * │                                                    [重置设置]  [确认发布 →] │
+ * │                                                    [重置设置]    [上稿 →]   │
  * └─────────────────────────────────────────────────────────────────────────────┘
  */
 
@@ -201,7 +198,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   };
 
   const handleReset = () => {
-    setPublishStatus('publish');
+    setPublishStatus('draft'); // Always default to draft - we don't publish directly
     setVisibility('public');
     setPassword('');
     setPublishDate('');
@@ -311,14 +308,12 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
           <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Settings className="w-4 h-4" />
             上稿設置
-            {publishStatus !== 'draft' && (
-              <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                {publishStatus === 'schedule' ? '定時上稿' : '直接發布'}
-              </span>
-            )}
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+              草稿模式
+            </span>
             {visibility !== 'public' && (
               <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                {visibility === 'private' ? '私密' : '密码保护'}
+                {visibility === 'private' ? '私密' : '密碼保護'}
               </span>
             )}
           </span>
@@ -367,13 +362,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             className="min-w-32 flex items-center gap-2"
           >
             <Send className="w-4 h-4" />
-            {isPublishing
-              ? '上稿中...'
-              : publishStatus === 'schedule'
-              ? '定時上稿'
-              : publishStatus === 'draft'
-              ? '上稿'
-              : '上稿並發布'}
+            {isPublishing ? '上稿中...' : '上稿'}
           </Button>
         </div>
       </div>
