@@ -252,7 +252,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
   // FIX: Use text search instead of position-based slicing to avoid HTML parsing issues
   const renderArticleWithHighlights = useMemo(() => {
     if (!articleContent || issues.length === 0) {
-      return <p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{articleContent || '无内容'}</p>;
+      return <p className="whitespace-pre-wrap text-gray-700 leading-relaxed">{articleContent || '無內容'}</p>;
     }
 
     // Build a list of text ranges to highlight
@@ -487,8 +487,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
         ? '已接受'
         : decision.decision_type === 'modified'
           ? '已修改'
-          : '已拒绝';
-      setAutoNavMessage(`${actionText}，跳转到下一个待处理问题`);
+          : '已拒絕';
+      setAutoNavMessage(`${actionText}，跳轉到下一個待處理問題`);
 
       // Auto-select next issue after a brief delay for visual feedback
       setTimeout(() => {
@@ -583,7 +583,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
   const handleSubmit = async () => {
     const decisionList = Array.from(decisions.values());
     if (decisionList.length === 0) {
-      alert('请至少做出一个审核决定');
+      alert('請至少做出一個審核決定');
       return;
     }
 
@@ -610,16 +610,16 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
       {/* Header with stats */}
       <div className="px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">校对审核</h3>
+          <h3 className="text-lg font-semibold text-gray-900">校對審核</h3>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-gray-600">
-              待处理: <strong className="text-amber-600">{currentStats.pending_count}</strong>
+              待處理: <strong className="text-amber-600">{currentStats.pending_count}</strong>
             </span>
             <span className="text-gray-600">
               已接受: <strong className="text-green-600">{currentStats.accepted_count}</strong>
             </span>
             <span className="text-gray-600">
-              已拒绝: <strong className="text-red-600">{currentStats.rejected_count}</strong>
+              已拒絕: <strong className="text-red-600">{currentStats.rejected_count}</strong>
             </span>
             {currentStats.modified_count > 0 && (
               <span className="text-gray-600">
@@ -641,8 +641,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
         <div className="w-1/5 min-w-[200px] border-r border-gray-200 bg-white overflow-y-auto">
           <div className="p-3 border-b border-gray-200 bg-gray-50">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">问题列表</span>
-              <span className="text-xs text-gray-500">{issues.length} 项</span>
+              <span className="text-sm font-medium text-gray-700">問題列表</span>
+              <span className="text-xs text-gray-500">{issues.length} 項</span>
             </div>
           </div>
 
@@ -667,7 +667,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                         <span className="text-xs font-medium text-gray-700 truncate">
-                          {issue.rule_category || '通用'}
+                          {issue.rule_category || '通用規則'}
                         </span>
                         {issue.engine === 'ai' && (
                           <Sparkles className="w-3 h-3 text-purple-500" />
@@ -740,7 +740,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                   }`}
                 >
                   <GitCompare className="w-3.5 h-3.5" />
-                  对比
+                  對比
                 </button>
                 <button
                   type="button"
@@ -752,7 +752,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  预览
+                  預覽
                 </button>
               </div>
               {/* Legend for article view */}
@@ -760,7 +760,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                 <div className="flex items-center gap-3 text-xs text-gray-500">
                   <span className="flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-red-100 border border-red-200"></span>
-                    严重
+                    嚴重
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-amber-100 border border-amber-200"></span>
@@ -768,7 +768,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></span>
-                    信息
+                    資訊
                   </span>
                 </div>
               )}
@@ -788,7 +788,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                 </div>
                 {/* Issue count indicator */}
                 <div className="mt-6 pt-4 border-t border-gray-200 text-xs text-gray-500 text-center">
-                  点击高亮文本查看问题详情 • 共 {issues.length} 个问题
+                  點擊高亮文字查看問題詳情 • 共 {issues.length} 個問題
                 </div>
               </div>
             ) : contentViewMode === 'diff' ? (
@@ -816,7 +816,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
               {/* Detail Header */}
               <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-gray-700">问题详情</h4>
+                  <h4 className="text-sm font-semibold text-gray-700">問題詳情</h4>
                   <span className="text-xs text-gray-500">
                     {issues.findIndex(i => i.id === selectedIssue.id) + 1} / {issues.length}
                   </span>
@@ -828,7 +828,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                 <div className="flex items-center gap-2 mb-2">
                   {getSeverityIcon(selectedIssue.severity)}
                   <span className="text-sm font-medium text-gray-700">
-                    {selectedIssue.rule_category || '通用'}
+                    {selectedIssue.rule_category || '通用規則'}
                   </span>
                   {selectedIssue.engine === 'ai' && (
                     <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700">
@@ -838,7 +838,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                   )}
                 </div>
                 <div className="text-xs text-gray-500">
-                  规则: {selectedIssue.rule_id}
+                  規則: {selectedIssue.rule_id}
                   {selectedIssue.confidence && ` • 置信度: ${Math.round(selectedIssue.confidence * 100)}%`}
                 </div>
                 {/* Warning label for G-class contextual validation */}
@@ -946,7 +946,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
 
               {/* Explanation */}
               <div className="px-4 py-3 border-b border-gray-200">
-                <div className="text-xs font-medium text-gray-700 mb-1.5">说明</div>
+                <div className="text-xs font-medium text-gray-700 mb-1.5">說明</div>
                 <p className="text-sm text-gray-600">{selectedIssue.explanation}</p>
                 {selectedIssue.explanation_detail && (
                   <p className="mt-1.5 text-xs text-gray-500">{selectedIssue.explanation_detail}</p>
@@ -958,7 +958,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                 {isEditing ? (
                   /* Custom Edit Mode */
                   <div className="space-y-3">
-                    <div className="text-xs font-medium text-purple-700 mb-1">自定義修改</div>
+                    <div className="text-xs font-medium text-purple-700 mb-1">自訂修改</div>
                     <textarea
                       value={editedText}
                       onChange={(e) => setEditedText(e.target.value)}
@@ -1016,8 +1016,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                         已{decisions.get(selectedIssue.id)?.decision_type === 'accepted'
                           ? '接受'
                           : decisions.get(selectedIssue.id)?.decision_type === 'modified'
-                            ? '自定義修改'
-                            : '拒绝'}
+                            ? '自訂修改'
+                            : '拒絕'}
                       </span>
                     </div>
                     {/* Show modified content if custom edited */}
@@ -1035,7 +1035,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                         onDecisionsChange(newDecisions);
                       }}
                     >
-                      撤销决定
+                      撤銷決定
                     </Button>
                   </div>
                 ) : (
@@ -1063,7 +1063,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                         className="w-full"
                       >
                         <XCircle className="w-4 h-4 mr-1.5" />
-                        拒绝
+                        拒絕
                       </Button>
                     </div>
                     {/* Custom Edit Button */}
@@ -1077,10 +1077,10 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                       className="w-full border-purple-300 text-purple-700 hover:bg-purple-50"
                     >
                       <Edit3 className="w-4 h-4 mr-1.5" />
-                      自定義修改
+                      自訂修改
                     </Button>
                     <p className="text-xs text-center text-gray-400">
-                      快捷键: A 接受 | R 拒绝 | E 編輯 | ↑↓ 导航
+                      快捷鍵: A 接受 | R 拒絕 | E 編輯 | ↑↓ 導航
                     </p>
                   </div>
                 )}
@@ -1089,7 +1089,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
               {/* Historical decisions for this issue */}
               {existingDecisions.filter(d => d.issue_id === selectedIssue.id).length > 0 && (
                 <div className="px-4 py-3 border-t border-gray-200 bg-gray-50">
-                  <div className="text-xs font-medium text-gray-600 mb-2">历史决策</div>
+                  <div className="text-xs font-medium text-gray-600 mb-2">歷史決策</div>
                   <div className="space-y-1.5">
                     {existingDecisions
                       .filter(d => d.issue_id === selectedIssue.id)
@@ -1107,10 +1107,10 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                               ? '已接受'
                               : d.decision_type === 'modified'
                                 ? '已修改'
-                                : '已拒绝'}
+                                : '已拒絕'}
                           </span>
                           <span className="text-gray-400 ml-2">
-                            {new Date(d.decided_at).toLocaleDateString('zh-CN')}
+                            {new Date(d.decided_at).toLocaleDateString('zh-TW')}
                           </span>
                           {d.decision_type === 'modified' && d.modified_content && (
                             <div className="mt-1 text-gray-600 italic">
@@ -1127,7 +1127,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
             <div className="flex items-center justify-center h-full">
               <div className="text-center p-8">
                 <Info className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                <p className="text-sm text-gray-500">请从左侧列表选择一个问题</p>
+                <p className="text-sm text-gray-500">請從左側列表選擇一個問題</p>
               </div>
             </div>
           )}
@@ -1140,7 +1140,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
           <div className="text-sm text-gray-600">
             {currentStats.pending_count > 0 && (
               <span className="text-amber-600">
-                ⚠️ 还有 {currentStats.pending_count} 个问题待审核
+                ⚠️ 還有 {currentStats.pending_count} 個問題待審核
               </span>
             )}
           </div>
@@ -1150,13 +1150,13 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
               onClick={handleReset}
               disabled={!hasPendingDecisions || isSubmitting}
             >
-              重置决定
+              重置決定
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={!hasPendingDecisions || isSubmitting}
             >
-              {isSubmitting ? '提交中...' : `提交审核 (${decisions.size})`}
+              {isSubmitting ? '提交中...' : `提交審核 (${decisions.size})`}
             </Button>
           </div>
         </div>
@@ -1188,10 +1188,10 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                 <CheckCircle className="w-10 h-10 text-green-500" />
               </div>
               <h3 className="text-xl font-bold text-white">
-                校对审核完成！
+                校對審核完成！
               </h3>
               <p className="text-green-100 mt-2">
-                所有 {issues.length} 个问题已处理完毕
+                所有 {issues.length} 個問題已處理完畢
               </p>
             </div>
 
@@ -1208,7 +1208,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                   <div className="text-2xl font-bold text-red-600">
                     {currentStats.rejected_count}
                   </div>
-                  <div className="text-xs text-gray-500">已拒绝</div>
+                  <div className="text-xs text-gray-500">已拒絕</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-purple-600">
@@ -1229,14 +1229,14 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                 }}
               >
                 <Eye className="w-4 h-4 mr-2" />
-                进入发布预览
+                進入上稿預覽
               </Button>
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={() => setShowCompletionDialog(false)}
               >
-                继续检查
+                繼續檢查
               </Button>
             </div>
           </div>

@@ -171,7 +171,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
 
   // Format stats for display
   const formatNumber = (num: number) => {
-    return num.toLocaleString('zh-CN');
+    return num.toLocaleString('zh-TW');
   };
 
   return (
@@ -180,7 +180,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <FileText className="w-5 h-5" />
-          对比视图
+          對比視圖
         </h3>
         <div className="flex items-center gap-2">
           {/* Line numbers toggle */}
@@ -192,7 +192,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
                 ? 'bg-gray-100 border-gray-300 text-gray-700'
                 : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
             }`}
-            title={showLineNumbers ? '隐藏行号' : '显示行号'}
+            title={showLineNumbers ? '隱藏行號' : '顯示行號'}
           >
             #
           </button>
@@ -206,10 +206,10 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
                   ? 'bg-primary-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
-              title="分栏视图"
+              title="分欄視圖"
             >
               <Columns className="w-3 h-3" />
-              分栏
+              分欄
             </button>
             <button
               type="button"
@@ -219,10 +219,10 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
                   ? 'bg-primary-600 text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
-              title="统一视图"
+              title="統一視圖"
             >
               <AlignJustify className="w-3 h-3" />
-              统一
+              統一
             </button>
           </div>
         </div>
@@ -232,8 +232,8 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
       {!hasChanges && (
         <div className="p-6 bg-green-50 border border-green-200 rounded-lg text-center">
           <Eye className="w-12 h-12 mx-auto text-green-600 mb-2" />
-          <p className="text-sm font-medium text-green-800">内容未修改</p>
-          <p className="text-xs text-green-600 mt-1">AI 校对后内容与原始内容完全一致</p>
+          <p className="text-sm font-medium text-green-800">內容未修改</p>
+          <p className="text-xs text-green-600 mt-1">AI 校對後內容與原始內容完全一致</p>
         </div>
       )}
 
@@ -246,14 +246,14 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
             splitView={viewMode === 'split'}
             showDiffOnly={false}
             useDarkTheme={false}
-            leftTitle="原始内容"
-            rightTitle="校对后内容"
+            leftTitle="原始內容"
+            rightTitle="校對後內容"
             compareMethod={DiffMethod.WORDS}
             extraLinesSurroundingDiff={3}
             hideLineNumbers={!showLineNumbers}
             styles={diffStyles}
             codeFoldMessageRenderer={(totalFoldedLines) => (
-              <span className="text-gray-500 text-xs">... 展开 {totalFoldedLines} 行相同内容 ...</span>
+              <span className="text-gray-500 text-xs">... 展開 {totalFoldedLines} 行相同內容 ...</span>
             )}
           />
         </div>
@@ -264,16 +264,16 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         <div className="p-2 bg-gray-50 rounded-lg text-center">
           <div className="text-gray-500 mb-0.5">原始</div>
           <div className="font-medium text-gray-900">
-            {formatNumber((originalContent || '').length)} 字符
+            {formatNumber((originalContent || '').length)} 字元
           </div>
           <div className="text-gray-400 text-[10px]">
             {formatNumber(calculatedStats.original_lines)} 行
           </div>
         </div>
         <div className="p-2 bg-gray-50 rounded-lg text-center">
-          <div className="text-gray-500 mb-0.5">校对后</div>
+          <div className="text-gray-500 mb-0.5">校對後</div>
           <div className="font-medium text-gray-900">
-            {formatNumber((proofreadContent || '').length)} 字符
+            {formatNumber((proofreadContent || '').length)} 字元
           </div>
           <div className="text-gray-400 text-[10px]">
             {formatNumber(calculatedStats.suggested_lines)} 行
@@ -289,7 +289,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         </div>
         <div className="p-2 bg-red-50 rounded-lg text-center">
           <div className="text-red-600 mb-0.5 flex items-center justify-center gap-1">
-            <span className="font-mono">-</span> 删除
+            <span className="font-mono">-</span> 刪除
           </div>
           <div className="font-medium text-red-700">
             {formatNumber(calculatedStats.deletions)}
@@ -297,10 +297,10 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         </div>
         <div className="p-2 bg-amber-50 rounded-lg text-center">
           <div className="text-amber-600 mb-0.5 flex items-center justify-center gap-1">
-            <BarChart3 className="w-3 h-3" /> 状态
+            <BarChart3 className="w-3 h-3" /> 狀態
           </div>
           <div className={`font-medium ${hasChanges ? 'text-amber-700' : 'text-green-700'}`}>
-            {hasChanges ? '有修改' : '无修改'}
+            {hasChanges ? '有修改' : '無修改'}
           </div>
         </div>
       </div>
@@ -308,7 +308,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
       {/* Pre-generated diff indicator */}
       {hasDiffData && (
         <div className="text-xs text-gray-400 text-right">
-          使用后端预生成的词级差异数据
+          使用後端預生成的詞級差異數據
         </div>
       )}
     </div>

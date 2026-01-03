@@ -128,7 +128,7 @@ export const ProofreadingIssuesSection: React.FC<ProofreadingIssuesSectionProps>
                   }
                 >
                   {currentStatus === 'accepted' && '✓ 已接受'}
-                  {currentStatus === 'rejected' && '✗ 已拒绝'}
+                  {currentStatus === 'rejected' && '✗ 已拒絕'}
                   {currentStatus === 'modified' && '✎ 已修改'}
                 </Badge>
               </div>
@@ -165,7 +165,7 @@ export const ProofreadingIssuesSection: React.FC<ProofreadingIssuesSectionProps>
               className="whitespace-nowrap"
             >
               <X className="w-3 h-3 mr-1" />
-              拒绝
+              拒絕
             </Button>
           </div>
         </div>
@@ -177,7 +177,7 @@ export const ProofreadingIssuesSection: React.FC<ProofreadingIssuesSectionProps>
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold text-gray-900">
-          问题列表 ({filteredIssues.length})
+          問題列表 ({filteredIssues.length})
         </h3>
 
         {/* Filter */}
@@ -194,9 +194,9 @@ export const ProofreadingIssuesSection: React.FC<ProofreadingIssuesSectionProps>
               }`}
             >
               {severity === 'all' && '全部'}
-              {severity === 'critical' && `严重 (${groupedIssues.critical.length})`}
+              {severity === 'critical' && `嚴重 (${groupedIssues.critical.length})`}
               {severity === 'warning' && `警告 (${groupedIssues.warning.length})`}
-              {severity === 'info' && `信息 (${groupedIssues.info.length})`}
+              {severity === 'info' && `資訊 (${groupedIssues.info.length})`}
             </button>
           ))}
         </div>
@@ -211,7 +211,7 @@ export const ProofreadingIssuesSection: React.FC<ProofreadingIssuesSectionProps>
         <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-lg">
           <Info className="w-12 h-12 mx-auto text-gray-400 mb-2" />
           <p className="text-sm text-gray-500">
-            {filterSeverity === 'all' ? '暂无校对问题' : '暂无该类型问题'}
+            {filterSeverity === 'all' ? '暫無校對問題' : '暫無該類型問題'}
           </p>
         </div>
       )}

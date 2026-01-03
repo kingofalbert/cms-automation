@@ -83,19 +83,19 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
         <Filter className="w-5 h-5 text-gray-600" />
         <h3 className="text-sm font-semibold text-gray-900">批量操作</h3>
         <span className="text-xs text-gray-500">
-          ({pendingIssues.length} 个待处理问题)
+          ({pendingIssues.length} 個待處理問題)
         </span>
       </div>
 
       {pendingIssues.length === 0 && (
-        <p className="text-sm text-gray-500">所有问题已审核</p>
+        <p className="text-sm text-gray-500">所有問題已審核</p>
       )}
 
       {pendingIssues.length > 0 && (
         <div className="space-y-3">
           {/* All pending */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-700 min-w-24">全部待处理:</span>
+            <span className="text-sm text-gray-700 min-w-24">全部待處理:</span>
             <Button
               size="sm"
               variant="outline"
@@ -112,14 +112,14 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
               className="text-xs"
             >
               <XSquare className="w-3 h-3 mr-1" />
-              全部拒绝 ({pendingIssues.length})
+              全部拒絕 ({pendingIssues.length})
             </Button>
           </div>
 
           {/* By severity */}
           {pendingBySeverity.critical.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700 min-w-24">严重问题:</span>
+              <span className="text-sm text-gray-700 min-w-24">嚴重問題:</span>
               <Button
                 size="sm"
                 variant="outline"
@@ -134,14 +134,14 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
                 onClick={() => handleBatchReject(pendingBySeverity.critical)}
                 className="text-xs"
               >
-                拒绝 ({pendingBySeverity.critical.length})
+                拒絕 ({pendingBySeverity.critical.length})
               </Button>
             </div>
           )}
 
           {pendingBySeverity.warning.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700 min-w-24">警告问题:</span>
+              <span className="text-sm text-gray-700 min-w-24">警告問題:</span>
               <Button
                 size="sm"
                 variant="outline"
@@ -156,7 +156,7 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
                 onClick={() => handleBatchReject(pendingBySeverity.warning)}
                 className="text-xs"
               >
-                拒绝 ({pendingBySeverity.warning.length})
+                拒絕 ({pendingBySeverity.warning.length})
               </Button>
             </div>
           )}
@@ -164,7 +164,7 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
           {/* By engine */}
           {pendingByEngine.ai.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-700 min-w-24">AI 建议:</span>
+              <span className="text-sm text-gray-700 min-w-24">AI 建議:</span>
               <Button
                 size="sm"
                 variant="outline"
@@ -179,7 +179,7 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
                 onClick={() => handleBatchReject(pendingByEngine.ai)}
                 className="text-xs"
               >
-                拒绝 ({pendingByEngine.ai.length})
+                拒絕 ({pendingByEngine.ai.length})
               </Button>
             </div>
           )}
@@ -188,7 +188,7 @@ export const BatchApprovalControls: React.FC<BatchApprovalControlsProps> = ({
 
       {/* Hint */}
       <div className="p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
-        <strong>提示：</strong>批量操作会覆盖之前的决定。请谨慎使用。
+        <strong>提示：</strong>批量操作會覆蓋之前的決定。請謹慎使用。
       </div>
     </div>
   );

@@ -172,7 +172,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
           <span
             key={`highlight-${index}`}
             className="bg-green-100 text-green-800 px-0.5 rounded border-b-2 border-green-400"
-            title="新增内容"
+            title="新增內容"
           >
             {highlightedText}
           </span>
@@ -187,7 +187,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
             )}
             <span
               className="bg-amber-100 text-amber-800 px-0.5 rounded border-b-2 border-amber-400"
-              title={highlight.original ? `原文: ${highlight.original}` : '修改内容'}
+              title={highlight.original ? `原文: ${highlight.original}` : '修改內容'}
             >
               {highlightedText}
             </span>
@@ -248,7 +248,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
           <Eye className="w-5 h-5" />
-          预览模式
+          預覽模式
         </h3>
         <div className="flex items-center gap-2">
           {/* View mode toggle: Rendered HTML vs Text with highlights */}
@@ -261,7 +261,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
                   ? 'bg-blue-500 text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
-              title="渲染模式：显示最终排版效果"
+              title="渲染模式：顯示最終排版效果"
             >
               <Monitor className="w-3 h-3" />
               排版
@@ -274,7 +274,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
                   ? 'bg-blue-500 text-white'
                   : 'bg-white text-gray-600 hover:bg-gray-50'
               }`}
-              title="文本模式：显示修改高亮"
+              title="文字模式：顯示修改高亮"
             >
               <Code className="w-3 h-3" />
               高亮
@@ -291,7 +291,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
                     ? 'bg-amber-50 border-amber-300 text-amber-700'
                     : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
                 }`}
-                title={showHighlights ? '隐藏高亮' : '显示高亮'}
+                title={showHighlights ? '隱藏高亮' : '顯示高亮'}
               >
                 <Highlighter className="w-3 h-3" />
                 高亮
@@ -305,7 +305,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
                       ? 'bg-red-50 border-red-300 text-red-700'
                       : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
                   }`}
-                  title={showOriginalInline ? '隐藏原文' : '显示原文'}
+                  title={showOriginalInline ? '隱藏原文' : '顯示原文'}
                 >
                   <Type className="w-3 h-3" />
                   原文
@@ -320,8 +320,8 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
       {!hasChanges && (
         <div className="p-6 bg-green-50 border border-green-200 rounded-lg text-center">
           <Check className="w-12 h-12 mx-auto text-green-600 mb-2" />
-          <p className="text-sm font-medium text-green-800">内容无需修改</p>
-          <p className="text-xs text-green-600 mt-1">AI 校对认为原文已经很好，无需调整</p>
+          <p className="text-sm font-medium text-green-800">內容無需修改</p>
+          <p className="text-xs text-green-600 mt-1">AI 校對認為原文已經很好，無需調整</p>
         </div>
       )}
 
@@ -334,17 +334,17 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
               {viewMode === 'rendered' ? (
                 <>
                   <Monitor className="w-3 h-3 inline-block mr-1" />
-                  排版预览 - 显示最终效果
+                  排版預覽 - 顯示最終效果
                 </>
               ) : (
                 <>
                   <Code className="w-3 h-3 inline-block mr-1" />
-                  文本预览 - 显示修改标记
+                  文字預覽 - 顯示修改標記
                 </>
               )}
             </span>
             <span className="text-xs text-gray-400">
-              {(proofreadContent || '').length.toLocaleString('zh-CN')} 字符
+              {(proofreadContent || '').length.toLocaleString('zh-TW')} 字元
             </span>
           </div>
           {/* Content area */}
@@ -357,7 +357,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
       {/* Legend and stats (only in text mode with highlights) */}
       {hasChanges && viewMode === 'text' && showHighlights && (
         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
-          <span className="font-medium">图例:</span>
+          <span className="font-medium">圖例:</span>
           <span className="flex items-center gap-1">
             <span className="inline-block w-4 h-4 bg-green-100 border-b-2 border-green-400 rounded"></span>
             新增 ({changeSummary.inserts})
@@ -369,7 +369,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
           {changeSummary.deletes > 0 && (
             <span className="flex items-center gap-1">
               <span className="inline-block w-4 h-4 bg-red-100 border border-red-300 rounded line-through"></span>
-              删除 ({changeSummary.deletes})
+              刪除 ({changeSummary.deletes})
             </span>
           )}
         </div>
@@ -379,10 +379,10 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
         <div className="p-2 bg-gray-50 rounded-lg text-center">
           <div className="text-gray-500 mb-0.5 flex items-center justify-center gap-1">
-            <FileText className="w-3 h-3" /> 字数
+            <FileText className="w-3 h-3" /> 字數
           </div>
           <div className="font-medium text-gray-900">
-            {(proofreadContent || '').length.toLocaleString('zh-CN')}
+            {(proofreadContent || '').length.toLocaleString('zh-TW')}
           </div>
           <div className="text-gray-400 text-[10px]">
             {(proofreadContent || '').split('\n').length} 行
@@ -406,7 +406,7 @@ export const ProofreadingPreviewSection: React.FC<ProofreadingPreviewSectionProp
         </div>
         <div className="p-2 bg-red-50 rounded-lg text-center">
           <div className="text-red-600 mb-0.5 flex items-center justify-center gap-1">
-            <X className="w-3 h-3" /> 删除
+            <X className="w-3 h-3" /> 刪除
           </div>
           <div className="font-medium text-red-700">
             {diffStats?.deletions ?? changeSummary.deletes}
