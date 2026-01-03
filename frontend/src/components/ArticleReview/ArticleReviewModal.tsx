@@ -758,7 +758,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
               disabled={activeStep === 2}
               className="min-w-32"
             >
-              {activeStep === 2 ? '发布' : '下一步'}
+              {activeStep === 2 ? '上稿' : '下一步'}
             </Button>
           </div>
         </div>

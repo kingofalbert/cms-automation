@@ -38,11 +38,11 @@ export const PublishConfirmation: React.FC<PublishConfirmationProps> = ({
   const getStatusText = () => {
     switch (settings.status) {
       case 'publish':
-        return '立即发布';
+        return '上稿並發布';
       case 'draft':
-        return '保存草稿';
+        return '上稿（草稿）';
       case 'schedule':
-        return '定时发布';
+        return '定時上稿';
     }
   };
 
@@ -65,10 +65,10 @@ export const PublishConfirmation: React.FC<PublishConfirmationProps> = ({
           <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-1" />
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              确认发布
+              確認上稿
             </h3>
             <p className="text-sm text-gray-600 mt-1">
-              请确认以下发布设置是否正确
+              請確認以下上稿設置是否正確
             </p>
           </div>
         </div>
@@ -82,13 +82,13 @@ export const PublishConfirmation: React.FC<PublishConfirmationProps> = ({
         {/* Settings Summary */}
         <div className="space-y-3">
           <div className="flex items-center justify-between py-2 border-b">
-            <span className="text-sm text-gray-600">发布状态</span>
+            <span className="text-sm text-gray-600">上稿狀態</span>
             <span className="text-sm font-medium text-gray-900">{getStatusText()}</span>
           </div>
 
           {settings.status === 'schedule' && settings.publish_date && (
             <div className="flex items-center justify-between py-2 border-b">
-              <span className="text-sm text-gray-600">发布时间</span>
+              <span className="text-sm text-gray-600">上稿時間</span>
               <span className="text-sm font-medium text-gray-900">
                 {new Date(settings.publish_date).toLocaleString('zh-CN')}
               </span>
@@ -141,7 +141,18 @@ export const PublishConfirmation: React.FC<PublishConfirmationProps> = ({
             <div className="flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-amber-800">
-                <strong>注意：</strong>文章将立即发布到网站，所有用户都可以访问。
+                <strong>注意：</strong>文章將立即發布到網站，所有用戶都可以訪問。
+              </p>
+            </div>
+          </div>
+        )}
+
+        {settings.status === 'draft' && (
+          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-green-800">
+                文章將上稿到 WordPress 並保存為草稿，不會發布。最終審稿編輯可在 WordPress 後台進行最後審核後發布。
               </p>
             </div>
           </div>
@@ -152,7 +163,7 @@ export const PublishConfirmation: React.FC<PublishConfirmationProps> = ({
             <div className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-blue-800">
-                文章将在指定时间自动发布。
+                文章將在指定時間自動發布。
               </p>
             </div>
           </div>
@@ -173,7 +184,7 @@ export const PublishConfirmation: React.FC<PublishConfirmationProps> = ({
             disabled={isPublishing}
             className="flex-1"
           >
-            {isPublishing ? '发布中...' : '确认发布'}
+            {isPublishing ? '上稿中...' : '確認上稿'}
           </Button>
         </div>
       </div>

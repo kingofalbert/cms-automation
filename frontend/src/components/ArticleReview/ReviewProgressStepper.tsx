@@ -42,8 +42,8 @@ const STEPS: Step[] = [
   },
   {
     id: 2,
-    label: '发布预览',
-    description: '最终预览和发布',
+    label: '上稿預覽',
+    description: '最終預覽和上稿',
   },
 ];
 

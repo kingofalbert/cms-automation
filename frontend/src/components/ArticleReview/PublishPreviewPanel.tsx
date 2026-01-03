@@ -89,7 +89,9 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   isPublishing = false,
 }) => {
   // Local state for publish settings
-  const [publishStatus, setPublishStatus] = useState<'draft' | 'publish' | 'schedule'>('publish');
+  // Default to 'draft' mode - articles are uploaded but NOT published
+  // Final editors will review and publish in WordPress admin
+  const [publishStatus, setPublishStatus] = useState<'draft' | 'publish' | 'schedule'>('draft');
   const [visibility, setVisibility] = useState<'public' | 'private' | 'password'>('public');
   const [password, setPassword] = useState('');
   const [publishDate, setPublishDate] = useState<string>('');
@@ -261,7 +263,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       {/* Header */}
       <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">发布预览</h3>
+          <h3 className="text-lg font-semibold text-gray-900">上稿預覽</h3>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-gray-600">
               状态: <strong className="text-blue-600">{data.status}</strong>
@@ -308,10 +310,10 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
         >
           <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
             <Settings className="w-4 h-4" />
-            发布设置
-            {publishStatus !== 'publish' && (
+            上稿設置
+            {publishStatus !== 'draft' && (
               <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
-                {publishStatus === 'schedule' ? '定时发布' : '草稿'}
+                {publishStatus === 'schedule' ? '定時上稿' : '直接發布'}
               </span>
             )}
             {visibility !== 'public' && (
@@ -345,7 +347,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
           {!isReadyToPublish && (
             <span className="text-amber-600 flex items-center gap-1">
               <span>⚠️</span>
-              请完成所有必填项才能发布
+              請完成所有必填項才能上稿
             </span>
           )}
         </div>
@@ -366,12 +368,12 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
           >
             <Send className="w-4 h-4" />
             {isPublishing
-              ? '发布中...'
+              ? '上稿中...'
               : publishStatus === 'schedule'
-              ? '定时发布'
+              ? '定時上稿'
               : publishStatus === 'draft'
-              ? '保存草稿'
-              : '立即发布'}
+              ? '上稿'
+              : '上稿並發布'}
           </Button>
         </div>
       </div>
