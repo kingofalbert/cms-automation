@@ -97,8 +97,9 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
       keywords = extractedKeywords;
     } else if (source === 'ai') {
       keywords = aiSuggestedKeywords || [];
-    } else if (source === 'merged') {
-      keywords = mergedKeywords;
+    } else if (source === 'custom') {
+      // Custom defaults to AI suggested keywords
+      keywords = aiSuggestedKeywords || [];
     } else {
       keywords = activeKeywords;
     }
@@ -329,14 +330,14 @@ export const KeywordsComparisonCard: React.FC<KeywordsComparisonCardProps> = ({
                       AI优化
                     </button>
                     <button
-                      onClick={() => handleSelectSource('merged')}
+                      onClick={() => handleSelectSource('custom')}
                       className={`px-3 py-1.5 text-xs font-medium rounded-full transition-all ${
-                        selectedSource === 'merged'
+                        selectedSource === 'custom'
                           ? 'bg-purple-500 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >
-                      合并全部 ({mergedKeywords.length})
+                      自定義
                     </button>
                   </>
                 )}
