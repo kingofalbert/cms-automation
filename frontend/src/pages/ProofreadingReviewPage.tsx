@@ -3,10 +3,11 @@
  * Human review interface for AI-generated proofreading suggestions.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { stripHtmlTags, resolveAllIssuePositions, removeOverlappingRanges } from '@/utils/proofreadingPosition';
 import { toast } from 'sonner';
 import { worklistAPI } from '@/services/worklist';
 import {
@@ -157,6 +158,50 @@ export default function ProofreadingReviewPage() {
   const dirtyCount = Object.keys(decisions).length;
   const allIssuesDecided = issues.length > 0 && issues.length === dirtyCount;
   const hasUnsavedChanges = dirtyCount > 0 || reviewNotes.length > 0;
+
+  // Generate suggested content by applying all issue suggestions to the original content
+  // This is used for the Diff view mode
+  const suggestedContent = useMemo(() => {
+    if (!worklistItem?.content || issues.length === 0) {
+      return null;
+    }
+
+    // Get plain text from original content
+    const plainContent = stripHtmlTags(worklistItem.content);
+    if (!plainContent) return null;
+
+    // Resolve all issue positions
+    const resolvedPositions = resolveAllIssuePositions(issues, plainContent);
+    const nonOverlapping = removeOverlappingRanges(resolvedPositions);
+
+    if (nonOverlapping.length === 0) {
+      return plainContent; // No changes to apply
+    }
+
+    // Build suggested content by applying all suggestions
+    let result = '';
+    let lastIndex = 0;
+
+    nonOverlapping.forEach(({ issue, position }) => {
+      // Add text before this issue
+      if (position.start > lastIndex) {
+        result += plainContent.slice(lastIndex, position.start);
+      }
+
+      // Add the suggested text (or original if no suggestion)
+      const suggestedText = issue.suggested_text_plain || stripHtmlTags(issue.suggested_text);
+      result += suggestedText || plainContent.slice(position.start, position.end);
+
+      lastIndex = position.end;
+    });
+
+    // Add remaining text after last issue
+    if (lastIndex < plainContent.length) {
+      result += plainContent.slice(lastIndex);
+    }
+
+    return result;
+  }, [worklistItem?.content, issues]);
 
   // Handle cancel with confirmation if there are unsaved changes
   const handleCancel = useCallback(() => {
@@ -393,7 +438,7 @@ export default function ProofreadingReviewPage() {
             selectedIssue={selectedIssue}
             viewMode={viewMode}
             onIssueClick={setSelectedIssue}
-            suggestedContent={undefined}
+            suggestedContent={suggestedContent}
           />
         </div>
 
