@@ -221,6 +221,9 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
     5. SEO Title markers (extracted to seo_title field):
        - 這是 SEO title / 【SEO title】 / SEO title：
     6. Any other suggestion/recommendation sections
+    7. Section dividers (horizontal lines used to separate content blocks):
+       - Consecutive dashes, em dashes, en dashes, underscores
+       - Examples: -------, —————, ────────, _______
 
     Args:
         body_html: The body HTML content from AI parsing
@@ -232,6 +235,24 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
 
     if not body_html:
         return body_html
+
+    cleaned = body_html
+
+    # Remove section dividers (consecutive horizontal line characters)
+    # These are used to separate content blocks like main content from FAQ/author sections
+    # Matches: --------, ————————, ──────────, _________, or mixed combinations
+    # Must be at least 5 consecutive characters to be considered a divider
+    divider_patterns = [
+        # Dividers wrapped in <p> tags (most common in HTML)
+        r'<p>\s*[-—─_=]{5,}\s*</p>',
+        # Dividers with possible surrounding text in <p> tags
+        r'<p>\s*[-—─_=·•]{5,}[-—─_=·•\s]*</p>',
+        # Mixed character dividers (e.g., —--------------)
+        r'<p>\s*[—–-]{1,}[-—–─_=]{4,}\s*</p>',
+    ]
+
+    for pattern in divider_patterns:
+        cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
 
     # Patterns for metadata section headers (markdown style in <p> tags)
     # These match from the header to the next header or end
@@ -251,7 +272,6 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
         r'<p>\s*#{1,3}\s*Excerpt\s*</p>.*?(?=<p>\s*#{1,3}|$)',
     ]
 
-    cleaned = body_html
     for pattern in metadata_patterns:
         cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE | re.DOTALL)
 
@@ -302,7 +322,11 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
     cleaned = cleaned.strip()
 
     if cleaned != body_html:
-        logger.info("[BODY CLEANUP] Removed metadata sections from body_html")
+        # Check what was removed for detailed logging
+        original_len = len(body_html)
+        cleaned_len = len(cleaned)
+        removed_chars = original_len - cleaned_len
+        logger.info(f"[BODY CLEANUP] Cleaned body_html: removed {removed_chars} characters (dividers/metadata sections)")
 
     return cleaned
 
