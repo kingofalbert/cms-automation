@@ -434,6 +434,10 @@ def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
         synced_at=item.synced_at,
         created_at=item.created_at,
         updated_at=item.updated_at,
+        # Phase 17: WordPress draft tracking fields
+        wordpress_draft_url=item.wordpress_draft_url,
+        wordpress_draft_uploaded_at=item.wordpress_draft_uploaded_at,
+        wordpress_post_id=item.wordpress_post_id,
     )
 
 

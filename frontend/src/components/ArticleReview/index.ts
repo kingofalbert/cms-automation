@@ -59,7 +59,7 @@ export { FinalPreviewSection } from './FinalPreviewSection';
 export type { FinalPreviewSectionProps } from './FinalPreviewSection';
 
 export { PublishPreviewPanel } from './PublishPreviewPanel';
-export type { PublishPreviewPanelProps, PublishSettings } from './PublishPreviewPanel';
+export type { PublishPreviewPanelProps, PublishSettings, PublishResult } from './PublishPreviewPanel';
 
 export { FinalContentPreview } from './FinalContentPreview';
 export type { FinalContentPreviewProps } from './FinalContentPreview';
@@ -69,6 +69,10 @@ export type { PublishSettingsSectionProps } from './PublishSettingsSection';
 
 export { PublishConfirmation } from './PublishConfirmation';
 export type { PublishConfirmationProps } from './PublishConfirmation';
+
+// Phase 17: WordPress Draft Success Confirmation
+export { PublishSuccessConfirmation } from './PublishSuccessConfirmation';
+export type { PublishSuccessConfirmationProps } from './PublishSuccessConfirmation';
 
 // Phase 8.3: Content Comparison Components
 export { ContentComparisonCard } from './ContentComparisonCard';

@@ -21,6 +21,7 @@ from src.models import (
     PublishTask,
     TaskStatus,
 )
+from src.models.worklist import WorklistItem, WorklistStatus
 from src.services.computer_use_cms import create_computer_use_cms_service
 from src.services.hybrid_publisher import create_hybrid_publisher
 from src.services.providers.playwright_wordpress_publisher import (
@@ -266,7 +267,9 @@ class PublishingOrchestrator:
         try:
             stmt = (
                 select(PublishTask)
-                .options(selectinload(PublishTask.article))
+                .options(
+                    selectinload(PublishTask.article).selectinload(Article.worklist_item)
+                )
                 .where(PublishTask.id == publish_task_id)
             )
             db_result = await session.execute(stmt)
@@ -293,11 +296,14 @@ class PublishingOrchestrator:
             task.mark_completed(cost_usd=self._extract_cost(result))
             task.error_message = None
 
+            # Extract WordPress URLs from result
+            result_status = (result.get("status") or "").lower()
+            editor_url = result.get("editor_url")
+            public_url = result.get("url")
+            cms_article_id = result.get("cms_article_id")
+
             if article:
-                article.cms_article_id = result.get("cms_article_id") or article.cms_article_id
-                result_status = (result.get("status") or "").lower()
-                editor_url = result.get("editor_url")
-                public_url = result.get("url")
+                article.cms_article_id = cms_article_id or article.cms_article_id
 
                 if result_status == "draft":
                     article.status = ArticleStatus.DRAFT
@@ -309,6 +315,22 @@ class PublishingOrchestrator:
                     article.published_at = article.published_at or datetime.utcnow()
 
                 session.add(article)
+
+                # Phase 17: Update linked worklist item with WordPress draft info
+                worklist_item = article.worklist_item
+                if worklist_item:
+                    worklist_item.wordpress_draft_url = editor_url or public_url
+                    worklist_item.wordpress_draft_uploaded_at = datetime.utcnow()
+                    worklist_item.wordpress_post_id = cms_article_id
+                    worklist_item.status = WorklistStatus.PUBLISHED
+                    session.add(worklist_item)
+
+                    logger.info(
+                        "worklist_item_wordpress_info_saved",
+                        worklist_id=worklist_item.id,
+                        wordpress_draft_url=worklist_item.wordpress_draft_url,
+                        wordpress_post_id=worklist_item.wordpress_post_id,
+                    )
 
             session.add(task)
             await session.commit()

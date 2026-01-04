@@ -136,6 +136,22 @@ class WorklistItem(Base, TimestampMixin):
         comment="Last time the record was synced from Drive",
     )
 
+    # WordPress draft tracking fields (Phase 17)
+    wordpress_draft_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+        comment="WordPress draft editor URL after upload",
+    )
+    wordpress_draft_uploaded_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+        comment="Timestamp when draft was uploaded to WordPress",
+    )
+    wordpress_post_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        comment="WordPress post ID",
+    )
+
     article: Mapped["Article"] = relationship(
         "Article",
         foreign_keys=[article_id],

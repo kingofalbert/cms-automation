@@ -75,6 +75,14 @@ export interface WorklistItem {
   article_status?: string | null;
   /** Google Drive metadata including webViewLink for opening original doc */
   drive_metadata?: Record<string, unknown>;
+
+  // Phase 17: WordPress draft tracking fields
+  /** WordPress draft editor URL after upload */
+  wordpress_draft_url?: string | null;
+  /** Timestamp when draft was uploaded to WordPress */
+  wordpress_draft_uploaded_at?: string | null;
+  /** WordPress post ID */
+  wordpress_post_id?: number | null;
 }
 
 export interface WorklistStatusHistoryEntry {

@@ -30,6 +30,17 @@ class WorklistItemResponse(BaseSchema):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
+    # Phase 17: WordPress draft tracking fields
+    wordpress_draft_url: str | None = Field(
+        default=None, description="WordPress draft editor URL after upload"
+    )
+    wordpress_draft_uploaded_at: datetime | None = Field(
+        default=None, description="Timestamp when draft was uploaded to WordPress"
+    )
+    wordpress_post_id: int | None = Field(
+        default=None, description="WordPress post ID"
+    )
+
 
 class WorklistStatusHistoryEntry(BaseSchema):
     """Serialized status history timeline for linked article."""

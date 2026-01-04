@@ -44,16 +44,27 @@ import { MetadataSummaryPanel } from './MetadataSummaryPanel';
 import { PublishReadinessChecklist, createChecklistItems } from './PublishReadinessChecklist';
 import { PublishSettingsSectionSimplified } from './PublishSettingsSectionSimplified';
 import { PublishConfirmation } from './PublishConfirmation';
+import { PublishSuccessConfirmation } from './PublishSuccessConfirmation';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import { Settings, Send, RotateCcw } from 'lucide-react';
+
+/**
+ * Result returned from onPublish callback
+ */
+export interface PublishResult {
+  wordpress_draft_url: string;
+  wordpress_draft_uploaded_at: string;
+  wordpress_post_id: number;
+  screenshots?: string[];
+}
 
 export interface PublishPreviewPanelProps {
   /** Article review data */
   data: ArticleReviewData;
   /** FAQs selected by user */
   faqs?: FAQItem[];
-  /** Callback when publish is triggered */
-  onPublish: (settings: PublishSettings) => Promise<void>;
+  /** Callback when publish is triggered. Returns publish result on success. */
+  onPublish: (settings: PublishSettings) => Promise<PublishResult | void>;
   /** Whether publishing is in progress */
   isPublishing?: boolean;
 }
@@ -94,6 +105,10 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   const [publishDate, setPublishDate] = useState<string>('');
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Phase 17: State for success confirmation
+  const [showSuccessConfirmation, setShowSuccessConfirmation] = useState(false);
+  const [publishResult, setPublishResult] = useState<PublishResult | null>(null);
 
   // Read categories/tags from data (set in ParsingReviewPanel)
   const primaryCategory = data.primary_category || null;
@@ -189,12 +204,29 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
       excerpt,
     };
 
-    await onPublish(settings);
-    setShowConfirmation(false);
+    try {
+      const result = await onPublish(settings);
+      setShowConfirmation(false);
+
+      // Phase 17: If onPublish returns a result with WordPress info, show success confirmation
+      if (result && result.wordpress_draft_url && result.wordpress_post_id) {
+        setPublishResult(result);
+        setShowSuccessConfirmation(true);
+      }
+    } catch (error) {
+      // Error handling is done by the parent component
+      setShowConfirmation(false);
+    }
   };
 
   const handleCancelConfirmation = () => {
     setShowConfirmation(false);
+  };
+
+  // Phase 17: Handler to close success confirmation
+  const handleCloseSuccessConfirmation = () => {
+    setShowSuccessConfirmation(false);
+    setPublishResult(null);
   };
 
   const handleReset = () => {
@@ -257,87 +289,90 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
 
   return (
     <div className="h-full flex flex-col min-h-0 flex-1">
-      {/* Header */}
-      <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">上稿預覽</h3>
-          <div className="flex items-center gap-4 text-sm">
-            <span className="text-gray-600">
-              状态: <strong className="text-blue-600">{data.status}</strong>
-            </span>
+      {/* ===== SCROLLABLE PREVIEW CONTENT AREA ===== */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {/* Header */}
+        <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">上稿預覽</h3>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="text-gray-600">
+                状态: <strong className="text-blue-600">{data.status}</strong>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Readiness Checklist */}
+        <div className="mb-4">
+          <PublishReadinessChecklist items={checklistItems} isReady={isReadyToPublish} />
+        </div>
+
+        {/* Main content: 60% + 40% grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[400px]">
+          {/* Left column: 60% (3 out of 5 cols) - Article Preview */}
+          <div className="lg:col-span-3 flex flex-col h-full">
+            <FinalContentPreview data={contentData} faqs={faqs} flexHeight={true} />
+          </div>
+
+          {/* Right column: 40% (2 out of 5 cols) - Metadata Summary (ENHANCED) */}
+          <div className="lg:col-span-2 overflow-y-auto">
+            <MetadataSummaryPanel
+              seo={metadataData.seo}
+              categories={metadataData.categories}
+              tags={metadataData.tags}
+              stats={metadataData.stats}
+              proofreading={metadataData.proofreading}
+              featuredImage={metadataData.featuredImage}
+              parsing={metadataData.parsing}
+              articleImages={metadataData.articleImages}
+            />
           </div>
         </div>
       </div>
 
-      {/* Readiness Checklist */}
-      <div className="mb-4">
-        <PublishReadinessChecklist items={checklistItems} isReady={isReadyToPublish} />
-      </div>
-
-      {/* Main content: 60% + 40% grid with proper flex heights */}
-      {/* FIXED: Added min-h-[400px] to prevent grid collapse, removed problematic min-h-0 */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[400px]">
-        {/* Left column: 60% (3 out of 5 cols) - Article Preview */}
-        {/* FIXED: Removed min-h-0 that was causing height collapse */}
-        <div className="lg:col-span-3 flex flex-col h-full">
-          <FinalContentPreview data={contentData} faqs={faqs} flexHeight={true} />
-        </div>
-
-        {/* Right column: 40% (2 out of 5 cols) - Metadata Summary (ENHANCED) */}
-        <div className="lg:col-span-2 overflow-y-auto">
-          <MetadataSummaryPanel
-            seo={metadataData.seo}
-            categories={metadataData.categories}
-            tags={metadataData.tags}
-            stats={metadataData.stats}
-            proofreading={metadataData.proofreading}
-            featuredImage={metadataData.featuredImage}
-            parsing={metadataData.parsing}
-            articleImages={metadataData.articleImages}
-          />
-        </div>
-      </div>
-
-      {/* Publish Settings (Collapsible) */}
-      <div className="mt-4">
-        <button
-          type="button"
-          onClick={() => setShowSettings(!showSettings)}
-          className="w-full flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
-            <Settings className="w-4 h-4" />
-            上稿設置
-            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-              草稿模式
-            </span>
-            {visibility !== 'public' && (
-              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                {visibility === 'private' ? '私密' : '密碼保護'}
+      {/* ===== BOTTOM SECTION: Settings + Buttons (always visible at bottom) ===== */}
+      <div className="flex-shrink-0 border-t bg-white pt-4 mt-4">
+        {/* Publish Settings (Collapsible) - ABOVE buttons */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => setShowSettings(!showSettings)}
+            className="w-full flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Settings className="w-4 h-4" />
+              上稿設置
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                草稿模式
               </span>
-            )}
-          </span>
-          <span className="text-gray-400">{showSettings ? '▲' : '▼'}</span>
-        </button>
+              {visibility !== 'public' && (
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
+                  {visibility === 'private' ? '私密' : '密碼保護'}
+                </span>
+              )}
+            </span>
+            <span className="text-gray-400">{showSettings ? '▲' : '▼'}</span>
+          </button>
 
-        {showSettings && (
-          <Card className="mt-2 p-4">
-            <PublishSettingsSectionSimplified
-              publishStatus={publishStatus}
-              visibility={visibility}
-              password={password}
-              publishDate={publishDate}
-              onPublishStatusChange={setPublishStatus}
-              onVisibilityChange={setVisibility}
-              onPasswordChange={setPassword}
-              onPublishDateChange={setPublishDate}
-            />
-          </Card>
-        )}
-      </div>
+          {showSettings && (
+            <Card className="mt-2 p-4">
+              <PublishSettingsSectionSimplified
+                publishStatus={publishStatus}
+                visibility={visibility}
+                password={password}
+                publishDate={publishDate}
+                onPublishStatusChange={setPublishStatus}
+                onVisibilityChange={setVisibility}
+                onPasswordChange={setPassword}
+                onPublishDateChange={setPublishDate}
+              />
+            </Card>
+          )}
+        </div>
 
-      {/* Action buttons */}
-      <div className="mt-4 flex items-center justify-between pt-4 border-t">
+        {/* Action buttons - BELOW settings */}
+        <div className="flex items-center justify-between">
         <div className="text-sm text-gray-600">
           {!isReadyToPublish && (
             <span className="text-amber-600 flex items-center gap-1">
@@ -365,6 +400,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             {isPublishing ? '上稿中...' : '上稿'}
           </Button>
         </div>
+        </div>
       </div>
 
       {/* Confirmation dialog */}
@@ -385,6 +421,18 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
           onConfirm={handleConfirmPublish}
           onCancel={handleCancelConfirmation}
           isPublishing={isPublishing}
+        />
+      )}
+
+      {/* Phase 17: Success confirmation with WordPress draft info */}
+      {showSuccessConfirmation && publishResult && (
+        <PublishSuccessConfirmation
+          articleTitle={data.title || ''}
+          wordpressDraftUrl={publishResult.wordpress_draft_url}
+          uploadedAt={publishResult.wordpress_draft_uploaded_at}
+          wordpressPostId={publishResult.wordpress_post_id}
+          screenshots={publishResult.screenshots}
+          onClose={handleCloseSuccessConfirmation}
         />
       )}
     </div>
