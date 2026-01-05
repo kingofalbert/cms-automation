@@ -142,6 +142,9 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   // Check if article has FAQ applicable flag (defaults to true if not set)
   const faqApplicable = data.articleReview?.faq_applicable ?? true;
 
+  // Check if article is already published (uploaded to WordPress)
+  const isAlreadyPublished = data.status === 'published';
+
   // Checklist items
   const checklistItems = useMemo(() => {
     return createChecklistItems({
@@ -374,12 +377,17 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
         {/* Action buttons - BELOW settings */}
         <div className="flex items-center justify-between">
         <div className="text-sm text-gray-600">
-          {!isReadyToPublish && (
+          {isAlreadyPublished ? (
+            <span className="text-green-600 flex items-center gap-1">
+              <span>✅</span>
+              此文章已上稿至 WordPress，無需重複提交
+            </span>
+          ) : !isReadyToPublish ? (
             <span className="text-amber-600 flex items-center gap-1">
               <span>⚠️</span>
               請完成所有必填項才能上稿
             </span>
-          )}
+          ) : null}
         </div>
         <div className="flex gap-3">
           <Button
@@ -393,11 +401,11 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
           </Button>
           <Button
             onClick={handlePublishClick}
-            disabled={!isReadyToPublish || isPublishing}
+            disabled={!isReadyToPublish || isPublishing || isAlreadyPublished}
             className="min-w-32 flex items-center gap-2"
           >
             <Send className="w-4 h-4" />
-            {isPublishing ? '上稿中...' : '上稿'}
+            {isPublishing ? '上稿中...' : isAlreadyPublished ? '已上稿' : '上稿'}
           </Button>
         </div>
         </div>
