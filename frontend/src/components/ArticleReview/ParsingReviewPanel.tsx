@@ -560,17 +560,17 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
 
   return (
     <div className="h-full flex flex-col min-h-0 flex-1">
-      {/* Phase 15: Progress Indicator (Proposal C) */}
-      <div className="mb-4 px-4 py-3 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-lg">
-        <div className="flex items-center justify-between mb-2">
+      {/* Phase 15: Progress Indicator (Proposal C) - Mobile optimized */}
+      <div className="mb-2 md:mb-4 px-3 md:px-4 py-2 md:py-3 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-lg flex-shrink-0">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-700">解析審核進度</span>
+            <span className="text-xs md:text-sm font-medium text-slate-700">解析審核進度</span>
             <span className="text-xs text-slate-500">
               ({progressItems.requiredCompleted}/{progressItems.requiredTotal} 必填項)
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-semibold ${
+            <span className={`text-xs md:text-sm font-semibold ${
               progressItems.completedCount === progressItems.total
                 ? 'text-green-600'
                 : progressItems.requiredCompleted === progressItems.requiredTotal
@@ -585,7 +585,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
           </div>
         </div>
         {/* Progress bar */}
-        <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+        <div className="h-1 md:h-1.5 bg-slate-200 rounded-full overflow-hidden mt-1.5 md:mt-2">
           <div
             className={`h-full transition-all duration-300 ${
               progressItems.completedCount === progressItems.total
@@ -597,8 +597,8 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
             style={{ width: `${(progressItems.completedCount / progressItems.total) * 100}%` }}
           />
         </div>
-        {/* Progress items mini-status */}
-        <div className="flex flex-wrap gap-2 mt-2">
+        {/* Progress items mini-status - hidden on mobile for space */}
+        <div className="hidden md:flex flex-wrap gap-2 mt-2">
           {progressItems.items.map((item, idx) => (
             <span
               key={idx}
@@ -617,9 +617,10 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
         </div>
       </div>
 
-      {/* Main content: 3-column grid (33% + 34% + 33%) */}
+      {/* Main content: 3-column grid (33% + 34% + 33%) - Mobile optimized with min-height */}
       <div
-        className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 overflow-auto"
+        className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 md:gap-4 overflow-auto min-h-0"
+        style={{ minHeight: '200px' }}
         data-testid="parsing-review-grid"
       >
         {/* Left column: 33% (4 out of 12 cols) - 基礎信息 (必填) */}
@@ -1044,16 +1045,18 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="mt-6 flex items-center justify-between pt-4 border-t">
-        <div className="text-sm text-gray-600">
+      {/* Action buttons - Mobile optimized */}
+      <div className="mt-3 md:mt-6 flex items-center justify-between pt-3 md:pt-4 border-t flex-shrink-0">
+        <div className="text-xs md:text-sm text-gray-600 hidden sm:block">
           {isDirty && (
             <span className="text-amber-600 font-medium">● 未保存的更改</span>
           )}
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 md:gap-3 w-full sm:w-auto justify-end">
           <Button
             variant="outline"
+            size="sm"
+            className="text-xs md:text-sm"
             onClick={() => {
               // Reset to original data
               setTitle(data.title || '');
@@ -1070,6 +1073,8 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
             重置
           </Button>
           <Button
+            size="sm"
+            className="text-xs md:text-sm"
             onClick={handleSave}
             disabled={!isDirty || isSaving}
             isLoading={isSaving}
