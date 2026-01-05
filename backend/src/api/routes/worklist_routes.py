@@ -306,9 +306,13 @@ async def publish_worklist_item(
         item.wordpress_post_id = int(wordpress_post_id) if wordpress_post_id else None
         item.wordpress_draft_uploaded_at = datetime.utcnow() if wordpress_post_id else None
 
+        # If WordPress draft was created successfully, mark as published
+        # Otherwise keep as ready_to_publish for retry
+        new_status = "published" if wordpress_post_id else "ready_to_publish"
+
         updated = await service.update_status(
             item_id=item_id,
-            status="ready_to_publish",
+            status=new_status,
             note={
                 "action": "publish",
                 "message": publish_message,
