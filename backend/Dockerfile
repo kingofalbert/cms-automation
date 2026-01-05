@@ -115,3 +115,4 @@ EXPOSE 8080
 # - worker: Celery Worker
 # - beat: Celery Beat Scheduler
 CMD ["/app/entrypoint.sh"]
+# Build timestamp: 1767590722

@@ -159,6 +159,8 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
   const [selectedIssue, setSelectedIssue] = useState<ProofreadingIssue | null>(null);
   // Ref for scrolling to issues
   const contentRef = useRef<HTMLDivElement>(null);
+  // Ref for the scrollable center column container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   // Show completion dialog when all issues are processed
   const [showCompletionDialog, setShowCompletionDialog] = useState(false);
   // Auto-navigation notification
@@ -191,14 +193,26 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
 
   // Scroll to selected issue in article view
   useEffect(() => {
-    if (selectedIssue && contentViewMode === 'article') {
+    if (selectedIssue && contentViewMode === 'article' && scrollContainerRef.current) {
       const timer = setTimeout(() => {
-        const element = document.querySelector(`[data-issue-id="${selectedIssue.id}"]`);
-        if (element) {
-          element.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center',
-            inline: 'nearest'
+        // Use CSS.escape to handle special characters in issue IDs
+        const escapedId = CSS.escape(selectedIssue.id);
+        const element = scrollContainerRef.current?.querySelector(`[data-issue-id="${escapedId}"]`) as HTMLElement | null;
+
+        if (element && scrollContainerRef.current) {
+          // Calculate the position to scroll to (center the element in view)
+          const container = scrollContainerRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const elementRect = element.getBoundingClientRect();
+
+          // Calculate scroll position to center the element
+          const elementTop = elementRect.top - containerRect.top + container.scrollTop;
+          const targetScroll = elementTop - (containerRect.height / 2) + (elementRect.height / 2);
+
+          // Smooth scroll to the calculated position
+          container.scrollTo({
+            top: Math.max(0, targetScroll),
+            behavior: 'smooth'
           });
         }
       }, 100);
@@ -720,7 +734,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
         </div>
 
         {/* Center Column: Article Content with Issue Highlights (50%) */}
-        <div className="flex-1 overflow-y-auto bg-white">
+        <div className="flex-1 overflow-y-auto bg-white" ref={scrollContainerRef}>
           {/* View mode toggle */}
           <div className="p-3 border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
             <div className="flex items-center justify-between">

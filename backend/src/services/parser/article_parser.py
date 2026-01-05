@@ -331,6 +331,97 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
     return cleaned
 
 
+def _compare_and_choose_seo_title(
+    ai_seo_title: str | None,
+    ai_extracted: bool,
+    heuristic_seo_title: str | None,
+    heuristic_extracted: bool,
+) -> tuple[str | None, bool, str]:
+    """Compare AI and heuristic SEO title extractions and choose the best one.
+
+    Args:
+        ai_seo_title: SEO title extracted by AI
+        ai_extracted: Whether AI successfully extracted an SEO title
+        heuristic_seo_title: SEO title extracted by heuristics
+        heuristic_extracted: Whether heuristics successfully extracted an SEO title
+
+    Returns:
+        Tuple of (chosen_seo_title, extracted_flag, source)
+        source is one of: "ai", "heuristic", None
+    """
+    # Case 1: Neither extracted anything
+    if not ai_extracted and not heuristic_extracted:
+        logger.debug("SEO Title: Neither AI nor heuristic found an SEO title")
+        return None, False, None
+
+    # Case 2: Only AI extracted
+    if ai_extracted and not heuristic_extracted:
+        logger.debug(f"SEO Title: Only AI found: {ai_seo_title}")
+        return ai_seo_title, True, "ai"
+
+    # Case 3: Only heuristic extracted
+    if not ai_extracted and heuristic_extracted:
+        logger.debug(f"SEO Title: Only heuristic found: {heuristic_seo_title}")
+        return heuristic_seo_title, True, "heuristic"
+
+    # Case 4: Both extracted - compare and choose the best one
+    logger.debug(f"SEO Title comparison - AI: '{ai_seo_title}' vs Heuristic: '{heuristic_seo_title}'")
+
+    # Helper function to score an SEO title
+    def score_title(title: str | None) -> int:
+        if not title:
+            return 0
+        score = 0
+        title_len = len(title)
+
+        # Length score: ideal SEO title is 30-60 characters
+        if 30 <= title_len <= 60:
+            score += 30
+        elif 20 <= title_len < 30 or 60 < title_len <= 80:
+            score += 20
+        elif 10 <= title_len < 20 or 80 < title_len <= 100:
+            score += 10
+        elif title_len < 10:
+            score += 0  # Too short, might be incomplete
+
+        # Content quality: penalize if it looks like a marker or incomplete
+        marker_patterns = [
+            r"^SEO\s*title",
+            r"^這是\s*SEO",
+            r"^【.*】$",
+            r"^[:：]\s*$",
+        ]
+        import re
+        for pattern in marker_patterns:
+            if re.match(pattern, title, re.IGNORECASE):
+                score -= 20  # Looks like a marker, not actual content
+
+        # Bonus for containing Chinese characters (since this is a Chinese CMS)
+        chinese_chars = len(re.findall(r'[\u4e00-\u9fff]', title))
+        if chinese_chars >= 5:
+            score += 15
+        elif chinese_chars >= 2:
+            score += 10
+
+        return score
+
+    ai_score = score_title(ai_seo_title)
+    heuristic_score = score_title(heuristic_seo_title)
+
+    logger.debug(f"SEO Title scores - AI: {ai_score}, Heuristic: {heuristic_score}")
+
+    # If scores are close (within 5 points), prefer heuristic as it's more deterministic
+    if abs(ai_score - heuristic_score) <= 5:
+        logger.info(f"SEO Title: Choosing heuristic (scores close: AI={ai_score}, Heuristic={heuristic_score})")
+        return heuristic_seo_title, True, "heuristic"
+    elif ai_score > heuristic_score:
+        logger.info(f"SEO Title: Choosing AI (score: {ai_score} > {heuristic_score})")
+        return ai_seo_title, True, "ai"
+    else:
+        logger.info(f"SEO Title: Choosing heuristic (score: {heuristic_score} > {ai_score})")
+        return heuristic_seo_title, True, "heuristic"
+
+
 class ArticleParserService:
     """Service for parsing Google Doc HTML into structured article data.
 
@@ -615,14 +706,31 @@ class ArticleParserService:
                     )
                     logger.info("Removed extracted FAQ section from body_html")
 
+            # Compare AI and heuristic SEO title extractions to choose the best one
+            ai_seo_title = parsed_data.get("seo_title")
+            ai_seo_extracted = parsed_data.get("seo_title_extracted", False)
+
+            # Also run heuristic extraction for comparison
+            soup = BeautifulSoup(raw_html, "html.parser")
+            heuristic_seo_result = self._extract_seo_title(soup)
+            heuristic_seo_title = heuristic_seo_result.get("seo_title")
+            heuristic_seo_extracted = heuristic_seo_result.get("extracted", False)
+
+            # Compare and choose the best SEO title
+            final_seo_title, final_seo_extracted, seo_source = _compare_and_choose_seo_title(
+                ai_seo_title, ai_seo_extracted,
+                heuristic_seo_title, heuristic_seo_extracted,
+            )
+            logger.info(f"SEO Title final choice: '{final_seo_title}' (source: {seo_source})")
+
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
                 title_prefix=parsed_data.get("title_prefix"),
                 title_main=parsed_data["title_main"],
                 title_suffix=parsed_data.get("title_suffix"),
-                seo_title=parsed_data.get("seo_title"),
-                seo_title_extracted=parsed_data.get("seo_title_extracted", False),
-                seo_title_source="extracted" if parsed_data.get("seo_title_extracted") else None,
+                seo_title=final_seo_title,
+                seo_title_extracted=final_seo_extracted,
+                seo_title_source=seo_source if final_seo_extracted else None,
                 author_line=parsed_data.get("author_line"),
                 author_name=parsed_data.get("author_name"),
                 body_html=cleaned_body_html,
@@ -741,7 +849,11 @@ Parse the following Google Doc HTML and extract structured information.
 
 **Instructions**:
 1. **Title**: Split into prefix (optional, e.g., "【專題】"), main title (required), and suffix (optional subtitle)
-2. **SEO Title**: Look for text marked with "這是 SEO title" or similar markers. If found, extract it as seo_title and set seo_title_extracted=true. If not found, leave seo_title=null and seo_title_extracted=false.
+2. **SEO Title**: Look for "這是 SEO title", "SEO title：", "SEO 標題" or similar markers.
+   - IMPORTANT: The marker and actual title may be in SEPARATE paragraphs (Google Docs often exports them this way)
+   - Example: <p>SEO title：</p><p></p><p>實際的SEO標題內容</p>
+   - If found, extract the title content (from same line or next non-empty paragraph) as seo_title and set seo_title_extracted=true
+   - If not found, leave seo_title=null and seo_title_extracted=false
 3. **Author**: Extract from author patterns like:
    - "文 / 作者名" or "文／作者名" (with or without spaces)
    - "作者：作者名" or "撰文：作者名"
@@ -865,7 +977,10 @@ Extract and structure the following elements from the HTML:
    - Include position (paragraph index)
 
 5. **Existing SEO** (ONLY extract if explicitly marked in document):
-   - **SEO Title**: Look for "這是 SEO title" markers. Extract if found, set seo_title_extracted=true.
+   - **SEO Title**: Look for "這是 SEO title", "SEO title：", "SEO 標題" markers.
+     * IMPORTANT: The marker and actual title may be in SEPARATE paragraphs (Google Docs often exports them this way)
+     * Example: <p>SEO title：</p><p></p><p>實際的SEO標題內容</p>
+     * Extract the title content from same line OR next non-empty paragraph, set seo_title_extracted=true.
    - **Meta Description**: Look for "【Meta摘要】" or "【Meta】" or "Meta摘要：" markers.
      * If found, extract the text IMMEDIATELY following the marker as meta_description
      * Example: "【Meta摘要】\n萊姆病每年影響約47.6萬名美國人..." → meta_description: "萊姆病每年影響約47.6萬名美國人..."
@@ -1233,6 +1348,13 @@ Process the above {content_type} and return the complete JSON response:"""
     def _extract_seo_title(self, soup: BeautifulSoup) -> dict[str, str | bool | None]:
         """Extract SEO Title from HTML if marked.
 
+        Handles two cases:
+        1. Marker and title on same line: "SEO title：實際標題內容"
+        2. Marker and title in separate paragraphs (Google Docs export):
+           <p>SEO title：</p>
+           <p></p>  <!-- possibly empty -->
+           <p>實際標題內容</p>
+
         Args:
             soup: BeautifulSoup parsed HTML
 
@@ -1243,26 +1365,65 @@ Process the above {content_type} and return the complete JSON response:"""
 
         import re
 
-        # Common SEO title markers in Chinese
-        seo_title_markers = [
-            r"這是\s*SEO\s*title[:：]?\s*(.+)",
-            r"SEO\s*title[:：]?\s*(.+)",
-            r"SEO\s*標題[:：]?\s*(.+)",
-            r"\[SEO\s*title\][:：]?\s*(.+)",
-            r"【SEO\s*title】[:：]?\s*(.+)",
+        # Patterns that capture content on the same line
+        # The content must be at least 2 characters and not just punctuation
+        seo_title_patterns_with_content = [
+            r"這是\s*SEO\s*title[:：]\s*(\S.{2,})",
+            r"SEO\s*title[:：]\s*(\S.{2,})",
+            r"SEO\s*標題[:：]\s*(\S.{2,})",
+            r"\[SEO\s*title\][:：]\s*(\S.{2,})",
+            r"【SEO\s*title】[:：]?\s*(\S.{2,})",
         ]
 
-        # Search first 20 paragraphs for SEO title marker
-        for p in soup.find_all(["p", "div", "span"], limit=20):
-            text = p.get_text(strip=True)
+        # Patterns that only match the marker (for multi-paragraph case)
+        seo_title_marker_only = [
+            r"^這是\s*SEO\s*title[:：]?\s*$",
+            r"^SEO\s*title[:：]?\s*$",
+            r"^SEO\s*標題[:：]?\s*$",
+            r"^\[SEO\s*title\][:：]?\s*$",
+            r"^【SEO\s*title】[:：]?\s*$",
+        ]
 
-            # Try each pattern
-            for pattern in seo_title_markers:
+        # Get all paragraph-like elements
+        # Note: SEO metadata may be at the END of Google Docs (after body content),
+        # so we need to scan more paragraphs than usual
+        paragraphs = soup.find_all(["p", "div"], limit=150)
+
+        for i, p in enumerate(paragraphs):
+            text = p.get_text(strip=True)
+            if not text:
+                continue
+
+            # Strategy 1: Try patterns that capture content on the same line
+            for pattern in seo_title_patterns_with_content:
                 match = re.search(pattern, text, re.IGNORECASE)
                 if match:
                     seo_title = match.group(1).strip()
-                    logger.debug(f"Found SEO Title: {seo_title}")
-                    return {"seo_title": seo_title, "extracted": True}
+                    if seo_title:  # Make sure we captured actual content
+                        logger.debug(f"Found SEO Title (same line): {seo_title}")
+                        return {"seo_title": seo_title, "extracted": True}
+
+            # Strategy 2: Check if this is a marker-only paragraph
+            for pattern in seo_title_marker_only:
+                if re.match(pattern, text, re.IGNORECASE):
+                    # Found marker, look for content in subsequent paragraphs
+                    logger.debug(f"Found SEO Title marker at paragraph {i}, searching next paragraphs")
+                    for next_p in paragraphs[i + 1 : i + 5]:  # Check up to 4 paragraphs ahead
+                        next_text = next_p.get_text(strip=True)
+                        if next_text:
+                            # Skip if this is another metadata marker
+                            is_marker = any(
+                                re.match(marker_pattern, next_text, re.IGNORECASE)
+                                for marker_pattern in [
+                                    r"^(這是\s*)?(SEO|Meta|標題|Tag|關鍵字)",
+                                    r"^【.*】[:：]?\s*$",
+                                    r"^###\s+",
+                                ]
+                            )
+                            if not is_marker:
+                                logger.debug(f"Found SEO Title (next paragraph): {next_text}")
+                                return {"seo_title": next_text, "extracted": True}
+                    break  # Marker found but no content, continue searching
 
         # No SEO title marker found
         logger.debug("No SEO Title marker found")

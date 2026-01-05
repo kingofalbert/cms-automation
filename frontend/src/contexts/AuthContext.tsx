@@ -61,6 +61,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     isMountedRef.current = true
 
+    // Timeout to handle cases where INITIAL_SESSION doesn't fire
+    const timeoutId = setTimeout(() => {
+      if (isMountedRef.current && state.loading) {
+        console.log('Auth initialization timeout - setting loading to false')
+        setState(prev => ({ ...prev, loading: false }))
+      }
+    }, 5000)
+
     // Listen for auth changes - this handles INITIAL_SESSION on first load
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -145,6 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       isMountedRef.current = false
+      clearTimeout(timeoutId)
       subscription.unsubscribe()
     }
   }, [])

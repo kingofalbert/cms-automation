@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: list[str] = Field(
         default=[
             "http://localhost:3000",
+            "http://localhost:4173",
             "http://localhost:8000",
             "https://storage.googleapis.com",
             "https://cms-automation-frontend-476323.storage.googleapis.com",

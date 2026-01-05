@@ -4,9 +4,47 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from typing import Any
 
 from bs4 import BeautifulSoup
+
+
+# URL 检测正则表达式 - 匹配常见的 URL 格式
+URL_PATTERN = re.compile(
+    r'https?://[^\s<>\[\]「」『』（）\(\)\"\']+|'  # http/https URLs
+    r'www\.[^\s<>\[\]「」『』（）\(\)\"\']+|'  # www URLs
+    r'[a-zA-Z0-9][-a-zA-Z0-9]*\.[a-zA-Z]{2,}(?:/[^\s<>\[\]「」『』（）\(\)\"\']*)?'  # domain.tld/path
+)
+
+
+def find_url_ranges(content: str) -> list[tuple[int, int]]:
+    """Find all URL ranges in content.
+
+    Returns a list of (start, end) tuples for each URL found.
+    """
+    ranges: list[tuple[int, int]] = []
+    for match in URL_PATTERN.finditer(content):
+        ranges.append((match.start(), match.end()))
+    return ranges
+
+
+def is_within_url(position: int, end_position: int, url_ranges: list[tuple[int, int]]) -> bool:
+    """Check if a position range overlaps with any URL range.
+
+    Args:
+        position: Start position of the match
+        end_position: End position of the match
+        url_ranges: List of (start, end) tuples for URLs
+
+    Returns:
+        True if the match overlaps with any URL
+    """
+    for url_start, url_end in url_ranges:
+        # Check if any part of the match overlaps with the URL
+        if position < url_end and end_position > url_start:
+            return True
+    return False
 
 from src.services.proofreading.models import (
     ArticlePayload,
@@ -87,8 +125,15 @@ class DictionaryReplacementRule(DeterministicRule):
         issues: list[ProofreadingIssue] = []
         content = payload.original_content
 
+        # 预先计算 URL 范围，避免在 URL 中进行校对
+        url_ranges = find_url_ranges(content)
+
         for pattern in self._patterns:
             for match in pattern.finditer(content):
+                # 跳过在 URL 中的匹配
+                if is_within_url(match.start(), match.end(), url_ranges):
+                    continue
+
                 match_text = match.group()
                 snippet_start = max(0, match.start() - 12)
                 snippet_end = min(len(content), match.end() + 12)
@@ -173,11 +218,16 @@ class HalfWidthCommaRule(DeterministicRule):
 
     def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
         issues: list[ProofreadingIssue] = []
-        matches = list(self.HALF_WIDTH_COMMA_PATTERN.finditer(payload.original_content))
+        content = payload.original_content
+        url_ranges = find_url_ranges(content)
+        matches = list(self.HALF_WIDTH_COMMA_PATTERN.finditer(content))
         for match in matches:
+            # 跳过在 URL 中的匹配
+            if is_within_url(match.start(), match.end(), url_ranges):
+                continue
             snippet_start = max(0, match.start() - 12)
-            snippet_end = min(len(payload.original_content), match.end() + 12)
-            snippet = payload.original_content[snippet_start:snippet_end]
+            snippet_end = min(len(content), match.end() + 12)
+            snippet = content[snippet_start:snippet_end]
             issues.append(
                 ProofreadingIssue(
                     rule_id=self.rule_id,
@@ -7341,65 +7391,9 @@ class F4_001_MetaDescriptionLengthRule(DeterministicRule):
         )
 
     def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
-        issues: list[ProofreadingIssue] = []
-
-        if not payload.meta_description:
-            issues.append(
-                ProofreadingIssue(
-                    rule_id=self.rule_id,
-                    category=self.category,
-                    subcategory=self.subcategory,
-                    message="Meta描述缺失：文章没有Meta描述。",
-                    suggestion="添加Meta描述以改善SEO效果。",
-                    severity=self.severity,
-                    confidence=1.0,
-                    can_auto_fix=self.can_auto_fix,
-                    blocks_publish=self.blocks_publish,
-                    source=RuleSource.SCRIPT,
-                    attributed_by="F4_001_MetaDescriptionLengthRule",
-                    location={},
-                    evidence="No meta_description",
-                )
-            )
-        else:
-            desc_length = len(payload.meta_description)
-            if desc_length < self.MIN_LENGTH:
-                issues.append(
-                    ProofreadingIssue(
-                        rule_id=self.rule_id,
-                        category=self.category,
-                        subcategory=self.subcategory,
-                        message=f"Meta描述过短：{desc_length}字符，建议至少{self.MIN_LENGTH}字符。",
-                        suggestion="扩充Meta描述以提供更完整的文章摘要。",
-                        severity="info",
-                        confidence=1.0,
-                        can_auto_fix=self.can_auto_fix,
-                        blocks_publish=self.blocks_publish,
-                        source=RuleSource.SCRIPT,
-                        attributed_by="F4_001_MetaDescriptionLengthRule",
-                        location={},
-                        evidence=f"Length: {desc_length}",
-                    )
-                )
-            elif desc_length > self.MAX_LENGTH:
-                issues.append(
-                    ProofreadingIssue(
-                        rule_id=self.rule_id,
-                        category=self.category,
-                        subcategory=self.subcategory,
-                        message=f"Meta描述过长：{desc_length}字符，超过建议长度（{self.MAX_LENGTH}字符）。",
-                        suggestion="缩短Meta描述，搜索引擎可能会截断过长的描述。",
-                        severity="info",
-                        confidence=1.0,
-                        can_auto_fix=self.can_auto_fix,
-                        blocks_publish=self.blocks_publish,
-                        source=RuleSource.SCRIPT,
-                        attributed_by="F4_001_MetaDescriptionLengthRule",
-                        location={},
-                        evidence=f"Length: {desc_length}",
-                    )
-                )
-        return issues
+        # 跳过非正文内容的检查（标题、meta 描述等）
+        # 根据用户要求，校对只针对正文内容
+        return []
 
 
 class F4_002_KeywordUsageRule(DeterministicRule):
@@ -7416,45 +7410,9 @@ class F4_002_KeywordUsageRule(DeterministicRule):
         )
 
     def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
-        issues: list[ProofreadingIssue] = []
-
-        if not payload.seo_keywords or len(payload.seo_keywords) == 0:
-            issues.append(
-                ProofreadingIssue(
-                    rule_id=self.rule_id,
-                    category=self.category,
-                    subcategory=self.subcategory,
-                    message="SEO关键词缺失：文章没有设置关键词。",
-                    suggestion="添加3-5个相关关键词以提升SEO效果。",
-                    severity=self.severity,
-                    confidence=1.0,
-                    can_auto_fix=self.can_auto_fix,
-                    blocks_publish=self.blocks_publish,
-                    source=RuleSource.SCRIPT,
-                    attributed_by="F4_002_KeywordUsageRule",
-                    location={},
-                    evidence="No keywords",
-                )
-            )
-        elif len(payload.seo_keywords) > 10:
-            issues.append(
-                ProofreadingIssue(
-                    rule_id=self.rule_id,
-                    category=self.category,
-                    subcategory=self.subcategory,
-                    message=f"SEO关键词过多：设置了{len(payload.seo_keywords)}个关键词，建议3-5个。",
-                    suggestion="精简关键词数量，聚焦核心主题。",
-                    severity=self.severity,
-                    confidence=0.8,
-                    can_auto_fix=self.can_auto_fix,
-                    blocks_publish=self.blocks_publish,
-                    source=RuleSource.SCRIPT,
-                    attributed_by="F4_002_KeywordUsageRule",
-                    location={},
-                    evidence=f"Keywords: {len(payload.seo_keywords)}",
-                )
-            )
-        return issues
+        # 跳过非正文内容的检查（SEO 关键词等元数据）
+        # 根据用户要求，校对只针对正文内容
+        return []
 
 
 class F4_003_InternalLinkRule(DeterministicRule):
@@ -8203,58 +8161,9 @@ class F4_004_TitleSEORule(DeterministicRule):
         )
 
     def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
-        issues: list[ProofreadingIssue] = []
-
-        # 使用 payload 的 title 字段
-        title = payload.title if hasattr(payload, 'title') and payload.title else None
-
-        if not title:
-            # 如果没有 title 字段，从内容中提取
-            content = payload.original_content
-            match = self.TITLE_PATTERN.search(content)
-            if match:
-                title = match.group(1).strip()
-
-        if title:
-            length = len(title)
-
-            if length < self.OPTIMAL_LENGTH[0]:
-                issues.append(
-                    ProofreadingIssue(
-                        rule_id=self.rule_id,
-                        category=self.category,
-                        subcategory=self.subcategory,
-                        message=f"标题过短：{length} 字符，建议 {self.OPTIMAL_LENGTH[0]}-{self.OPTIMAL_LENGTH[1]} 字符。",
-                        suggestion="扩充标题以包含更多关键词，提高 SEO 效果。",
-                        severity=self.severity,
-                        confidence=0.8,
-                        can_auto_fix=self.can_auto_fix,
-                        blocks_publish=self.blocks_publish,
-                        source=RuleSource.SCRIPT,
-                        attributed_by="F4_004_TitleSEORule",
-                        location={},
-                        evidence=title,
-                    )
-                )
-            elif length > self.OPTIMAL_LENGTH[1]:
-                issues.append(
-                    ProofreadingIssue(
-                        rule_id=self.rule_id,
-                        category=self.category,
-                        subcategory=self.subcategory,
-                        message=f"标题过长：{length} 字符，建议 {self.OPTIMAL_LENGTH[0]}-{self.OPTIMAL_LENGTH[1]} 字符。",
-                        suggestion="缩短标题以避免在搜索结果中被截断。",
-                        severity=self.severity,
-                        confidence=0.8,
-                        can_auto_fix=self.can_auto_fix,
-                        blocks_publish=self.blocks_publish,
-                        source=RuleSource.SCRIPT,
-                        attributed_by="F4_004_TitleSEORule",
-                        location={},
-                        evidence=title,
-                    )
-                )
-        return issues
+        # 跳过非正文内容的检查（标题等元数据）
+        # 根据用户要求，校对只针对正文内容
+        return []
 
 
 class F4_005_KeywordDensityRule(DeterministicRule):
@@ -8271,59 +8180,9 @@ class F4_005_KeywordDensityRule(DeterministicRule):
         )
 
     def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
-        issues: list[ProofreadingIssue] = []
-
-        # 如果 payload 有 seo_keywords，检查密度
-        if hasattr(payload, 'seo_keywords') and payload.seo_keywords:
-            content = payload.original_content.lower()
-
-            for keyword in payload.seo_keywords[:3]:  # 检查前3个关键词
-                keyword_lower = keyword.lower()
-                count = content.count(keyword_lower)
-
-                # 计算关键词密度
-                words = len(content.split())
-                if words > 0:
-                    density = (count / words) * 100
-
-                    # 理想密度 1-3%
-                    if density > 5:
-                        issues.append(
-                            ProofreadingIssue(
-                                rule_id=self.rule_id,
-                                category=self.category,
-                                subcategory=self.subcategory,
-                                message=f"关键词 '{keyword}' 密度过高：{density:.1f}%（出现 {count} 次）。",
-                                suggestion="减少关键词使用以避免过度优化，建议密度 1-3%。",
-                                severity=self.severity,
-                                confidence=0.8,
-                                can_auto_fix=self.can_auto_fix,
-                                blocks_publish=self.blocks_publish,
-                                source=RuleSource.SCRIPT,
-                                attributed_by="F4_005_KeywordDensityRule",
-                                location={},
-                                evidence=f"Keyword: {keyword}, Density: {density:.1f}%",
-                            )
-                        )
-                    elif density < 0.5 and words > 300:
-                        issues.append(
-                            ProofreadingIssue(
-                                rule_id=self.rule_id,
-                                category=self.category,
-                                subcategory=self.subcategory,
-                                message=f"关键词 '{keyword}' 密度过低：{density:.1f}%（出现 {count} 次）。",
-                                suggestion="适当增加关键词使用以提高 SEO 效果。",
-                                severity=self.severity,
-                                confidence=0.6,
-                                can_auto_fix=self.can_auto_fix,
-                                blocks_publish=self.blocks_publish,
-                                source=RuleSource.SCRIPT,
-                                attributed_by="F4_005_KeywordDensityRule",
-                                location={},
-                                evidence=f"Keyword: {keyword}, Density: {density:.1f}%",
-                            )
-                        )
-        return issues
+        # 跳过基于 SEO 关键词元数据的检查
+        # 根据用户要求，校对只针对正文内容，不涉及元数据
+        return []
 
 
 class F4_006_NofollowLinkRule(DeterministicRule):
@@ -8533,39 +8392,9 @@ class F4_010_SocialMetaTagRule(DeterministicRule):
         )
 
     def evaluate(self, payload: ArticlePayload) -> list[ProofreadingIssue]:
-        issues: list[ProofreadingIssue] = []
-
-        # 检查是否有 meta_description（Open Graph 的基础）
-        has_meta = hasattr(payload, 'meta_description') and payload.meta_description
-
-        # 检查是否有特色图片（社交分享必需）
-        has_featured_image = hasattr(payload, 'featured_image') and payload.featured_image
-
-        if not has_meta or not has_featured_image:
-            missing = []
-            if not has_meta:
-                missing.append('meta_description')
-            if not has_featured_image:
-                missing.append('featured_image')
-
-            issues.append(
-                ProofreadingIssue(
-                    rule_id=self.rule_id,
-                    category=self.category,
-                    subcategory=self.subcategory,
-                    message=f"缺少社交媒体元标签：{', '.join(missing)}。",
-                    suggestion="添加 meta description 和特色图片以优化社交媒体分享效果。",
-                    severity=self.severity,
-                    confidence=0.7,
-                    can_auto_fix=self.can_auto_fix,
-                    blocks_publish=self.blocks_publish,
-                    source=RuleSource.SCRIPT,
-                    attributed_by="F4_010_SocialMetaTagRule",
-                    location={},
-                    evidence=f"Missing: {', '.join(missing)}",
-                )
-            )
-        return issues
+        # 跳过非正文内容的检查（meta_description、featured_image 等元数据）
+        # 根据用户要求，校对只针对正文内容
+        return []
 
 
 # ============================================================================
@@ -9178,4 +9007,22 @@ class DeterministicRuleEngine:
         issues: list[ProofreadingIssue] = []
         for rule in self.rules:
             issues.extend(rule.evaluate(payload))
+
+        # 过滤掉落在 URL 范围内的问题
+        url_ranges = find_url_ranges(payload.original_content)
+        if url_ranges:
+            filtered_issues: list[ProofreadingIssue] = []
+            for issue in issues:
+                # 获取问题的位置
+                offset = issue.location.get("offset") if issue.location else None
+                if offset is not None:
+                    # 检查问题是否在 URL 范围内
+                    # 假设每个问题的范围很小，只检查起始位置
+                    if not any(url_start <= offset < url_end for url_start, url_end in url_ranges):
+                        filtered_issues.append(issue)
+                else:
+                    # 没有位置信息的问题保留
+                    filtered_issues.append(issue)
+            return filtered_issues
+
         return issues

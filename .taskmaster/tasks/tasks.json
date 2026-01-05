@@ -205,13 +205,123 @@
         ],
         "status": "pending",
         "subtasks": []
+      },
+      {
+        "id": "16",
+        "title": "Create database migration for WordPress draft fields",
+        "description": "Create and implement database migration to add WordPress draft tracking fields to the worklist_items table",
+        "details": "Create migration file `backend/migrations/versions/20260104_xxxx_add_wordpress_draft_fields.py` with SQL commands:\n```sql\nALTER TABLE worklist_items ADD COLUMN wordpress_draft_url VARCHAR(500);\nALTER TABLE worklist_items ADD COLUMN wordpress_draft_uploaded_at TIMESTAMP WITH TIME ZONE;\nALTER TABLE worklist_items ADD COLUMN wordpress_post_id INTEGER;\n```\nEnsure all fields are nullable and include appropriate comments. Test migration in development environment to verify schema changes are applied correctly.",
+        "testStrategy": "Run migration in dev environment, verify new columns exist with correct types and constraints, test rollback functionality, ensure existing data remains intact",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T20:52:25.541Z"
+      },
+      {
+        "id": "17",
+        "title": "Update WorklistItem model with WordPress draft columns",
+        "description": "Add new WordPress draft fields to the WorklistItem SQLAlchemy model with proper type annotations and mappings",
+        "details": "Modify `backend/src/models/worklist.py` to add new mapped columns:\n```python\nwordpress_draft_url: Mapped[str | None] = mapped_column(\n    String(500),\n    nullable=True,\n    comment=\"WordPress draft URL after upload\",\n)\nwordpress_draft_uploaded_at: Mapped[datetime | None] = mapped_column(\n    nullable=True,\n    comment=\"Timestamp when draft was uploaded to WordPress\",\n)\nwordpress_post_id: Mapped[int | None] = mapped_column(\n    Integer,\n    nullable=True,\n    comment=\"WordPress post ID\",\n)\n```\nEnsure proper imports for datetime and Integer types.",
+        "testStrategy": "Verify model loads without errors, test ORM queries with new fields, validate nullable constraints work correctly, ensure serialization works properly",
+        "priority": "high",
+        "dependencies": [
+          "16"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T20:53:16.083Z"
+      },
+      {
+        "id": "18",
+        "title": "Update publishing orchestrator to store WordPress draft information",
+        "description": "Modify the publishing orchestrator to capture and store WordPress draft URL, timestamp, and post ID in the WorklistItem when publishing succeeds",
+        "details": "Update `backend/src/services/publishing/orchestrator.py` in the `_finalize_success()` method:\n```python\nasync def _finalize_success(self, publish_task_id: int, result: dict) -> None:\n    # ... existing code ...\n    \n    # Update linked worklist item\n    if article and article.worklist_item:\n        worklist_item = article.worklist_item\n        worklist_item.wordpress_draft_url = result.get(\"editor_url\") or result.get(\"url\")\n        worklist_item.wordpress_draft_uploaded_at = datetime.utcnow()\n        worklist_item.wordpress_post_id = result.get(\"cms_article_id\")\n        worklist_item.status = WorklistStatus.PUBLISHED\n        session.add(worklist_item)\n```\nEnsure proper datetime import and error handling.",
+        "testStrategy": "Test publishing flow end-to-end, verify WordPress fields are populated correctly after successful publish, test with both editor_url and fallback url, validate timestamp accuracy",
+        "priority": "high",
+        "dependencies": [
+          "17"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T20:54:31.993Z"
+      },
+      {
+        "id": "19",
+        "title": "Update API schemas and endpoints for WordPress draft fields",
+        "description": "Add WordPress draft fields to API response schemas and create/update endpoints to expose the new data to frontend",
+        "details": "Update `backend/src/api/schemas/worklist.py`:\n```python\nclass WorklistItemResponse(BaseModel):\n    # ... existing fields ...\n    wordpress_draft_url: str | None = None\n    wordpress_draft_uploaded_at: datetime | None = None\n    wordpress_post_id: int | None = None\n```\nCreate or update endpoint for publishing results:\n```python\n@router.get(\"/worklist/{id}/publish-result\")\nasync def get_publish_result(id: int) -> PublishResultResponse:\n    # Return WordPress draft info + screenshots from PublishTask\n```\nEnsure proper serialization of datetime fields.",
+        "testStrategy": "Test API endpoints return new fields correctly, validate JSON serialization of datetime fields, test with null values, verify endpoint security and permissions",
+        "priority": "medium",
+        "dependencies": [
+          "18"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T20:56:15.437Z"
+      },
+      {
+        "id": "20",
+        "title": "Create PublishSuccessConfirmation component",
+        "description": "Build React component to display WordPress draft confirmation with URL, timestamp, screenshot, and next steps guidance",
+        "details": "Create `frontend/src/components/ArticleReview/PublishSuccessConfirmation.tsx`:\n```typescript\ninterface PublishSuccessConfirmationProps {\n    articleTitle: string;\n    wordpressDraftUrl: string;\n    uploadedAt: string;\n    wordpressPostId: number;\n    screenshot?: string;\n    onClose: () => void;\n    onOpenWordPress: () => void;\n}\n```\nImplement UI layout with:\n- Success header with checkmark\n- Screenshot display (clickable to enlarge)\n- WordPress draft information section\n- Clickable WordPress URL\n- Upload timestamp formatting\n- Next steps guidance\n- Action buttons (Open WordPress, Close)\nUse existing ScreenshotGallery component for screenshot display.",
+        "testStrategy": "Test component rendering with all props, verify clickable WordPress URL opens in new tab, test screenshot enlargement functionality, validate timestamp formatting, test responsive layout",
+        "priority": "medium",
+        "dependencies": [
+          "19"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T20:57:34.851Z"
+      },
+      {
+        "id": "21",
+        "title": "Update PublishPreviewPanel with success confirmation flow",
+        "description": "Modify the publishing flow in PublishPreviewPanel to show success confirmation with WordPress draft details after successful publishing",
+        "details": "Update `frontend/src/components/ArticleReview/PublishPreviewPanel.tsx`:\n```typescript\nconst [publishState, setPublishState] = useState<\n    'idle' | 'confirming' | 'publishing' | 'success' | 'failed'\n>('idle');\nconst [publishResult, setPublishResult] = useState<PublishResult | null>(null);\n```\nModify publishing flow:\n1. User clicks \"上稿\" → PublishConfirmation\n2. onPublish() → Show loading state\n3. On success → Fetch publish result → Show PublishSuccessConfirmation\n4. Handle WordPress URL opening and modal closing\nAdd proper error handling and loading states.",
+        "testStrategy": "Test complete publishing flow from confirmation to success, verify loading states display correctly, test error handling scenarios, validate state transitions, test WordPress URL opening functionality",
+        "priority": "medium",
+        "dependencies": [
+          "20"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T20:59:43.341Z"
+      },
+      {
+        "id": "22",
+        "title": "Update TypeScript types and data hooks",
+        "description": "Add TypeScript type definitions for WordPress draft fields and update data hooks to include the new information",
+        "details": "Update `frontend/src/types/api.ts`:\n```typescript\ninterface WorklistItem {\n    // ... existing fields ...\n    wordpress_draft_url?: string;\n    wordpress_draft_uploaded_at?: string;\n    wordpress_post_id?: number;\n}\n\ninterface PublishResult {\n    wordpress_draft_url: string;\n    wordpress_draft_uploaded_at: string;\n    wordpress_post_id: number;\n    screenshots: Screenshot[];\n    status: 'published' | 'draft' | 'failed';\n}\n```\nUpdate `frontend/src/hooks/articleReview/useArticleReviewData.ts` to include WordPress draft info in the returned data object.",
+        "testStrategy": "Verify TypeScript compilation without errors, test type safety in components using the new types, validate data hook returns correct WordPress information, test with optional fields",
+        "priority": "medium",
+        "dependencies": [
+          "21"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T21:06:38.492Z"
+      },
+      {
+        "id": "23",
+        "title": "End-to-end testing and visual validation",
+        "description": "Perform comprehensive testing of the entire WordPress draft capture and confirmation flow, including visual validation of UI components",
+        "details": "Execute comprehensive testing plan:\n1. Database migration testing in dev environment\n2. Complete publishing flow testing:\n   - Navigate to CMS frontend\n   - Select article in \"ready_to_publish\" status\n   - Open article review modal → \"上稿預覽\" tab\n   - Click \"上稿\" → Confirm → Wait for completion\n   - Verify PublishSuccessConfirmation displays correctly\n3. WordPress integration testing:\n   - Click WordPress draft URL\n   - Verify opens WordPress admin in new tab\n   - Confirm draft article is visible\n4. Screenshot display testing\n5. Database verification of stored WordPress information\n6. Error scenario testing and edge cases",
+        "testStrategy": "Manual testing of complete user journey, automated tests for API endpoints, database query validation, cross-browser testing of UI components, performance testing of screenshot loading, accessibility testing of new components",
+        "priority": "medium",
+        "dependencies": [
+          "22"
+        ],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-04T21:14:40.934Z"
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2025-12-08T06:43:30.376Z",
-      "taskCount": 15,
-      "completedCount": 9,
+      "lastModified": "2026-01-04T21:14:40.936Z",
+      "taskCount": 23,
+      "completedCount": 17,
       "tags": [
         "master"
       ]
