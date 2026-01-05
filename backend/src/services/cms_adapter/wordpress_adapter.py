@@ -18,16 +18,23 @@ logger = get_logger(__name__)
 class WordPressAdapter(CMSAdapter):
     """WordPress CMS adapter using REST API."""
 
-    def __init__(self, base_url: str, credentials: dict[str, str]) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        credentials: dict[str, str],
+        http_auth: tuple[str, str] | None = None,
+    ) -> None:
         """Initialize WordPress adapter.
 
         Args:
             base_url: WordPress site URL
             credentials: WordPress credentials (username, application_password)
+            http_auth: Optional HTTP Basic Auth tuple (username, password) for site-level auth
         """
         super().__init__(base_url, credentials)
         self.api_base = f"{self.base_url}/wp-json/wp/v2"
         self.auth_handler = CMSAuthHandler("wordpress", base_url, credentials)
+        self.http_auth = http_auth
         self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -40,6 +47,7 @@ class WordPressAdapter(CMSAdapter):
             self._client = httpx.AsyncClient(
                 timeout=30.0,
                 headers=self.auth_handler.get_headers(),
+                auth=self.http_auth,  # Site-level HTTP Basic Auth
             )
         return self._client
 
@@ -71,18 +79,24 @@ class WordPressAdapter(CMSAdapter):
                 "status": metadata.status,
             }
 
-            # Add tags if provided
-            if metadata.tags:
-                # Get or create tag IDs
-                tag_ids = await self._get_or_create_tag_ids(metadata.tags)
-                post_data["tags"] = tag_ids
+            # Add tags if provided (skip for drafts to avoid 404 errors on some WP installations)
+            if metadata.tags and metadata.status != "draft":
+                try:
+                    # Get or create tag IDs
+                    tag_ids = await self._get_or_create_tag_ids(metadata.tags)
+                    post_data["tags"] = tag_ids
+                except Exception as e:
+                    logger.warning("wordpress_tags_skip", error=str(e))
 
-            # Add categories if provided
-            if metadata.categories:
-                category_ids = await self._get_or_create_category_ids(
-                    metadata.categories
-                )
-                post_data["categories"] = category_ids
+            # Add categories if provided (skip for drafts to avoid 404 errors on some WP installations)
+            if metadata.categories and metadata.status != "draft":
+                try:
+                    category_ids = await self._get_or_create_category_ids(
+                        metadata.categories
+                    )
+                    post_data["categories"] = category_ids
+                except Exception as e:
+                    logger.warning("wordpress_categories_skip", error=str(e))
 
             # Create post
             response = await client.post(f"{self.api_base}/posts", json=post_data)

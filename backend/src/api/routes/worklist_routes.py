@@ -201,14 +201,125 @@ async def publish_worklist_item(
     item_id: int,
     session: AsyncSession = Depends(get_session),
 ) -> WorklistItemResponse:
-    """Placeholder endpoint to initiate publishing from worklist."""
+    """Publish worklist item as WordPress draft.
+
+    Creates a draft post in WordPress with the article content and returns
+    the WordPress draft URL for the Phase 17 PublishSuccessConfirmation dialog.
+    """
+    from datetime import datetime
+    from src.config.settings import get_settings
+    from src.services.providers.playwright_wordpress_publisher import PlaywrightWordPressPublisher
+
+    settings = get_settings()
+
     service = WorklistService(session)
+
+    # 1. Get worklist item with article data
     try:
+        item = await service.get_item(item_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+
+    # 2. Verify item is ready to publish
+    if item.status.value not in ["proofreading", "ready_to_publish"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Item must be in 'proofreading' or 'ready_to_publish' status to publish, current: {item.status.value}",
+        )
+
+    # 3. Check CMS configuration
+    if not settings.CMS_BASE_URL:
+        logger.warning("wordpress_not_configured", item_id=item_id)
+        # Fall back to placeholder behavior if WordPress not configured
+        try:
+            updated = await service.update_status(
+                item_id=item_id,
+                status="ready_to_publish",
+                note={"action": "publish", "message": "WordPress not configured - marked ready_to_publish"},
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+        return _serialize_item(updated)
+
+    # 4. Prepare article content for WordPress
+    article = getattr(item, "article", None)
+    title = item.title or "Untitled"
+    body = item.content or ""
+
+    # 5. Use Playwright browser automation to publish to WordPress
+    # Build HTTP auth tuple if site-level authentication is configured
+    http_auth = None
+    if settings.CMS_HTTP_AUTH_USERNAME and settings.CMS_HTTP_AUTH_PASSWORD:
+        http_auth = (settings.CMS_HTTP_AUTH_USERNAME, settings.CMS_HTTP_AUTH_PASSWORD)
+
+    publisher = PlaywrightWordPressPublisher()
+
+    wordpress_draft_url = None
+    wordpress_post_id = None
+    publish_message = "Publishing triggered from worklist"
+
+    try:
+        result = await publisher.publish_article(
+            cms_url=settings.CMS_BASE_URL,
+            username=settings.CMS_USERNAME,
+            password=settings.CMS_APPLICATION_PASSWORD,
+            article_title=title,
+            article_body=body,
+            seo_data=None,  # SEO data handled separately
+            headless=True,  # Run headless in Cloud Run
+            publish_mode="draft",  # Always save as draft for Phase 17
+            http_auth=http_auth,
+        )
+
+        if result.get("success"):
+            wordpress_draft_url = result.get("editor_url") or result.get("url")
+            wordpress_post_id = result.get("cms_article_id")
+            publish_message = "Published as WordPress draft via Playwright"
+
+            logger.info(
+                "wordpress_draft_created",
+                item_id=item_id,
+                post_id=wordpress_post_id,
+                url=wordpress_draft_url,
+            )
+        else:
+            # Playwright publishing failed
+            error_msg = result.get("error", "Unknown error")
+            logger.warning("wordpress_publish_failed", item_id=item_id, error=error_msg)
+            publish_message = f"WordPress publish failed: {error_msg}"
+
+    except Exception as e:
+        # Playwright or network errors
+        logger.error("wordpress_publish_error", item_id=item_id, error=str(e), exc_info=True)
+        publish_message = f"WordPress connection error: {str(e)}"
+
+    # 6. Update worklist item with WordPress draft info (if available)
+    try:
+        # Update item with WordPress info
+        item.wordpress_draft_url = wordpress_draft_url
+        item.wordpress_post_id = int(wordpress_post_id) if wordpress_post_id else None
+        item.wordpress_draft_uploaded_at = datetime.utcnow() if wordpress_post_id else None
+
         updated = await service.update_status(
             item_id=item_id,
             status="ready_to_publish",
-            note={"action": "publish", "message": "Publishing triggered from worklist"},
+            note={
+                "action": "publish",
+                "message": publish_message,
+                "wordpress_post_id": wordpress_post_id,
+                "wordpress_draft_url": wordpress_draft_url,
+            },
         )
+
+        # Refresh to get latest data
+        await session.refresh(item)
+
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -216,11 +327,12 @@ async def publish_worklist_item(
         ) from exc
 
     logger.info(
-        "worklist_publish_triggered",
+        "worklist_published_to_wordpress",
         item_id=item_id,
-        status=updated.status.value,
+        wordpress_post_id=wordpress_post_id,
+        wordpress_draft_url=wordpress_draft_url,
     )
-    return _serialize_item(updated)
+    return _serialize_item(item)
 
 
 @router.post("/{item_id}/review-decisions", response_model=ReviewDecisionsResponse)

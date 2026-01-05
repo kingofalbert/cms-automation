@@ -140,10 +140,11 @@ class PlaywrightWordPressPublisher:
         password: str,
         article_title: str,
         article_body: str,
-        seo_data: SEOMetadata,
+        seo_data: SEOMetadata | None = None,
         article_images: list[dict[str, Any]] | None = None,
-        headless: bool = False,
+        headless: bool = True,
         publish_mode: Literal["publish", "draft"] = "publish",
+        http_auth: tuple[str, str] | None = None,
     ) -> dict[str, Any]:
         """Publish article to WordPress using Playwright.
 
@@ -153,9 +154,11 @@ class PlaywrightWordPressPublisher:
             password: WordPress password or application password
             article_title: Article title
             article_body: Article content (HTML/Markdown)
-            seo_data: SEO metadata
+            seo_data: SEO metadata (optional)
             article_images: List of image metadata with local_path
-            headless: Run browser in headless mode (default: False for debugging)
+            headless: Run browser in headless mode (default: True for Cloud Run)
+            publish_mode: "publish" or "draft"
+            http_auth: Optional tuple of (username, password) for site-level HTTP Basic Auth
 
         Returns:
             Publishing result dictionary
@@ -166,6 +169,7 @@ class PlaywrightWordPressPublisher:
                 title=article_title[:50],
                 has_images=bool(article_images),
                 publish_mode=publish_mode,
+                has_http_auth=bool(http_auth),
             )
 
             # Start Playwright
@@ -173,13 +177,19 @@ class PlaywrightWordPressPublisher:
                 # Launch browser
                 self.browser = await p.chromium.launch(
                     headless=headless,
-                    args=["--start-maximized"] if not headless else [],
+                    args=["--no-sandbox", "--disable-setuid-sandbox"] if headless else ["--start-maximized"],
                 )
 
-                # Create context and page
-                context = await self.browser.new_context(
-                    viewport={"width": 1920, "height": 1080} if headless else None
-                )
+                # Create context with HTTP Basic Auth if provided
+                context_options: dict[str, Any] = {
+                    "viewport": {"width": 1920, "height": 1080},
+                }
+                if http_auth:
+                    context_options["http_credentials"] = {
+                        "username": http_auth[0],
+                        "password": http_auth[1],
+                    }
+                context = await self.browser.new_context(**context_options)
                 self.page = await context.new_page()
 
                 # Enable verbose logging
@@ -199,7 +209,8 @@ class PlaywrightWordPressPublisher:
                     )
 
                 await self._step_set_content(article_body)
-                await self._step_configure_seo(seo_data)
+                if seo_data:
+                    await self._step_configure_seo(seo_data)
                 article_location, article_id = await self._step_publish(publish_mode=publish_mode)
 
                 # Take final screenshot
@@ -302,13 +313,26 @@ class PlaywrightWordPressPublisher:
         # Wait for editor to load
         await asyncio.sleep(self.config["waits"]["editor_load"] / 1000)
 
-        # Wait for title field
-        await self.page.wait_for_selector(
-            self.config["editor"]["title_field"],
-            timeout=15000,
-        )
+        # Detect editor type: Gutenberg or Classic
+        # Try Gutenberg first, then Classic
+        gutenberg_title = self.config["editor"]["title_field"]  # .editor-post-title__input
+        classic_title = "#title"  # Classic Editor title field
 
-        logger.info("playwright_new_post_loaded")
+        try:
+            await self.page.wait_for_selector(gutenberg_title, timeout=5000)
+            self._editor_type = "gutenberg"
+            logger.info("playwright_editor_detected", editor_type="gutenberg")
+        except Exception:
+            try:
+                await self.page.wait_for_selector(classic_title, timeout=10000)
+                self._editor_type = "classic"
+                logger.info("playwright_editor_detected", editor_type="classic")
+            except Exception:
+                # Last fallback - check for any input with 'title' in name
+                self._editor_type = "unknown"
+                logger.warning("playwright_editor_unknown", message="Could not detect editor type")
+
+        logger.info("playwright_new_post_loaded", editor_type=getattr(self, '_editor_type', 'unknown'))
 
     async def _step_set_title(self, title: str) -> None:
         """Step 3: Set article title.
@@ -318,14 +342,19 @@ class PlaywrightWordPressPublisher:
         """
         logger.info("playwright_step_set_title", title=title[:50])
 
-        title_field = self.config["editor"]["title_field"]
+        # Use appropriate selector based on detected editor
+        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        if editor_type == "classic":
+            title_field = "#title"
+        else:
+            title_field = self.config["editor"]["title_field"]
 
         # Click and fill title
         await self.page.click(title_field)
         await self.page.fill(title_field, title)
         await asyncio.sleep(self.config["waits"]["after_type"] / 1000)
 
-        logger.info("playwright_title_set")
+        logger.info("playwright_title_set", editor_type=editor_type)
 
     async def _step_upload_images(self, images: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Step 4: Upload images to WordPress media library.
@@ -397,17 +426,56 @@ class PlaywrightWordPressPublisher:
         """
         logger.info("playwright_step_set_content", length=len(content))
 
-        content_area = self.config["editor"]["content_area"]
+        editor_type = getattr(self, '_editor_type', 'gutenberg')
 
-        # Click content area
-        await self.page.click(content_area)
-        await asyncio.sleep(0.5)
+        if editor_type == "classic":
+            # Classic Editor: Use TinyMCE or plain textarea
+            # First, try to switch to "Text" tab for HTML input
+            try:
+                text_tab = "#content-html"  # "Text" tab in Classic Editor
+                await self.page.click(text_tab)
+                await asyncio.sleep(0.3)
+                logger.info("playwright_switched_to_text_mode")
+            except Exception:
+                logger.debug("Text tab not found, using visual editor")
 
-        # Type content (simplified - may need to handle HTML parsing)
-        await self.page.keyboard.type(content[:1000])  # Limit for demo
+            # Fill the textarea directly (works in Text mode)
+            content_textarea = "#content"
+            try:
+                await self.page.fill(content_textarea, content)
+                logger.info("playwright_content_set_classic_textarea")
+            except Exception as e:
+                # Fallback: Try TinyMCE iframe
+                logger.debug(f"Textarea fill failed: {e}, trying TinyMCE iframe")
+                try:
+                    # Switch to Visual tab
+                    visual_tab = "#content-tmce"
+                    await self.page.click(visual_tab)
+                    await asyncio.sleep(0.5)
+
+                    # Access TinyMCE iframe
+                    iframe = self.page.frame_locator("#content_ifr")
+                    body = iframe.locator("#tinymce")
+                    await body.click()
+                    await self.page.keyboard.type(content[:5000])
+                    logger.info("playwright_content_set_classic_tinymce")
+                except Exception as e2:
+                    logger.error(f"TinyMCE also failed: {e2}")
+                    raise
+        else:
+            # Gutenberg Editor
+            content_area = self.config["editor"]["content_area"]
+
+            # Click content area
+            await self.page.click(content_area)
+            await asyncio.sleep(0.5)
+
+            # Type content (simplified - may need to handle HTML parsing)
+            await self.page.keyboard.type(content[:1000])  # Limit for demo
+            logger.info("playwright_content_set_gutenberg")
+
         await asyncio.sleep(self.config["waits"]["after_type"] / 1000)
-
-        logger.info("playwright_content_set")
+        logger.info("playwright_content_set", editor_type=editor_type)
 
     async def _step_configure_seo(self, seo_data: SEOMetadata) -> None:
         """Step 6: Configure SEO metadata.
@@ -469,42 +537,68 @@ class PlaywrightWordPressPublisher:
         Returns:
             Tuple of (result_url, article_id)
         """
-        logger.info("playwright_step_publish", publish_mode=publish_mode)
+        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        logger.info("playwright_step_publish", publish_mode=publish_mode, editor_type=editor_type)
 
         # Scroll to top
         await self.page.evaluate("window.scrollTo(0, 0)")
         await asyncio.sleep(0.5)
 
         if publish_mode == "draft":
-            save_selector = self.config["publish"].get("save_draft_button")
-            if not save_selector:
-                raise ValueError("Save draft selector not configured")
+            if editor_type == "classic":
+                # Classic Editor: Save Draft button is #save-post
+                save_selector = "#save-post"
+                logger.info("playwright_using_classic_save_draft", selector=save_selector)
+            else:
+                # Gutenberg: Use config selector
+                save_selector = self.config["publish"].get("save_draft_button")
+                if not save_selector:
+                    raise ValueError("Save draft selector not configured")
 
             await self.page.click(save_selector)
-            await asyncio.sleep(self.config["waits"].get("after_save", 1000) / 1000)
+            await asyncio.sleep(self.config["waits"].get("after_save", 1500) / 1000)
 
-            draft_notice = self.config["publish"].get("draft_saved_notice")
-            if draft_notice:
+            # For Classic Editor, wait for the page to reload/update
+            if editor_type == "classic":
+                # Wait for URL to contain post= parameter (indicates post was saved)
                 try:
-                    await self.page.wait_for_selector(draft_notice, timeout=5000)
+                    await self.page.wait_for_url("**/post.php?post=*", timeout=10000)
+                    logger.info("playwright_draft_saved_classic")
                 except Exception:
-                    logger.warning("draft_saved_notice_not_found")
+                    # Already on edit page, check for notice
+                    logger.debug("URL didn't change, checking for saved notice")
+                    await asyncio.sleep(1)
+            else:
+                draft_notice = self.config["publish"].get("draft_saved_notice")
+                if draft_notice:
+                    try:
+                        await self.page.wait_for_selector(draft_notice, timeout=5000)
+                    except Exception:
+                        logger.warning("draft_saved_notice_not_found")
 
             current_url = self.page.url
             draft_article_id = self._extract_post_id(current_url)
+            logger.info("playwright_draft_saved", article_id=draft_article_id, url=current_url)
             return current_url, draft_article_id
 
-        # Click publish button
-        publish_button = self.config["publish"]["publish_button"]
+        # Publish mode
+        if editor_type == "classic":
+            # Classic Editor: Publish button is #publish
+            publish_button = "#publish"
+        else:
+            # Gutenberg: Use config selector
+            publish_button = self.config["publish"]["publish_button"]
+
         await self.page.click(publish_button)
         await asyncio.sleep(self.config["waits"]["before_publish"] / 1000)
 
-        # Click confirm publish (if needed)
-        try:
-            confirm_button = self.config["publish"]["post_publish_button"]
-            await self.page.click(confirm_button)
-        except Exception:
-            pass  # May not need confirmation
+        # Click confirm publish (if needed, mainly for Gutenberg)
+        if editor_type != "classic":
+            try:
+                confirm_button = self.config["publish"]["post_publish_button"]
+                await self.page.click(confirm_button)
+            except Exception:
+                pass  # May not need confirmation
 
         # Wait for publish complete
         await asyncio.sleep(self.config["waits"]["after_publish"] / 1000)
@@ -518,6 +612,7 @@ class PlaywrightWordPressPublisher:
             article_id=article_id,
             url=article_url,
             publish_mode=publish_mode,
+            editor_type=editor_type,
         )
 
         return article_url, article_id

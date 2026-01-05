@@ -116,21 +116,21 @@ class ComputerUseCMSService:
                 related_articles=related_articles,
             )
 
-            # Initialize Computer Use tools
+            # Initialize Computer Use tools (2025 version)
             tools = [
                 {
-                    "type": "computer_20241022",
+                    "type": "computer_20250124",
                     "name": "computer",
                     "display_width_px": self.display_width,
                     "display_height_px": self.display_height,
                     "display_number": 1,
                 },
                 {
-                    "type": "text_editor_20241022",
-                    "name": "str_replace_editor",
+                    "type": "text_editor_20250728",
+                    "name": "str_replace_based_edit_tool",
                 },
                 {
-                    "type": "bash_20241022",
+                    "type": "bash_20250124",
                     "name": "bash",
                 },
             ]
@@ -162,7 +162,7 @@ class ComputerUseCMSService:
                     max_tokens=self.max_tokens,
                     tools=tools,
                     messages=messages,
-                    betas=["computer-use-2024-10-22"],
+                    betas=["computer-use-2025-01-24"],
                 )
 
                 logger.info(
