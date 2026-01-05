@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 from typing import Any, Literal
 
+import anthropic
 from playwright.async_api import Browser, Page, async_playwright
 
 from src.api.schemas.seo import SEOMetadata
@@ -217,7 +219,33 @@ class PlaywrightWordPressPublisher:
                 screenshot_path = f"/tmp/playwright_success_{article_id}.png"
                 await self.page.screenshot(path=screenshot_path)
 
+                # Perform AI visual verification
+                verification_result = await self._verify_with_vision_ai(
+                    expected_title=article_title,
+                    expected_content_snippet=article_body[:200] if article_body else None,
+                )
+
                 status_value = "draft" if publish_mode == "draft" else "published"
+
+                # Determine final success based on both data and visual verification
+                visual_verified = verification_result.get("verified", False)
+                visual_confidence = verification_result.get("confidence", 0.0)
+
+                # Log verification result
+                if visual_verified:
+                    logger.info(
+                        "playwright_visual_verification_passed",
+                        article_id=article_id,
+                        confidence=visual_confidence,
+                    )
+                else:
+                    logger.warning(
+                        "playwright_visual_verification_warning",
+                        article_id=article_id,
+                        confidence=visual_confidence,
+                        errors=verification_result.get("errors_detected", []),
+                        details=verification_result.get("details", ""),
+                    )
 
                 logger.info(
                     "playwright_publish_completed",
@@ -225,6 +253,7 @@ class PlaywrightWordPressPublisher:
                     url=article_location if publish_mode != "draft" else None,
                     editor_url=article_location if publish_mode == "draft" else None,
                     publish_mode=publish_mode,
+                    visual_verified=visual_verified,
                 )
 
                 return {
@@ -234,6 +263,15 @@ class PlaywrightWordPressPublisher:
                     "editor_url": article_location if publish_mode == "draft" else None,
                     "screenshot": screenshot_path,
                     "status": status_value,
+                    "visual_verification": {
+                        "verified": visual_verified,
+                        "confidence": visual_confidence,
+                        "title_found": verification_result.get("title_found", False),
+                        "content_found": verification_result.get("content_found", False),
+                        "save_confirmed": verification_result.get("save_confirmed", False),
+                        "errors_detected": verification_result.get("errors_detected", []),
+                        "details": verification_result.get("details", ""),
+                    },
                 }
 
         except Exception as e:
@@ -714,6 +752,160 @@ class PlaywrightWordPressPublisher:
         )
 
         return article_url, article_id
+
+    async def _verify_with_vision_ai(
+        self,
+        expected_title: str,
+        expected_content_snippet: str | None = None,
+    ) -> dict[str, Any]:
+        """Verify published content using Claude's vision API.
+
+        Takes a screenshot and asks Claude to verify:
+        1. The title is visible and matches expected
+        2. Content appears to be present
+        3. No error messages are visible
+
+        Args:
+            expected_title: The article title that should be visible
+            expected_content_snippet: Optional content snippet to verify (first 100 chars)
+
+        Returns:
+            Verification result dictionary with:
+            - verified: bool - whether verification passed
+            - confidence: float - confidence level (0-1)
+            - title_found: bool - whether title was found
+            - content_found: bool - whether content appears present
+            - errors_detected: list - any error messages found
+            - details: str - detailed explanation
+        """
+        logger.info("playwright_vision_verification_start", title=expected_title[:50])
+
+        try:
+            # Take screenshot as bytes
+            screenshot_bytes = await self.page.screenshot(type="png")
+            screenshot_base64 = base64.b64encode(screenshot_bytes).decode("utf-8")
+
+            # Prepare the verification prompt
+            content_check = ""
+            if expected_content_snippet:
+                content_check = f"\n3. Check if content appears to be present (look for text similar to: '{expected_content_snippet[:100]}...')"
+
+            verification_prompt = f"""Please analyze this WordPress editor screenshot and verify the following:
+
+1. Is the article title "{expected_title}" visible in the title field?
+2. Does the page appear to be a WordPress post editor (either Classic or Gutenberg)?{content_check}
+4. Are there any error messages, warnings, or failure indicators visible?
+5. Does the page indicate the post was saved successfully (look for "Draft saved", "Post updated", success notices)?
+
+Please respond in JSON format:
+{{
+    "title_found": true/false,
+    "title_matches": true/false,
+    "editor_detected": "classic" | "gutenberg" | "unknown",
+    "content_present": true/false,
+    "errors_detected": ["list of any error messages found"],
+    "save_confirmed": true/false,
+    "confidence": 0.0-1.0,
+    "details": "Brief explanation of what you see"
+}}
+
+Be strict: only return title_found=true if you can clearly see the expected title text."""
+
+            # Call Claude's vision API
+            client = anthropic.Anthropic()
+            response = client.messages.create(
+                model="claude-sonnet-4-20250514",  # Use Sonnet for cost efficiency
+                max_tokens=1024,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": "image/png",
+                                    "data": screenshot_base64,
+                                },
+                            },
+                            {
+                                "type": "text",
+                                "text": verification_prompt,
+                            },
+                        ],
+                    }
+                ],
+            )
+
+            # Parse the response
+            response_text = response.content[0].text
+            logger.debug("vision_api_response", response=response_text[:500])
+
+            # Extract JSON from response
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', response_text)
+            if json_match:
+                result = json.loads(json_match.group())
+            else:
+                # Fallback if JSON not found
+                result = {
+                    "title_found": False,
+                    "title_matches": False,
+                    "editor_detected": "unknown",
+                    "content_present": False,
+                    "errors_detected": ["Could not parse AI response"],
+                    "save_confirmed": False,
+                    "confidence": 0.0,
+                    "details": response_text[:200],
+                }
+
+            # Determine overall verification status
+            # For Classic Editor, save_confirmed may not be visible (URL change is the indicator)
+            # So we consider verified if:
+            # 1. Title is found and matches (required)
+            # 2. No errors detected (required)
+            # 3. Either save_confirmed OR high confidence (>=0.8)
+            title_ok = result.get("title_found", False) and result.get("title_matches", False)
+            no_errors = len(result.get("errors_detected", [])) == 0
+            save_indicator = result.get("save_confirmed", False) or result.get("confidence", 0.0) >= 0.8
+
+            verified = title_ok and no_errors and save_indicator
+
+            verification_result = {
+                "verified": verified,
+                "confidence": result.get("confidence", 0.0),
+                "title_found": result.get("title_found", False),
+                "title_matches": result.get("title_matches", False),
+                "content_found": result.get("content_present", False),
+                "editor_type": result.get("editor_detected", "unknown"),
+                "save_confirmed": result.get("save_confirmed", False),
+                "errors_detected": result.get("errors_detected", []),
+                "details": result.get("details", ""),
+            }
+
+            logger.info(
+                "playwright_vision_verification_complete",
+                verified=verified,
+                confidence=result.get("confidence", 0.0),
+                title_found=result.get("title_found", False),
+                save_confirmed=result.get("save_confirmed", False),
+            )
+
+            return verification_result
+
+        except Exception as e:
+            logger.error("playwright_vision_verification_failed", error=str(e))
+            return {
+                "verified": False,
+                "confidence": 0.0,
+                "title_found": False,
+                "title_matches": False,
+                "content_found": False,
+                "editor_type": "unknown",
+                "save_confirmed": False,
+                "errors_detected": [f"Vision verification failed: {str(e)}"],
+                "details": str(e),
+            }
 
     def _extract_post_id(self, url: str) -> str:
         """Extract post ID from URL.
