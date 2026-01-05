@@ -154,6 +154,7 @@
     },
     "statisticsCards": {
       "wordsLabel": "{{count}} 字",
+      "needsAttentionHint": "待審核和待上稿",
       "readyHint": "可立即上稿",
       "avgCycle": "平均週期",
       "cycleHint": "從進件到上稿",

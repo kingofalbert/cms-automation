@@ -154,6 +154,7 @@
     },
     "statisticsCards": {
       "wordsLabel": "{{count}} words",
+      "needsAttentionHint": "Pending review & publish",
       "readyHint": "Ready to go live",
       "avgCycle": "Average Cycle",
       "cycleHint": "From intake to publish",

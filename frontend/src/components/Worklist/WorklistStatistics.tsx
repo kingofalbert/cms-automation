@@ -5,7 +5,7 @@
 
 import { WorklistStatistics as Stats } from '@/types/worklist';
 import { Card } from '@/components/ui';
-import { FileText, Clock, TrendingUp, BarChart3, Activity, AlertTriangle } from 'lucide-react';
+import { FileText, Clock, TrendingUp, BarChart3, Activity, AlertTriangle, Bell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export interface WorklistStatisticsProps {
@@ -22,6 +22,11 @@ export const WorklistStatistics: React.FC<WorklistStatisticsProps> = ({
   const proofreading = breakdown.proofreading ?? 0;
   const underReview = breakdown.under_review ?? 0;
   const failed = breakdown.failed ?? 0;
+  // Phase 16: Add parsing_review and calculate "needs attention" count
+  const parsingReview = breakdown.parsing_review ?? 0;
+  const proofreadingReview = breakdown.proofreading_review ?? underReview; // fallback to under_review for legacy
+  // "Needs attention" = articles requiring user action (matches QuickFilters needsAttention)
+  const needsAttention = parsingReview + proofreadingReview + readyToPublish;
   const totalWordCount =
     typeof statistics.total_word_count === 'number'
       ? statistics.total_word_count
@@ -78,6 +83,26 @@ export const WorklistStatistics: React.FC<WorklistStatisticsProps> = ({
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
               <FileText className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </Card>
+
+        {/* Needs Attention - Phase 16: Show articles needing user action */}
+        <Card className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 mb-1">
+                {t('worklist.quickFilters.needsAttention')}
+              </p>
+              <p className="text-2xl font-bold text-orange-600">
+                {needsAttention}
+              </p>
+              <p className="text-xs text-gray-600 mt-1">
+                {t('worklist.statisticsCards.needsAttentionHint', '待審核和待上稿')}
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+              <Bell className="w-6 h-6 text-orange-600" />
             </div>
           </div>
         </Card>
