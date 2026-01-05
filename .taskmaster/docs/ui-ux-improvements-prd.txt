@@ -1,0 +1,206 @@
+# UI/UX Improvements PRD - Regression Test Follow-up
+
+## Overview
+This PRD documents the minor issues and enhancement suggestions discovered during the comprehensive UI/UX regression test conducted on 2026-01-05. These items are lower priority than the critical/major bugs which have already been fixed.
+
+## Background
+A full end-to-end regression test was performed using Playwright automation. The test covered all major pages: Worklist, Proofreading Review, Parsing Review, SEO Confirmation, Pipeline Monitor, and Settings. Critical and major bugs (BUG-0001 through BUG-0005) have been resolved. This PRD covers the remaining minor issues and enhancement suggestions.
+
+---
+
+## Minor Issues (12 items)
+
+### MINOR-001: Proofreading Issue Counter Missing
+**Page:** /worklist/:id/review
+**Description:** The proofreading review page lacks a "Issue X of Y" counter to show progress through the list of issues.
+**Impact:** Users cannot easily track their progress when reviewing multiple proofreading issues.
+**Acceptance Criteria:**
+- Display "第 X / Y 個問題" counter near the issue navigation
+- Counter updates as user navigates between issues
+- Counter should be visible at all screen sizes
+
+### MINOR-002: SEO Page Information Density Too High
+**Page:** /articles/:id/seo-confirmation
+**Description:** The SEO confirmation page has too much information displayed without clear visual hierarchy.
+**Impact:** Users may feel overwhelmed and miss important information.
+**Acceptance Criteria:**
+- Group related information into collapsible sections
+- Use visual separators between major sections
+- Highlight most important actions/decisions
+- Test with actual users for feedback
+
+### MINOR-003: Parsing Page Title Suggestion Missing Recommendation Badge
+**Page:** /articles/:id/parsing
+**Description:** AI-generated title suggestions should have a "Recommended" badge on the best option.
+**Impact:** Users may not know which suggestion the AI considers best.
+**Acceptance Criteria:**
+- Add "推薦" badge to the top-ranked AI suggestion
+- Badge should be visually distinct (e.g., star icon + text)
+- Maintain badge when user scrolls
+
+### MINOR-004: Table Row Hover Effect Not Obvious
+**Page:** /worklist
+**Description:** When hovering over table rows, the visual feedback is too subtle.
+**Impact:** Users may not realize rows are clickable.
+**Acceptance Criteria:**
+- Increase hover background color contrast
+- Add subtle cursor: pointer indication
+- Ensure hover state is accessible (not color-only)
+
+### MINOR-005: Statistics Cards Show "0" Instead of Skeleton During Load
+**Page:** /worklist
+**Description:** Statistics cards display "0" values while data is loading, which can be misleading.
+**Impact:** Users may think there are actually 0 items.
+**Acceptance Criteria:**
+- Show skeleton/shimmer animation during loading
+- Only display actual values after data is loaded
+- Handle error states gracefully
+
+### MINOR-006: Language Switcher Position Inconsistent
+**Page:** All pages
+**Description:** The language switcher position varies slightly between pages.
+**Impact:** Users may have trouble finding the switcher.
+**Acceptance Criteria:**
+- Fix language switcher position in header
+- Ensure consistent placement across all pages
+- Test on different screen sizes
+
+### MINOR-007: Settings Page Accordion State Not Remembered
+**Page:** /settings
+**Description:** When navigating away and back to settings, accordion sections reset to default state.
+**Impact:** Users lose their place when switching pages.
+**Acceptance Criteria:**
+- Persist accordion open/closed state in localStorage
+- Restore state when returning to settings page
+- Provide "Expand All" / "Collapse All" buttons
+
+### MINOR-008: Missing Keyboard Focus Rings on Some Elements
+**Page:** Multiple pages
+**Description:** Some interactive elements lack visible focus indicators when navigating with keyboard.
+**Impact:** Keyboard users cannot see which element is focused.
+**Acceptance Criteria:**
+- Audit all interactive elements for focus visibility
+- Add consistent focus ring style (e.g., ring-2 ring-primary-500)
+- Test with keyboard-only navigation
+
+### MINOR-009: Date Format Inconsistency
+**Page:** Multiple pages
+**Description:** Dates are displayed in different formats across the application (e.g., "2025-01-05" vs "Jan 5, 2025" vs "1/5/25").
+**Impact:** Inconsistent user experience and potential confusion.
+**Acceptance Criteria:**
+- Define standard date format for the application
+- Use consistent format across all pages
+- Respect user locale preferences if applicable
+
+### MINOR-010: No "No Results" Message for Empty Search
+**Page:** /worklist
+**Description:** When search returns no results, the table appears empty without explanation.
+**Impact:** Users may think the search is broken.
+**Acceptance Criteria:**
+- Display "找不到符合條件的文章" message
+- Include suggestion to adjust search criteria
+- Show illustration for empty state
+
+### MINOR-011: Some Buttons Missing Loading State
+**Page:** Multiple pages
+**Description:** Some action buttons do not show loading indicators during async operations.
+**Impact:** Users may click multiple times thinking nothing happened.
+**Acceptance Criteria:**
+- Audit all async action buttons
+- Add loading spinner during operation
+- Disable button while loading to prevent double-clicks
+
+### MINOR-012: Tooltips Truncated at Screen Edge
+**Page:** Multiple pages
+**Description:** Tooltips that appear near screen edges get cut off instead of repositioning.
+**Impact:** Users cannot read full tooltip content.
+**Acceptance Criteria:**
+- Implement tooltip repositioning logic
+- Tooltips should flip/shift to stay within viewport
+- Test on various screen sizes
+
+---
+
+## Enhancement Suggestions (7 items)
+
+### ENH-001: Keyboard Shortcuts Help Dialog
+**Description:** Add a help dialog showing all available keyboard shortcuts, triggered by pressing "?" key.
+**Rationale:** Power users can work faster with keyboard shortcuts but need to discover them first.
+**Acceptance Criteria:**
+- "?" key opens shortcuts help modal
+- Modal lists all shortcuts grouped by feature
+- Modal is accessible and dismissible with Escape
+- Consider adding shortcut hints on hover
+
+### ENH-002: Multi-step Progress Indicator
+**Description:** Add visual progress indicator for multi-step workflows (Parsing → Proofreading → Publish).
+**Rationale:** Users should understand where they are in the workflow and what comes next.
+**Acceptance Criteria:**
+- Show stepper/progress bar at top of review modals
+- Highlight current step
+- Allow clicking steps to navigate (if allowed by workflow)
+- Show completion status for each step
+
+### ENH-003: Dark Mode Support
+**Description:** Add dark mode theme option for users who prefer dark interfaces.
+**Rationale:** Dark mode reduces eye strain and is preferred by many users.
+**Acceptance Criteria:**
+- Add theme toggle in settings and/or header
+- Implement dark color palette for all components
+- Persist theme preference
+- Respect system preference by default
+
+### ENH-004: Batch Selection Operations
+**Description:** Allow selecting multiple worklist items and performing batch operations.
+**Rationale:** Users managing many articles can save time with bulk actions.
+**Acceptance Criteria:**
+- Add checkbox column to worklist table
+- Implement "Select All" functionality
+- Enable batch status change, batch delete (if allowed)
+- Show count of selected items
+
+### ENH-005: Breadcrumb Navigation
+**Description:** Add breadcrumb navigation to show current location in the app hierarchy.
+**Rationale:** Helps users understand their location and navigate back easily.
+**Acceptance Criteria:**
+- Display breadcrumbs below header on nested pages
+- Breadcrumb items are clickable links
+- Current page is not clickable
+- Works correctly with dynamic routes
+
+### ENH-006: Form Auto-save
+**Description:** Automatically save form data periodically to prevent data loss.
+**Rationale:** Users may lose work if browser crashes or they accidentally navigate away.
+**Acceptance Criteria:**
+- Auto-save every 30 seconds (configurable)
+- Show "Saving..." / "Saved" indicator
+- Prompt user about unsaved changes on navigation
+- Store drafts in localStorage or backend
+
+### ENH-007: Mobile Bottom Navigation Bar
+**Description:** Add fixed bottom navigation bar on mobile devices for easy access to main sections.
+**Rationale:** Bottom navigation is more thumb-friendly on mobile devices.
+**Acceptance Criteria:**
+- Show bottom nav only on mobile viewports
+- Include icons for main sections (Worklist, Settings)
+- Highlight active section
+- Hide when scrolling down, show when scrolling up
+
+---
+
+## Technical Notes
+- All changes should follow existing design system patterns
+- Use existing UI component library where possible
+- Ensure all changes are fully responsive
+- Add appropriate i18n support (zh-TW and en-US)
+- Write unit tests for new components
+- Update Playwright E2E tests as needed
+
+## Priority Order
+1. MINOR-004, MINOR-005, MINOR-010 (High impact, low effort)
+2. MINOR-001, MINOR-003, MINOR-011 (Medium impact, medium effort)
+3. MINOR-002, MINOR-007, MINOR-008 (Medium impact, medium effort)
+4. MINOR-006, MINOR-009, MINOR-012 (Low impact, low effort)
+5. ENH-002, ENH-004 (High value features)
+6. ENH-001, ENH-005, ENH-006 (Medium value features)
+7. ENH-003, ENH-007 (Nice to have)

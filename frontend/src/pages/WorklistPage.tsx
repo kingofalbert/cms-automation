@@ -22,7 +22,8 @@ import {
   WorklistListResponse,
   WorklistItemDetail,
 } from '@/types/worklist';
-import { Search, Filter, RefreshCw } from 'lucide-react';
+import { Search, Filter, RefreshCw, CheckSquare, X } from 'lucide-react';
+import { SkeletonStatsCard } from '@/components/ui/skeleton';
 
 export default function WorklistPage() {
   const { t } = useTranslation();
@@ -33,6 +34,10 @@ export default function WorklistPage() {
   const [quickFilter, setQuickFilter] = useState<QuickFilterKey>('all');
   const [selectedItem, setSelectedItem] = useState<WorklistItem | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Batch selection state
+  const [showSelection, setShowSelection] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Phase 8: ArticleReviewModal state
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
@@ -66,7 +71,7 @@ export default function WorklistPage() {
   });
 
   // Fetch statistics
-  const { data: statistics } = useQuery({
+  const { data: statistics, isLoading: isStatisticsLoading } = useQuery({
     queryKey: ['worklist-statistics'],
     queryFn: async () => {
       return await api.get<Stats>('/v1/worklist/statistics');
@@ -246,11 +251,30 @@ export default function WorklistPage() {
       </div>
 
       {/* Statistics */}
-      {statistics && (
-        <div className="mb-8">
+      <div className="mb-8">
+        {isStatisticsLoading ? (
+          <>
+            {/* Skeleton for first row - 4 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <SkeletonStatsCard key={`row1-${i}`} />
+              ))}
+              {/* Last card spans 2 columns on md+ */}
+              <div className="md:col-span-2">
+                <SkeletonStatsCard />
+              </div>
+            </div>
+            {/* Skeleton for second row - 3 cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <SkeletonStatsCard key={`row2-${i}`} />
+              ))}
+            </div>
+          </>
+        ) : statistics ? (
           <WorklistStatistics statistics={statistics} />
-        </div>
-      )}
+        ) : null}
+      </div>
 
       {/* Quick Filters */}
       <QuickFilters
@@ -329,6 +353,70 @@ export default function WorklistPage() {
         )}
       </Card>
 
+      {/* Batch Actions Toolbar */}
+      {showSelection && selectedIds.size > 0 && (
+        <Card className="mb-4 p-4 bg-primary-50 border-primary-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckSquare className="w-5 h-5 text-primary-600" />
+              <span className="font-medium text-primary-700">
+                {t('worklist.table.selectedCount', { count: selectedIds.size })}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    const newStatus = e.target.value as WorklistStatus;
+                    const statusLabel = t(`worklist.status.${newStatus}`);
+                    if (window.confirm(t('worklist.table.batchStatusChangeConfirm', { count: selectedIds.size, status: statusLabel }))) {
+                      // TODO: Implement batch status change API
+                      console.log('Batch status change:', Array.from(selectedIds), newStatus);
+                      alert(t('worklist.table.batchStatusChangeSuccess', { count: selectedIds.size }));
+                      setSelectedIds(new Set());
+                      refetch();
+                    }
+                  }
+                }}
+                options={[
+                  { value: '', label: t('worklist.table.batchStatusChange') },
+                  { value: 'pending', label: t('worklist.status.pending') },
+                  { value: 'ready_to_publish', label: t('worklist.status.ready_to_publish') },
+                  { value: 'failed', label: t('worklist.status.failed') },
+                ]}
+                className="min-w-[180px]"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedIds(new Set());
+                  setShowSelection(false);
+                }}
+              >
+                <X className="w-4 h-4 mr-1" />
+                {t('worklist.table.clearSelection')}
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Batch Selection Toggle */}
+      {!showSelection && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowSelection(true)}
+          >
+            <CheckSquare className="w-4 h-4 mr-2" />
+            {t('worklist.table.batchActions')}
+          </Button>
+        </div>
+      )}
+
       {/* Worklist Table */}
       <Card>
         <WorklistTable
@@ -342,6 +430,14 @@ export default function WorklistPage() {
             // TODO: Implement retry logic
             console.log('Retry:', item);
           }}
+          hasFilters={filters.status !== 'all' || !!filters.search || !!filters.author || quickFilter !== 'all'}
+          onClearFilters={() => {
+            setFilters({ status: 'all', search: '', author: '' });
+            setQuickFilter('all');
+          }}
+          showSelection={showSelection}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
         />
       </Card>
 

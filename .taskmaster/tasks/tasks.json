@@ -315,13 +315,223 @@
         "status": "done",
         "subtasks": [],
         "updatedAt": "2026-01-04T21:14:40.934Z"
+      },
+      {
+        "id": "24",
+        "title": "Implement Proofreading Issue Counter",
+        "description": "Add progress counter showing 'Issue X of Y' on proofreading review page to help users track their progress through multiple issues",
+        "details": "Create a counter component that displays '第 X / Y 個問題' near the issue navigation. Update counter state when user navigates between issues using next/previous buttons. Position counter prominently but non-intrusively, ensuring visibility on all screen sizes. Use React state to track current issue index and total count.",
+        "testStrategy": "Unit test counter component with different issue counts. E2E test navigation between issues to verify counter updates correctly. Test responsive behavior on mobile and desktop viewports.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "25",
+        "title": "Enhance Table Row Hover Effects",
+        "description": "Improve visual feedback for table row hover states on worklist page to make clickable rows more obvious",
+        "details": "Increase hover background color contrast using CSS hover pseudo-class. Add cursor: pointer to indicate clickability. Implement accessible hover states that don't rely solely on color (add subtle border or shadow). Use CSS transitions for smooth hover effects. Apply consistent styling across all table components.",
+        "testStrategy": "Visual regression tests for hover states. Accessibility testing with screen readers. Manual testing across different browsers and devices. Verify hover effects work with keyboard navigation.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [],
+        "updatedAt": "2026-01-05T11:30:54.754Z"
+      },
+      {
+        "id": "26",
+        "title": "Replace Loading Zeros with Skeleton Animation",
+        "description": "Replace misleading '0' values in statistics cards with skeleton/shimmer animations during data loading",
+        "details": "Create skeleton component with shimmer animation using CSS keyframes or library like react-loading-skeleton. Replace hardcoded '0' values with skeleton placeholders during loading states. Implement proper loading state management in statistics components. Add error state handling for failed data loads.",
+        "testStrategy": "Unit tests for loading states. Visual tests for skeleton animations. Network throttling tests to verify skeleton appears during slow loads. Error state testing with mocked API failures.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "27",
+        "title": "Add Empty Search Results Message",
+        "description": "Display helpful message and suggestions when worklist search returns no results instead of showing empty table",
+        "details": "Create empty state component with '找不到符合條件的文章' message. Include suggestions to adjust search criteria. Add illustration or icon for visual appeal. Implement conditional rendering based on search results length. Provide clear call-to-action to modify search.",
+        "testStrategy": "Unit tests for empty state rendering. E2E tests with various search queries that return no results. Accessibility testing for screen reader compatibility. Visual regression tests for empty state appearance.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "28",
+        "title": "Add Recommended Badge to AI Title Suggestions",
+        "description": "Display 'Recommended' badge on the best AI-generated title suggestion to guide user selection",
+        "details": "Create badge component with '推薦' text and star icon. Apply to top-ranked AI suggestion based on confidence score or ranking. Use distinct styling (color, border, icon) to make badge prominent. Ensure badge remains visible during scrolling with sticky positioning if needed.",
+        "testStrategy": "Unit tests for badge rendering logic. Visual tests for badge appearance. Test badge persistence during page interactions. Verify badge appears on correct suggestion based on AI ranking.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "29",
+        "title": "Audit and Add Loading States to Action Buttons",
+        "description": "Identify buttons missing loading indicators and add spinners/disabled states during async operations",
+        "details": "Audit all async action buttons across the application. Implement loading state with spinner icon and disabled attribute. Use consistent loading indicator design system-wide. Add loading state management to button components. Prevent double-clicks during operations.",
+        "testStrategy": "Comprehensive audit of all interactive buttons. Unit tests for loading state behavior. E2E tests for async operations. Manual testing to verify no double-click issues. Performance testing for loading state transitions.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "30",
+        "title": "Restructure SEO Page Information Hierarchy",
+        "description": "Reorganize SEO confirmation page content into collapsible sections with clear visual hierarchy to reduce information density",
+        "details": "Group related SEO information into logical sections (metadata, content analysis, recommendations). Implement collapsible accordion components. Add visual separators and whitespace between sections. Highlight critical actions and decisions. Use progressive disclosure to show details on demand.",
+        "testStrategy": "User testing sessions for information comprehension. A/B testing with current vs. new layout. Accessibility testing for accordion components. Mobile responsiveness testing for collapsible sections.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "31",
+        "title": "Fix Language Switcher Position Consistency",
+        "description": "Standardize language switcher position across all pages to ensure consistent user experience",
+        "details": "Define fixed position for language switcher in header component. Update all page layouts to use consistent header. Test positioning across different screen sizes and orientations. Ensure switcher remains accessible and visible on all pages. Use CSS positioning (absolute/fixed) for consistency.",
+        "testStrategy": "Visual regression tests across all pages. Responsive design testing on multiple devices. Cross-browser compatibility testing. Manual navigation testing to verify consistent positioning.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "32",
+        "title": "Implement Settings Accordion State Persistence",
+        "description": "Save and restore accordion open/closed states in settings page using localStorage",
+        "details": "Implement localStorage integration for accordion state. Create state management for tracking open/closed sections. Add 'Expand All' and 'Collapse All' buttons for user convenience. Handle localStorage errors gracefully. Use unique keys for different accordion sections.",
+        "testStrategy": "Unit tests for localStorage integration. E2E tests for state persistence across page navigation. Error handling tests for localStorage failures. User experience testing for expand/collapse functionality.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "33",
+        "title": "Add Keyboard Focus Indicators",
+        "description": "Audit and add visible focus rings to interactive elements for keyboard navigation accessibility",
+        "details": "Conduct comprehensive audit of all interactive elements (buttons, links, form inputs). Implement consistent focus ring styling using CSS outline or box-shadow. Use design system colors (e.g., ring-2 ring-primary-500). Ensure focus indicators are visible against all backgrounds. Test with keyboard-only navigation.",
+        "testStrategy": "Accessibility audit with keyboard navigation. Automated testing with axe-core. Manual testing across all interactive elements. Screen reader compatibility testing. Visual contrast testing for focus indicators.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "34",
+        "title": "Standardize Date Format Display",
+        "description": "Implement consistent date formatting across all pages and components in the application",
+        "details": "Define standard date format for the application (considering locale preferences). Create utility function for date formatting. Replace all hardcoded date formats with centralized formatter. Implement locale-aware formatting for zh-TW and en-US. Use libraries like date-fns or Intl.DateTimeFormat.",
+        "testStrategy": "Unit tests for date formatting utility. Visual regression tests for date displays. Locale testing for different language settings. Edge case testing with various date formats and timezones.",
+        "priority": "low",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "35",
+        "title": "Fix Tooltip Positioning at Screen Edges",
+        "description": "Implement smart tooltip repositioning to prevent truncation at viewport boundaries",
+        "details": "Implement tooltip positioning logic that detects viewport boundaries. Add flip/shift behavior to keep tooltips within visible area. Use libraries like Popper.js or implement custom positioning algorithm. Handle edge cases for small screens and long tooltip content. Ensure smooth transitions during repositioning.",
+        "testStrategy": "Unit tests for positioning logic. Visual tests on various screen sizes. Edge case testing with long tooltip content. Cross-browser compatibility testing. Mobile device testing for touch interactions.",
+        "priority": "low",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "36",
+        "title": "Create Keyboard Shortcuts Help Dialog",
+        "description": "Implement help modal triggered by '?' key showing all available keyboard shortcuts grouped by feature",
+        "details": "Create modal component with keyboard shortcut documentation. Implement '?' key listener for modal trigger. Group shortcuts by feature/page for easy navigation. Make modal accessible with proper ARIA labels and Escape key dismissal. Add shortcut hints on hover for discoverable shortcuts.",
+        "testStrategy": "Unit tests for modal component and keyboard listeners. Accessibility testing with screen readers. E2E tests for modal trigger and dismissal. Cross-browser keyboard event testing. User testing for shortcut discoverability.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "37",
+        "title": "Implement Multi-step Progress Indicator",
+        "description": "Add visual progress stepper for multi-step workflows (Parsing → Proofreading → Publish) to show current position and next steps",
+        "details": "Create stepper component showing workflow stages. Highlight current step and completed steps. Allow navigation to previous steps if workflow permits. Position stepper at top of review modals. Use clear visual indicators for step status (pending, current, completed). Implement responsive design for mobile.",
+        "testStrategy": "Unit tests for stepper component states. E2E tests for workflow navigation. Visual regression tests for stepper appearance. Mobile responsiveness testing. User testing for workflow clarity.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "38",
+        "title": "Implement Dark Mode Theme Support",
+        "description": "Add dark mode theme option with toggle control and system preference detection",
+        "details": "Create dark color palette for all components. Implement theme context and provider. Add theme toggle in settings/header. Use CSS custom properties or styled-components for theme switching. Persist theme preference in localStorage. Respect system preference with prefers-color-scheme media query.",
+        "testStrategy": "Visual regression tests for both themes. Unit tests for theme switching logic. Cross-browser compatibility testing. Accessibility testing for color contrast in dark mode. Performance testing for theme transitions.",
+        "priority": "low",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "39",
+        "title": "Add Batch Selection Operations",
+        "description": "Implement multi-select functionality for worklist items with batch operations like status change and delete",
+        "details": "Add checkbox column to worklist table. Implement 'Select All' functionality with indeterminate state. Create batch operation toolbar showing selected count. Enable batch status change and delete operations. Handle partial selection states and error scenarios. Optimize for large datasets.",
+        "testStrategy": "Unit tests for selection state management. E2E tests for batch operations. Performance testing with large datasets. Accessibility testing for checkbox interactions. Error handling tests for failed batch operations.",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "40",
+        "title": "Implement Breadcrumb Navigation",
+        "description": "Add breadcrumb navigation to show current location in app hierarchy with clickable navigation links",
+        "details": "Create breadcrumb component that builds path from current route. Make breadcrumb items clickable links except current page. Position breadcrumbs below header on nested pages. Handle dynamic routes with proper parameter display. Implement responsive behavior for long breadcrumb paths.",
+        "testStrategy": "Unit tests for breadcrumb generation logic. E2E tests for navigation functionality. Responsive design testing. Dynamic route testing with various parameters. Accessibility testing for navigation landmarks.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "41",
+        "title": "Implement Form Auto-save Functionality",
+        "description": "Add automatic form data saving every 30 seconds with unsaved changes detection and draft recovery",
+        "details": "Implement auto-save timer (configurable interval). Add 'Saving...' and 'Saved' status indicators. Store drafts in localStorage or backend API. Prompt users about unsaved changes on navigation. Handle form validation during auto-save. Provide manual save option and draft recovery on page load.",
+        "testStrategy": "Unit tests for auto-save logic and timers. E2E tests for draft persistence and recovery. Error handling tests for save failures. User experience testing for save indicators. Performance testing for frequent saves.",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": "42",
+        "title": "Create Mobile Bottom Navigation Bar",
+        "description": "Add fixed bottom navigation bar on mobile devices with thumb-friendly access to main sections",
+        "details": "Create bottom navigation component visible only on mobile viewports. Include icons for main sections (Worklist, Settings). Highlight active section with visual indicators. Implement hide-on-scroll-down, show-on-scroll-up behavior. Use safe-area-inset for devices with home indicators. Ensure proper z-index stacking.",
+        "testStrategy": "Mobile device testing across different screen sizes. Scroll behavior testing for hide/show functionality. Touch interaction testing for navigation items. Visual regression tests for active states. Safe area testing on devices with notches/home indicators.",
+        "priority": "low",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-01-04T21:14:40.936Z",
-      "taskCount": 23,
-      "completedCount": 17,
+      "lastModified": "2026-01-05T11:30:54.754Z",
+      "taskCount": 42,
+      "completedCount": 18,
       "tags": [
         "master"
       ]

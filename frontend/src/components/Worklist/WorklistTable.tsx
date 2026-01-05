@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useTranslation } from 'react-i18next';
+import { SearchX, CheckSquare, Square, MinusSquare } from 'lucide-react';
 
 export interface WorklistTableProps {
   items: WorklistItem[];
@@ -35,6 +36,16 @@ export interface WorklistTableProps {
   isSyncing?: boolean;
   onPublish?: (item: WorklistItem) => void;
   onRetry?: (item: WorklistItem) => void;
+  /** Whether filters are currently active (search, status, author) */
+  hasFilters?: boolean;
+  /** Callback to clear all filters */
+  onClearFilters?: () => void;
+  /** Currently selected item IDs */
+  selectedIds?: Set<number>;
+  /** Callback when selection changes */
+  onSelectionChange?: (selectedIds: Set<number>) => void;
+  /** Whether to show batch selection checkboxes */
+  showSelection?: boolean;
 }
 
 export const WorklistTable: React.FC<WorklistTableProps> = ({
@@ -45,6 +56,11 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
   isSyncing,
   onPublish,
   onRetry,
+  hasFilters,
+  onClearFilters,
+  selectedIds = new Set(),
+  onSelectionChange,
+  showSelection = false,
 }) => {
   const navigate = useNavigate();
   const { t } = useTranslation();
@@ -92,6 +108,27 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
   }
 
   if (items.length === 0) {
+    // If filters are active, show "no results" message
+    if (hasFilters) {
+      return (
+        <div className="text-center py-12">
+          <SearchX className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+          <p className="text-gray-600 font-medium">{t('worklist.table.noResultsTitle')}</p>
+          <p className="text-sm text-gray-500 mt-1">{t('worklist.table.noResultsDescription')}</p>
+          {onClearFilters && (
+            <button
+              onClick={onClearFilters}
+              className="mt-4 inline-flex items-center px-4 py-2 border border-primary-300 rounded-md shadow-sm text-sm font-medium text-primary-700 bg-primary-50 hover:bg-primary-100 transition-colors"
+            >
+              <X className="w-4 h-4 mr-2" />
+              {t('worklist.table.clearFilters')}
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // Default empty state - no items at all
     return (
       <div className="text-center py-12">
         <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
@@ -145,6 +182,33 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
     return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
   });
 
+  // Selection helpers
+  const allSelected = sortedItems.length > 0 && sortedItems.every((item) => selectedIds.has(item.id));
+  const someSelected = sortedItems.some((item) => selectedIds.has(item.id));
+
+  const handleSelectAll = () => {
+    if (!onSelectionChange) return;
+    if (allSelected) {
+      // Deselect all
+      onSelectionChange(new Set());
+    } else {
+      // Select all visible items
+      onSelectionChange(new Set(sortedItems.map((item) => item.id)));
+    }
+  };
+
+  const handleSelectItem = (itemId: number, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click
+    if (!onSelectionChange) return;
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(itemId)) {
+      newSelected.delete(itemId);
+    } else {
+      newSelected.add(itemId);
+    }
+    onSelectionChange(newSelected);
+  };
+
   return (
     <div>
       {/* Sync Button */}
@@ -168,6 +232,26 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              {/* Selection checkbox column */}
+              {showSelection && (
+                <th className="px-4 py-3 w-12">
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="p-1 rounded hover:bg-gray-200 transition-colors"
+                    aria-label={t('worklist.table.selectAll')}
+                    title={t('worklist.table.selectAll')}
+                  >
+                    {allSelected ? (
+                      <CheckSquare className="w-5 h-5 text-primary-600" />
+                    ) : someSelected ? (
+                      <MinusSquare className="w-5 h-5 text-primary-400" />
+                    ) : (
+                      <Square className="w-5 h-5 text-gray-400" />
+                    )}
+                  </button>
+                </th>
+              )}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 {t('worklist.table.columns.title')}
               </th>
@@ -197,12 +281,33 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
               const readingTime = safeNumber(item.metadata?.estimated_reading_time);
               const qualityScore = safeNumber(item.metadata?.quality_score);
 
+              const isSelected = selectedIds.has(item.id);
+
               return (
                 <tr
                   key={item.id}
                   onClick={() => onItemClick(item)}
-                  className="hover:bg-gray-50 cursor-pointer"
+                  className={`hover:bg-primary-50 hover:shadow-sm cursor-pointer transition-colors duration-150 border-l-2 border-transparent hover:border-l-primary-500 ${
+                    isSelected ? 'bg-primary-50/50' : ''
+                  }`}
                 >
+                  {/* Selection checkbox */}
+                  {showSelection && (
+                    <td className="px-4 py-4 w-12">
+                      <button
+                        type="button"
+                        onClick={(e) => handleSelectItem(item.id, e)}
+                        className="p-1 rounded hover:bg-gray-200 transition-colors"
+                        aria-label={isSelected ? 'Deselect' : 'Select'}
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-5 h-5 text-primary-600" />
+                        ) : (
+                          <Square className="w-5 h-5 text-gray-400" />
+                        )}
+                      </button>
+                    </td>
+                  )}
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <FileText className="w-5 h-5 text-gray-400 mr-2" />
