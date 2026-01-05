@@ -8,6 +8,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { routes } from '../../config/routes';
 import { cn } from '../../lib/cn';
 import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '../common/LanguageSwitcher';
 
 export default function MobileMenu() {
   const [isOpen, setIsOpen] = useState(false);
@@ -106,6 +107,16 @@ export default function MobileMenu() {
               </Link>
             );
           })}
+
+          {/* Language Switcher */}
+          <div className="pt-4 mt-4 border-t border-gray-200">
+            <label className="block px-4 pb-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+              {t('common.language')}
+            </label>
+            <div className="px-4">
+              <LanguageSwitcher variant="buttons" className="flex-wrap" />
+            </div>
+          </div>
         </nav>
       </div>
     </>

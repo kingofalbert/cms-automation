@@ -19,6 +19,7 @@ import {
 import { Button } from '../ui';
 import { Badge } from '../ui';
 import { Alert, AlertDescription } from '../ui/alert';
+import { Star } from 'lucide-react';
 import type { TitleOption } from '../../services/parsing';
 
 export interface TitleOptimizationCardProps {
@@ -188,6 +189,12 @@ export default function TitleOptimizationCard({
                       <span className="text-lg font-bold text-gray-700">
                         方案 {index + 1}
                       </span>
+                      {index === 0 && (
+                        <Badge className="bg-amber-100 text-amber-700 border-amber-300 flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                          推薦
+                        </Badge>
+                      )}
                       <Badge variant={getTypeVariant(option.type)}>
                         {option.type.replace('_', ' ')}
                       </Badge>

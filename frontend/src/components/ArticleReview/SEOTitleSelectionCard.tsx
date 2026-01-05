@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   Edit3,
+  Star,
 } from 'lucide-react';
 import { Button } from '../ui';
 import type { SEOTitleSuggestionsData, SEOTitleVariant, SelectSEOTitleRequest, SelectSEOTitleResponse } from '../../types/api';
@@ -336,7 +337,13 @@ export const SEOTitleSelectionCard: React.FC<SEOTitleSelectionCardProps> = ({
                   <Sparkles className="w-4 h-4 text-emerald-600" />
                   <span className="text-sm font-medium text-emerald-700">AI 優化建議</span>
                   {hasAi && (
-                    <span className="text-xs text-emerald-600">({aiLength} 字)</span>
+                    <>
+                      <Badge variant="success" className="text-xs bg-amber-100 text-amber-700 border-amber-300 flex items-center gap-1">
+                        <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                        推薦
+                      </Badge>
+                      <span className="text-xs text-emerald-600">({aiLength} 字)</span>
+                    </>
                   )}
                 </div>
                 {hasAi && (

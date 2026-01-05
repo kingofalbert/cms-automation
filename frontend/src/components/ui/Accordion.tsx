@@ -14,7 +14,12 @@ export interface AccordionItemProps extends HTMLAttributes<HTMLDivElement> {
   title: string;
   subtitle?: string;
   icon?: ReactNode;
+  /** Initial state if uncontrolled */
   defaultOpen?: boolean;
+  /** Controlled open state */
+  isOpen?: boolean;
+  /** Callback when open state changes (for controlled mode) */
+  onToggle?: (isOpen: boolean) => void;
   children: ReactNode;
 }
 
@@ -23,11 +28,25 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
   subtitle,
   icon,
   defaultOpen = false,
+  isOpen: controlledIsOpen,
+  onToggle,
   children,
   className,
   ...props
 }) => {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledIsOpen !== undefined;
+  const [internalIsOpen, setInternalIsOpen] = useState(defaultOpen);
+  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
+
+  const handleToggle = () => {
+    const newIsOpen = !isOpen;
+    if (!isControlled) {
+      setInternalIsOpen(newIsOpen);
+    }
+    onToggle?.(newIsOpen);
+  };
+
   const contentRef = useRef<HTMLDivElement>(null);
   const isInitialMount = useRef(true);
 
@@ -96,8 +115,8 @@ export const AccordionItem: React.FC<AccordionItemProps> = ({
     >
       <button
         type="button"
-        onClick={() => setIsOpen((previous) => !previous)}
-        className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left transition-colors duration-200 hover:bg-gray-50"
+        onClick={handleToggle}
+        className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left transition-colors duration-200 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500 rounded-t-2xl"
         aria-expanded={isOpen}
       >
         <div className="flex flex-1 items-center gap-4">

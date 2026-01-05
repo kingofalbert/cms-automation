@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Sparkles,
   CheckCircle,
+  ChevronsUpDown,
   // Hidden in Phase 1: Globe, Camera, Tag
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -39,6 +40,10 @@ import {
   type SettingsFormValues,
 } from '@/schemas/settings-schema';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { useAccordionState } from '@/hooks/useAccordionState';
+
+// Accordion section IDs for state management
+const SETTINGS_ACCORDION_SECTIONS = ['provider', 'cost', 'proofreading'] as const;
 
 const createDefaultSettings = (): SettingsFormValues => ({
   provider_config: {
@@ -226,6 +231,13 @@ export default function SettingsPageModern() {
     watch,
     reset,
   } = form;
+
+  // Accordion state with localStorage persistence
+  const accordionState = useAccordionState({
+    storageKey: 'cms-settings-accordion-state',
+    defaultOpenSections: ['provider'], // Provider section open by default
+    sectionIds: [...SETTINGS_ACCORDION_SECTIONS],
+  });
 
   // Fetch settings
   const { data: settings, isLoading, isError, error, refetch } = useQuery({
@@ -557,12 +569,37 @@ export default function SettingsPageModern() {
             </div>
           )}
 
+          {/* Expand/Collapse All Controls */}
+          <div className="flex justify-end gap-2 mb-4">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={accordionState.expandAll}
+              className="text-gray-600"
+            >
+              <ChevronsUpDown className="h-4 w-4 mr-1" />
+              {t('settings.accordion.expandAll')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={accordionState.collapseAll}
+              className="text-gray-600"
+            >
+              <ChevronsUpDown className="h-4 w-4 mr-1 rotate-90" />
+              {t('settings.accordion.collapseAll')}
+            </Button>
+          </div>
+
           <Accordion spacing="lg">
             <AccordionItem
               title={t('settings.accordion.provider.title')}
               subtitle={t('settings.accordion.provider.subtitle')}
               icon={<Monitor className="h-5 w-5" />}
-              defaultOpen
+              isOpen={accordionState.isOpen('provider')}
+              onToggle={() => accordionState.toggle('provider')}
             >
               <ProviderConfigSection />
             </AccordionItem>
@@ -580,6 +617,8 @@ export default function SettingsPageModern() {
               title={t('settings.accordion.cost.title')}
               subtitle={t('settings.accordion.cost.subtitle')}
               icon={<DollarSign className="h-5 w-5" />}
+              isOpen={accordionState.isOpen('cost')}
+              onToggle={() => accordionState.toggle('cost')}
             >
               <CostLimitsSection
                 currentDailySpend={costUsage?.daily_spend ?? 0}
@@ -602,6 +641,8 @@ export default function SettingsPageModern() {
               title={t('settings.sections.proofreading')}
               subtitle={t('settings.proofreading.subtitle')}
               icon={<CheckCircle className="h-5 w-5" />}
+              isOpen={accordionState.isOpen('proofreading')}
+              onToggle={() => accordionState.toggle('proofreading')}
             >
               <ProofreadingRulesSection />
             </AccordionItem>

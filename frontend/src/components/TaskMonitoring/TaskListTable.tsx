@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { PublishTask } from '@/types/publishing';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { clsx } from 'clsx';
-import { format } from 'date-fns';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 
 export interface TaskListTableProps {
@@ -225,7 +225,7 @@ export const TaskListTable: React.FC<TaskListTableProps> = ({
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-600">
-                  {format(new Date(task.started_at), 'MM-dd HH:mm')}
+                  {formatDate(task.started_at, DATE_FORMATS.SHORT)}
                 </td>
               </tr>
             );

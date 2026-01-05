@@ -91,6 +91,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
   const { t } = useTranslation();
   const [note, setNote] = useState('');
   const [changingStatus, setChangingStatus] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   const data = detail ?? item;
 
@@ -127,7 +128,12 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
 
   const handlePublish = async () => {
     if (!onPublish || !data) return;
-    await onPublish(data.id);
+    setIsPublishing(true);
+    try {
+      await onPublish(data.id);
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   if (!data) {
@@ -458,6 +464,7 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
                   variant="outline"
                   onClick={() => handleStatusChange(status)}
                   disabled={changingStatus}
+                  isLoading={changingStatus}
                 >
                   <Send className="w-4 h-4 mr-2" />
                   {t('worklist.drawer.changeTo')}: {t(STATUS_TRANSLATION_KEYS[status])}
@@ -469,9 +476,15 @@ export const WorklistDetailDrawer: React.FC<WorklistDetailDrawerProps> = ({
 
         {resolvedStatus === 'ready_to_publish' && onPublish && (
           <div className="border-t border-gray-200 pt-4">
-            <Button variant="primary" onClick={handlePublish} fullWidth>
+            <Button
+              variant="primary"
+              onClick={handlePublish}
+              fullWidth
+              disabled={isPublishing}
+              isLoading={isPublishing}
+            >
               <Send className="w-4 h-4 mr-2" />
-              {t('worklist.drawer.publish')}
+              {isPublishing ? t('worklist.drawer.publishing') : t('worklist.drawer.publish')}
             </Button>
           </div>
         )}

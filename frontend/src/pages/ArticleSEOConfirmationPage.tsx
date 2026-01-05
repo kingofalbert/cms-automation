@@ -17,11 +17,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Accordion,
+  AccordionItem,
 } from '../components/ui';
 import { Button } from '../components/ui';
 import { Badge } from '../components/ui';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Skeleton } from '../components/ui';
+import { Search, FileText, Tag, HelpCircle, CheckCircle } from 'lucide-react';
 import { parsingAPI, seoAPI } from '../services';
 import type {
   OptimizationsResponse,
@@ -236,221 +239,220 @@ export default function ArticleSEOConfirmationPage() {
         </Alert>
       )}
 
-      {/* SEO Keywords */}
-      <Card>
-        <CardHeader>
-          <CardTitle>SEO 关键词</CardTitle>
-          <CardDescription>
-            AI 分析的核心关键词，用于优化搜索引擎排名
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Focus Keyword */}
-          {seoSuggestions.seo_keywords.focus_keyword && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                核心关键词 (Focus Keyword)
-              </label>
-              <div className="mt-2">
-                <Badge variant="default" className="text-lg px-4 py-2">
-                  {seoSuggestions.seo_keywords.focus_keyword}
-                </Badge>
-              </div>
-              {seoSuggestions.seo_keywords.focus_keyword_rationale && (
-                <p className="text-sm text-muted-foreground mt-2">
-                  💡 {seoSuggestions.seo_keywords.focus_keyword_rationale}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Primary Keywords */}
-          {seoSuggestions.seo_keywords.primary_keywords.length > 0 && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                主要关键词 ({seoSuggestions.seo_keywords.primary_keywords.length})
-              </label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {seoSuggestions.seo_keywords.primary_keywords.map((keyword, idx) => (
-                  <Badge key={idx} variant="secondary">
-                    {keyword}
+      {/* Collapsible SEO Sections */}
+      <Accordion spacing="md">
+        {/* SEO Keywords - Default Open */}
+        <AccordionItem
+          title="SEO 关键词"
+          subtitle={`核心: ${seoSuggestions.seo_keywords.focus_keyword || '无'} | 主要: ${seoSuggestions.seo_keywords.primary_keywords.length} 个 | 次要: ${seoSuggestions.seo_keywords.secondary_keywords.length} 个`}
+          icon={<Search className="w-5 h-5" />}
+          defaultOpen={true}
+        >
+          <div className="space-y-4">
+            {/* Focus Keyword */}
+            {seoSuggestions.seo_keywords.focus_keyword && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  核心关键词 (Focus Keyword)
+                </label>
+                <div className="mt-2">
+                  <Badge variant="default" className="text-lg px-4 py-2">
+                    {seoSuggestions.seo_keywords.focus_keyword}
                   </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Secondary Keywords */}
-          {seoSuggestions.seo_keywords.secondary_keywords.length > 0 && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                次要关键词 ({seoSuggestions.seo_keywords.secondary_keywords.length})
-              </label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {seoSuggestions.seo_keywords.secondary_keywords.map((keyword, idx) => (
-                  <Badge key={idx} variant="secondary">
-                    {keyword}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Meta Description */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Meta Description</CardTitle>
-          <CardDescription>
-            搜索结果中显示的文章描述 (推荐 150-160 字符)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Original (if exists) */}
-          {seoSuggestions.meta_description.original_meta_description && (
-            <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                原始 Meta Description
-              </label>
-              <p className="mt-1 text-sm bg-muted p-3 rounded">
-                {seoSuggestions.meta_description.original_meta_description}
-              </p>
-            </div>
-          )}
-
-          {/* Suggested (editable) */}
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                AI 建议的 Meta Description
-              </label>
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-sm ${
-                    metaLength >= 150 && metaLength <= 160
-                      ? 'text-green-600'
-                      : 'text-orange-600'
-                  }`}
-                >
-                  {metaLength} / 150-160 字符
-                </span>
-                {seoSuggestions.meta_description.meta_description_score && (
-                  <Badge variant="info">
-                    评分: {seoSuggestions.meta_description.meta_description_score}/100
-                  </Badge>
+                </div>
+                {seoSuggestions.seo_keywords.focus_keyword_rationale && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    💡 {seoSuggestions.seo_keywords.focus_keyword_rationale}
+                  </p>
                 )}
               </div>
-            </div>
+            )}
 
-            {editingMetaDescription ? (
-              <div className="space-y-2">
-                <textarea
-                  value={metaDescriptionValue}
-                  onChange={(e) => setMetaDescriptionValue(e.target.value)}
-                  className="w-full px-3 py-2 border rounded min-h-[100px]"
-                  placeholder="输入 Meta Description"
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={handleSaveMetaDescription}>
-                    保存
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setEditingMetaDescription(false);
-                      setMetaDescriptionValue(
-                        seoSuggestions.meta_description.suggested_meta_description || ''
-                      );
-                    }}
-                  >
-                    取消
-                  </Button>
+            {/* Primary Keywords */}
+            {seoSuggestions.seo_keywords.primary_keywords.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  主要关键词 ({seoSuggestions.seo_keywords.primary_keywords.length})
+                </label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {seoSuggestions.seo_keywords.primary_keywords.map((keyword, idx) => (
+                    <Badge key={idx} variant="secondary">
+                      {keyword}
+                    </Badge>
+                  ))}
                 </div>
               </div>
-            ) : (
+            )}
+
+            {/* Secondary Keywords */}
+            {seoSuggestions.seo_keywords.secondary_keywords.length > 0 && (
               <div>
-                <p className="bg-background p-3 rounded border">
-                  {metaDescriptionValue}
-                </p>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditingMetaDescription(true)}
-                  className="mt-2"
-                >
-                  编辑
-                </Button>
+                <label className="text-sm font-medium text-gray-500">
+                  次要关键词 ({seoSuggestions.seo_keywords.secondary_keywords.length})
+                </label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {seoSuggestions.seo_keywords.secondary_keywords.map((keyword, idx) => (
+                    <Badge key={idx} variant="secondary">
+                      {keyword}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             )}
           </div>
+        </AccordionItem>
 
-          {/* Improvements */}
-          {seoSuggestions.meta_description.meta_description_improvements.length > 0 && (
+        {/* Meta Description - Default Open */}
+        <AccordionItem
+          title="Meta Description"
+          subtitle={`${metaLength} 字符 ${metaLength >= 150 && metaLength <= 160 ? '✓' : '(推荐 150-160)'}`}
+          icon={<FileText className="w-5 h-5" />}
+          defaultOpen={true}
+        >
+          <div className="space-y-4">
+            {/* Original (if exists) */}
+            {seoSuggestions.meta_description.original_meta_description && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  原始 Meta Description
+                </label>
+                <p className="mt-1 text-sm bg-gray-100 p-3 rounded">
+                  {seoSuggestions.meta_description.original_meta_description}
+                </p>
+              </div>
+            )}
+
+            {/* Suggested (editable) */}
             <div>
-              <label className="text-sm font-medium text-muted-foreground">
-                优化建议
-              </label>
-              <ul className="mt-2 space-y-1">
-                {seoSuggestions.meta_description.meta_description_improvements.map((improvement, idx) => (
-                  <li key={idx} className="text-sm flex items-start gap-2">
-                    <span className="text-green-600">✓</span>
-                    <span>{improvement}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Tags */}
-      <Card>
-        <CardHeader>
-          <CardTitle>标签 (Tags)</CardTitle>
-          <CardDescription>
-            推荐选择 {seoSuggestions.tags.recommended_tag_count || '6-8'} 个标签
-            {seoSuggestions.tags.tag_strategy && ` | 策略: ${seoSuggestions.tags.tag_strategy}`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {seoSuggestions.tags.suggested_tags.map((tagSuggestion, idx) => {
-              const isSelected = selectedTags.includes(tagSuggestion.tag);
-              return (
-                <button
-                  key={idx}
-                  onClick={() => handleToggleTag(tagSuggestion.tag)}
-                  className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
-                  }`}
-                >
-                  {tagSuggestion.tag}
-                  <span className="ml-1.5 text-xs opacity-70">
-                    {(tagSuggestion.relevance * 100).toFixed(0)}%
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-500">
+                  AI 建议的 Meta Description
+                </label>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-sm ${
+                      metaLength >= 150 && metaLength <= 160
+                        ? 'text-green-600'
+                        : 'text-orange-600'
+                    }`}
+                  >
+                    {metaLength} / 150-160 字符
                   </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-sm text-muted-foreground mt-4">
-            已选择: {selectedTags.length} 个标签
-          </p>
-        </CardContent>
-      </Card>
+                  {seoSuggestions.meta_description.meta_description_score && (
+                    <Badge variant="info">
+                      评分: {seoSuggestions.meta_description.meta_description_score}/100
+                    </Badge>
+                  )}
+                </div>
+              </div>
 
-      {/* FAQs */}
-      <Card>
-        <CardHeader>
-          <CardTitle>FAQ 列表 ({faqs.length})</CardTitle>
-          <CardDescription>
-            优化 AI 搜索引擎可见性 | 可拖拽调整顺序
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+              {editingMetaDescription ? (
+                <div className="space-y-2">
+                  <textarea
+                    value={metaDescriptionValue}
+                    onChange={(e) => setMetaDescriptionValue(e.target.value)}
+                    className="w-full px-3 py-2 border rounded min-h-[100px]"
+                    placeholder="输入 Meta Description"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveMetaDescription}>
+                      保存
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingMetaDescription(false);
+                        setMetaDescriptionValue(
+                          seoSuggestions.meta_description.suggested_meta_description || ''
+                        );
+                      }}
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <p className="bg-white p-3 rounded border">
+                    {metaDescriptionValue}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setEditingMetaDescription(true)}
+                    className="mt-2"
+                  >
+                    编辑
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Improvements */}
+            {seoSuggestions.meta_description.meta_description_improvements.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">
+                  优化建议
+                </label>
+                <ul className="mt-2 space-y-1">
+                  {seoSuggestions.meta_description.meta_description_improvements.map((improvement, idx) => (
+                    <li key={idx} className="text-sm flex items-start gap-2">
+                      <span className="text-green-600">✓</span>
+                      <span>{improvement}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </AccordionItem>
+
+        {/* Tags - Default Collapsed */}
+        <AccordionItem
+          title="标签 (Tags)"
+          subtitle={`已选择 ${selectedTags.length} 个标签 | 推荐 ${seoSuggestions.tags.recommended_tag_count || '6-8'} 个`}
+          icon={<Tag className="w-5 h-5" />}
+          defaultOpen={false}
+        >
+          <div>
+            <div className="flex flex-wrap gap-2">
+              {seoSuggestions.tags.suggested_tags.map((tagSuggestion, idx) => {
+                const isSelected = selectedTags.includes(tagSuggestion.tag);
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => handleToggleTag(tagSuggestion.tag)}
+                    className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                      isSelected
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {tagSuggestion.tag}
+                    <span className="ml-1.5 text-xs opacity-70">
+                      {(tagSuggestion.relevance * 100).toFixed(0)}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-sm text-gray-500 mt-4">
+              已选择: {selectedTags.length} 个标签
+              {seoSuggestions.tags.tag_strategy && (
+                <span className="ml-2">| 策略: {seoSuggestions.tags.tag_strategy}</span>
+              )}
+            </p>
+          </div>
+        </AccordionItem>
+
+        {/* FAQs - Default Collapsed */}
+        <AccordionItem
+          title={`FAQ 列表 (${faqs.length})`}
+          subtitle="优化 AI 搜索引擎可见性 | 可拖拽调整顺序"
+          icon={<HelpCircle className="w-5 h-5" />}
+          defaultOpen={false}
+        >
           <div className="space-y-3">
             {faqs.map((faq, index) => (
               <div
@@ -459,14 +461,14 @@ export default function ArticleSEOConfirmationPage() {
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
-                className={`border rounded-lg p-4 cursor-move transition-all ${
+                className={`border rounded-lg p-4 cursor-move transition-all bg-white ${
                   draggedFAQIndex === index
                     ? 'opacity-50 scale-95'
                     : 'hover:shadow-md'
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center text-sm font-medium">
+                  <div className="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm font-medium">
                     {index + 1}
                   </div>
                   <div className="flex-1 space-y-2">
@@ -485,7 +487,7 @@ export default function ArticleSEOConfirmationPage() {
                         )}
                       </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">{faq.answer}</p>
+                    <p className="text-sm text-gray-500">{faq.answer}</p>
                     {faq.keywords_covered.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {faq.keywords_covered.map((keyword, kidx) => (
@@ -500,8 +502,8 @@ export default function ArticleSEOConfirmationPage() {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+        </AccordionItem>
+      </Accordion>
 
       {/* Confirm Button */}
       <Card>
@@ -518,6 +520,7 @@ export default function ArticleSEOConfirmationPage() {
           <Button
             onClick={handleConfirm}
             disabled={confirmSEOMutation.isPending}
+            isLoading={confirmSEOMutation.isPending}
             className="w-full"
             size="lg"
           >

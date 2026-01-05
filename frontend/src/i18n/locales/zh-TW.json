@@ -194,7 +194,8 @@
       "statusChangeTitle": "狀態變更",
       "notePlaceholder": "新增備註（可選）",
       "changeTo": "變更為",
-      "publish": "上稿"
+      "publish": "上稿",
+      "publishing": "上稿中..."
     }
   },
   "settings": {
@@ -207,6 +208,26 @@
       "advanced": "進階功能",
       "proofreading": "校對規則",
       "tags": "標籤管理"
+    },
+    "accordion": {
+      "expandAll": "全部展開",
+      "collapseAll": "全部收合",
+      "provider": {
+        "title": "發布提供者配置",
+        "subtitle": "配置 Playwright、Computer Use 和混合模式"
+      },
+      "cost": {
+        "title": "成本限制",
+        "subtitle": "設定每日、每月和每任務成本限制"
+      },
+      "cms": {
+        "title": "WordPress 配置",
+        "subtitle": "配置 WordPress 連接設定"
+      },
+      "screenshot": {
+        "title": "截圖保留",
+        "subtitle": "配置截圖存儲和清理策略"
+      }
     },
     "language": {
       "title": "介面語言",
@@ -460,6 +481,7 @@
     },
     "labels": {
       "issuesDecided": "個問題已決策",
+      "issueCounter": "第 {{current}} / {{total}} 個問題",
       "original": "原文",
       "suggested": "建議",
       "modified": "調整後",

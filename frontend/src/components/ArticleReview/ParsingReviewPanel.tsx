@@ -1072,6 +1072,7 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
           <Button
             onClick={handleSave}
             disabled={!isDirty || isSaving}
+            isLoading={isSaving}
           >
             {isSaving ? '保存中...' : '保存解析數據'}
           </Button>

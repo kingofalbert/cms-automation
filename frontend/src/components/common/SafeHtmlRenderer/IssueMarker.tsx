@@ -22,17 +22,35 @@ export const IssueMarker: React.FC<IssueMarkerProps> = ({
   onFix,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState<'top' | 'bottom'>('top');
+  const [tooltipPosition, setTooltipPosition] = useState<{
+    vertical: 'top' | 'bottom';
+    horizontal: 'left' | 'right' | 'center';
+  }>({ vertical: 'top', horizontal: 'left' });
   const markerRef = useRef<HTMLSpanElement>(null);
 
-  // 計算 Tooltip 位置
+  // 計算 Tooltip 位置（垂直和水平）
   useEffect(() => {
     if (showTooltip && markerRef.current) {
       const rect = markerRef.current.getBoundingClientRect();
       const spaceAbove = rect.top;
       const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceRight = window.innerWidth - rect.left;
+      const tooltipWidth = 288; // w-72 = 18rem = 288px
 
-      setTooltipPosition(spaceAbove > 150 ? 'top' : 'bottom');
+      // 計算垂直位置
+      const vertical = spaceAbove > 150 ? 'top' : 'bottom';
+
+      // 計算水平位置 - 避免右邊被截斷
+      let horizontal: 'left' | 'right' | 'center' = 'left';
+      if (spaceRight < tooltipWidth + 16) {
+        // 如果右邊空間不足，從右邊對齊
+        horizontal = 'right';
+      } else if (rect.left < tooltipWidth / 2) {
+        // 如果左邊空間不足居中，從左邊對齊
+        horizontal = 'left';
+      }
+
+      setTooltipPosition({ vertical, horizontal });
     }
   }, [showTooltip]);
 
@@ -75,8 +93,8 @@ export const IssueMarker: React.FC<IssueMarkerProps> = ({
         <div
           className={`
             font-tooltip absolute z-50 w-72 p-3 bg-white rounded-lg shadow-lg border
-            ${tooltipPosition === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
-            left-0
+            ${tooltipPosition.vertical === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'}
+            ${tooltipPosition.horizontal === 'right' ? 'right-0' : 'left-0'}
           `}
           role="tooltip"
         >
@@ -84,11 +102,11 @@ export const IssueMarker: React.FC<IssueMarkerProps> = ({
           <div
             className={`
               absolute w-3 h-3 bg-white border transform rotate-45
-              ${tooltipPosition === 'top'
+              ${tooltipPosition.vertical === 'top'
                 ? 'bottom-[-6px] border-t-0 border-l-0'
                 : 'top-[-6px] border-b-0 border-r-0'
               }
-              left-4
+              ${tooltipPosition.horizontal === 'right' ? 'right-4' : 'left-4'}
             `}
           />
 

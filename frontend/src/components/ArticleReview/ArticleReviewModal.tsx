@@ -749,13 +749,15 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
             <Button
               variant="outline"
               onClick={handleSaveDraft}
+              disabled={isSaving}
+              isLoading={isSaving}
             >
-              保存草稿 (Ctrl+S)
+              {isSaving ? '保存中...' : '保存草稿 (Ctrl+S)'}
             </Button>
 
             <Button
               onClick={goToNextStep}
-              disabled={activeStep === 2}
+              disabled={activeStep === 2 || isSaving}
               className="min-w-32"
             >
               {activeStep === 2 ? '上稿' : '下一步'}

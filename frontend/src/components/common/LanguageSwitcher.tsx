@@ -29,10 +29,10 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
           <button
             key={lang.code}
             onClick={() => handleLanguageChange(lang.code)}
-            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
               currentLanguage === lang.code
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                ? 'bg-blue-600 text-white focus-visible:ring-blue-600'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 focus-visible:ring-gray-400'
             }`}
           >
             {lang.nativeName}

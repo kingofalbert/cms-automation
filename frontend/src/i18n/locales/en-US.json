@@ -194,7 +194,8 @@
       "statusChangeTitle": "Status Change",
       "notePlaceholder": "Add note (optional)",
       "changeTo": "Change to",
-      "publish": "Publish to WordPress"
+      "publish": "Publish to WordPress",
+      "publishing": "Publishing..."
     }
   },
   "settings": {
@@ -348,6 +349,26 @@
       "deleteOnFailure": "Delete screenshots after failed tasks",
       "failureNote": "Keep failed-task screenshots to help with troubleshooting."
     },
+    "accordion": {
+      "expandAll": "Expand All",
+      "collapseAll": "Collapse All",
+      "provider": {
+        "title": "Provider Configuration",
+        "subtitle": "Configure Playwright, Computer Use and Hybrid modes"
+      },
+      "cost": {
+        "title": "Cost Limits",
+        "subtitle": "Set daily, monthly and per-task cost limits"
+      },
+      "cms": {
+        "title": "WordPress Configuration",
+        "subtitle": "Configure WordPress connection settings"
+      },
+      "screenshot": {
+        "title": "Screenshot Retention",
+        "subtitle": "Configure screenshot storage and cleanup policies"
+      }
+    },
     "fields": {
       "browser": "Browser",
       "timeout": "Timeout",
@@ -460,6 +481,7 @@
     },
     "labels": {
       "issuesDecided": "issues decided",
+      "issueCounter": "Issue {{current}} of {{total}}",
       "original": "Original",
       "suggested": "Suggested",
       "modified": "Modified",

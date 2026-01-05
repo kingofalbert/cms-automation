@@ -631,7 +631,15 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
       {/* Header with stats */}
       <div className="px-4 py-3 bg-white border-b border-gray-200 shadow-sm">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">校對審核</h3>
+          <div className="flex items-center gap-4">
+            <h3 className="text-lg font-semibold text-gray-900">校對審核</h3>
+            {/* Issue Counter */}
+            {selectedIssue && issues.length > 0 && (
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                第 {issues.findIndex(i => i.id === selectedIssue.id) + 1} / {issues.length} 個問題
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-4 text-sm">
             <span className="text-gray-600">
               待處理: <strong className="text-amber-600">{currentStats.pending_count}</strong>
@@ -1187,6 +1195,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
             <Button
               onClick={handleSubmit}
               disabled={!hasPendingDecisions || isSubmitting}
+              isLoading={isSubmitting}
             >
               {isSubmitting ? '提交中...' : `提交審核 (${decisions.size})`}
             </Button>

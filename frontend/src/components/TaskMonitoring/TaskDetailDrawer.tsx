@@ -7,7 +7,7 @@ import { Drawer, DrawerFooter, Button } from '@/components/ui';
 import { PublishTask } from '@/types/publishing';
 import { CurrentStepDisplay } from '../Publishing/CurrentStepDisplay';
 import { ScreenshotGallery } from '../Publishing/ScreenshotGallery';
-import { format } from 'date-fns';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 
 export interface TaskDetailDrawerProps {
@@ -134,7 +134,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                 {t('publishTasks.detail.startedAt')}:
               </span>
               <span className="text-gray-900">
-                {format(new Date(task.started_at), 'yyyy-MM-dd HH:mm:ss')}
+                {formatDate(task.started_at, DATE_FORMATS.FULL)}
               </span>
             </div>
             {task.completed_at && (
@@ -143,7 +143,7 @@ export const TaskDetailDrawer: React.FC<TaskDetailDrawerProps> = ({
                   {t('publishTasks.detail.completedAt')}:
                 </span>
                 <span className="text-gray-900">
-                  {format(new Date(task.completed_at), 'yyyy-MM-dd HH:mm:ss')}
+                  {formatDate(task.completed_at, DATE_FORMATS.FULL)}
                 </span>
               </div>
             )}
