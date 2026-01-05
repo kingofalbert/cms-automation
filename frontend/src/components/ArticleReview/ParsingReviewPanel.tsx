@@ -1045,44 +1045,6 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
         </div>
       </div>
 
-      {/* Action buttons - Mobile optimized */}
-      <div className="mt-3 md:mt-6 flex items-center justify-between pt-3 md:pt-4 border-t flex-shrink-0">
-        <div className="text-xs md:text-sm text-gray-600 hidden sm:block">
-          {isDirty && (
-            <span className="text-amber-600 font-medium">● 未保存的更改</span>
-          )}
-        </div>
-        <div className="flex gap-2 md:gap-3 w-full sm:w-auto justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs md:text-sm"
-            onClick={() => {
-              // Reset to original data
-              setTitle(data.title || '');
-              setAuthor(data.author || '');
-              setFeaturedImage((data.metadata?.featured_image_path as string) || '');
-              setAdditionalImages((data.metadata?.additional_images as string[]) || []);
-              setMetaDescription(data.meta_description || '');
-              setSeoKeywords(data.seo_keywords || []);
-              setFaqSuggestions((data.metadata?.faq_suggestions as Array<{ question: string; answer: string }>) || []);
-              setIsDirty(false);
-            }}
-            disabled={!isDirty || isSaving}
-          >
-            重置
-          </Button>
-          <Button
-            size="sm"
-            className="text-xs md:text-sm"
-            onClick={handleSave}
-            disabled={!isDirty || isSaving}
-            isLoading={isSaving}
-          >
-            {isSaving ? '保存中...' : '保存解析數據'}
-          </Button>
-        </div>
-      </div>
     </div>
   );
 });

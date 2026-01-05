@@ -601,22 +601,6 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedIssue, issues, handleDecision, isEditing]);
 
-  const handleSubmit = async () => {
-    const decisionList = Array.from(decisions.values());
-    if (decisionList.length === 0) {
-      alert('請至少做出一個審核決定');
-      return;
-    }
-
-    await onSubmitDecisions(decisionList);
-    // Note: Don't clear decisions here - they're managed by parent and will be
-    // synced with backend data after refetch
-  };
-
-  const handleReset = () => {
-    onDecisionsChange(new Map());
-  };
-
   const hasPendingDecisions = decisions.size > 0;
 
   // Get decision status for an issue
@@ -1174,31 +1158,22 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
         </div>
       </div>
 
-      {/* Footer with action buttons */}
+      {/* Footer status indicator */}
       <div className="px-4 py-3 bg-white border-t border-gray-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            {currentStats.pending_count > 0 && (
+            {currentStats.pending_count > 0 ? (
               <span className="text-amber-600">
                 ⚠️ 還有 {currentStats.pending_count} 個問題待審核
               </span>
+            ) : (
+              <span className="text-green-600">
+                ✅ 所有問題已審核完成
+              </span>
             )}
           </div>
-          <div className="flex gap-3">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={!hasPendingDecisions || isSubmitting}
-            >
-              重置決定
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={!hasPendingDecisions || isSubmitting}
-              isLoading={isSubmitting}
-            >
-              {isSubmitting ? '提交中...' : `提交審核 (${decisions.size})`}
-            </Button>
+          <div className="text-sm text-gray-500">
+            已處理: {decisions.size} / {issues.length}
           </div>
         </div>
       </div>
