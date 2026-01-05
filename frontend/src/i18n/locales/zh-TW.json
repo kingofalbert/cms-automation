@@ -15,7 +15,9 @@
     "search": "搜尋",
     "noResults": "暫無結果",
     "backToList": "返回列表",
-    "clearAll": "清除全部"
+    "clearAll": "清除全部",
+    "goBack": "返回上一頁",
+    "goToWorklist": "前往工作列表"
   },
   "worklist": {
     "title": "工作清單",
@@ -439,27 +441,13 @@
       "loadFailedTitle": "無法載入設定",
       "loadFailedDescription": "連線後端服務失敗，請確認服務已啟動。",
       "reload": "重新載入"
-    },
-    "accordion": {
-      "provider": {
-        "title": "上傳設定",
-        "subtitle": "設定 Playwright、Computer Use 與 Hybrid 上稿流程"
-      },
-      "cms": {
-        "title": "WordPress 設定",
-        "subtitle": "管理 WordPress 連線與登入資訊"
-      },
-      "cost": {
-        "title": "成本限額",
-        "subtitle": "設定每日與每月支出上限"
-      },
-      "screenshot": {
-        "title": "截圖保留策略",
-        "subtitle": "設定截圖自動清理規則"
-      }
     }
   },
   "routes": {
+    "login": {
+      "title": "CMS自動化系統 - 登入",
+      "description": "登入您的帳戶以存取系統"
+    },
     "worklist": {
       "title": "CMS自動化系統 - 工作清單",
       "description": "管理您的文章校對工作流"
@@ -878,9 +866,5 @@
     "pageNotFound": "找不到頁面",
     "pageNotFoundDesc": "您訪問的頁面不存在或已被移動。請檢查網址是否正確，或返回工作列表。",
     "needHelp": "如果問題持續，請聯繫系統管理員。"
-  },
-  "common": {
-    "goBack": "返回上一頁",
-    "goToWorklist": "前往工作列表"
   }
 }

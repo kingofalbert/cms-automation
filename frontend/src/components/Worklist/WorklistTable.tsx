@@ -252,7 +252,7 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                   </button>
                 </th>
               )}
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
                 {t('worklist.table.columns.title')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -308,15 +308,15 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                       </button>
                     </td>
                   )}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 min-w-[200px] max-w-[400px]">
                     <div className="flex items-center">
-                      <FileText className="w-5 h-5 text-gray-400 mr-2" />
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
+                      <FileText className="w-5 h-5 text-gray-400 mr-2 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium text-gray-900 truncate" title={item.title}>
                           {item.title}
                         </div>
                         {item.tags && item.tags.length > 0 && (
-                          <div className="text-xs text-gray-500 mt-1">
+                          <div className="text-xs text-gray-500 mt-1 truncate">
                             {item.tags.slice(0, 3).join(', ')}
                             {item.tags.length > 3 && ` +${item.tags.length - 3}`}
                           </div>

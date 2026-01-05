@@ -15,7 +15,9 @@
     "search": "Search",
     "noResults": "No results",
     "backToList": "Back to List",
-    "clearAll": "Clear All"
+    "clearAll": "Clear All",
+    "goBack": "Go Back",
+    "goToWorklist": "Go to Worklist"
   },
   "worklist": {
     "title": "Worklist",
@@ -439,27 +441,13 @@
       "loadFailedTitle": "Unable to load settings",
       "loadFailedDescription": "Failed to connect to the backend service. Please ensure it is running.",
       "reload": "Reload"
-    },
-    "accordion": {
-      "provider": {
-        "title": "Upload Settings",
-        "subtitle": "Configure Playwright, Computer Use and Hybrid publishing flows"
-      },
-      "cms": {
-        "title": "WordPress Configuration",
-        "subtitle": "Manage your WordPress connection credentials"
-      },
-      "cost": {
-        "title": "Cost Limits",
-        "subtitle": "Set daily and monthly spend caps"
-      },
-      "screenshot": {
-        "title": "Screenshot Retention",
-        "subtitle": "Configure automatic cleanup rules for screenshots"
-      }
     }
   },
   "routes": {
+    "login": {
+      "title": "CMS Automation System - Login",
+      "description": "Sign in to access your account"
+    },
     "worklist": {
       "title": "CMS Automation System - Worklist",
       "description": "Manage your article proofreading workflow"
@@ -878,9 +866,5 @@
     "pageNotFound": "Page Not Found",
     "pageNotFoundDesc": "The page you are looking for does not exist or has been moved. Please check the URL or return to the worklist.",
     "needHelp": "If the problem persists, please contact your system administrator."
-  },
-  "common": {
-    "goBack": "Go Back",
-    "goToWorklist": "Go to Worklist"
   }
 }
