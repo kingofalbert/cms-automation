@@ -349,10 +349,21 @@ class PlaywrightWordPressPublisher:
         else:
             title_field = self.config["editor"]["title_field"]
 
-        # Click and fill title
+        # Wait for title field to be visible and interactable
+        await self.page.wait_for_selector(title_field, state="visible", timeout=10000)
+
+        # Click and fill title using fill() - fast and reliable
         await self.page.click(title_field)
         await self.page.fill(title_field, title)
-        await asyncio.sleep(self.config["waits"]["after_type"] / 1000)
+
+        # Verify title was set correctly
+        actual_title = await self.page.input_value(title_field)
+        if actual_title != title:
+            logger.warning("playwright_title_mismatch",
+                          expected=title[:50],
+                          actual=actual_title[:50])
+        else:
+            logger.info("playwright_title_verified", length=len(title))
 
         logger.info("playwright_title_set", editor_type=editor_type)
 
@@ -427,55 +438,122 @@ class PlaywrightWordPressPublisher:
         logger.info("playwright_step_set_content", length=len(content))
 
         editor_type = getattr(self, '_editor_type', 'gutenberg')
+        content_set = False
+        actual_length = 0
 
         if editor_type == "classic":
             # Classic Editor: Use TinyMCE or plain textarea
-            # First, try to switch to "Text" tab for HTML input
+            # First, try to switch to "Text" tab for HTML input (best for HTML content)
             try:
                 text_tab = "#content-html"  # "Text" tab in Classic Editor
+                await self.page.wait_for_selector(text_tab, timeout=3000)
                 await self.page.click(text_tab)
-                await asyncio.sleep(0.3)
+                await self.page.wait_for_selector("#content:not([style*='display: none'])", timeout=3000)
                 logger.info("playwright_switched_to_text_mode")
             except Exception:
-                logger.debug("Text tab not found, using visual editor")
+                logger.debug("Text tab not found or not clickable, trying direct textarea")
 
-            # Fill the textarea directly (works in Text mode)
+            # Fill the textarea directly (works in Text mode) - NO LENGTH LIMIT
             content_textarea = "#content"
             try:
-                await self.page.fill(content_textarea, content)
-                logger.info("playwright_content_set_classic_textarea")
+                await self.page.wait_for_selector(content_textarea, state="visible", timeout=5000)
+                await self.page.fill(content_textarea, content)  # fill() is fast and handles full content
+
+                # Verify content was set correctly
+                actual_content = await self.page.input_value(content_textarea)
+                actual_length = len(actual_content)
+                content_set = True
+                logger.info("playwright_content_set_classic_textarea",
+                           expected_length=len(content),
+                           actual_length=actual_length)
             except Exception as e:
-                # Fallback: Try TinyMCE iframe
+                # Fallback: Try TinyMCE iframe with JavaScript injection
                 logger.debug(f"Textarea fill failed: {e}, trying TinyMCE iframe")
                 try:
                     # Switch to Visual tab
                     visual_tab = "#content-tmce"
                     await self.page.click(visual_tab)
-                    await asyncio.sleep(0.5)
+                    await self.page.wait_for_selector("#content_ifr", timeout=5000)
 
-                    # Access TinyMCE iframe
-                    iframe = self.page.frame_locator("#content_ifr")
-                    body = iframe.locator("#tinymce")
-                    await body.click()
-                    await self.page.keyboard.type(content[:5000])
-                    logger.info("playwright_content_set_classic_tinymce")
+                    # Use JavaScript to set TinyMCE content (faster and more reliable)
+                    await self.page.evaluate(f"""
+                        if (typeof tinyMCE !== 'undefined' && tinyMCE.get('content')) {{
+                            tinyMCE.get('content').setContent({repr(content)});
+                        }}
+                    """)
+
+                    # Verify via JavaScript
+                    actual_content = await self.page.evaluate("""
+                        () => {
+                            if (typeof tinyMCE !== 'undefined' && tinyMCE.get('content')) {
+                                return tinyMCE.get('content').getContent();
+                            }
+                            return '';
+                        }
+                    """)
+                    actual_length = len(actual_content)
+                    content_set = True
+                    logger.info("playwright_content_set_classic_tinymce",
+                               expected_length=len(content),
+                               actual_length=actual_length)
                 except Exception as e2:
                     logger.error(f"TinyMCE also failed: {e2}")
                     raise
         else:
-            # Gutenberg Editor
-            content_area = self.config["editor"]["content_area"]
+            # Gutenberg Editor - use JavaScript for reliable content insertion
+            try:
+                # Wait for Gutenberg editor to be ready
+                await self.page.wait_for_selector(".block-editor-writing-flow", timeout=10000)
 
-            # Click content area
-            await self.page.click(content_area)
-            await asyncio.sleep(0.5)
+                # Use WordPress data API to insert content block
+                await self.page.evaluate(f"""
+                    () => {{
+                        const {{ dispatch, select }} = wp.data;
+                        const {{ createBlock }} = wp.blocks;
 
-            # Type content (simplified - may need to handle HTML parsing)
-            await self.page.keyboard.type(content[:1000])  # Limit for demo
-            logger.info("playwright_content_set_gutenberg")
+                        // Create a paragraph block with the content
+                        const block = createBlock('core/paragraph', {{
+                            content: {repr(content)}
+                        }});
 
-        await asyncio.sleep(self.config["waits"]["after_type"] / 1000)
-        logger.info("playwright_content_set", editor_type=editor_type)
+                        // Insert the block
+                        dispatch('core/block-editor').insertBlocks(block);
+                    }}
+                """)
+                content_set = True
+                actual_length = len(content)
+                logger.info("playwright_content_set_gutenberg_api", length=len(content))
+            except Exception as e:
+                logger.warning(f"Gutenberg API failed, trying direct input: {e}")
+                # Fallback to direct typing (slower but works)
+                content_area = self.config["editor"]["content_area"]
+                await self.page.wait_for_selector(content_area, state="visible", timeout=10000)
+                await self.page.click(content_area)
+                # Use fill() if possible, otherwise type (but type is slow)
+                try:
+                    await self.page.fill(content_area, content)
+                    content_set = True
+                    actual_length = len(content)
+                except Exception:
+                    # Last resort: keyboard.type() - but this is slow
+                    await self.page.keyboard.type(content)
+                    content_set = True
+                    actual_length = len(content)
+                logger.info("playwright_content_set_gutenberg_fallback")
+
+        # Verify content completeness
+        if content_set:
+            completeness = (actual_length / len(content) * 100) if len(content) > 0 else 100
+            if completeness < 90:
+                logger.warning("playwright_content_incomplete",
+                              expected=len(content),
+                              actual=actual_length,
+                              completeness=f"{completeness:.1f}%")
+            else:
+                logger.info("playwright_content_verified",
+                           completeness=f"{completeness:.1f}%")
+
+        logger.info("playwright_content_set", editor_type=editor_type, content_length=actual_length)
 
     async def _step_configure_seo(self, seo_data: SEOMetadata) -> None:
         """Step 6: Configure SEO metadata.
@@ -540,9 +618,8 @@ class PlaywrightWordPressPublisher:
         editor_type = getattr(self, '_editor_type', 'gutenberg')
         logger.info("playwright_step_publish", publish_mode=publish_mode, editor_type=editor_type)
 
-        # Scroll to top
+        # Scroll to top to ensure buttons are visible
         await self.page.evaluate("window.scrollTo(0, 0)")
-        await asyncio.sleep(0.5)
 
         if publish_mode == "draft":
             if editor_type == "classic":
@@ -555,30 +632,43 @@ class PlaywrightWordPressPublisher:
                 if not save_selector:
                     raise ValueError("Save draft selector not configured")
 
+            # Wait for save button to be visible and clickable
+            await self.page.wait_for_selector(save_selector, state="visible", timeout=10000)
             await self.page.click(save_selector)
-            await asyncio.sleep(self.config["waits"].get("after_save", 1500) / 1000)
 
             # For Classic Editor, wait for the page to reload/update
             if editor_type == "classic":
                 # Wait for URL to contain post= parameter (indicates post was saved)
                 try:
-                    await self.page.wait_for_url("**/post.php?post=*", timeout=10000)
+                    await self.page.wait_for_url("**/post.php?post=*", timeout=15000)
                     logger.info("playwright_draft_saved_classic")
                 except Exception:
-                    # Already on edit page, check for notice
-                    logger.debug("URL didn't change, checking for saved notice")
-                    await asyncio.sleep(1)
+                    # Already on edit page, check for success message
+                    logger.debug("URL didn't change, checking for saved message")
+                    try:
+                        # Look for WordPress success notice
+                        await self.page.wait_for_selector("#message.updated, .notice-success", timeout=5000)
+                        logger.info("playwright_draft_saved_classic_notice")
+                    except Exception:
+                        logger.warning("No confirmation found, but continuing")
             else:
+                # Gutenberg: wait for draft saved notice
                 draft_notice = self.config["publish"].get("draft_saved_notice")
                 if draft_notice:
                     try:
-                        await self.page.wait_for_selector(draft_notice, timeout=5000)
+                        await self.page.wait_for_selector(draft_notice, timeout=10000)
                     except Exception:
                         logger.warning("draft_saved_notice_not_found")
 
             current_url = self.page.url
             draft_article_id = self._extract_post_id(current_url)
-            logger.info("playwright_draft_saved", article_id=draft_article_id, url=current_url)
+
+            # Verify we got a valid post ID
+            if draft_article_id == "unknown":
+                logger.warning("playwright_draft_id_not_found", url=current_url)
+            else:
+                logger.info("playwright_draft_saved", article_id=draft_article_id, url=current_url)
+
             return current_url, draft_article_id
 
         # Publish mode
@@ -589,19 +679,27 @@ class PlaywrightWordPressPublisher:
             # Gutenberg: Use config selector
             publish_button = self.config["publish"]["publish_button"]
 
+        # Wait for publish button and click
+        await self.page.wait_for_selector(publish_button, state="visible", timeout=10000)
         await self.page.click(publish_button)
-        await asyncio.sleep(self.config["waits"]["before_publish"] / 1000)
 
         # Click confirm publish (if needed, mainly for Gutenberg)
         if editor_type != "classic":
             try:
                 confirm_button = self.config["publish"]["post_publish_button"]
+                await self.page.wait_for_selector(confirm_button, timeout=5000)
                 await self.page.click(confirm_button)
             except Exception:
                 pass  # May not need confirmation
 
-        # Wait for publish complete
-        await asyncio.sleep(self.config["waits"]["after_publish"] / 1000)
+        # Wait for publish complete - look for success indicators
+        if editor_type == "classic":
+            try:
+                await self.page.wait_for_selector("#message.updated, .notice-success", timeout=10000)
+            except Exception:
+                logger.warning("No publish confirmation found")
+        else:
+            await asyncio.sleep(self.config["waits"]["after_publish"] / 1000)
 
         # Extract article URL and ID
         article_url = self.page.url
