@@ -13,6 +13,26 @@ import React, { useState, useMemo } from 'react';
 import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
 import { FileText, Eye, Columns, AlignJustify, BarChart3 } from 'lucide-react';
 
+/**
+ * Strip HTML tags from content and convert to plain text
+ * Preserves paragraph structure by converting block elements to newlines
+ */
+const stripHtmlTags = (html: string): string => {
+  if (!html) return '';
+  return html
+    // Convert block elements to newlines
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<\/h[1-6]>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    // Remove all remaining HTML tags
+    .replace(/<[^>]+>/g, '')
+    // Clean up excessive whitespace
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
 export interface DiffStats {
   additions: number;
   deletions: number;
@@ -34,6 +54,27 @@ export interface DiffViewSectionProps {
 
 // Custom styles for react-diff-viewer
 const diffStyles = {
+  diffContainer: {
+    display: 'block',
+    width: '100%',
+    overflowX: 'auto',
+    '& table': {
+      tableLayout: 'fixed',
+      width: '100%',
+    },
+    '& td': {
+      verticalAlign: 'top',
+    },
+    // Force equal column widths for split view
+    '& td.diff-gutter': {
+      width: '40px',
+      minWidth: '40px',
+      maxWidth: '40px',
+    },
+    '& td:not(.diff-gutter)': {
+      width: 'calc(50% - 40px)',
+    },
+  },
   variables: {
     light: {
       diffViewerBackground: '#ffffff',
@@ -100,13 +141,17 @@ const diffStyles = {
     fontSize: '11px',
   },
   content: {
-    width: '100%',
+    width: '50%',
+    minWidth: '200px',
+    maxWidth: 'none',
     padding: '0 8px',
     fontSize: '13px',
     lineHeight: '1.6',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "Microsoft YaHei", sans-serif',
     whiteSpace: 'pre-wrap',
     wordBreak: 'break-word',
+    wordWrap: 'break-word',
+    overflowWrap: 'break-word',
   },
   codeFold: {
     padding: '8px',
@@ -147,17 +192,21 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
   const [viewMode, setViewMode] = useState<'split' | 'unified'>('split');
   const [showLineNumbers, setShowLineNumbers] = useState(true);
 
-  // Calculate whether there are changes
-  const hasChanges = useMemo(() => {
-    return originalContent !== proofreadContent;
-  }, [originalContent, proofreadContent]);
+  // Clean content by stripping HTML tags
+  const cleanedOriginal = useMemo(() => stripHtmlTags(originalContent), [originalContent]);
+  const cleanedProofread = useMemo(() => stripHtmlTags(proofreadContent), [proofreadContent]);
 
-  // Calculate stats if not provided
+  // Calculate whether there are changes (using cleaned content)
+  const hasChanges = useMemo(() => {
+    return cleanedOriginal !== cleanedProofread;
+  }, [cleanedOriginal, cleanedProofread]);
+
+  // Calculate stats if not provided (using cleaned content)
   const calculatedStats = useMemo(() => {
     if (diffStats) return diffStats;
 
-    const originalLines = (originalContent || '').split('\n').length;
-    const suggestedLines = (proofreadContent || '').split('\n').length;
+    const originalLines = cleanedOriginal.split('\n').length;
+    const suggestedLines = cleanedProofread.split('\n').length;
 
     // Simple estimation (backend provides more accurate stats)
     return {
@@ -167,7 +216,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
       deletions: Math.max(0, originalLines - suggestedLines),
       total_changes: hasChanges ? Math.abs(originalLines - suggestedLines) + 1 : 0,
     };
-  }, [diffStats, originalContent, proofreadContent, hasChanges]);
+  }, [diffStats, cleanedOriginal, cleanedProofread, hasChanges]);
 
   // Format stats for display
   const formatNumber = (num: number) => {
@@ -239,10 +288,13 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
 
       {/* Diff viewer */}
       {hasChanges && (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="border border-gray-200 rounded-lg overflow-hidden diff-viewer-container" style={{
+          // Force equal column widths in split view
+          ['--diff-column-width' as string]: '50%',
+        }}>
           <ReactDiffViewer
-            oldValue={originalContent || ''}
-            newValue={proofreadContent || ''}
+            oldValue={cleanedOriginal}
+            newValue={cleanedProofread}
             splitView={viewMode === 'split'}
             showDiffOnly={false}
             useDarkTheme={false}
@@ -264,7 +316,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         <div className="p-2 bg-gray-50 rounded-lg text-center">
           <div className="text-gray-500 mb-0.5">原始</div>
           <div className="font-medium text-gray-900">
-            {formatNumber((originalContent || '').length)} 字元
+            {formatNumber(cleanedOriginal.length)} 字元
           </div>
           <div className="text-gray-400 text-[10px]">
             {formatNumber(calculatedStats.original_lines)} 行
@@ -273,7 +325,7 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         <div className="p-2 bg-gray-50 rounded-lg text-center">
           <div className="text-gray-500 mb-0.5">校對後</div>
           <div className="font-medium text-gray-900">
-            {formatNumber((proofreadContent || '').length)} 字元
+            {formatNumber(cleanedProofread.length)} 字元
           </div>
           <div className="text-gray-400 text-[10px]">
             {formatNumber(calculatedStats.suggested_lines)} 行
