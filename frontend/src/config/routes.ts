@@ -63,6 +63,9 @@ const ArticleSEOConfirmationPage = createLazyRoute(() => import('../pages/Articl
 // Pipeline Monitor page
 const PipelineMonitorPage = createLazyRoute(() => import('../pages/PipelineMonitorPage'));
 
+// 404 Not Found page
+const NotFoundPage = createLazyRoute(() => import('../pages/NotFoundPage'));
+
 // Phase 2+: Commented out for future use
 // const HomePage = createLazyRoute(() => import('../pages/HomePage'));
 // const ArticleGeneratorPage = createLazyRoute(() => import('../pages/ArticleGeneratorPage'));
@@ -166,6 +169,16 @@ export const routes: RouteConfig[] = [
     description: '監控大紀元健康文章處理 Pipeline 的運行狀態',
     showInNav: false,
     loadingType: 'dashboard',
+  },
+  // 404 Not Found - Must be last
+  {
+    path: '*',
+    ...NotFoundPage,
+    title: '找不到頁面',
+    titleKey: 'errors.pageNotFound',
+    description: '找不到您請求的頁面',
+    isPublic: true,
+    loadingType: 'default',
   },
 
   // PHASE 2+ ROUTES (Hidden in Phase 1)

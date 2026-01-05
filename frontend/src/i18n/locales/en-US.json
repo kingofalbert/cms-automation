@@ -543,6 +543,7 @@
       "selectIssue": "Select an issue from the left to view details",
       "selectIssueHint": "Click an issue from the list to view details",
       "noIssuesFound": "No proofreading issues found",
+      "noIssuesFoundDesc": "This article has no proofreading issues. You can proceed to the next step.",
       "loadFailed": "Failed to load",
       "decisionsSaved": "Decisions saved",
       "reviewCompletedAndTransitioned": "Review completed and status transitioned",
@@ -840,6 +841,13 @@
     "network": "Network connection failed",
     "unauthorized": "Unauthorized access",
     "notFound": "Resource not found",
-    "serverError": "Server error"
+    "serverError": "Server error",
+    "pageNotFound": "Page Not Found",
+    "pageNotFoundDesc": "The page you are looking for does not exist or has been moved. Please check the URL or return to the worklist.",
+    "needHelp": "If the problem persists, please contact your system administrator."
+  },
+  "common": {
+    "goBack": "Go Back",
+    "goToWorklist": "Go to Worklist"
   }
 }

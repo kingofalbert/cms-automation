@@ -543,6 +543,7 @@
       "selectIssue": "請從左側選擇一個問題以查看詳情",
       "selectIssueHint": "點擊列表中的問題以查看詳情",
       "noIssuesFound": "未發現校對問題",
+      "noIssuesFoundDesc": "此文章未發現任何校對問題，可以繼續下一步流程。",
       "loadFailed": "載入失敗",
       "decisionsSaved": "決策已儲存",
       "reviewCompletedAndTransitioned": "審核完成並已更新狀態",
@@ -840,6 +841,13 @@
     "network": "網路連線失敗",
     "unauthorized": "未授權的存取",
     "notFound": "找不到資源",
-    "serverError": "伺服器錯誤"
+    "serverError": "伺服器錯誤",
+    "pageNotFound": "找不到頁面",
+    "pageNotFoundDesc": "您訪問的頁面不存在或已被移動。請檢查網址是否正確，或返回工作列表。",
+    "needHelp": "如果問題持續，請聯繫系統管理員。"
+  },
+  "common": {
+    "goBack": "返回上一頁",
+    "goToWorklist": "前往工作列表"
   }
 }

@@ -152,17 +152,22 @@ const PipelineMonitorPage: React.FC = () => {
       <div style={styles.container}>
         <h1 style={styles.title}>Pipeline 監控</h1>
         <div style={styles.errorCard}>
-          <h3>連接錯誤</h3>
-          <p>{error}</p>
-          <p style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
-            請在終端運行以下命令啟動監控 API：
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔌</div>
+          <h3 style={{ margin: '0 0 0.5rem 0' }}>監控服務暫時無法連接</h3>
+          <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+            Pipeline 監控服務目前未運行。如需查看 Pipeline 狀態，請聯繫系統管理員啟動服務。
           </p>
-          <pre style={styles.codeBlock}>
-            cd backend && source venv/bin/activate && python scripts/pipeline_monitor_api.py
-          </pre>
           <button onClick={fetchAll} style={styles.retryButton}>
             重試連接
           </button>
+          <details style={{ marginTop: '1.5rem', textAlign: 'left' }}>
+            <summary style={{ cursor: 'pointer', color: '#666', fontSize: '0.85rem' }}>
+              技術詳情 (管理員用)
+            </summary>
+            <pre style={{ ...styles.codeBlock, marginTop: '0.5rem', fontSize: '0.8rem' }}>
+              cd backend && source venv/bin/activate && python scripts/pipeline_monitor_api.py
+            </pre>
+          </details>
         </div>
       </div>
     );

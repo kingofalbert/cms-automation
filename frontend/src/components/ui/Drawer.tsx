@@ -57,9 +57,9 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(
     if (!isOpen) return null;
 
     const sizeStyles = {
-      sm: 'w-80',
-      md: 'w-96',
-      lg: 'w-[600px]',
+      sm: 'w-full sm:w-80',
+      md: 'w-full sm:w-96',
+      lg: 'w-full sm:w-[600px]',
     };
 
     const positionStyles = {
@@ -74,15 +74,15 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(
 
     const drawerContent = (
       <div
-        className="fixed inset-0 z-50"
+        className="fixed inset-0 z-[100]"
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'drawer-title' : undefined}
       >
-        {/* Overlay */}
+        {/* Overlay - covers everything behind */}
         <div
           className={clsx(
-            'fixed inset-0 bg-black transition-opacity',
+            'fixed inset-0 bg-black transition-opacity z-[100]',
             isOpen ? 'bg-opacity-50' : 'bg-opacity-0'
           )}
           onClick={closeOnOverlayClick ? onClose : undefined}
@@ -93,7 +93,7 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(
         <div
           ref={ref}
           className={clsx(
-            'fixed top-0 bottom-0 bg-white shadow-2xl',
+            'fixed top-0 bottom-0 bg-white shadow-2xl z-[101]',
             'transform transition-transform duration-300 ease-in-out',
             'flex flex-col',
             sizeStyles[size],

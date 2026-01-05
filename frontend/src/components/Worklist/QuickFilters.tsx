@@ -68,9 +68,9 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
     if (isActive) {
       return {
         bg: 'bg-primary-100',
-        text: 'text-primary-700',
-        border: 'border-primary-500',
-        badge: 'bg-primary-500',
+        text: 'text-primary-700 font-semibold',
+        border: 'border-primary-500 ring-2 ring-primary-200',
+        badge: 'bg-primary-600',
       };
     }
 
@@ -91,16 +91,16 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
   };
 
   return (
-    <div className="mb-6 overflow-x-auto">
-      <div className="flex gap-3 min-w-max">
+    <div className="mb-6 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+      <div className="flex gap-2 sm:gap-3 min-w-max">
         {/* All filter */}
         <button
           onClick={() => onFilterChange('all')}
           className={cn(
-            'flex items-center gap-2 px-4 py-2 rounded-full transition-all',
-            'border text-sm font-medium whitespace-nowrap',
+            'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all',
+            'border text-xs sm:text-sm font-medium whitespace-nowrap',
             activeFilter === 'all'
-              ? 'bg-primary-100 text-primary-700 border-primary-500'
+              ? 'bg-primary-100 text-primary-700 font-semibold border-primary-500 ring-2 ring-primary-200'
               : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
           )}
           aria-label={t('worklist.quickFilters.all')}
@@ -109,7 +109,7 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
           {t('worklist.quickFilters.all')}
           <span className={cn(
             'px-2 py-0.5 rounded-full text-xs font-semibold text-white',
-            activeFilter === 'all' ? 'bg-primary-500' : 'bg-gray-500'
+            activeFilter === 'all' ? 'bg-primary-600' : 'bg-gray-500'
           )}>
             {items.length}
           </span>
@@ -127,8 +127,8 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
               key={filter.key}
               onClick={() => onFilterChange(filter.key)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-full transition-all',
-                'border text-sm font-medium whitespace-nowrap',
+                'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all',
+                'border text-xs sm:text-sm font-medium whitespace-nowrap',
                 colors.bg,
                 colors.text,
                 colors.border,
@@ -137,7 +137,7 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
               aria-label={t(`worklist.quickFilters.${filter.key}`)}
               aria-pressed={isActive}
             >
-              <Icon className="w-5 h-5" aria-hidden="true" />
+              <Icon className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
               {t(`worklist.quickFilters.${filter.key}`)}
               <span className={cn(
                 'px-2 py-0.5 rounded-full text-xs font-semibold text-white',

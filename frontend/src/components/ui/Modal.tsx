@@ -66,14 +66,14 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
 
     const modalContent = (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? 'modal-title' : undefined}
       >
-        {/* Overlay */}
+        {/* Overlay - covers everything behind */}
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity z-[100]"
           onClick={closeOnOverlayClick ? onClose : undefined}
           aria-hidden="true"
         />
@@ -82,7 +82,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
         <div
           ref={ref}
           className={clsx(
-            'relative bg-white rounded-lg shadow-xl w-full',
+            'relative bg-white rounded-lg shadow-xl w-full z-[101]',
             'transform transition-all',
             sizeStyles[size],
             className
