@@ -592,6 +592,14 @@ class GoogleDriveSyncService:
         metadata = dict(existing.drive_metadata if existing else {})
         metadata.update(drive_metadata)
 
+        # Calculate word count from content and store in metadata
+        content = payload.get("content", "")
+        if content:
+            word_count = len(content.split())
+            metadata["word_count"] = word_count
+            # Average reading speed: ~200 words per minute for Chinese text
+            metadata["estimated_reading_time"] = max(1, round(word_count / 200))
+
         if existing:
             existing.title = payload["title"]
             existing.content = payload["content"]
