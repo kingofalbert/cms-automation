@@ -1306,25 +1306,67 @@ Process the above {content_type} and return the complete JSON response:"""
         Returns:
             Dict with 'prefix', 'main', 'suffix' keys
         """
+        import re
+
         logger.debug("Extracting title using heuristics")
+
+        def is_divider_line(text: str) -> bool:
+            """Check if text is a divider/separator line."""
+            if not text or len(text) < 5:
+                return False
+            separator_chars = set('-—–─_=~·•*')
+            separator_count = sum(1 for c in text if c in separator_chars)
+            return separator_count / len(text) > 0.8
+
+        def looks_like_body_content(text: str) -> bool:
+            """Check if text looks like body content rather than a title."""
+            if not text:
+                return False
+            # Body content indicators
+            if '。' in text[:-1]:  # Multiple sentences
+                return True
+            if re.search(r'\d+\.?\d*[萬億千百]\s*[名個人]', text):  # Statistics
+                return True
+            if len(text) > 60:  # Too long for a title
+                return True
+            return False
+
+        def is_valid_title(text: str) -> bool:
+            """Check if text could be a valid title."""
+            if not text or len(text) < 5:
+                return False
+            if is_divider_line(text):
+                return False
+            if looks_like_body_content(text):
+                return False
+            # Skip author/byline patterns
+            if re.match(r'^文\s*[/／]', text) or '編譯' in text:
+                return False
+            return True
+
+        title_text = None
 
         # Strategy 1: Look for <h1> tags
         h1_tag = soup.find("h1")
         if h1_tag:
-            title_text = h1_tag.get_text(strip=True)
-        else:
-            # Strategy 2: Look for first paragraph with large font or bold
-            for p in soup.find_all("p", limit=5):
+            candidate = h1_tag.get_text(strip=True)
+            if is_valid_title(candidate):
+                title_text = candidate
+            else:
+                logger.debug(f"Skipping invalid h1 title: {candidate[:50]}")
+
+        # Strategy 2: Look for first valid paragraph
+        if not title_text:
+            for p in soup.find_all("p", limit=10):
                 text = p.get_text(strip=True)
-                if len(text) > 10 and len(text) < 200:
+                if len(text) >= 10 and len(text) <= 60 and is_valid_title(text):
                     title_text = text
                     break
-            else:
-                return {"prefix": None, "main": None, "suffix": None}
+
+        if not title_text:
+            return {"prefix": None, "main": None, "suffix": None}
 
         # Parse title components using patterns
-        import re
-
         # Extract prefix (e.g., "【專題報導】", "《頭條》")
         prefix_match = re.match(r"^([【《\[][\u4e00-\u9fa5]+[】》\]])\s*(.*)", title_text)
         if prefix_match:

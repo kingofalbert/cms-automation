@@ -466,6 +466,37 @@ class GoogleDriveSyncService:
         title = None
         body = content.strip()
 
+        def is_divider_line(text: str) -> bool:
+            """Check if a line is a divider/separator line (e.g., --------, ========)."""
+            if not text:
+                return False
+            # Check if the line consists mostly of repeated separator characters
+            # Allow for some whitespace and mixed separators
+            separator_chars = set('-—–─_=~·•*')
+            clean_text = text.strip()
+            if len(clean_text) < 5:
+                return False
+            # Count separator characters
+            separator_count = sum(1 for c in clean_text if c in separator_chars)
+            # If more than 80% of the line is separator characters, it's a divider
+            return separator_count / len(clean_text) > 0.8
+
+        def looks_like_body_content(text: str) -> bool:
+            """Check if text looks like body content rather than a title."""
+            if not text:
+                return False
+            # Body content indicators:
+            # 1. Contains multiple sentences (ends with 。followed by more text)
+            if '。' in text[:-1]:  # Has period not at the very end
+                return True
+            # 2. Contains statistics/numbers with units (e.g., "47.6萬名美國人")
+            if re.search(r'\d+\.?\d*[萬億千百]\s*[名個人]', text):
+                return True
+            # 3. Very long text (> 60 chars is likely body content)
+            if len(text) > 60:
+                return True
+            return False
+
         # Strategy 1: Try to extract from HTML heading tags (h1, h2, h3)
         for heading_tag in ['h1', 'h2', 'h3']:
             heading_match = re.search(rf'<{heading_tag}[^>]*>(.*?)</{heading_tag}>', content, re.IGNORECASE | re.DOTALL)
@@ -473,8 +504,14 @@ class GoogleDriveSyncService:
                 # Remove HTML tags from heading content and decode HTML entities
                 heading_text = re.sub(r'<[^>]+>', '', heading_match.group(1)).strip()
                 heading_text = html.unescape(heading_text)  # Decode HTML entities like &#24863;
-                # Skip if it looks like a meta description (too long)
+                # Skip divider lines, body content, and invalid titles
                 if heading_text and len(heading_text) >= 5 and len(heading_text) <= 100:
+                    if is_divider_line(heading_text):
+                        logger.debug("google_drive_skipping_divider_heading", text=heading_text[:50])
+                        continue
+                    if looks_like_body_content(heading_text):
+                        logger.debug("google_drive_skipping_body_content_heading", text=heading_text[:50])
+                        continue
                     title = heading_text[:500]
                     logger.info("google_drive_title_extracted_from_heading", title=title, tag=heading_tag)
                     break
@@ -490,6 +527,10 @@ class GoogleDriveSyncService:
                 # Skip CSS/style patterns
                 if line.startswith('.') or line.startswith('#') or '{' in line or '}' in line:
                     continue
+                # Skip divider lines (consecutive dashes, underscores, etc.)
+                if is_divider_line(line):
+                    logger.debug("google_drive_skipping_divider_line", text=line[:50])
+                    continue
                 # Skip author/byline patterns (e.g., "文 / xxx 編譯 / xxx", "記者xxx報導")
                 if re.match(r'^文\s*[/／]', line) or '編譯' in line or '翻譯' in line:
                     continue
@@ -498,9 +539,12 @@ class GoogleDriveSyncService:
                 # Skip image captions (圖說, 圖片來源, 圖:)
                 if re.match(r'^(圖說|圖片來源|圖\s*[：:]|圖/)', line):
                     continue
-                # Skip lines that look like descriptions (too long, > 80 chars typically)
-                # Good titles are usually 10-80 characters
-                if len(line) >= 10 and len(line) <= 80:
+                # Skip lines that look like body content (statistics, multiple sentences)
+                if looks_like_body_content(line):
+                    logger.debug("google_drive_skipping_body_content_line", text=line[:50])
+                    continue
+                # Good titles are usually 10-60 characters (reduced from 80)
+                if len(line) >= 10 and len(line) <= 60:
                     title = line[:500]
                     logger.info("google_drive_title_extracted_from_content", title=title)
                     break
