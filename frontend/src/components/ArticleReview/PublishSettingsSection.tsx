@@ -128,49 +128,22 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Settings className="w-5 h-5 text-gray-600" />
-        <h3 className="text-lg font-semibold text-gray-900">发布设置</h3>
+        <h3 className="text-lg font-semibold text-gray-900">上稿設置</h3>
       </div>
 
-      {/* Publish Status */}
+      {/* Upload Mode - Always draft */}
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
           <Calendar className="w-4 h-4" />
-          发布状态
+          上稿模式
         </label>
-        <div className="flex gap-2">
-          {(['publish', 'draft', 'schedule'] as const).map((status) => (
-            <button
-              key={status}
-              type="button"
-              onClick={() => onPublishStatusChange(status)}
-              className={`px-4 py-2 text-sm rounded ${
-                publishStatus === status
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              {status === 'publish' && '立即发布'}
-              {status === 'draft' && '保存草稿'}
-              {status === 'schedule' && '定时发布'}
-            </button>
-          ))}
+        <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800">
+            <strong>草稿模式</strong> - 文章將上傳到 WordPress 作為草稿，由最終審稿編輯在 WordPress 後台審核後再發布。
+          </p>
         </div>
       </div>
 
-      {/* Publish Date (only for schedule) */}
-      {publishStatus === 'schedule' && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">
-            发布时间 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="datetime-local"
-            value={publishDate}
-            onChange={(e) => onPublishDateChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
-        </div>
-      )}
 
       {/* Visibility */}
       <div className="space-y-2">

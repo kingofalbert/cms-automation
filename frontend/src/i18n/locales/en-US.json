@@ -833,9 +833,9 @@
       }
     },
     "confirmation": {
-      "title": "Confirm publish",
+      "title": "Confirm upload",
       "articleInfo": "Article details",
-      "publishSettings": "Publishing settings",
+      "publishSettings": "Upload settings",
       "fields": {
         "title": "Title",
         "wordCount": "Word count",
@@ -843,14 +843,14 @@
         "provider": "Provider",
         "estimatedTime": "Estimated duration",
         "estimatedCost": "Estimated cost",
-        "publishMode": "Publish mode",
-        "publishImmediately": "Publish immediately",
+        "publishMode": "Upload mode",
+        "publishImmediately": "Draft mode",
         "categories": "Categories",
         "tags": "Tags",
         "seoEnabled": "SEO optimization enabled"
       },
       "wordCountValue": "~{{count}} words",
-      "warning": "Publishing will immediately send the article live to WordPress. Please confirm the content before proceeding."
+      "warning": "The article will be uploaded to WordPress as a draft. Final editors can review and publish it from the WordPress admin panel."
     }
   },
   "navigation": {

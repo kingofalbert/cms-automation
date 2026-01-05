@@ -37,16 +37,14 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Card } from '../ui';
 import { Button } from '../ui';
 import { FinalContentPreview, type FAQItem } from './FinalContentPreview';
 import { MetadataSummaryPanel } from './MetadataSummaryPanel';
 import { PublishReadinessChecklist, createChecklistItems } from './PublishReadinessChecklist';
-import { PublishSettingsSectionSimplified } from './PublishSettingsSectionSimplified';
 import { PublishConfirmation } from './PublishConfirmation';
 import { PublishSuccessConfirmation } from './PublishSuccessConfirmation';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
-import { Settings, Send, RotateCcw } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 /**
  * Result returned from onPublish callback
@@ -99,12 +97,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   // Local state for publish settings
   // Default to 'draft' mode - articles are uploaded but NOT published
   // Final editors will review and publish in WordPress admin
-  const [publishStatus, setPublishStatus] = useState<'draft' | 'publish' | 'schedule'>('draft');
-  const [visibility, setVisibility] = useState<'public' | 'private' | 'password'>('public');
-  const [password, setPassword] = useState('');
-  const [publishDate, setPublishDate] = useState<string>('');
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
 
   // Phase 17: State for success confirmation
   const [showSuccessConfirmation, setShowSuccessConfirmation] = useState(false);
@@ -133,11 +126,10 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   const hasSeoDescription = Boolean(data.meta_description);
 
   const isReadyToPublish = useMemo(() => {
+    // Simplified: only need title and content to be ready for draft upload
     if (!data.title || !hasValidContent) return false;
-    if (publishStatus === 'schedule' && !publishDate) return false;
-    if (visibility === 'password' && !password) return false;
     return true;
-  }, [data.title, hasValidContent, publishStatus, publishDate, visibility, password]);
+  }, [data.title, hasValidContent]);
 
   // Check if article has FAQ applicable flag (defaults to true if not set)
   const faqApplicable = data.articleReview?.faq_applicable ?? true;
@@ -195,11 +187,10 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   };
 
   const handleConfirmPublish = async () => {
+    // Simplified settings - always upload as draft with public visibility
     const settings: PublishSettings = {
-      status: publishStatus,
-      visibility,
-      password: visibility === 'password' ? password : undefined,
-      publish_date: publishStatus === 'schedule' ? publishDate : undefined,
+      status: 'draft',
+      visibility: 'public',
       primary_category: primaryCategory || undefined,
       secondary_categories: secondaryCategories.length > 0 ? secondaryCategories : undefined,
       tags,
@@ -230,13 +221,6 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
   const handleCloseSuccessConfirmation = () => {
     setShowSuccessConfirmation(false);
     setPublishResult(null);
-  };
-
-  const handleReset = () => {
-    setPublishStatus('draft'); // Always default to draft - we don't publish directly
-    setVisibility('public');
-    setPassword('');
-    setPublishDate('');
   };
 
   // Content data for preview
@@ -334,71 +318,38 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
         </div>
       </div>
 
-      {/* ===== BOTTOM SECTION: Settings + Buttons (always visible at bottom) ===== */}
+      {/* ===== BOTTOM SECTION: Action Button (always visible at bottom) ===== */}
       <div className="flex-shrink-0 border-t bg-white pt-4 mt-4">
-        {/* Publish Settings (Collapsible) - ABOVE buttons */}
-        <div className="mb-4">
-          <button
-            type="button"
-            onClick={() => setShowSettings(!showSettings)}
-            className="w-full flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors"
-          >
-            <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
-              <Settings className="w-4 h-4" />
-              上稿設置
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                草稿模式
-              </span>
-              {visibility !== 'public' && (
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                  {visibility === 'private' ? '私密' : '密碼保護'}
-                </span>
-              )}
+        {/* Info banner about draft mode */}
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-blue-800">
+            <Send className="w-4 h-4 text-blue-600" />
+            <span>
+              <strong>上稿模式：</strong>文章將上傳到 WordPress 作為草稿，由最終審稿編輯在 WordPress 後台審核後再發布。
             </span>
-            <span className="text-gray-400">{showSettings ? '▲' : '▼'}</span>
-          </button>
-
-          {showSettings && (
-            <Card className="mt-2 p-4">
-              <PublishSettingsSectionSimplified
-                publishStatus={publishStatus}
-                visibility={visibility}
-                password={password}
-                publishDate={publishDate}
-                onPublishStatusChange={setPublishStatus}
-                onVisibilityChange={setVisibility}
-                onPasswordChange={setPassword}
-                onPublishDateChange={setPublishDate}
-              />
-            </Card>
-          )}
+          </div>
         </div>
 
-        {/* Action buttons - BELOW settings */}
+        {/* Action buttons */}
         <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          {isAlreadyPublished ? (
-            <span className="text-green-600 flex items-center gap-1">
-              <span>✅</span>
-              此文章已上稿至 WordPress，無需重複提交
-            </span>
-          ) : !isReadyToPublish ? (
-            <span className="text-amber-600 flex items-center gap-1">
-              <span>⚠️</span>
-              請完成所有必填項才能上稿
-            </span>
-          ) : null}
-        </div>
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            disabled={isPublishing}
-            className="flex items-center gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            重置設置
-          </Button>
+          <div className="text-sm text-gray-600">
+            {isAlreadyPublished ? (
+              <span className="text-green-600 flex items-center gap-1">
+                <span>✅</span>
+                此文章已上稿至 WordPress，無需重複提交
+              </span>
+            ) : !isReadyToPublish ? (
+              <span className="text-amber-600 flex items-center gap-1">
+                <span>⚠️</span>
+                請完成所有必填項才能上稿
+              </span>
+            ) : (
+              <span className="text-green-600 flex items-center gap-1">
+                <span>✓</span>
+                準備就緒，可以上稿
+              </span>
+            )}
+          </div>
           <Button
             onClick={handlePublishClick}
             disabled={!isReadyToPublish || isPublishing || isAlreadyPublished}
@@ -408,17 +359,14 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             {isPublishing ? '上稿中...' : isAlreadyPublished ? '已上稿' : '上稿'}
           </Button>
         </div>
-        </div>
       </div>
 
       {/* Confirmation dialog */}
       {showConfirmation && (
         <PublishConfirmation
           settings={{
-            status: publishStatus,
-            visibility,
-            password: visibility === 'password' ? password : undefined,
-            publish_date: publishStatus === 'schedule' ? publishDate : undefined,
+            status: 'draft',
+            visibility: 'public',
             primary_category: primaryCategory || undefined,
             secondary_categories: secondaryCategories.length > 0 ? secondaryCategories : undefined,
             tags,

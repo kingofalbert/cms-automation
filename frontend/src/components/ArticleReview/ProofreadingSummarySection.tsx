@@ -186,7 +186,7 @@ export const ProofreadingSummarySection: React.FC<ProofreadingSummarySectionProp
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-xs text-amber-700">
             <strong>注意:</strong> 仍有 {stats.pendingCount} 個問題待處理。
-            建議在發布前完成所有校對審核。
+            建議在上稿前完成所有校對審核。
           </div>
         </div>
       )}
