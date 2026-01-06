@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { api } from '@/lib/api';
+import { api, apiClient, EXTENDED_TIMEOUT } from '@/services/api-client';
 import { Card, Select, Input, Button } from '@/components/ui';
 import { WorklistTable } from '@/components/Worklist/WorklistTable';
 import { WorklistDetailDrawer } from '@/components/Worklist/WorklistDetailDrawer';
@@ -99,13 +99,24 @@ export default function WorklistPage() {
     enabled: drawerOpen && Boolean(selectedItemId),
   });
 
-  // Sync with Google Drive
+  // Sync with Google Drive (uses extended timeout for long-running operation)
   const syncMutation = useMutation({
     mutationFn: async () => {
-      return await api.post('/v1/worklist/sync');
+      // Use extended timeout (3 minutes) for Google Drive sync operation
+      // The sync can take a long time if there are many files or API is slow
+      return await apiClient.post('/v1/worklist/sync', {}, { timeout: EXTENDED_TIMEOUT }).then(res => res.data);
     },
-    onSuccess: () => {
-      alert(t('worklist.messages.syncStarted'));
+    onSuccess: (data: any) => {
+      const summary = data?.summary;
+      if (summary) {
+        const message = t('worklist.messages.syncCompleted', {
+          created: summary.created || 0,
+          updated: summary.updated || 0,
+        });
+        alert(message);
+      } else {
+        alert(t('worklist.messages.syncStarted'));
+      }
       refetch();
     },
     onError: (error: any) => {

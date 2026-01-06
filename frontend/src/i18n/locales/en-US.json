@@ -80,6 +80,7 @@
     },
     "messages": {
       "syncStarted": "Google Drive sync started",
+      "syncCompleted": "Sync completed: {{created}} new, {{updated}} updated",
       "syncFailed": "Sync failed",
       "statusChanged": "Status changed successfully",
       "statusChangeFailed": "Status change failed",

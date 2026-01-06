@@ -26,12 +26,23 @@ export interface APIError extends APIErrorType {}
 type APIAxiosError = AxiosError<APIErrorType>;
 
 /**
+ * Default timeout in milliseconds for API requests.
+ * Note: Some long-running operations (like Google Drive sync) may need longer timeouts.
+ */
+const DEFAULT_TIMEOUT = 30000; // 30 seconds
+
+/**
+ * Extended timeout for long-running operations like Google Drive sync.
+ */
+export const EXTENDED_TIMEOUT = 180000; // 3 minutes
+
+/**
  * Create configured axios instance for API requests.
  */
 function createAPIClient(): AxiosInstance {
   const client = axios.create({
     baseURL: API_BASE_URL,
-    timeout: 30000, // 30 seconds
+    timeout: DEFAULT_TIMEOUT,
     headers: {
       'Content-Type': 'application/json',
     },

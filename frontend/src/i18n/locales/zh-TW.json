@@ -80,6 +80,7 @@
     },
     "messages": {
       "syncStarted": "Google Drive 同步已開始",
+      "syncCompleted": "同步完成：新增 {{created}} 篇，更新 {{updated}} 篇",
       "syncFailed": "同步失敗",
       "statusChanged": "狀態變更成功",
       "statusChangeFailed": "狀態變更失敗",
