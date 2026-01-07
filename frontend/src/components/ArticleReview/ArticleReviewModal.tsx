@@ -133,6 +133,16 @@ const getStepFromStatus = (status: WorklistStatus): number => {
 };
 
 /**
+ * Check if a specific step is accessible based on current worklist status
+ * This prevents users from jumping to steps that require a higher status
+ */
+const canAccessStep = (status: WorklistStatus, targetStep: number): boolean => {
+  const currentMaxStep = getStepFromStatus(status);
+  // Allow accessing current step and any previous steps
+  return targetStep <= currentMaxStep;
+};
+
+/**
  * Map initial tab prop to step index
  */
 const getStepFromTab = (tab: 'parsing' | 'proofreading' | 'publish'): number => {
@@ -375,21 +385,40 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   }, [activeStep, saveCurrentStepData]);
 
   const goToNextStep = useCallback(async () => {
-    if (activeStep < 2) {
+    const currentStatus = data?.status as WorklistStatus;
+    const nextStep = activeStep + 1;
+
+    // Check if next step is accessible based on current status
+    if (activeStep < 2 && currentStatus && canAccessStep(currentStatus, nextStep)) {
       try {
         // Auto-save current step before navigating
         await saveCurrentStepData(activeStep);
-        setActiveStep(activeStep + 1);
+        setActiveStep(nextStep);
       } catch (err) {
         console.error('[Navigation] Error navigating to next step:', err);
         // Still allow navigation even if save failed
-        setActiveStep(activeStep + 1);
+        setActiveStep(nextStep);
       }
+    } else if (activeStep < 2 && currentStatus && !canAccessStep(currentStatus, nextStep)) {
+      // Show user-friendly message when step is not accessible
+      const stepNames = ['解析審核', '校對審核', '上稿預覽'];
+      console.warn(`[Navigation] Cannot access step ${nextStep} (${stepNames[nextStep]}) with current status: ${currentStatus}`);
+      alert(`請先完成當前步驟的審核。目前狀態為「${currentStatus}」，無法進入「${stepNames[nextStep]}」。`);
     }
-  }, [activeStep, saveCurrentStepData]);
+  }, [activeStep, saveCurrentStepData, data?.status]);
 
   const handleStepClick = useCallback(async (stepId: number) => {
     if (stepId !== activeStep) {
+      const currentStatus = data?.status as WorklistStatus;
+
+      // Check if target step is accessible based on current status
+      if (currentStatus && !canAccessStep(currentStatus, stepId)) {
+        const stepNames = ['解析審核', '校對審核', '上稿預覽'];
+        console.warn(`[Navigation] Cannot access step ${stepId} (${stepNames[stepId]}) with current status: ${currentStatus}`);
+        alert(`目前狀態為「${currentStatus}」，無法進入「${stepNames[stepId]}」。請先完成前面步驟的審核。`);
+        return;
+      }
+
       try {
         // Auto-save current step before navigating
         await saveCurrentStepData(activeStep);
@@ -400,7 +429,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         setActiveStep(stepId);
       }
     }
-  }, [activeStep, saveCurrentStepData]);
+  }, [activeStep, saveCurrentStepData, data?.status]);
 
   // Handle save parsing data
   const handleSaveParsingData = useCallback(async (parsingData: ParsingData) => {
@@ -496,6 +525,13 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
 
   // Handle publish article
   const handlePublish = useCallback(async (settings: PublishSettings) => {
+    // Double-check status before publishing to prevent 400 errors
+    const currentStatus = data?.status as WorklistStatus;
+    if (currentStatus && !['proofreading', 'ready_to_publish'].includes(currentStatus)) {
+      alert(`目前狀態為「${currentStatus}」，無法上稿。請先完成校對審核流程。`);
+      return;
+    }
+
     setIsPublishing(true);
     try {
       // Call API to publish article
@@ -530,7 +566,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
     } finally {
       setIsPublishing(false);
     }
-  }, [refetch, onClose, articleId, worklistItemId]);
+  }, [refetch, onClose, articleId, worklistItemId, data?.status]);
 
   // Handle save draft (Ctrl+S)
   // BUGFIX: Now saves step-specific data (FAQs, proofreading decisions) in addition to workflow progress
