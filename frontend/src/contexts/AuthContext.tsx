@@ -69,6 +69,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, 5000)
 
+    // If Supabase is not configured, set loading to false and return
+    if (!supabase) {
+      console.warn('Supabase not configured - authentication disabled')
+      setState(prev => ({ ...prev, loading: false }))
+      return () => {
+        isMountedRef.current = false
+        clearTimeout(timeoutId)
+      }
+    }
+
     // Listen for auth changes - this handles INITIAL_SESSION on first load
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -160,6 +170,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign in with email and password
   const signIn = useCallback(async (email: string, password: string) => {
+    if (!supabase) {
+      const error = { message: 'Authentication not configured', status: 500 } as AuthError
+      return { error }
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }))
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -177,7 +192,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Sign out
   const signOut = useCallback(async () => {
     setState(prev => ({ ...prev, loading: true }))
-    await supabase.auth.signOut()
+    if (supabase) {
+      await supabase.auth.signOut()
+    }
     setState({
       user: null,
       profile: null,
@@ -189,6 +206,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Send magic link
   const sendMagicLink = useCallback(async (email: string) => {
+    if (!supabase) {
+      return { error: { message: 'Authentication not configured', status: 500 } as AuthError }
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -200,6 +220,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Reset password
   const resetPassword = useCallback(async (email: string) => {
+    if (!supabase) {
+      return { error: { message: 'Authentication not configured', status: 500 } as AuthError }
+    }
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/reset-password`,
     })

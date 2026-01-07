@@ -53,9 +53,11 @@ function createAPIClient(): AxiosInstance {
     async (config) => {
       try {
         // Get session from Supabase (includes auto-refresh)
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.access_token) {
-          config.headers.Authorization = `Bearer ${session.access_token}`;
+        if (supabase) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            config.headers.Authorization = `Bearer ${session.access_token}`;
+          }
         }
       } catch (err) {
         console.warn('Failed to get auth session:', err);
@@ -84,7 +86,9 @@ function createAPIClient(): AxiosInstance {
 
       // Handle 401 Unauthorized - sign out and redirect to login
       if (status === 401) {
-        await supabase.auth.signOut();
+        if (supabase) {
+          await supabase.auth.signOut();
+        }
         // Use hash router format for redirect
         window.location.href = '/#/login';
       }
