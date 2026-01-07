@@ -944,10 +944,24 @@ Perform ALL the following tasks in a SINGLE comprehensive response:
 
 Extract and structure the following elements from the HTML:
 
-1. **Title Components**:
-   - `title_prefix`: Optional prefix like "【專題報導】", "【深度解析】"
+1. **Title Components** (CRITICAL - Read carefully):
+   - `title_prefix`: Optional prefix like "【藥食同源】", "【專題報導】", "【深度解析】"
    - `title_main`: The main title (required, never empty)
    - `title_suffix`: Optional subtitle or additional context
+
+   **IMPORTANT TITLE EXTRACTION RULES**:
+   - The title is ALWAYS at the VERY BEGINNING of the document (first 3-5 lines)
+   - The title is typically SHORT (under 50 characters) and does NOT contain periods (。)
+   - The title is usually followed by the author line (文／XXX or 作者：XXX)
+   - If a line contains a period (。) or is longer than 60 characters, it is likely BODY TEXT, not a title
+   - Common document structure:
+     * Line 1: 【欄目名】 (prefix like 【藥食同源】)
+     * Line 2: Main title (e.g., "小寒養生：海鮮燉飯引氣下行 調和上熱下寒")
+     * Line 3: Author line (e.g., "文／白玉熙")
+     * Line 4+: Meta description, images, body content
+   - NEVER use a paragraph that contains a period (。) or starts with common sentence patterns as the title
+   - Example of WRONG title: "在這樣的氣機背景下，有些人可能會感受到..." ← This is body text!
+   - Example of CORRECT title: "小寒養生：海鮮燉飯引氣下行 調和上熱下寒" ← Short, no period, descriptive
 
 2. **Author Information**:
    - `author_line`: The COMPLETE raw author text line as it appears (e.g., "文 / Mercura Wang　編譯 / 方海冬")
@@ -1323,11 +1337,17 @@ Process the above {content_type} and return the complete JSON response:"""
             if not text:
                 return False
             # Body content indicators
-            if '。' in text[:-1]:  # Multiple sentences
+            if '。' in text:  # Contains any period - likely a sentence
+                return True
+            if '，' in text and len(text) > 40:  # Long text with commas - likely body
                 return True
             if re.search(r'\d+\.?\d*[萬億千百]\s*[名個人]', text):  # Statistics
                 return True
-            if len(text) > 60:  # Too long for a title
+            if len(text) > 50:  # Too long for a title (reduced from 60)
+                return True
+            # Common body content patterns
+            if re.match(r'^(在|當|如果|這|那|有|是|因為|所以|但是|然而|進入|最近)', text):
+                # Starts with common sentence starters - likely body content
                 return True
             return False
 
@@ -1355,12 +1375,39 @@ Process the above {content_type} and return the complete JSON response:"""
             else:
                 logger.debug(f"Skipping invalid h1 title: {candidate[:50]}")
 
-        # Strategy 2: Look for first valid paragraph
+        # Strategy 2: Look for title in first few paragraphs
+        # Handle case where first line is a column prefix (e.g., 【藥食同源】)
         if not title_text:
-            for p in soup.find_all("p", limit=10):
+            prefix_only = None
+            paragraphs = soup.find_all("p", limit=15)
+
+            for i, p in enumerate(paragraphs):
                 text = p.get_text(strip=True)
-                if len(text) >= 10 and len(text) <= 60 and is_valid_title(text):
-                    title_text = text
+                if not text:
+                    continue
+
+                # Check if this is a standalone prefix like【藥食同源】
+                if re.match(r'^[【《\[][\u4e00-\u9fa5]{2,8}[】》\]]$', text):
+                    prefix_only = text
+                    logger.debug(f"Found standalone prefix: {text}")
+                    continue
+
+                # Skip meta markers and image captions
+                if text.startswith(('【Meta', '圖說', '圖片下載', 'SEO', 'Tag')):
+                    continue
+
+                # Skip author lines
+                if re.match(r'^文\s*[/／]', text):
+                    continue
+
+                # Check if this looks like a valid title
+                if len(text) >= 8 and len(text) <= 50 and is_valid_title(text):
+                    # If we found a prefix earlier, combine them
+                    if prefix_only:
+                        title_text = f"{prefix_only}{text}"
+                    else:
+                        title_text = text
+                    logger.debug(f"Found title: {title_text}")
                     break
 
         if not title_text:
