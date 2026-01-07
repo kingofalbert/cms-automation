@@ -549,3 +549,24 @@ export async function deleteOptimizations(articleId: number): Promise<void> {
 export async function refreshRelatedArticles(articleId: number): Promise<ParsedArticleData> {
   return api.post<ParsedArticleData>(`/v1/articles/${articleId}/refresh-related-articles`, {});
 }
+
+/**
+ * Re-parse an article from Google Drive using the latest parser.
+ * This fetches the latest content from Google Drive and re-parses it.
+ * Useful when:
+ * - The original document was updated in Google Drive
+ * - The parsing result has errors that need to be fixed
+ * - You want to use the latest parsing algorithm
+ *
+ * @param articleId - Article ID to re-parse
+ * @returns Updated article data
+ *
+ * @example
+ * ```ts
+ * const article = await reparseArticle(123);
+ * console.log(`Re-parsed: ${article.full_title}`);
+ * ```
+ */
+export async function reparseArticle(articleId: number): Promise<ParsedArticleData> {
+  return api.post<ParsedArticleData>(`/v1/articles/${articleId}/reparse`, {});
+}

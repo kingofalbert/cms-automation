@@ -271,8 +271,9 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
   // AUTO-SAVE: Save current step's data before navigation
   // This ensures all data is persisted when switching steps
   // Phase 15: Now saves ALL parsing fields, not just FAQs
+  // BUGFIX: Added transitionToNextStatus parameter to update backend status
   // ============================================================
-  const saveCurrentStepData = useCallback(async (fromStep: number): Promise<boolean> => {
+  const saveCurrentStepData = useCallback(async (fromStep: number, transitionToNextStatus: boolean = false): Promise<boolean> => {
     try {
       // Phase 15: Save ALL parsing data when leaving step 0
       if (fromStep === 0) {
@@ -281,7 +282,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         const isDirty = parsingPanelRef.current?.isDirty() ?? false;
 
         // Only save if there's data and it's dirty (or has FAQs to sync)
-        if (currentData && (isDirty || parsingFaqs.length > 0)) {
+        if (currentData && (isDirty || parsingFaqs.length > 0 || transitionToNextStatus)) {
           setIsSaving(true);
           console.log('💾 自動保存解析數據:', {
             title: currentData.title?.slice(0, 20),
@@ -289,6 +290,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
             faqCount: currentData.faq_suggestions?.length || 0,
             tagsCount: currentData.tags?.length || 0,
             primaryCategory: currentData.primary_category,
+            transitionToNextStatus,
           });
 
           // Save all parsing data to article
@@ -328,19 +330,37 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
           } else {
             console.log('✅ 解析數據已自動保存');
           }
+
+          // BUGFIX: When transitioning from step 0 to step 1, update status to 'proofreading_review'
+          if (transitionToNextStatus) {
+            console.log('📤 更新狀態到 proofreading_review...');
+            await worklistAPI.updateStatus(worklistItemId, 'proofreading_review');
+            console.log('✅ 狀態已更新為 proofreading_review');
+          }
+
           // Phase 15: Reset dirty flag and refetch to sync with backend after auto-save
           parsingPanelRef.current?.resetDirty();
+          refetch();
+        } else if (transitionToNextStatus) {
+          // Even if no data to save, still update status when transitioning
+          console.log('📤 沒有新的數據要保存，但需要更新狀態到 proofreading_review');
+          setIsSaving(true);
+          await worklistAPI.updateStatus(worklistItemId, 'proofreading_review');
+          console.log('✅ 狀態已更新為 proofreading_review');
           refetch();
         }
       }
 
       // Save proofreading decisions when leaving step 1
-      console.log('🔍 saveCurrentStepData - fromStep:', fromStep, ', proofreadingDecisions.size:', proofreadingDecisions.size);
+      console.log('🔍 saveCurrentStepData - fromStep:', fromStep, ', proofreadingDecisions.size:', proofreadingDecisions.size, ', transitionToNextStatus:', transitionToNextStatus);
       if (fromStep === 1 && proofreadingDecisions.size > 0) {
         console.log('✅ 條件滿足，開始保存校對決定...');
         setIsSubmitting(true);
         const decisionList = Array.from(proofreadingDecisions.values());
         console.log('📤 決定列表:', decisionList);
+
+        // BUGFIX: When transitioning to step 2 (Publish Preview), also update status to 'ready_to_publish'
+        // This ensures the backend status is in sync with the frontend workflow step
         await worklistAPI.saveReviewDecisions(worklistItemId, {
           decisions: decisionList.map(d => ({
             issue_id: d.issue_id,
@@ -351,9 +371,21 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
             feedback_category: d.feedback_category,
             feedback_notes: d.feedback_notes,
           })),
+          // BUGFIX: Pass transition_to when moving to next step
+          transition_to: transitionToNextStatus ? 'ready_to_publish' : undefined,
         });
-        console.log('✅ 校對決定已自動保存');
+        console.log('✅ 校對決定已自動保存', transitionToNextStatus ? '(狀態已更新為 ready_to_publish)' : '');
         // Refetch to sync with backend
+        refetch();
+      } else if (fromStep === 1 && transitionToNextStatus) {
+        // Even if no decisions to save, still update status when transitioning to next step
+        console.log('📤 沒有新的決定要保存，但需要更新狀態到 ready_to_publish');
+        setIsSubmitting(true);
+        await worklistAPI.saveReviewDecisions(worklistItemId, {
+          decisions: [], // Empty decisions array
+          transition_to: 'ready_to_publish',
+        });
+        console.log('✅ 狀態已更新為 ready_to_publish');
         refetch();
       }
       return true;
@@ -388,22 +420,35 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
     const currentStatus = data?.status as WorklistStatus;
     const nextStep = activeStep + 1;
 
+    // BUGFIX: When moving between steps, we need to transition status
+    // Step 0 → 1: parsing_review → proofreading_review
+    // Step 1 → 2: proofreading_review → ready_to_publish
+    // This ensures the backend status is in sync with the frontend workflow step
+    const shouldTransitionStatus = activeStep < 2; // Always transition when moving forward
+
     // Check if next step is accessible based on current status
-    if (activeStep < 2 && currentStatus && canAccessStep(currentStatus, nextStep)) {
-      try {
-        // Auto-save current step before navigating
-        await saveCurrentStepData(activeStep);
-        setActiveStep(nextStep);
-      } catch (err) {
-        console.error('[Navigation] Error navigating to next step:', err);
-        // Still allow navigation even if save failed
-        setActiveStep(nextStep);
+    // Note: If transitioning status, we allow the navigation since saveCurrentStepData will update the status
+    if (activeStep < 2) {
+      const canAccess = currentStatus && canAccessStep(currentStatus, nextStep);
+
+      if (canAccess || shouldTransitionStatus) {
+        try {
+          // Auto-save current step before navigating
+          // Pass true for transitionToNextStatus to update backend status
+          await saveCurrentStepData(activeStep, shouldTransitionStatus);
+          setActiveStep(nextStep);
+        } catch (err) {
+          console.error('[Navigation] Error navigating to next step:', err);
+          // If transition failed, show error message instead of silently failing
+          alert('無法更新文章狀態，請稍後再試。');
+          return;
+        }
+      } else {
+        // Show user-friendly message when step is not accessible
+        const stepNames = ['解析審核', '校對審核', '上稿預覽'];
+        console.warn(`[Navigation] Cannot access step ${nextStep} (${stepNames[nextStep]}) with current status: ${currentStatus}`);
+        alert(`請先完成當前步驟的審核。目前狀態為「${currentStatus}」，無法進入「${stepNames[nextStep]}」。`);
       }
-    } else if (activeStep < 2 && currentStatus && !canAccessStep(currentStatus, nextStep)) {
-      // Show user-friendly message when step is not accessible
-      const stepNames = ['解析審核', '校對審核', '上稿預覽'];
-      console.warn(`[Navigation] Cannot access step ${nextStep} (${stepNames[nextStep]}) with current status: ${currentStatus}`);
-      alert(`請先完成當前步驟的審核。目前狀態為「${currentStatus}」，無法進入「${stepNames[nextStep]}」。`);
     }
   }, [activeStep, saveCurrentStepData, data?.status]);
 
@@ -411,8 +456,16 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
     if (stepId !== activeStep) {
       const currentStatus = data?.status as WorklistStatus;
 
+      // BUGFIX: When clicking on a higher step, we need to transition status
+      // Step 0 → 1: parsing_review → proofreading_review
+      // Step 1 → 2: proofreading_review → ready_to_publish
+      const shouldTransitionStatus = stepId > activeStep;
+
       // Check if target step is accessible based on current status
-      if (currentStatus && !canAccessStep(currentStatus, stepId)) {
+      // Note: If transitioning status forward, we allow the navigation since saveCurrentStepData will update the status
+      const canAccess = currentStatus && canAccessStep(currentStatus, stepId);
+
+      if (!canAccess && !shouldTransitionStatus) {
         const stepNames = ['解析審核', '校對審核', '上稿預覽'];
         console.warn(`[Navigation] Cannot access step ${stepId} (${stepNames[stepId]}) with current status: ${currentStatus}`);
         alert(`目前狀態為「${currentStatus}」，無法進入「${stepNames[stepId]}」。請先完成前面步驟的審核。`);
@@ -421,11 +474,17 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
 
       try {
         // Auto-save current step before navigating
-        await saveCurrentStepData(activeStep);
+        // Pass true for transitionToNextStatus when moving forward to update backend status
+        await saveCurrentStepData(activeStep, shouldTransitionStatus);
         setActiveStep(stepId);
       } catch (err) {
         console.error('[Navigation] Error navigating to step', stepId, ':', err);
-        // Still allow navigation even if save failed
+        // If transition failed, show error message instead of silently failing
+        if (shouldTransitionStatus) {
+          alert('無法更新文章狀態，請稍後再試。');
+          return;
+        }
+        // For non-transition cases, still allow navigation even if save failed
         setActiveStep(stepId);
       }
     }
@@ -740,6 +799,8 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
               // BUGFIX: Lifted FAQ state for persistence during backtracking
               faqs={parsingFaqs}
               onFaqsChange={setParsingFaqs}
+              // Reparse support: trigger refetch after successful reparse
+              onReparse={refetch}
             />
           )}
 

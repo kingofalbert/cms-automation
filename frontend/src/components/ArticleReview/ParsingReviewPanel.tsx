@@ -35,10 +35,12 @@ import { FAQReviewSection, type AIFAQSuggestion } from './FAQReviewSection';
 import { CategorySelectionCard, type AICategoryRecommendation, type AISecondaryCategoryRecommendation } from './CategorySelectionCard';
 import { ExcerptReviewSection } from './ExcerptReviewSection';
 import { toast } from 'sonner';
+import { RefreshCw } from 'lucide-react';
 import type { SuggestedTag, RelatedArticle } from '../../types/api';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import type { SEOTitleSuggestionsData, SelectSEOTitleResponse } from '../../types/api';
 import { api } from '../../services/api-client';
+import { reparseArticle } from '../../services/parsing';
 
 /**
  * FAQ item structure
@@ -63,6 +65,8 @@ export interface ParsingReviewPanelProps {
   faqs?: FAQItem[];
   /** Callback when FAQs change */
   onFaqsChange?: (faqs: FAQItem[]) => void;
+  /** Callback to refetch article data after reparse */
+  onReparse?: () => void;
 }
 
 /**
@@ -111,7 +115,10 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
   // BUGFIX: Lifted FAQ state for persistence during backtracking
   faqs: liftedFaqs,
   onFaqsChange: onLiftedFaqsChange,
+  onReparse,
 }, ref) => {
+  // State for reparse operation
+  const [isReparsing, setIsReparsing] = useState(false);
   // Local state for parsing data (editable)
   const initialParsingState = useMemo(() => {
     const metadata = data.metadata;
@@ -463,6 +470,62 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
     }
   };
 
+  // Handle reparse from Google Drive
+  const handleReparse = useCallback(async () => {
+    if (!data.article_id) {
+      toast.error('無法重新解析：缺少文章 ID');
+      return;
+    }
+
+    // Confirm with user
+    const confirmed = window.confirm(
+      '確定要重新從 Google Drive 解析此文章嗎？\n\n' +
+      '這將會：\n' +
+      '• 重新下載 Google Drive 文檔\n' +
+      '• 重新提取標題、作者、內容\n' +
+      '• 重新處理圖片\n\n' +
+      '⚠️ 您目前的編輯將會被覆蓋！'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsReparsing(true);
+    try {
+      await reparseArticle(data.article_id);
+      toast.success('文章重新解析成功！');
+
+      // Trigger refetch to reload the data
+      if (onReparse) {
+        onReparse();
+      }
+
+      // Reset dirty flag since data is reloaded
+      setIsDirty(false);
+    } catch (error: unknown) {
+      console.error('Error reparsing article:', error);
+      const axiosErr = error as {
+        response?: { data?: { detail?: string }; status?: number };
+        message?: string;
+      };
+
+      let errorMessage: string;
+      if (axiosErr.response?.data?.detail) {
+        errorMessage = axiosErr.response.data.detail;
+      } else if (axiosErr.response?.status === 404) {
+        errorMessage = '找不到原始 Google Drive 文檔';
+      } else if (axiosErr.response?.status === 500) {
+        errorMessage = '伺服器內部錯誤，請稍後重試';
+      } else {
+        errorMessage = '重新解析失敗，請檢查網路連線';
+      }
+      toast.error(`重新解析失敗：${errorMessage}`);
+    } finally {
+      setIsReparsing(false);
+    }
+  }, [data.article_id, onReparse]);
+
   // Phase 9.2: Generate AI FAQs
   const handleGenerateFaqs = useCallback(async () => {
     if (!data.article_id) {
@@ -582,6 +645,17 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
             {isDirty && (
               <span className="text-xs text-amber-600 bg-amber-100 px-2 py-0.5 rounded">未保存</span>
             )}
+            {/* Reparse Button */}
+            <button
+              type="button"
+              onClick={handleReparse}
+              disabled={isReparsing || !data.article_id}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-300 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="從 Google Drive 重新解析此文章"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isReparsing ? 'animate-spin' : ''}`} />
+              {isReparsing ? '解析中...' : '重新解析'}
+            </button>
           </div>
         </div>
         {/* Progress bar */}
