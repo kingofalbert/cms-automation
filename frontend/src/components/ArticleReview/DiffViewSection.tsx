@@ -12,6 +12,7 @@
 import React, { useState, useMemo } from 'react';
 import ReactDiffViewer, { DiffMethod } from 'react-diff-viewer-continued';
 import { FileText, Eye, Columns, AlignJustify, BarChart3 } from 'lucide-react';
+import { Tooltip } from '../ui';
 
 /**
  * Strip HTML tags from content and convert to plain text
@@ -233,46 +234,49 @@ export const DiffViewSection: React.FC<DiffViewSectionProps> = ({
         </h3>
         <div className="flex items-center gap-2">
           {/* Line numbers toggle */}
-          <button
-            type="button"
-            onClick={() => setShowLineNumbers(!showLineNumbers)}
-            className={`px-2 py-1 text-xs rounded border ${
-              showLineNumbers
-                ? 'bg-gray-100 border-gray-300 text-gray-700'
-                : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
-            }`}
-            title={showLineNumbers ? '隱藏行號' : '顯示行號'}
-          >
-            #
-          </button>
+          <Tooltip content={showLineNumbers ? '隱藏行號' : '顯示行號'} placement="bottom">
+            <button
+              type="button"
+              onClick={() => setShowLineNumbers(!showLineNumbers)}
+              className={`px-2 py-1 text-xs rounded border ${
+                showLineNumbers
+                  ? 'bg-gray-100 border-gray-300 text-gray-700'
+                  : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+              }`}
+            >
+              #
+            </button>
+          </Tooltip>
           {/* View mode buttons */}
           <div className="flex rounded-md overflow-hidden border border-gray-200">
-            <button
-              type="button"
-              onClick={() => setViewMode('split')}
-              className={`px-3 py-1 text-xs flex items-center gap-1 ${
-                viewMode === 'split'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-              title="分欄視圖"
-            >
-              <Columns className="w-3 h-3" />
-              分欄
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('unified')}
-              className={`px-3 py-1 text-xs flex items-center gap-1 border-l border-gray-200 ${
-                viewMode === 'unified'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-50'
-              }`}
-              title="統一視圖"
-            >
-              <AlignJustify className="w-3 h-3" />
-              統一
-            </button>
+            <Tooltip content="分欄視圖" placement="bottom">
+              <button
+                type="button"
+                onClick={() => setViewMode('split')}
+                className={`px-3 py-1 text-xs flex items-center gap-1 ${
+                  viewMode === 'split'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Columns className="w-3 h-3" />
+                分欄
+              </button>
+            </Tooltip>
+            <Tooltip content="統一視圖" placement="bottom">
+              <button
+                type="button"
+                onClick={() => setViewMode('unified')}
+                className={`px-3 py-1 text-xs flex items-center gap-1 border-l border-gray-200 ${
+                  viewMode === 'unified'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <AlignJustify className="w-3 h-3" />
+                統一
+              </button>
+            </Tooltip>
           </div>
         </div>
       </div>

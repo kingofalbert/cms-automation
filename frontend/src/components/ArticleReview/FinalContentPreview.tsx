@@ -141,7 +141,7 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
   const displayTitle = useMemo(() => {
     const parts: string[] = [];
     if (data.titlePrefix) parts.push(data.titlePrefix);
-    parts.push(data.title || '(无标题)');
+    parts.push(data.title || '(無標題)');
     if (data.titleSuffix) parts.push(data.titleSuffix);
     return parts.join(' ');
   }, [data.title, data.titlePrefix, data.titleSuffix]);
@@ -159,7 +159,7 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
       <div className="px-6 py-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
           <Newspaper className="w-4 h-4" />
-          <span>文章预览</span>
+          <span>文章預覽</span>
         </div>
         {/* Title */}
         <h1 className="text-2xl font-bold text-gray-900 leading-tight mb-2">{displayTitle}</h1>
@@ -167,7 +167,7 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
         <div className="flex items-center gap-4 text-sm text-gray-600">
           <span className="flex items-center gap-1.5">
             <User className="w-4 h-4" />
-            {data.author || '(无作者)'}
+            {data.author || '(無作者)'}
           </span>
           <span className="text-gray-400">|</span>
           <span className="flex items-center gap-1.5">
@@ -254,7 +254,7 @@ export const FinalContentPreview: React.FC<FinalContentPreviewProps> = ({
 
       {/* Footer */}
       <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 text-xs text-gray-500 flex items-center justify-between">
-        <span>预览模式 - 实际发布效果可能因 WordPress 主题而略有不同</span>
+        <span>預覽模式 - 實際發布效果可能因 WordPress 主題而略有不同</span>
         <span>{data.content.length.toLocaleString('zh-CN')} 字符</span>
       </div>
     </div>

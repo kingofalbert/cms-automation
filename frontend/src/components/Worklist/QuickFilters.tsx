@@ -99,6 +99,7 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
           className={cn(
             'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all',
             'border text-xs sm:text-sm font-medium whitespace-nowrap',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
             activeFilter === 'all'
               ? 'bg-primary-100 text-primary-700 font-semibold border-primary-500 ring-2 ring-primary-200'
               : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
@@ -129,6 +130,7 @@ export const QuickFilters: React.FC<QuickFiltersProps> = ({
               className={cn(
                 'flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all',
                 'border text-xs sm:text-sm font-medium whitespace-nowrap',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
                 colors.bg,
                 colors.text,
                 colors.border,

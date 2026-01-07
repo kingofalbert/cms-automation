@@ -52,7 +52,8 @@ export const WorklistStatistics: React.FC<WorklistStatisticsProps> = ({
     : null;
 
   const formatTime = (hours: number | null) => {
-    if (hours === null) {
+    // Show "暫無數據" for null or 0 (no meaningful data)
+    if (hours === null || hours === 0) {
       return t('worklist.statisticsCards.noCycleData');
     }
     if (hours < 24) {
@@ -134,7 +135,7 @@ export const WorklistStatistics: React.FC<WorklistStatisticsProps> = ({
               <p className="text-sm text-gray-500 mb-1">
                 {t('worklist.statisticsCards.avgCycle')}
               </p>
-              <p className="text-lg font-bold text-purple-600">
+              <p className={`text-lg font-bold ${avgCycleTimeHours === null || avgCycleTimeHours === 0 ? 'text-gray-400' : 'text-purple-600'}`}>
                 {formatTime(avgCycleTimeHours)}
               </p>
               <p className="text-xs text-gray-600 mt-1">

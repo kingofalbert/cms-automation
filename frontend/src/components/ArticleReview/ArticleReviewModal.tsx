@@ -541,10 +541,10 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       // Invalidate cache to refetch updated data
       refetch();
 
-      console.log('解析数据保存成功！');
+      console.log('解析資料儲存成功！');
     } catch (err) {
       console.error('Failed to save parsing data:', err);
-      alert('保存失败：' + (err as Error).message);
+      alert('儲存失敗：' + (err as Error).message);
     } finally {
       setIsSaving(false);
     }
@@ -570,13 +570,13 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         })),
       });
 
-      console.log('校对决定提交成功！', response);
+      console.log('校對決定提交成功！', response);
 
       // Invalidate cache to refetch updated data
       refetch();
     } catch (err) {
       console.error('Failed to submit proofreading decisions:', err);
-      alert('提交失败：' + (err as Error).message);
+      alert('提交失敗：' + (err as Error).message);
     } finally {
       setIsSubmitting(false);
     }
@@ -610,7 +610,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         publish_settings: settings,
       });
 
-      console.log('文章发布成功！');
+      console.log('文章上稿成功！');
 
       // Invalidate cache to refetch updated data
       refetch();
@@ -621,7 +621,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       }, 500);
     } catch (err) {
       console.error('Failed to publish article:', err);
-      alert('发布失败：' + (err as Error).message);
+      alert('上稿失敗：' + (err as Error).message);
     } finally {
       setIsPublishing(false);
     }
@@ -681,7 +681,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4" />
-            <p className="text-gray-600">加载文章审核数据...</p>
+            <p className="text-gray-600">載入文章審核資料...</p>
           </div>
         </div>
       </Modal>
@@ -714,9 +714,9 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">加载失败</h3>
-            <p className="text-gray-600 mb-4">{error.message || '无法加载文章审核数据'}</p>
-            <Button onClick={() => refetch()}>重试</Button>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">載入失敗</h3>
+            <p className="text-gray-600 mb-4">{error.message || '無法載入文章審核資料'}</p>
+            <Button onClick={() => refetch()}>重試</Button>
           </div>
         </div>
       </Modal>
@@ -740,7 +740,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
         <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold text-gray-900">文章审核</h2>
+          <h2 className="text-xl font-semibold text-gray-900">文章審核</h2>
           <span className="text-sm text-gray-500">#{worklistItemId}</span>
           {/* View Original Google Doc Button */}
           {typeof data.drive_metadata?.webViewLink === 'string' && (
@@ -765,7 +765,7 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
           type="button"
           onClick={handleClose}
           className="text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="关闭审核"
+          aria-label="關閉審核"
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path

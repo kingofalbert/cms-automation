@@ -12,6 +12,7 @@ import { ProofreadingIssue, DecisionPayload, FeedbackCategory } from '@/types/wo
 import { ProofreadingDecisionDetail } from '@/types/api';
 import { Button, Input } from '@/components/ui';
 import { stripHtmlTags } from '@/utils/proofreadingPosition';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 import {
   CheckCircle,
   XCircle,
@@ -522,7 +523,7 @@ export function ProofreadingIssueDetailPanel({
                     </span>
                     <div className="flex items-center gap-1 text-xs text-gray-500">
                       <Clock className="h-3 w-3" />
-                      {new Date(hist.decided_at).toLocaleDateString()}
+                      {formatDate(hist.decided_at, DATE_FORMATS.DATE_ONLY)}
                     </div>
                   </div>
 

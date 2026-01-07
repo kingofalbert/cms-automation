@@ -182,7 +182,7 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
             type="text"
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
-            placeholder="设置访问密码"
+            placeholder="設置訪問密碼"
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -314,7 +314,7 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
           <TagIcon className="w-4 h-4" />
-          标签
+          標籤
         </label>
         <div className="flex gap-2">
           <input
@@ -322,7 +322,7 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyPress={(e) => handleKeyPress(e, handleAddTag)}
-            placeholder="输入标签名称"
+            placeholder="輸入標籤名稱"
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
           <Button size="sm" onClick={handleAddTag}>
@@ -367,10 +367,10 @@ export const PublishSettingsSection: React.FC<PublishSettingsSectionProps> = ({
           <div className="mt-2 aspect-video bg-gray-100 rounded overflow-hidden max-w-xs">
             <img
               src={featuredImage}
-              alt="特色图片预览"
+              alt="特色圖片預覽"
               className="w-full h-full object-cover"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="150"%3E%3Crect fill="%23f3f4f6" width="200" height="150"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="%236b7280" font-family="sans-serif" font-size="12"%3E加载失败%3C/text%3E%3C/svg%3E';
+                (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="150"%3E%3Crect fill="%23f3f4f6" width="200" height="150"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" fill="%236b7280" font-family="sans-serif" font-size="12"%3E載入失敗%3C/text%3E%3C/svg%3E';
               }}
             />
           </div>

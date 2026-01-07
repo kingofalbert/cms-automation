@@ -112,7 +112,7 @@ export const Drawer = forwardRef<HTMLDivElement, DrawerProps>(
               <button
                 type="button"
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-lg p-1"
                 aria-label="Close drawer"
               >
                 <svg

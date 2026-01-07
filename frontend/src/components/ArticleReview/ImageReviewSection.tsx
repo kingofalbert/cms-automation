@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { Button } from '../ui';
+import { Button, Tooltip } from '../ui';
 import {
   Image as ImageIcon,
   X,
@@ -313,13 +313,14 @@ const FeaturedBadge: React.FC<{
   const { label, tooltip } = getDetectionLabel();
 
   return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-200"
-      title={tooltip}
-    >
-      ⭐ 置頂圖片
-      <span className="text-[10px] text-amber-600">({label})</span>
-    </span>
+    <Tooltip content={tooltip} placement="top">
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-800 border border-amber-200"
+      >
+        ⭐ 置頂圖片
+        <span className="text-[10px] text-amber-600">({label})</span>
+      </span>
+    </Tooltip>
   );
 };
 
@@ -617,15 +618,16 @@ const ImageInfoCard: React.FC<{
                       <div className="flex-1 text-xs p-1.5 rounded border bg-purple-50 border-purple-200 text-purple-900">
                         {suggestion.suggested_alt_text}
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleApplyAltText}
-                        className="px-2 py-1 bg-purple-600 text-white text-[10px] rounded hover:bg-purple-700 flex items-center gap-1 flex-shrink-0"
-                        title="採用此建議"
-                      >
-                        <Check className="w-3 h-3" />
-                        採用
-                      </button>
+                      <Tooltip content="採用此建議" placement="left">
+                        <button
+                          type="button"
+                          onClick={handleApplyAltText}
+                          className="px-2 py-1 bg-purple-600 text-white text-[10px] rounded hover:bg-purple-700 flex items-center gap-1 flex-shrink-0"
+                        >
+                          <Check className="w-3 h-3" />
+                          採用
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>
@@ -657,15 +659,16 @@ const ImageInfoCard: React.FC<{
                       <div className="flex-1 text-xs p-1.5 rounded border bg-purple-50 border-purple-200 text-purple-900">
                         {suggestion.suggested_description}
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleApplyDescription}
-                        className="px-2 py-1 bg-purple-600 text-white text-[10px] rounded hover:bg-purple-700 flex items-center gap-1 flex-shrink-0"
-                        title="採用此建議"
-                      >
-                        <Check className="w-3 h-3" />
-                        採用
-                      </button>
+                      <Tooltip content="採用此建議" placement="left">
+                        <button
+                          type="button"
+                          onClick={handleApplyDescription}
+                          className="px-2 py-1 bg-purple-600 text-white text-[10px] rounded hover:bg-purple-700 flex items-center gap-1 flex-shrink-0"
+                        >
+                          <Check className="w-3 h-3" />
+                          採用
+                        </button>
+                      </Tooltip>
                     </div>
                   </div>
                 </div>

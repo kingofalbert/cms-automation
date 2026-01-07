@@ -868,5 +868,45 @@
     "pageNotFound": "Page Not Found",
     "pageNotFoundDesc": "The page you are looking for does not exist or has been moved. Please check the URL or return to the worklist.",
     "needHelp": "If the problem persists, please contact your system administrator."
+  },
+  "breadcrumb": {
+    "ariaLabel": "Breadcrumb navigation",
+    "articles": "Articles",
+    "review": "Review",
+    "parsing": "Parsing",
+    "seoConfirmation": "SEO Confirmation",
+    "pipeline": "Pipeline Monitor"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "subtitle": "Press ? anytime to see this help",
+    "footer": "Note: Some shortcuts are only available on specific pages or modes",
+    "showHelp": "Show keyboard shortcuts help",
+    "closeModal": "Close dialog/modal",
+    "save": "Save",
+    "previousStep": "Previous step",
+    "nextStep": "Next step",
+    "previousItem": "Previous item",
+    "nextItem": "Next item",
+    "accept": "Accept suggestion",
+    "reject": "Reject suggestion",
+    "toggleSelect": "Toggle selection",
+    "submit": "Submit/Confirm",
+    "undo": "Undo",
+    "redo": "Redo",
+    "groups": {
+      "global": "Global",
+      "navigation": "Navigation",
+      "proofreading": "Proofreading Review",
+      "editing": "Editing"
+    }
+  },
+  "autoSave": {
+    "saving": "Saving...",
+    "saved": "Saved",
+    "error": "Save failed",
+    "lastSaved": "Last saved",
+    "unsavedChanges": "Unsaved changes",
+    "saveNow": "Save now"
   }
 }

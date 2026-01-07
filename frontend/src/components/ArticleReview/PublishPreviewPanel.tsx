@@ -47,6 +47,29 @@ import type { ArticleReviewData } from '../../hooks/articleReview/useArticleRevi
 import { Send } from 'lucide-react';
 
 /**
+ * Status labels mapping - English to Traditional Chinese
+ */
+const STATUS_LABELS: Record<string, string> = {
+  imported: '已匯入',
+  parsing: '解析中',
+  parsing_review: '解析審核',
+  proofreading: '校對中',
+  proofreading_review: '校對審核',
+  'in-review': '審核中',
+  ready_to_publish: '準備上稿',
+  publishing: '上稿中',
+  published: '已發布',
+  failed: '失敗',
+};
+
+/**
+ * Get Chinese label for status
+ */
+const getStatusLabel = (status: string): string => {
+  return STATUS_LABELS[status] || status;
+};
+
+/**
  * Result returned from onPublish callback
  */
 export interface PublishResult {
@@ -284,7 +307,7 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
             <h3 className="text-lg font-semibold text-gray-900">上稿預覽</h3>
             <div className="flex items-center gap-4 text-sm">
               <span className="text-gray-600">
-                状态: <strong className="text-blue-600">{data.status}</strong>
+                狀態: <strong className="text-blue-600">{getStatusLabel(data.status)}</strong>
               </span>
             </div>
           </div>

@@ -23,6 +23,7 @@
 
 import React from 'react';
 import { FileText, User, Check, AlertCircle, Clock } from 'lucide-react';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 
 export interface ParsingConfirmationSectionProps {
   /** Main article title */
@@ -62,23 +63,6 @@ export const ParsingConfirmationSection: React.FC<ParsingConfirmationSectionProp
   const seoTitleLength = seoTitle?.length || 0;
   const isSeoTitleOptimal = seoTitleLength >= 25 && seoTitleLength <= 30;
   const isSeoTitleTooLong = seoTitleLength > 30;
-
-  // Format confirmation date
-  const formatDate = (dateStr: string | null | undefined) => {
-    if (!dateStr) return null;
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleString('zh-TW', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
 
   return (
     <div className="p-4 bg-white border border-gray-200 rounded-lg">
@@ -176,7 +160,7 @@ export const ParsingConfirmationSection: React.FC<ParsingConfirmationSectionProp
               {parsingConfirmedAt && (
                 <span className="text-xs text-gray-500 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {formatDate(parsingConfirmedAt)}
+                  {formatDate(parsingConfirmedAt, DATE_FORMATS.SHORT)}
                 </span>
               )}
             </>

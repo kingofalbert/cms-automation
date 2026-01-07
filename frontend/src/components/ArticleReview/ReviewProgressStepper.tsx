@@ -32,13 +32,13 @@ interface Step {
 const STEPS: Step[] = [
   {
     id: 0,
-    label: '解析审核',
-    description: '审核标题、作者、图片、SEO',
+    label: '解析審核',
+    description: '審核標題、作者、圖片、SEO',
   },
   {
     id: 1,
-    label: '校对审核',
-    description: '审核校对建议和修改',
+    label: '校對審核',
+    description: '審核校對建議和修改',
   },
   {
     id: 2,
@@ -92,6 +92,7 @@ export const ReviewProgressStepper: React.FC<ReviewProgressStepperProps> = ({
                 onClick={() => onStepClick?.(step.id)}
                 className={clsx(
                   'relative flex flex-col items-center group',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-lg p-1',
                   onStepClick && 'cursor-pointer',
                   !onStepClick && 'cursor-default'
                 )}

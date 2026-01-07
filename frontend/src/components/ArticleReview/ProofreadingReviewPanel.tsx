@@ -24,6 +24,7 @@ import { DiffViewSection, type DiffStats } from './DiffViewSection';
 import { ProofreadingPreviewSection, type WordChange } from './ProofreadingPreviewSection';
 import { FinalPreviewSection } from './FinalPreviewSection';
 import { BatchApprovalControls } from './BatchApprovalControls';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
 import type { ProofreadingIssue, DecisionPayload, IssueSeverity, WarningLabel } from '../../types/worklist';
 
@@ -1134,7 +1135,7 @@ export const ProofreadingReviewPanel: React.FC<ProofreadingReviewPanelProps> = (
                                 : '已拒絕'}
                           </span>
                           <span className="text-gray-400 ml-2">
-                            {new Date(d.decided_at).toLocaleDateString('zh-TW')}
+                            {formatDate(d.decided_at, DATE_FORMATS.DATE_ONLY)}
                           </span>
                           {d.decision_type === 'modified' && d.modified_content && (
                             <div className="mt-1 text-gray-600 italic">

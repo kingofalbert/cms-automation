@@ -24,6 +24,7 @@ import {
 } from '@/types/worklist';
 import { Search, Filter, RefreshCw, CheckSquare, X } from 'lucide-react';
 import { SkeletonStatsCard } from '@/components/ui/skeleton';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 
 export default function WorklistPage() {
   const { t } = useTranslation();
@@ -252,7 +253,7 @@ export default function WorklistPage() {
                 <div>
                   {t('worklist.lastSync')}:{' '}
                   {syncStatus.last_synced_at
-                    ? new Date(syncStatus.last_synced_at).toLocaleString()
+                    ? formatDate(syncStatus.last_synced_at, DATE_FORMATS.FULL)
                     : t('worklist.neverSynced')}
                 </div>
               )}

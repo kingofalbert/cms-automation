@@ -8,7 +8,7 @@
  *
  * Layout:
  * ┌─────────────────────────────────────────────────────────────────────────────┐
- * │ ✓ 标题  ✓ 正文  ✓ SEO  ✓ 分类  ○ 图片  │  4/5 完成                         │
+ * │ ✓ 標題  ✓ 正文  ✓ SEO  ✓ 分類  ○ 圖片  │  4/5 完成                         │
  * └─────────────────────────────────────────────────────────────────────────────┘
  */
 
@@ -76,7 +76,7 @@ export const PublishReadinessChecklist: React.FC<PublishReadinessChecklistProps>
                   ? 'text-amber-700'
                   : 'text-gray-500'
               }`}
-              title={item.required ? '必填项' : '可选项'}
+              title={item.required ? '必填項' : '可選項'}
             >
               {item.completed ? (
                 <Check className="w-4 h-4 text-green-600" />
@@ -107,7 +107,7 @@ export const PublishReadinessChecklist: React.FC<PublishReadinessChecklistProps>
           {isReady ? (
             <span className="flex items-center gap-1 text-sm font-semibold text-green-700 bg-green-100 px-2 py-1 rounded-full">
               <Check className="w-4 h-4" />
-              准备就绪
+              準備就緒
             </span>
           ) : allRequiredComplete ? (
             <span className="flex items-center gap-1 text-sm font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded-full">
@@ -143,7 +143,7 @@ export const createChecklistItems = (data: {
   const items: ChecklistItem[] = [
     {
       id: 'title',
-      label: '标题',
+      label: '標題',
       completed: data.hasTitle,
       required: true,
       icon: <Type className="w-3 h-3" />,
@@ -164,21 +164,21 @@ export const createChecklistItems = (data: {
     },
     {
       id: 'category',
-      label: '分类',
+      label: '分類',
       completed: data.hasCategory,
       required: true,
       icon: <FolderTree className="w-3 h-3" />,
     },
     {
       id: 'tags',
-      label: '标签',
+      label: '標籤',
       completed: data.hasTags,
       required: false,
       icon: <Tag className="w-3 h-3" />,
     },
     {
       id: 'image',
-      label: '图片',
+      label: '圖片',
       completed: data.hasFeaturedImage,
       required: false,
       icon: <ImageIcon className="w-3 h-3" />,

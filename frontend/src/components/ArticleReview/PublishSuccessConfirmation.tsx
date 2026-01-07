@@ -11,6 +11,7 @@
 import React, { useState } from 'react';
 import { Button } from '../ui';
 import { CheckCircle, ExternalLink, Clock, FileText, Image, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 
 export interface PublishSuccessConfirmationProps {
   /** Article title */
@@ -28,25 +29,6 @@ export interface PublishSuccessConfirmationProps {
   /** Callback to open WordPress in new tab */
   onOpenWordPress?: () => void;
 }
-
-/**
- * Format ISO date string to readable format
- */
-const formatDateTime = (isoString: string): string => {
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  } catch {
-    return isoString;
-  }
-};
 
 /**
  * PublishSuccessConfirmation Component
@@ -189,7 +171,7 @@ export const PublishSuccessConfirmation: React.FC<PublishSuccessConfirmationProp
                   <Clock className="w-3 h-3" />
                   上傳時間
                 </div>
-                <div className="text-sm text-gray-900">{formatDateTime(uploadedAt)}</div>
+                <div className="text-sm text-gray-900">{formatDate(uploadedAt, DATE_FORMATS.FULL)}</div>
               </div>
               <div>
                 <div className="text-xs text-gray-500 mb-1">WordPress 文章 ID</div>
