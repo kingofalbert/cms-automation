@@ -35,7 +35,7 @@ import { useArticleReviewData } from '../../hooks/articleReview/useArticleReview
 import { useReviewWorkflow } from '../../hooks/articleReview/useReviewWorkflow';
 import { useKeyboardShortcuts } from '../../hooks/articleReview/useKeyboardShortcuts';
 import { worklistAPI } from '../../services/worklist';
-import { api } from '../../services/api-client';
+import { api, EXTENDED_TIMEOUT } from '../../services/api-client';
 import type { WorklistStatus, DecisionPayload } from '../../types/worklist';
 
 /**
@@ -606,9 +606,10 @@ export const ArticleReviewModal: React.FC<ArticleReviewModalProps> = ({
       });
 
       // Then trigger publish via worklist endpoint
+      // Use extended timeout for publishing (Playwright automation takes ~60-90 seconds)
       await api.post(`/v1/worklist/${worklistItemId}/publish`, {
         publish_settings: settings,
-      });
+      }, { timeout: EXTENDED_TIMEOUT });
 
       console.log('文章上稿成功！');
 

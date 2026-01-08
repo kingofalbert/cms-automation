@@ -153,9 +153,10 @@ export default function WorklistPage() {
   });
 
   // Publish to WordPress
+  // Use extended timeout for publishing (Playwright automation takes ~60-90 seconds)
   const publishMutation = useMutation({
     mutationFn: async (itemId: number) => {
-      return await api.post(`/v1/worklist/${itemId}/publish`);
+      return await api.post(`/v1/worklist/${itemId}/publish`, undefined, { timeout: EXTENDED_TIMEOUT });
     },
     onSuccess: (_, itemId) => {
       alert(t('worklist.messages.publishSubmitted'));
