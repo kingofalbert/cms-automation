@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
-from datetime import datetime, timezone
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, func, select
@@ -357,7 +357,9 @@ def _serialize_publish_task(task: PublishTask) -> PublishTaskResponse:
     """Convert ORM publish task into API schema."""
     duration = task.duration_seconds
     if duration is None and task.started_at and not task.is_complete:
-        duration = int((datetime.now(timezone.utc) - task.started_at).total_seconds())
+        # Handle timezone-aware datetime from database by stripping timezone
+        started = task.started_at.replace(tzinfo=None) if task.started_at.tzinfo else task.started_at
+        duration = int((datetime.utcnow() - started).total_seconds())
 
     screenshots = _serialize_screenshots(task.screenshots or [])
 

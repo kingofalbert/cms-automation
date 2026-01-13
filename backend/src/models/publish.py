@@ -13,6 +13,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -210,7 +211,7 @@ class PublishTask(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        server_default=text("now()"),
         index=True,
         comment="When task was created",
     )
@@ -311,7 +312,7 @@ class PublishTask(Base):
         screenshot_data = {
             "url": url,
             "step": step,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         if description:
@@ -350,7 +351,7 @@ class PublishTask(Base):
         self.current_step = TaskStatus.INITIALIZING.value
         self.progress = 0
         self.completed_steps = 0
-        self.started_at = datetime.now(timezone.utc)
+        self.started_at = datetime.utcnow()
 
     def mark_completed(self, cost_usd: float | None = None) -> None:
         """Mark task as completed successfully.
@@ -359,9 +360,11 @@ class PublishTask(Base):
             cost_usd: Optional cost in USD for the task
         """
         self.status = TaskStatus.COMPLETED
-        self.completed_at = datetime.now(timezone.utc)
+        self.completed_at = datetime.utcnow()
         if self.started_at:
-            self.duration_seconds = int((self.completed_at - self.started_at).total_seconds())
+            # Handle timezone-aware datetime from database by stripping timezone
+            started = self.started_at.replace(tzinfo=None) if self.started_at.tzinfo else self.started_at
+            self.duration_seconds = int((self.completed_at - started).total_seconds())
         if cost_usd is not None:
             self.cost_usd = cost_usd
         self.current_step = TaskStatus.COMPLETED.value
@@ -375,10 +378,12 @@ class PublishTask(Base):
             error_message: Description of the failure
         """
         self.status = TaskStatus.FAILED
-        self.completed_at = datetime.now(timezone.utc)
+        self.completed_at = datetime.utcnow()
         self.error_message = error_message
         if self.started_at:
-            self.duration_seconds = int((self.completed_at - self.started_at).total_seconds())
+            # Handle timezone-aware datetime from database by stripping timezone
+            started = self.started_at.replace(tzinfo=None) if self.started_at.tzinfo else self.started_at
+            self.duration_seconds = int((self.completed_at - started).total_seconds())
         self.current_step = TaskStatus.FAILED.value
         self.progress = 100
 
@@ -474,7 +479,7 @@ class ExecutionLog(Base):
     # Timestamp (primary key component for partitioning)
     created_at: Mapped[datetime] = mapped_column(
         nullable=False,
-        default=lambda: datetime.now(timezone.utc),
+        server_default=text("now()"),
         index=True,
         primary_key=True,
         comment="When log entry was created (partition key)",
