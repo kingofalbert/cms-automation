@@ -37,6 +37,7 @@ class PlaywrightWordPressPublisher:
         """
         self.browser: Browser | None = None
         self.page: Page | None = None
+        self._cms_url: str | None = None  # Store CMS URL for later use
 
         # Load WordPress selectors configuration
         if config_path:
@@ -316,10 +317,28 @@ class PlaywrightWordPressPublisher:
             username: Username
             password: Password
         """
-        logger.info("playwright_step_login")
+        logger.info("playwright_step_login", cms_url=cms_url)
 
-        login_url = f"{cms_url}/wp-admin"
-        await self.page.goto(login_url)
+        # Store CMS URL for later use
+        self._cms_url = cms_url.rstrip("/")
+
+        login_url = f"{self._cms_url}/wp-admin"
+        logger.info("playwright_navigating_to_login", url=login_url)
+
+        try:
+            await self.page.goto(login_url, timeout=30000)
+        except Exception as e:
+            logger.error("playwright_login_page_failed", error=str(e), url=login_url)
+            # Take screenshot for debugging
+            try:
+                await self.page.screenshot(path="/tmp/playwright_login_error.png")
+                logger.info("playwright_error_screenshot_saved", path="/tmp/playwright_login_error.png")
+            except Exception:
+                pass
+            raise
+
+        current_url = self.page.url
+        logger.info("playwright_login_page_loaded", current_url=current_url)
 
         # Wait for login form
         await self.page.wait_for_selector(
@@ -338,26 +357,52 @@ class PlaywrightWordPressPublisher:
         # Click login
         await self.page.click(self.config["login"]["submit_button"])
 
-        # Wait for dashboard
-        await asyncio.sleep(self.config["waits"]["after_login"] / 1000)
+        # Wait for navigation to complete
+        try:
+            await self.page.wait_for_load_state("networkidle", timeout=15000)
+        except Exception:
+            # Fallback to simple timeout if networkidle times out
+            await asyncio.sleep(self.config["waits"]["after_login"] / 1000)
 
-        logger.info("playwright_login_completed")
+        # Verify login succeeded - check we're not still on login page
+        post_login_url = self.page.url
+        logger.info("playwright_post_login_url", url=post_login_url)
+
+        if "wp-login.php" in post_login_url:
+            # Still on login page - check for error message
+            error_selector = "#login_error"
+            try:
+                error_element = await self.page.wait_for_selector(error_selector, timeout=2000)
+                error_text = await error_element.inner_text()
+                logger.error("playwright_login_failed", error=error_text)
+                raise RuntimeError(f"WordPress login failed: {error_text}")
+            except Exception:
+                # No error element, but still on login page
+                logger.error("playwright_login_failed_unknown", url=post_login_url)
+                raise RuntimeError("WordPress login failed - still on login page")
+
+        logger.info("playwright_login_completed", dashboard_url=post_login_url)
 
     async def _step_navigate_to_new_post(self) -> None:
         """Step 2: Navigate to new post page."""
-        logger.info("playwright_step_new_post")
+        logger.info("playwright_step_new_post", current_url=self.page.url)
 
         # Click "Posts" → "Add New"
         new_post_link = self.config["dashboard"]["new_post_link"]
 
         try:
             # Try direct link click
+            await self.page.wait_for_selector(new_post_link, timeout=5000)
             await self.page.click(new_post_link)
-        except Exception:
-            # Fallback: navigate directly to post-new.php
-            current_url = self.page.url
-            base_url = current_url.split("/wp-admin")[0]
-            await self.page.goto(f"{base_url}/wp-admin/post-new.php")
+            logger.info("playwright_clicked_new_post_link")
+        except Exception as e:
+            # Fallback: navigate directly to post-new.php using stored CMS URL
+            logger.warning("playwright_new_post_link_failed", error=str(e))
+            if not self._cms_url:
+                raise RuntimeError("CMS URL not stored - login step may have failed")
+            new_post_url = f"{self._cms_url}/wp-admin/post-new.php"
+            logger.info("playwright_navigating_to_new_post", url=new_post_url)
+            await self.page.goto(new_post_url, timeout=30000)
 
         # Wait for editor to load
         await asyncio.sleep(self.config["waits"]["editor_load"] / 1000)
