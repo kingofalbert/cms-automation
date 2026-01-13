@@ -205,6 +205,11 @@ class PublishingOrchestrator:
             publisher = await create_playwright_publisher(
                 options.get("playwright_config_path"),
             )
+            # Build HTTP auth tuple if site-level authentication is configured
+            http_auth = None
+            if self.settings.CMS_HTTP_AUTH_USERNAME and self.settings.CMS_HTTP_AUTH_PASSWORD:
+                http_auth = (self.settings.CMS_HTTP_AUTH_USERNAME, self.settings.CMS_HTTP_AUTH_PASSWORD)
+
             result = await publisher.publish_article(
                 cms_url=context.cms_url,
                 username=context.cms_username,
@@ -215,6 +220,7 @@ class PublishingOrchestrator:
                 article_images=options.get("article_images") or [],
                 headless=options.get("headless", True),  # Default to headless for Cloud Run
                 publish_mode=publish_mode,
+                http_auth=http_auth,
             )
         elif provider is Provider.COMPUTER_USE:
             computer_use = await create_computer_use_cms_service()
