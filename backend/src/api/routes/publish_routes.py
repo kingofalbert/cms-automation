@@ -59,34 +59,92 @@ async def submit_publish_task(
     try:
         await session.flush()
 
-        # Lazy import to avoid circular dependency
-        from src.workers.tasks.publishing import publish_article_task
+        # Try Celery first, fallback to sync execution if broker unavailable
+        celery_task_id = None
+        use_sync = False
 
-        celery_task = publish_article_task.delay(
-            publish_task_id=task.id,
-            article_id=article_id,
-            provider=provider.value,
-            options=request.options.model_dump(mode="json", exclude_none=True),
-        )
+        try:
+            from src.workers.tasks.publishing import publish_article_task
 
-        task.task_id = celery_task.id
+            celery_task = publish_article_task.delay(
+                publish_task_id=task.id,
+                article_id=article_id,
+                provider=provider.value,
+                options=request.options.model_dump(mode="json", exclude_none=True),
+            )
+            celery_task_id = celery_task.id
+            task.task_id = celery_task_id
+            logger.info(
+                "publish_task_submitted_celery",
+                task_id=task.id,
+                article_id=article_id,
+                provider=provider.value,
+                celery_task_id=celery_task_id,
+            )
+        except Exception as celery_exc:
+            # Celery broker unavailable, fallback to sync execution
+            logger.warning(
+                "celery_unavailable_fallback_sync",
+                task_id=task.id,
+                article_id=article_id,
+                error=str(celery_exc),
+            )
+            use_sync = True
+            task.task_id = f"sync-{task.id}"
+
         session.add(task)
-
         await session.commit()
 
-        logger.info(
-            "publish_task_submitted",
-            task_id=task.id,
-            article_id=article_id,
-            provider=provider.value,
-            celery_task_id=celery_task.id,
-        )
+        # If Celery failed, execute synchronously
+        if use_sync:
+            from src.services.publishing import PublishingOrchestrator
+
+            logger.info(
+                "publish_task_executing_sync",
+                task_id=task.id,
+                article_id=article_id,
+                provider=provider.value,
+            )
+
+            orchestrator = PublishingOrchestrator()
+            try:
+                result = await orchestrator.publish_article(
+                    publish_task_id=task.id,
+                    article_id=article_id,
+                    provider=provider,
+                    options=request.options.model_dump(mode="json", exclude_none=True),
+                )
+                logger.info(
+                    "publish_task_completed_sync",
+                    task_id=task.id,
+                    article_id=article_id,
+                    result=result.get("success"),
+                )
+                return PublishResult(
+                    task_id=task.task_id,
+                    status="completed",
+                    message="Publishing completed successfully (sync mode).",
+                )
+            except Exception as sync_exc:
+                logger.error(
+                    "publish_task_failed_sync",
+                    task_id=task.id,
+                    article_id=article_id,
+                    error=str(sync_exc),
+                    exc_info=True,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Publishing failed: {str(sync_exc)[:200]}",
+                ) from sync_exc
 
         return PublishResult(
-            task_id=celery_task.id,
+            task_id=celery_task_id,
             status=task.status.value,
             message="Publishing task submitted successfully.",
         )
+    except HTTPException:
+        raise
     except Exception as exc:  # noqa: BLE001 - propagate as HTTP error
         await session.rollback()
         logger.error(
