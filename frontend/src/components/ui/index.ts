@@ -77,3 +77,22 @@ export {
   PROOFREADING_SHORTCUTS_COMPACT,
 } from './KeyboardShortcutsHint';
 export type { KeyboardShortcutsHintProps, KeyboardShortcut } from './KeyboardShortcutsHint';
+
+export {
+  KeyboardShortcutsModal,
+  useKeyboardShortcutsModal,
+} from './KeyboardShortcutsModal';
+export type {
+  KeyboardShortcutsModalProps,
+  ShortcutGroup,
+  ShortcutItem,
+} from './KeyboardShortcutsModal';
+
+export { Breadcrumb, PageBreadcrumb } from './Breadcrumb';
+export type { BreadcrumbProps, BreadcrumbItem } from './Breadcrumb';
+
+export { SaveStatusIndicator, InlineSaveStatus } from './SaveStatusIndicator';
+export type { SaveStatusIndicatorProps } from './SaveStatusIndicator';
+
+export { Tooltip, TooltipWrapper } from './Tooltip';
+export type { TooltipProps, TooltipPlacement } from './Tooltip';

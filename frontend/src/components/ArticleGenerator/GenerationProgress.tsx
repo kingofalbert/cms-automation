@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui';
 import { api } from '../../services/api-client';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 
 interface TopicRequest {
   id: number;
@@ -230,12 +231,12 @@ export function GenerationProgress({
         <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500 space-y-1">
           <div>
             <span className="font-medium">Created:</span>{' '}
-            {new Date(topicRequest.created_at).toLocaleString()}
+            {formatDate(topicRequest.created_at, DATE_FORMATS.FULL)}
           </div>
           {topicRequest.updated_at !== topicRequest.created_at && (
             <div>
               <span className="font-medium">Updated:</span>{' '}
-              {new Date(topicRequest.updated_at).toLocaleString()}
+              {formatDate(topicRequest.updated_at, DATE_FORMATS.FULL)}
             </div>
           )}
         </div>

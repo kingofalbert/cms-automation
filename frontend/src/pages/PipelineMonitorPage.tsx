@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatDate, DATE_FORMATS } from '../lib/utils';
 
 interface LocalStats {
   total_local: number;
@@ -344,7 +345,7 @@ const PipelineMonitorPage: React.FC = () => {
               <span style={styles.historyType}>{item.type}</span>
               <span style={styles.historyFilename}>{item.filename}</span>
               <span style={styles.historyTime}>
-                {new Date(item.start_time).toLocaleString()}
+                {formatDate(item.start_time, DATE_FORMATS.FULL)}
               </span>
               <span style={styles.historySize}>{item.size_kb} KB</span>
             </div>

@@ -11,6 +11,7 @@ import { queryClient } from './services/query-client';
 import ErrorBoundary from './components/ErrorBoundary';
 import { Phase1Header } from './components/layout/Phase1Header';
 import { AuthProvider } from './contexts/AuthContext';
+import { KeyboardShortcutsModal, useKeyboardShortcutsModal } from './components/ui';
 // Initialize i18n
 import './i18n/config';
 
@@ -20,6 +21,7 @@ import './i18n/config';
 function AppLayout() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
+  const shortcutsModal = useKeyboardShortcutsModal();
 
   return (
     <>
@@ -28,6 +30,11 @@ function AppLayout() {
       <div className="min-h-screen bg-gray-50">
         <AppRoutes />
       </div>
+      {/* Global keyboard shortcuts help modal - press ? to show */}
+      <KeyboardShortcutsModal
+        isOpen={shortcutsModal.isOpen}
+        onClose={shortcutsModal.close}
+      />
     </>
   );
 }

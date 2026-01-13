@@ -84,6 +84,7 @@ export default {
         'in': 'in 200ms ease-out',
         'slide-in-from-top-5': 'slide-in-from-top-5 200ms ease-out',
         'fade-in': 'fade-in 200ms ease-out',
+        'shimmer': 'shimmer 1.5s ease-in-out infinite',
       },
       keyframes: {
         in: {
@@ -97,6 +98,10 @@ export default {
         'fade-in': {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        'shimmer': {
+          '0%': { backgroundPosition: '200% 0' },
+          '100%': { backgroundPosition: '-200% 0' },
         },
       },
     },

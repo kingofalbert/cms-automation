@@ -13,6 +13,7 @@ import {
   Timeline,
   Divider
 } from 'antd';
+import { formatDate, DATE_FORMATS } from '../lib/utils';
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -220,7 +221,7 @@ const ProofreadingStatsPage: React.FC = () => {
       title: '創建時間',
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (date: string) => new Date(date).toLocaleDateString('zh-TW')
+      render: (date: string) => formatDate(date, DATE_FORMATS.DATE_ONLY)
     }
   ];
 
@@ -330,7 +331,7 @@ const ProofreadingStatsPage: React.FC = () => {
                     </Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: '11px' }}>
-                      {new Date(activity.date).toLocaleString('zh-TW')}
+                      {formatDate(activity.date, DATE_FORMATS.FULL)}
                     </Text>
                   </div>
                 )

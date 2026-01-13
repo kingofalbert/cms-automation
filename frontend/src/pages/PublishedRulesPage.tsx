@@ -8,6 +8,7 @@ import {
   ReloadOutlined
 } from '@ant-design/icons';
 import ruleManagementAPI from '../services/ruleManagementAPI';
+import { formatDate, DATE_FORMATS } from '../lib/utils';
 import './PublishedRulesPage.css';
 
 const { Title, Text } = Typography;
@@ -136,7 +137,7 @@ const PublishedRulesPage: React.FC = () => {
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
-      render: (date: string) => new Date(date).toLocaleString('zh-TW')
+      render: (date: string) => formatDate(date, DATE_FORMATS.FULL)
     },
     {
       title: '操作',
@@ -250,7 +251,7 @@ const PublishedRulesPage: React.FC = () => {
                 <Tag color="blue">{selectedRuleset.rules?.length || 0} 條</Tag>
               </Descriptions.Item>
               <Descriptions.Item label="創建時間" span={2}>
-                {new Date(selectedRuleset.created_at).toLocaleString('zh-TW')}
+                {formatDate(selectedRuleset.created_at, DATE_FORMATS.FULL)}
               </Descriptions.Item>
               <Descriptions.Item label="版本">
                 {selectedRuleset.version || '1.0.0'}

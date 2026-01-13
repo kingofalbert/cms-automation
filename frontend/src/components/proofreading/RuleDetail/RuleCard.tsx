@@ -7,6 +7,7 @@ import {
   CodeOutlined
 } from '@ant-design/icons';
 import { DraftRule, ReviewStatus, ReviewAction } from '../../../types/proofreading';
+import { formatDate, DATE_FORMATS } from '../../../lib/utils';
 import './RuleCard.css';
 
 const { Panel } = Collapse;
@@ -163,7 +164,7 @@ const RuleCard: FC<RuleCardProps> = ({
               )}
               {rule.modified_at && (
                 <div className="metadata">
-                  <strong>最後修改:</strong> {new Date(rule.modified_at).toLocaleString('zh-TW')}
+                  <strong>最後修改:</strong> {formatDate(rule.modified_at, DATE_FORMATS.FULL)}
                   {rule.modified_by && ` by ${rule.modified_by}`}
                 </div>
               )}

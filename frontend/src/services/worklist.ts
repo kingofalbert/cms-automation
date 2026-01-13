@@ -50,6 +50,15 @@ export const worklistAPI = {
   getSyncStatus: () => api.get<DriveSyncStatus>('/v1/worklist/sync-status'),
 
   /**
+   * Update status for a single worklist item.
+   * BUGFIX: Added to support workflow step transitions
+   */
+  updateStatus: (itemId: number, status: string) =>
+    api.post<WorklistItemDetail>(`/v1/worklist/${itemId}/status`, {
+      status,
+    }),
+
+  /**
    * Bulk update status for multiple worklist items.
    */
   bulkUpdateStatus: (ids: number[], status: string) =>

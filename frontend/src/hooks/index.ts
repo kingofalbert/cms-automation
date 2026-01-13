@@ -11,3 +11,6 @@ export { useWebSocket, useWebSocketSubscription } from './useWebSocket';
 export type { UseWebSocketOptions, UseWebSocketReturn } from './useWebSocket';
 
 export { useUnsavedChanges } from './useUnsavedChanges';
+
+export { useAutoSave, useUnsavedChangesWarning } from './useAutoSave';
+export type { SaveStatus, AutoSaveConfig, AutoSaveReturn } from './useAutoSave';

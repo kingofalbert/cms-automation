@@ -9,6 +9,7 @@ import {
   TeamOutlined
 } from '@ant-design/icons';
 import { DraftStatus, ReviewProgress } from '../../../types/proofreading';
+import { formatDate, DATE_FORMATS } from '../../../lib/utils';
 import './RuleDraftCard.css';
 
 interface RuleDraftCardProps {
@@ -63,18 +64,6 @@ const RuleDraftCard: React.FC<RuleDraftCardProps> = ({ draft, onView }) => {
     ? Math.round((draft.review_progress.reviewed / draft.review_progress.total) * 100)
     : 0;
 
-  // 格式化日期
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('zh-TW', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
     <Card
       className="rule-draft-card"
@@ -109,7 +98,7 @@ const RuleDraftCard: React.FC<RuleDraftCardProps> = ({ draft, onView }) => {
           <div className="meta-item">
             <ClockCircleOutlined />
             <span className="meta-label">創建時間:</span>
-            <span className="meta-value">{formatDate(draft.created_at)}</span>
+            <span className="meta-value">{formatDate(draft.created_at, DATE_FORMATS.SHORT)}</span>
           </div>
 
           <div className="meta-item">

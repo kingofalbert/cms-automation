@@ -3,6 +3,7 @@
  */
 
 import { Badge, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui';
+import { formatDate, DATE_FORMATS } from '@/lib/utils';
 
 interface ArticlePreviewProps {
   article: {
@@ -48,11 +49,7 @@ export function ArticlePreview({ article, onView }: ArticlePreviewProps) {
               {article.status}
             </Badge>
             <span className="text-sm text-gray-500">
-              {new Date(article.created_at).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })}
+              {formatDate(article.created_at, DATE_FORMATS.DATE_ONLY)}
             </span>
           </div>
         </CardDescription>
