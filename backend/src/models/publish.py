@@ -92,7 +92,7 @@ class PublishTask(Base):
 
     # Provider configuration
     provider: Mapped[Provider] = mapped_column(
-        Enum(Provider, values_callable=lambda x: [e.value for e in x]),
+        Enum(Provider, name="provider_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
         nullable=False,
         default=Provider.PLAYWRIGHT,
         index=True,
@@ -114,7 +114,7 @@ class PublishTask(Base):
 
     # Task status and control
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus, values_callable=lambda x: [e.value for e in x]),
+        Enum(TaskStatus, name="task_status_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
         nullable=False,
         default=TaskStatus.PENDING,
         index=True,
@@ -419,7 +419,7 @@ class ExecutionLog(Base):
 
     # Log metadata
     log_level: Mapped[LogLevel] = mapped_column(
-        Enum(LogLevel, values_callable=lambda x: [e.value for e in x]),
+        Enum(LogLevel, name="log_level_enum", values_callable=lambda x: [e.value for e in x], create_type=False),
         nullable=False,
         default=LogLevel.INFO,
         index=True,
