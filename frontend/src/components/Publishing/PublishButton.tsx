@@ -5,7 +5,8 @@
 
 import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import axios, { type AxiosError } from 'axios';
+import { type AxiosError } from 'axios';
+import { api } from '@/services/api-client';
 import { Button } from '@/components/ui';
 import { ProviderSelectionDropdown } from './ProviderSelectionDropdown';
 import { PublishConfirmationDialog } from './PublishConfirmationDialog';
@@ -39,14 +40,14 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
   // Submit publish request
   const publishMutation = useMutation<PublishResult, AxiosError<{ message?: string }>, PublishRequest>({
     mutationFn: async (request: PublishRequest) => {
-      const response = await axios.post<PublishResult>(
-        `/api/v1/publish/submit/${request.article_id}`,
+      return await api.post<PublishResult>(
+        `/v1/publish/submit/${request.article_id}`,
         {
           provider: request.provider,
           options: request.options,
-        }
+        },
+        { timeout: 180000 }  // 3 minutes for publish submission
       );
-      return response.data;
     },
     onSuccess: (data) => {
       setCurrentTaskId(data.task_id);
@@ -66,10 +67,10 @@ export const PublishButton: React.FC<PublishButtonProps> = ({
     queryKey: ['publish-task', currentTaskId],
     queryFn: async () => {
       if (!currentTaskId) return null;
-      const response = await axios.get<PublishTask>(
-        `/api/v1/publish/tasks/${currentTaskId}/status`
+      return await api.get<PublishTask>(
+        `/v1/publish/tasks/${currentTaskId}/status`,
+        { timeout: 60000 }  // 1 minute for status polling
       );
-      return response.data;
     },
     enabled: !!currentTaskId && showProgressModal,
     refetchInterval: ({ state }) => {

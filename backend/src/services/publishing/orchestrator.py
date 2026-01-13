@@ -21,6 +21,7 @@ from src.models import (
     PublishTask,
     TaskStatus,
 )
+from src.models.article_image import ArticleImage
 from src.models.worklist import WorklistItem, WorklistStatus
 from src.services.computer_use_cms import create_computer_use_cms_service
 from src.services.hybrid_publisher import create_hybrid_publisher
@@ -48,6 +49,11 @@ class PublishingContext:
     cms_password: str
     seo_metadata: SEOMetadata
     provider: Provider
+    # Phase B: Extended publishing data
+    primary_category: str | None = None
+    secondary_categories: list[str] | None = None
+    featured_image_path: str | None = None
+    article_images: list[dict[str, Any]] | None = None
 
 
 class PublishingOrchestrator:
@@ -124,6 +130,7 @@ class PublishingOrchestrator:
                 select(PublishTask)
                 .options(
                     selectinload(PublishTask.article).selectinload(Article.seo_metadata),
+                    selectinload(PublishTask.article).selectinload(Article.article_images),
                 )
                 .where(PublishTask.id == publish_task_id)
             )
@@ -188,6 +195,11 @@ class PublishingOrchestrator:
                 cms_password=cms_password,
                 seo_metadata=self._build_seo_metadata(article),
                 provider=provider,
+                # Phase B: Extended publishing data
+                primary_category=article.primary_category,
+                secondary_categories=article.secondary_categories or [],
+                featured_image_path=article.featured_image_path,
+                article_images=self._prepare_article_images(article),
             )
         finally:
             await session.close()
@@ -210,6 +222,9 @@ class PublishingOrchestrator:
             if self.settings.CMS_HTTP_AUTH_USERNAME and self.settings.CMS_HTTP_AUTH_PASSWORD:
                 http_auth = (self.settings.CMS_HTTP_AUTH_USERNAME, self.settings.CMS_HTTP_AUTH_PASSWORD)
 
+            # Use article_images from context (loaded from DB), fallback to options
+            article_images = context.article_images or options.get("article_images") or []
+
             result = await publisher.publish_article(
                 cms_url=context.cms_url,
                 username=context.cms_username,
@@ -217,10 +232,15 @@ class PublishingOrchestrator:
                 article_title=context.article_title,
                 article_body=context.article_body,
                 seo_data=context.seo_metadata,
-                article_images=options.get("article_images") or [],
+                article_images=article_images,
                 headless=options.get("headless", True),  # Default to headless for Cloud Run
                 publish_mode=publish_mode,
                 http_auth=http_auth,
+                # Phase B: Extended publishing data
+                primary_category=context.primary_category,
+                secondary_categories=context.secondary_categories,
+                tags=context.tags,
+                featured_image_path=context.featured_image_path,
             )
         elif provider is Provider.COMPUTER_USE:
             computer_use = await create_computer_use_cms_service()
@@ -469,6 +489,49 @@ class PublishingOrchestrator:
         }
 
         return SEOMetadata(**fallback)
+
+    def _prepare_article_images(self, article: Article) -> list[dict[str, Any]]:
+        """Prepare article images data for publishing.
+
+        Converts ArticleImage models into dictionaries suitable for the publisher.
+
+        Args:
+            article: Article with loaded article_images relationship
+
+        Returns:
+            List of image dictionaries with paths, alt text, captions, and positions
+        """
+        if not article.article_images:
+            return []
+
+        images: list[dict[str, Any]] = []
+        for img in article.article_images:
+            image_data = {
+                "id": img.id,
+                "source_path": img.source_path,
+                "source_url": img.source_url,
+                "preview_path": img.preview_path,
+                "caption": img.caption,
+                "alt_text": img.alt_text or img.caption or "",
+                "description": img.description,
+                "position": img.position,
+                "is_featured": img.is_featured,
+                "image_type": img.image_type,
+            }
+            images.append(image_data)
+
+        # Log image count for debugging
+        featured_count = sum(1 for img in images if img.get("is_featured"))
+        content_count = len(images) - featured_count
+        logger.info(
+            "article_images_prepared",
+            article_id=article.id,
+            total_images=len(images),
+            featured_images=featured_count,
+            content_images=content_count,
+        )
+
+        return images
 
     def _collect_screenshots(self, result: dict[str, Any]) -> list[str]:
         """Extract screenshot URLs from provider result."""

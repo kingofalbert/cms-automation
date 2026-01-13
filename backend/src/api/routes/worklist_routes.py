@@ -207,14 +207,16 @@ async def publish_worklist_item(
     the WordPress draft URL for the Phase 17 PublishSuccessConfirmation dialog.
     """
     from datetime import datetime
+    from sqlalchemy.orm import selectinload
     from src.config.settings import get_settings
     from src.services.providers.playwright_wordpress_publisher import PlaywrightWordPressPublisher
+    from src.api.schemas.seo import SEOMetadata
 
     settings = get_settings()
 
     service = WorklistService(session)
 
-    # 1. Get worklist item with article data
+    # 1. Get worklist item with article data (including article_images)
     try:
         item = await service.get_item(item_id)
     except ValueError as exc:
@@ -252,6 +254,67 @@ async def publish_worklist_item(
     title = item.title or "Untitled"
     body = item.content or ""
 
+    # Phase B: Get extended publishing data from article
+    primary_category = None
+    secondary_categories = []
+    tags = []
+    featured_image_path = None
+    article_images = []
+    seo_data = None
+
+    if article:
+        # Get categories and tags
+        primary_category = getattr(article, "primary_category", None)
+        secondary_categories = getattr(article, "secondary_categories", None) or []
+        tags = getattr(article, "tags", None) or []
+        featured_image_path = getattr(article, "featured_image_path", None)
+
+        # Get article images
+        if hasattr(article, "article_images") and article.article_images:
+            for img in article.article_images:
+                article_images.append({
+                    "id": img.id,
+                    "source_path": img.source_path,
+                    "source_url": img.source_url,
+                    "preview_path": img.preview_path,
+                    "caption": img.caption,
+                    "alt_text": img.alt_text or img.caption or "",
+                    "description": img.description,
+                    "position": img.position,
+                    "is_featured": img.is_featured,
+                    "image_type": img.image_type,
+                })
+
+        # Build SEO metadata from article
+        try:
+            seo_title = getattr(article, "seo_title", None) or title
+            meta_description = getattr(article, "meta_description", None) or getattr(article, "suggested_meta_description", None) or ""
+            focus_keyword = getattr(article, "focus_keyword", None) or ""
+            seo_keywords = getattr(article, "seo_keywords", None) or []
+
+            if seo_title or meta_description or focus_keyword:
+                seo_data = SEOMetadata(
+                    meta_title=seo_title[:60] if seo_title else title[:60],
+                    meta_description=meta_description[:160] if meta_description else "",
+                    focus_keyword=focus_keyword,
+                    keywords=seo_keywords[:5] if seo_keywords else [],
+                )
+        except Exception as e:
+            logger.warning("seo_metadata_build_failed", error=str(e))
+            seo_data = None
+
+    logger.info(
+        "publish_worklist_item_data_prepared",
+        item_id=item_id,
+        has_article=article is not None,
+        primary_category=primary_category,
+        secondary_categories_count=len(secondary_categories),
+        tags_count=len(tags),
+        has_featured_image=bool(featured_image_path),
+        article_images_count=len(article_images),
+        has_seo_data=seo_data is not None,
+    )
+
     # 5. Use Playwright browser automation to publish to WordPress
     # Build HTTP auth tuple if site-level authentication is configured
     http_auth = None
@@ -271,10 +334,16 @@ async def publish_worklist_item(
             password=settings.CMS_APPLICATION_PASSWORD,
             article_title=title,
             article_body=body,
-            seo_data=None,  # SEO data handled separately
+            seo_data=seo_data,
+            article_images=article_images,
             headless=True,  # Run headless in Cloud Run
             publish_mode="draft",  # Always save as draft for Phase 17
             http_auth=http_auth,
+            # Phase B: Extended publishing data
+            primary_category=primary_category,
+            secondary_categories=secondary_categories,
+            tags=tags,
+            featured_image_path=featured_image_path,
         )
 
         if result.get("success"):

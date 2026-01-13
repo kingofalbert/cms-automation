@@ -44,7 +44,7 @@ import { PublishReadinessChecklist, createChecklistItems } from './PublishReadin
 import { PublishConfirmation } from './PublishConfirmation';
 import { PublishSuccessConfirmation } from './PublishSuccessConfirmation';
 import type { ArticleReviewData } from '../../hooks/articleReview/useArticleReviewData';
-import { Send } from 'lucide-react';
+import { Send, CheckCircle, ExternalLink } from 'lucide-react';
 
 /**
  * Status labels mapping - English to Traditional Chinese
@@ -159,6 +159,14 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
 
   // Check if article is already published (uploaded to WordPress)
   const isAlreadyPublished = data.status === 'published';
+
+  // Extract WordPress draft info if available (from metadata or direct fields)
+  const wordpressDraftUrl = (data.metadata?.wordpress_draft_url as string) ||
+    ((data as unknown) as Record<string, unknown>).wordpress_draft_url as string | undefined;
+  const wordpressPostId = (data.metadata?.wordpress_post_id as number) ||
+    ((data as unknown) as Record<string, unknown>).wordpress_post_id as number | undefined;
+  const wordpressDraftUploadedAt = (data.metadata?.wordpress_draft_uploaded_at as string) ||
+    ((data as unknown) as Record<string, unknown>).wordpress_draft_uploaded_at as string | undefined;
 
   // Checklist items
   const checklistItems = useMemo(() => {
@@ -343,15 +351,45 @@ export const PublishPreviewPanel: React.FC<PublishPreviewPanelProps> = ({
 
       {/* ===== BOTTOM SECTION: Action Button (always visible at bottom) ===== */}
       <div className="flex-shrink-0 border-t bg-white pt-4 mt-4">
-        {/* Info banner about draft mode */}
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center gap-2 text-sm text-blue-800">
-            <Send className="w-4 h-4 text-blue-600" />
-            <span>
-              <strong>上稿模式：</strong>文章將上傳到 WordPress 作為草稿，由最終審稿編輯在 WordPress 後台審核後再發布。
-            </span>
+        {/* Info banner - show different content based on published status */}
+        {isAlreadyPublished && wordpressDraftUrl ? (
+          /* Already published with WordPress URL - show success block */
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 rounded-full">
+                  <CheckCircle className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-green-900">已成功上稿至 WordPress</p>
+                  <p className="text-sm text-green-700">
+                    Post ID: #{wordpressPostId}
+                    {wordpressDraftUploadedAt && ` | 上傳於: ${new Date(wordpressDraftUploadedAt).toLocaleString('zh-TW')}`}
+                  </p>
+                </div>
+              </div>
+              <a
+                href={wordpressDraftUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                前往 WordPress 編輯
+              </a>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Not published yet - show draft mode info */
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-blue-800">
+              <Send className="w-4 h-4 text-blue-600" />
+              <span>
+                <strong>上稿模式：</strong>文章將上傳到 WordPress 作為草稿，由最終審稿編輯在 WordPress 後台審核後再發布。
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Action buttons */}
         <div className="flex items-center justify-between">

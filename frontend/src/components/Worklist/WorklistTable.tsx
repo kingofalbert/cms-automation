@@ -455,24 +455,44 @@ export const WorklistTable: React.FC<WorklistTableProps> = ({
                         </Button>
                       )}
 
-                      {/* Published - Open URL button */}
-                      {resolveStatus(item.status) === 'published' &&
-                       item.metadata &&
-                       typeof item.metadata === 'object' &&
-                       'published_url' in item.metadata &&
-                       typeof item.metadata.published_url === 'string' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(item.metadata.published_url as string, '_blank');
-                          }}
-                          aria-label={t('worklist.table.actions.openUrl')}
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                        </Button>
-                      )}
+                      {/* Published - WordPress Draft button */}
+                      {resolveStatus(item.status) === 'published' && (() => {
+                        const wpUrl = item.wordpress_draft_url || (item.metadata?.published_url as string | undefined);
+                        return (
+                          <div className="flex items-center gap-1">
+                            {/* WordPress draft link - primary action */}
+                            {wpUrl && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(wpUrl, '_blank');
+                                }}
+                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                aria-label={t('worklist.table.actions.openWordPress')}
+                                title={item.wordpress_post_id
+                                  ? `WordPress Post #${item.wordpress_post_id}`
+                                  : t('worklist.table.actions.openUrl')}
+                              >
+                                {/* WordPress icon */}
+                                <svg
+                                  className="h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="currentColor"
+                                >
+                                  <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm-2.5 16.5l-5-5 1.41-1.41L9.5 15.67l7.09-7.09L18 10l-8.5 8.5z" />
+                                </svg>
+                              </Button>
+                            )}
+                            {/* Published indicator dot */}
+                            <span
+                              className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0"
+                              title={t('worklist.table.status.published')}
+                            />
+                          </div>
+                        );
+                      })()}
 
                       {/* Failed - Retry button */}
                       {resolveStatus(item.status) === 'failed' && (

@@ -50,12 +50,14 @@ RUN mkdir -p /var/log/cms-automation && chown appuser:appuser /var/log/cms-autom
 # Create startup script that runs migrations then starts the app (must be done as root)
 # Uses PORT env var from Cloud Run (defaults to 8080)
 # Migration errors are non-fatal - the app will still start if migrations fail
+# SKIP_MIGRATIONS=true can be set to skip migrations entirely (useful for min-instances warmup)
 RUN echo '#!/bin/bash\n\
-echo "Running database migrations..."\n\
-if python -m alembic upgrade head; then\n\
-  echo "Migrations complete."\n\
+if [ "$SKIP_MIGRATIONS" != "true" ]; then\n\
+  echo "Running database migrations..."\n\
+  python -m alembic upgrade head 2>&1 || echo "WARNING: Migrations failed (database may already be up to date)"\n\
+  echo "Migrations step complete."\n\
 else\n\
-  echo "WARNING: Migrations failed, but continuing anyway (database may already be up to date)"\n\
+  echo "Skipping migrations (SKIP_MIGRATIONS=true)"\n\
 fi\n\
 echo "Starting application on port ${PORT:-8080}..."\n\
 exec uvicorn src.main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 4\n\

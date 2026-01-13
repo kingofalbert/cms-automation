@@ -150,7 +150,11 @@
         "reject": "拒絕",
         "publish": "上稿",
         "retry": "重試",
-        "openUrl": "開啟"
+        "openUrl": "開啟",
+        "openWordPress": "開啟 WordPress 草稿"
+      },
+      "status": {
+        "published": "已上稿"
       }
     },
     "statisticsCards": {
@@ -199,7 +203,14 @@
       "notePlaceholder": "新增備註（可選）",
       "changeTo": "變更為",
       "publish": "上稿",
-      "publishing": "上稿中..."
+      "publishing": "上稿中...",
+      "wordpressInfo": "WordPress 發布信息",
+      "wordpressDraftUrl": "草稿連結",
+      "wordpressPostId": "文章 ID",
+      "uploadedAt": "上傳時間",
+      "openInWordPress": "在 WordPress 中開啟",
+      "editInWordPress": "前往 WordPress 編輯",
+      "copyUrl": "複製連結"
     }
   },
   "settings": {

@@ -148,6 +148,11 @@ class PlaywrightWordPressPublisher:
         headless: bool = True,
         publish_mode: Literal["publish", "draft"] = "publish",
         http_auth: tuple[str, str] | None = None,
+        # Phase B: Extended publishing data
+        primary_category: str | None = None,
+        secondary_categories: list[str] | None = None,
+        tags: list[str] | None = None,
+        featured_image_path: str | None = None,
     ) -> dict[str, Any]:
         """Publish article to WordPress using Playwright.
 
@@ -162,6 +167,10 @@ class PlaywrightWordPressPublisher:
             headless: Run browser in headless mode (default: True for Cloud Run)
             publish_mode: "publish" or "draft"
             http_auth: Optional tuple of (username, password) for site-level HTTP Basic Auth
+            primary_category: WordPress primary category name
+            secondary_categories: List of WordPress secondary category names
+            tags: List of WordPress tags
+            featured_image_path: Path to featured image file
 
         Returns:
             Publishing result dictionary
@@ -173,6 +182,10 @@ class PlaywrightWordPressPublisher:
                 has_images=bool(article_images),
                 publish_mode=publish_mode,
                 has_http_auth=bool(http_auth),
+                primary_category=primary_category,
+                secondary_categories_count=len(secondary_categories or []),
+                tags_count=len(tags or []),
+                has_featured_image=bool(featured_image_path),
             )
 
             # Start Playwright
@@ -223,6 +236,17 @@ class PlaywrightWordPressPublisher:
                     )
 
                 await self._step_set_content(article_body)
+
+                # Phase B: Set categories and tags
+                if primary_category or secondary_categories:
+                    await self._step_set_categories(primary_category, secondary_categories or [])
+                if tags:
+                    await self._step_set_tags(tags)
+
+                # Set featured image (before SEO to allow og_image auto-detection)
+                if featured_image_path:
+                    await self._step_set_featured_image(featured_image_path)
+
                 if seo_data:
                     await self._step_configure_seo(seo_data)
                 article_location, article_id = await self._step_publish(publish_mode=publish_mode)
@@ -648,6 +672,358 @@ class PlaywrightWordPressPublisher:
                            completeness=f"{completeness:.1f}%")
 
         logger.info("playwright_content_set", editor_type=editor_type, content_length=actual_length)
+
+    async def _step_set_categories(
+        self, primary_category: str | None, secondary_categories: list[str]
+    ) -> None:
+        """Step 6a: Set WordPress categories.
+
+        Opens the Categories panel in the sidebar and checks the appropriate checkboxes.
+
+        Args:
+            primary_category: Primary category name to select
+            secondary_categories: List of secondary category names to select
+        """
+        logger.info(
+            "playwright_step_set_categories",
+            primary=primary_category,
+            secondary_count=len(secondary_categories),
+        )
+
+        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        all_categories = []
+        if primary_category:
+            all_categories.append(primary_category)
+        all_categories.extend(secondary_categories)
+
+        if not all_categories:
+            logger.debug("No categories to set, skipping")
+            return
+
+        try:
+            if editor_type == "classic":
+                # Classic Editor: Categories are in a meta box on the right side
+                # First, ensure the Categories meta box is visible
+                categories_panel = "#categorychecklist"
+                await self.page.wait_for_selector(categories_panel, timeout=5000)
+
+                for category_name in all_categories:
+                    try:
+                        # Find checkbox by label text
+                        # WordPress categories use: <label><input type="checkbox"> Category Name</label>
+                        checkbox_selector = f"#categorychecklist label:has-text('{category_name}') input[type='checkbox']"
+                        checkbox = await self.page.query_selector(checkbox_selector)
+
+                        if checkbox:
+                            is_checked = await checkbox.is_checked()
+                            if not is_checked:
+                                await checkbox.click()
+                                logger.debug(f"Category checked: {category_name}")
+                        else:
+                            # Try alternative: search by exact text match
+                            labels = await self.page.query_selector_all("#categorychecklist label")
+                            for label in labels:
+                                label_text = await label.inner_text()
+                                if category_name.strip() in label_text.strip():
+                                    checkbox = await label.query_selector("input[type='checkbox']")
+                                    if checkbox and not await checkbox.is_checked():
+                                        await checkbox.click()
+                                        logger.debug(f"Category checked (alt): {category_name}")
+                                    break
+                    except Exception as e:
+                        logger.warning(f"Failed to check category '{category_name}': {e}")
+                        continue
+
+            else:
+                # Gutenberg Editor: Categories are in the sidebar panel
+                # First, open the Settings sidebar if not already open
+                try:
+                    settings_button = "button[aria-label='Settings']"
+                    settings_btn = await self.page.query_selector(settings_button)
+                    if settings_btn:
+                        is_pressed = await settings_btn.get_attribute("aria-pressed")
+                        if is_pressed != "true":
+                            await settings_btn.click()
+                            await asyncio.sleep(0.5)
+                except Exception:
+                    pass  # Settings might already be open
+
+                # Click on the Post tab in sidebar (if not already selected)
+                try:
+                    post_tab = "button[data-label='Post'], button:has-text('Post')"
+                    await self.page.click(post_tab)
+                    await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+
+                # Expand Categories panel if collapsed
+                try:
+                    categories_panel_button = "button.components-panel__body-toggle:has-text('Categories')"
+                    panel_btn = await self.page.query_selector(categories_panel_button)
+                    if panel_btn:
+                        is_expanded = await panel_btn.get_attribute("aria-expanded")
+                        if is_expanded != "true":
+                            await panel_btn.click()
+                            await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+
+                # Now check the categories
+                for category_name in all_categories:
+                    try:
+                        # Gutenberg uses: <label><input type="checkbox"><span>Category Name</span></label>
+                        checkbox_selector = f".editor-post-taxonomies__hierarchical-terms-list label:has-text('{category_name}') input[type='checkbox']"
+                        checkbox = await self.page.query_selector(checkbox_selector)
+
+                        if checkbox:
+                            is_checked = await checkbox.is_checked()
+                            if not is_checked:
+                                await checkbox.click()
+                                logger.debug(f"Gutenberg category checked: {category_name}")
+                        else:
+                            # Fallback: try to find by searching all category labels
+                            labels = await self.page.query_selector_all(".editor-post-taxonomies__hierarchical-terms-list label")
+                            for label in labels:
+                                label_text = await label.inner_text()
+                                if category_name.strip() in label_text.strip():
+                                    checkbox = await label.query_selector("input[type='checkbox']")
+                                    if checkbox and not await checkbox.is_checked():
+                                        await checkbox.click()
+                                        logger.debug(f"Gutenberg category checked (alt): {category_name}")
+                                    break
+                    except Exception as e:
+                        logger.warning(f"Failed to check Gutenberg category '{category_name}': {e}")
+                        continue
+
+            logger.info(
+                "playwright_categories_set",
+                total=len(all_categories),
+                editor_type=editor_type,
+            )
+
+        except Exception as e:
+            logger.warning(
+                "playwright_categories_failed",
+                error=str(e),
+                categories=all_categories,
+            )
+            # Continue without categories - non-fatal error
+
+    async def _step_set_tags(self, tags: list[str]) -> None:
+        """Step 6b: Set WordPress tags.
+
+        Opens the Tags panel in the sidebar and adds the specified tags.
+
+        Args:
+            tags: List of tag names to add
+        """
+        if not tags:
+            return
+
+        logger.info("playwright_step_set_tags", count=len(tags))
+
+        editor_type = getattr(self, '_editor_type', 'gutenberg')
+
+        try:
+            if editor_type == "classic":
+                # Classic Editor: Tags are in a meta box
+                tags_input = "#new-tag-post_tag"
+                add_button = ".tagadd"
+
+                await self.page.wait_for_selector(tags_input, timeout=5000)
+
+                # Add tags one by one or as comma-separated list
+                tags_str = ", ".join(tags)
+                await self.page.fill(tags_input, tags_str)
+                await asyncio.sleep(0.3)
+
+                # Click the Add button
+                try:
+                    await self.page.click(add_button)
+                    await asyncio.sleep(0.5)
+                except Exception:
+                    # Some themes auto-add on Enter
+                    await self.page.keyboard.press("Enter")
+                    await asyncio.sleep(0.5)
+
+            else:
+                # Gutenberg Editor: Tags are in the sidebar panel
+                # First, ensure Settings sidebar is open
+                try:
+                    settings_button = "button[aria-label='Settings']"
+                    settings_btn = await self.page.query_selector(settings_button)
+                    if settings_btn:
+                        is_pressed = await settings_btn.get_attribute("aria-pressed")
+                        if is_pressed != "true":
+                            await settings_btn.click()
+                            await asyncio.sleep(0.5)
+                except Exception:
+                    pass
+
+                # Click on the Post tab
+                try:
+                    post_tab = "button[data-label='Post'], button:has-text('Post')"
+                    await self.page.click(post_tab)
+                    await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+
+                # Expand Tags panel if collapsed
+                try:
+                    tags_panel_button = "button.components-panel__body-toggle:has-text('Tags')"
+                    panel_btn = await self.page.query_selector(tags_panel_button)
+                    if panel_btn:
+                        is_expanded = await panel_btn.get_attribute("aria-expanded")
+                        if is_expanded != "true":
+                            await panel_btn.click()
+                            await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+
+                # Find the tags input field
+                tags_input = ".components-form-token-field__input"
+                await self.page.wait_for_selector(tags_input, timeout=5000)
+
+                # Add each tag
+                for tag in tags:
+                    await self.page.fill(tags_input, tag)
+                    await asyncio.sleep(0.2)
+                    await self.page.keyboard.press("Enter")
+                    await asyncio.sleep(0.3)
+
+            logger.info(
+                "playwright_tags_set",
+                count=len(tags),
+                editor_type=editor_type,
+            )
+
+        except Exception as e:
+            logger.warning(
+                "playwright_tags_failed",
+                error=str(e),
+                tags=tags,
+            )
+            # Continue without tags - non-fatal error
+
+    async def _step_set_featured_image(self, image_path: str) -> None:
+        """Step 6c: Set WordPress featured image.
+
+        Opens the Featured Image panel and uploads the specified image.
+
+        Args:
+            image_path: Path to the featured image file (local path or URL)
+        """
+        logger.info("playwright_step_set_featured_image", path=image_path)
+
+        editor_type = getattr(self, '_editor_type', 'gutenberg')
+
+        try:
+            if editor_type == "classic":
+                # Classic Editor: Featured Image is in a meta box
+                # Click "Set featured image" link
+                set_featured_link = "#set-post-thumbnail"
+                await self.page.wait_for_selector(set_featured_link, timeout=5000)
+                await self.page.click(set_featured_link)
+                await asyncio.sleep(1)
+
+                # Wait for media modal
+                media_modal = ".media-modal"
+                await self.page.wait_for_selector(media_modal, timeout=10000)
+
+                # Click "Upload files" tab
+                upload_tab = ".media-modal .media-menu-item:has-text('Upload files')"
+                try:
+                    await self.page.click(upload_tab)
+                    await asyncio.sleep(0.5)
+                except Exception:
+                    pass
+
+                # Upload the file
+                file_input = ".media-modal input[type='file']"
+                await self.page.wait_for_selector(file_input, timeout=5000)
+                await self.page.set_input_files(file_input, image_path)
+                await asyncio.sleep(self.config["waits"]["media_upload"] / 1000)
+
+                # Click "Set featured image" button
+                set_button = ".media-modal .media-button-select"
+                await self.page.click(set_button)
+                await asyncio.sleep(1)
+
+            else:
+                # Gutenberg Editor: Featured Image is in the sidebar panel
+                # First, ensure Settings sidebar is open
+                try:
+                    settings_button = "button[aria-label='Settings']"
+                    settings_btn = await self.page.query_selector(settings_button)
+                    if settings_btn:
+                        is_pressed = await settings_btn.get_attribute("aria-pressed")
+                        if is_pressed != "true":
+                            await settings_btn.click()
+                            await asyncio.sleep(0.5)
+                except Exception:
+                    pass
+
+                # Click on the Post tab
+                try:
+                    post_tab = "button[data-label='Post'], button:has-text('Post')"
+                    await self.page.click(post_tab)
+                    await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+
+                # Expand Featured Image panel if collapsed
+                try:
+                    featured_panel_button = "button.components-panel__body-toggle:has-text('Featured image')"
+                    panel_btn = await self.page.query_selector(featured_panel_button)
+                    if panel_btn:
+                        is_expanded = await panel_btn.get_attribute("aria-expanded")
+                        if is_expanded != "true":
+                            await panel_btn.click()
+                            await asyncio.sleep(0.3)
+                except Exception:
+                    pass
+
+                # Click "Set featured image" button
+                set_featured_button = ".editor-post-featured-image__toggle, button:has-text('Set featured image')"
+                await self.page.click(set_featured_button)
+                await asyncio.sleep(1)
+
+                # Wait for media modal
+                media_modal = ".media-modal"
+                await self.page.wait_for_selector(media_modal, timeout=10000)
+
+                # Click "Upload files" tab
+                upload_tab = ".media-modal button:has-text('Upload files'), .media-modal .media-menu-item:has-text('Upload files')"
+                try:
+                    await self.page.click(upload_tab)
+                    await asyncio.sleep(0.5)
+                except Exception:
+                    pass
+
+                # Upload the file
+                file_input = ".media-modal input[type='file']"
+                await self.page.wait_for_selector(file_input, timeout=5000)
+                await self.page.set_input_files(file_input, image_path)
+                await asyncio.sleep(self.config["waits"]["media_upload"] / 1000)
+
+                # Click "Set featured image" button in modal
+                set_button = ".media-modal .media-button-select, .media-modal button:has-text('Set featured image')"
+                await self.page.click(set_button)
+                await asyncio.sleep(1)
+
+            logger.info(
+                "playwright_featured_image_set",
+                path=image_path,
+                editor_type=editor_type,
+            )
+
+        except Exception as e:
+            logger.warning(
+                "playwright_featured_image_failed",
+                error=str(e),
+                path=image_path,
+            )
+            # Continue without featured image - non-fatal error
 
     async def _step_configure_seo(self, seo_data: SEOMetadata) -> None:
         """Step 6: Configure SEO metadata.

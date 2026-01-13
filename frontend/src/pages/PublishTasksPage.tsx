@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { api } from '@/services/api-client';
 import { Card } from '@/components/ui';
 import { SkeletonStatsCard } from '@/components/ui/skeleton';
 import { TaskListTable } from '@/components/TaskMonitoring/TaskListTable';
@@ -29,10 +29,9 @@ export default function PublishTasksPage() {
       if (statusFilter !== 'all') params.status = statusFilter;
       if (providerFilter !== 'all') params.provider = providerFilter;
 
-      const response = await axios.get<PublishTask[]>('v1/publish/tasks', {
+      return await api.get<PublishTask[]>('/v1/publish/tasks', {
         params,
       });
-      return response.data;
     },
     refetchInterval: 30000, // Refresh every 30 seconds (reduced from 5s to save resources)
   });
@@ -44,7 +43,7 @@ export default function PublishTasksPage() {
 
   const handleRetry = async (taskId: string) => {
     try {
-      await axios.post(`/api/v1/publish/tasks/${taskId}/retry`);
+      await api.post(`/v1/publish/tasks/${taskId}/retry`);
       refetch();
       setDrawerOpen(false);
       alert(t('publishTasks.messages.retrySubmitted'));
