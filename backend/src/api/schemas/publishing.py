@@ -17,6 +17,15 @@ class PublishOptions(BaseSchema):
         default=True,
         description="Publish immediately instead of scheduling for later",
     )
+    publish_mode: str = Field(
+        default="draft",
+        pattern=r"^(draft|publish)$",
+        description="Publishing mode: 'draft' saves as draft, 'publish' publishes immediately",
+    )
+    headless: bool = Field(
+        default=True,
+        description="Run browser in headless mode (required for Cloud Run)",
+    )
     tags: list[str] | None = Field(
         default=None, description="Tags to assign to the article"
     )

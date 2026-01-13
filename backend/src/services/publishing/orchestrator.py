@@ -213,7 +213,7 @@ class PublishingOrchestrator:
                 article_body=context.article_body,
                 seo_data=context.seo_metadata,
                 article_images=options.get("article_images") or [],
-                headless=options.get("headless", False),
+                headless=options.get("headless", True),  # Default to headless for Cloud Run
                 publish_mode=publish_mode,
             )
         elif provider is Provider.COMPUTER_USE:
