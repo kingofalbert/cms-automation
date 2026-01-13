@@ -754,7 +754,7 @@ export interface APIProofreadingIssue {
   message: string;           // Maps to explanation
   rule_id: string;
   category: string;          // Maps to rule_category
-  evidence: string;          // Maps to original_text
+  evidence: string;          // Context snippet around the issue
   location: {
     offset: number;
     line?: number;
@@ -762,7 +762,11 @@ export interface APIProofreadingIssue {
   };
   severity: 'critical' | 'warning' | 'info';
   confidence: number;        // 0-1 value
-  suggestion: string;        // Maps to suggested_text
+  suggestion: string;        // Description text (e.g., "将 '裡' 替换为 '里'。")
+  original_text?: string;    // The actual matched text (e.g., "裡")
+  suggested_text?: string;   // The actual corrected text (e.g., "里") for Preview mode
+  suggested_text_plain?: string; // Plain text version for frontend display
+  original_text_plain?: string;  // Plain text version of original_text
   subcategory?: string;
   can_auto_fix?: boolean;
   attributed_by?: string;
@@ -783,12 +787,17 @@ export const transformAPIProofreadingIssue = (
   engine: apiIssue.source === 'ai' ? 'ai' : 'deterministic',
   position: {
     start: apiIssue.location.offset,
-    end: apiIssue.location.offset + (apiIssue.evidence?.length || 0),
+    end: apiIssue.location.offset + (apiIssue.original_text?.length || apiIssue.evidence?.length || 0),
     line: apiIssue.location.line,
     column: apiIssue.location.column,
   },
-  original_text: apiIssue.evidence || '',
-  suggested_text: apiIssue.suggestion || '',
+  // Use original_text (actual matched text) if available, fallback to evidence (context snippet)
+  original_text: apiIssue.original_text || apiIssue.evidence || '',
+  // Use suggested_text (actual corrected text) if available, fallback to suggestion (description)
+  suggested_text: apiIssue.suggested_text || apiIssue.suggestion || '',
+  // Include plain text versions for frontend preview
+  original_text_plain: apiIssue.original_text_plain,
+  suggested_text_plain: apiIssue.suggested_text_plain,
   explanation: apiIssue.message || '',
   confidence: apiIssue.confidence,
   decision_status: 'pending',
@@ -878,7 +887,7 @@ const smartTransformIssues = (issues: unknown[]): ProofreadingIssue[] => {
   }
 
   // Already in frontend format with original_text/suggested_text/explanation
-  // Just ensure the structure is correct
+  // Just ensure the structure is correct and include plain text versions
   return (issues as ProofreadingIssue[]).map((issue, index) => ({
     id: issue.id || `${issue.rule_id}-${index}`,
     rule_id: issue.rule_id,
@@ -888,6 +897,9 @@ const smartTransformIssues = (issues: unknown[]): ProofreadingIssue[] => {
     position: issue.position || { start: 0, end: 0 },
     original_text: issue.original_text || '',
     suggested_text: issue.suggested_text || '',
+    // Include plain text versions for frontend preview mode
+    original_text_plain: issue.original_text_plain,
+    suggested_text_plain: issue.suggested_text_plain,
     explanation: issue.explanation || '',
     explanation_detail: issue.explanation_detail,
     confidence: issue.confidence,

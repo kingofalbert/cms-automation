@@ -155,12 +155,18 @@ class DictionaryReplacementRule(DeterministicRule):
                 else:
                     suggestion = "请根据规范调整该用语。"
 
+                # Generate actual suggested_text for frontend Preview mode
+                # This is the real corrected text, not a description
+                suggested_text = self.correct_form if self.correct_form else None
+
                 issues.append(
                     ProofreadingIssue(
                         rule_id=self.rule_id,
                         category=self.category,
                         subcategory=self.subcategory,
                         message=message,
+                        original_text=match_text,
+                        suggested_text=suggested_text,
                         suggestion=suggestion,
                         severity=self.severity,
                         confidence=self.confidence,
@@ -234,6 +240,8 @@ class HalfWidthCommaRule(DeterministicRule):
                     category=self.category,
                     subcategory=self.subcategory,
                     message="检测到中文段落使用半角逗号，请改为全角 '，'。",
+                    original_text=",",
+                    suggested_text="，",
                     suggestion="将半角 ',' 替换为全角 '，'。",
                     severity=self.severity,
                     confidence=1.0,

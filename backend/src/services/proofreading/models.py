@@ -137,8 +137,14 @@ class ProofreadingIssue(BaseModel):
     original_text: str | None = Field(
         default=None, description="Original text snippet that has the issue"
     )
+    suggested_text: str | None = Field(
+        default=None,
+        description="The actual corrected text after applying the fix. "
+        "Used by frontend Preview mode to show real changes. "
+        "Example: if original_text='健身房裡', suggested_text='健身房里'",
+    )
     suggestion: str | None = Field(
-        default=None, description="Optional auto-fix suggestion"
+        default=None, description="Optional auto-fix suggestion description"
     )
     severity: str = Field(
         description="Severity label (info, warning, error, critical)",

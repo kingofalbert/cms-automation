@@ -468,9 +468,16 @@ class WorklistPipelineService:
                 if original_text:
                     issue["original_text_plain"] = strip_html_tags(original_text)
 
-                suggestion = issue.get("suggestion")
-                if suggestion:
-                    issue["suggested_text_plain"] = strip_html_tags(suggestion)
+                # Use suggested_text (actual corrected text) for frontend Preview mode
+                # Fall back to suggestion (description) if suggested_text not available
+                suggested_text = issue.get("suggested_text")
+                if suggested_text:
+                    issue["suggested_text_plain"] = strip_html_tags(suggested_text)
+                else:
+                    # Legacy fallback: some rules may only have suggestion description
+                    suggestion = issue.get("suggestion")
+                    if suggestion:
+                        issue["suggested_text_plain"] = strip_html_tags(suggestion)
 
                 # 2. Calculate plain text position
                 location = issue.get("location")
