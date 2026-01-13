@@ -111,7 +111,16 @@ class PlaywrightCDPProvider(ComputerUseProvider):
         network_stats: dict[str, Any] = {}
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=self.headless)
+            # Launch browser with Cloud Run compatible options
+            browser_args = [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+                "--single-process",
+            ]
+            browser = await p.chromium.launch(headless=self.headless, args=browser_args)
             context_obj = await browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
                 user_agent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36'

@@ -176,10 +176,21 @@ class PlaywrightWordPressPublisher:
 
             # Start Playwright
             async with async_playwright() as p:
-                # Launch browser
+                # Launch browser with Cloud Run compatible options
+                browser_args = [
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage",  # Important for Docker/Cloud Run
+                    "--disable-gpu",
+                    "--disable-software-rasterizer",
+                    "--single-process",  # Run in single process mode for containerized environments
+                ]
+                if not headless:
+                    browser_args.append("--start-maximized")
+
                 self.browser = await p.chromium.launch(
                     headless=headless,
-                    args=["--no-sandbox", "--disable-setuid-sandbox"] if headless else ["--start-maximized"],
+                    args=browser_args,
                 )
 
                 # Create context with HTTP Basic Auth if provided
