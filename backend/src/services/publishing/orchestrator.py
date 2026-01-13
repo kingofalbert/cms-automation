@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import ValidationError
@@ -312,7 +312,7 @@ class PublishingOrchestrator:
                 else:
                     article.status = ArticleStatus.PUBLISHED
                     article.published_url = public_url or editor_url or article.published_url
-                    article.published_at = article.published_at or datetime.utcnow()
+                    article.published_at = article.published_at or datetime.now(timezone.utc)
 
                 session.add(article)
 
@@ -320,7 +320,7 @@ class PublishingOrchestrator:
                 worklist_item = article.worklist_item
                 if worklist_item:
                     worklist_item.wordpress_draft_url = editor_url or public_url
-                    worklist_item.wordpress_draft_uploaded_at = datetime.utcnow()
+                    worklist_item.wordpress_draft_uploaded_at = datetime.now(timezone.utc)
                     worklist_item.wordpress_post_id = cms_article_id
                     worklist_item.status = WorklistStatus.PUBLISHED
                     session.add(worklist_item)

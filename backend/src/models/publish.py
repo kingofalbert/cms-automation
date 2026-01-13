@@ -1,6 +1,6 @@
 """Publishing task models for Computer Use automation."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum as PyEnum
 from typing import TYPE_CHECKING
 
@@ -311,7 +311,7 @@ class PublishTask(Base):
         screenshot_data = {
             "url": url,
             "step": step,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         if description:
@@ -350,7 +350,7 @@ class PublishTask(Base):
         self.current_step = TaskStatus.INITIALIZING.value
         self.progress = 0
         self.completed_steps = 0
-        self.started_at = datetime.utcnow()
+        self.started_at = datetime.now(timezone.utc)
 
     def mark_completed(self, cost_usd: float | None = None) -> None:
         """Mark task as completed successfully.
@@ -359,7 +359,7 @@ class PublishTask(Base):
             cost_usd: Optional cost in USD for the task
         """
         self.status = TaskStatus.COMPLETED
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(timezone.utc)
         if self.started_at:
             self.duration_seconds = int((self.completed_at - self.started_at).total_seconds())
         if cost_usd is not None:
@@ -375,7 +375,7 @@ class PublishTask(Base):
             error_message: Description of the failure
         """
         self.status = TaskStatus.FAILED
-        self.completed_at = datetime.utcnow()
+        self.completed_at = datetime.now(timezone.utc)
         self.error_message = error_message
         if self.started_at:
             self.duration_seconds = int((self.completed_at - self.started_at).total_seconds())
