@@ -210,7 +210,7 @@ class PublishTask(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
         index=True,
         comment="When task was created",
     )
@@ -474,7 +474,7 @@ class ExecutionLog(Base):
     # Timestamp (primary key component for partitioning)
     created_at: Mapped[datetime] = mapped_column(
         nullable=False,
-        default=datetime.utcnow,
+        default=lambda: datetime.now(timezone.utc),
         index=True,
         primary_key=True,
         comment="When log entry was created (partition key)",
