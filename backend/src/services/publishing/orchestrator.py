@@ -323,8 +323,10 @@ class PublishingOrchestrator:
                 session.add(article)
 
                 # Phase 17: Update linked worklist item with WordPress draft info
-                worklist_item = article.worklist_item
-                if worklist_item:
+                # article.worklist_item is a backref list, get the first item if exists
+                worklist_items = article.worklist_item if hasattr(article, 'worklist_item') else []
+                if worklist_items and len(worklist_items) > 0:
+                    worklist_item = worklist_items[0]  # Get the first (most recent) worklist item
                     worklist_item.wordpress_draft_url = editor_url or public_url
                     worklist_item.wordpress_draft_uploaded_at = datetime.utcnow()
                     worklist_item.wordpress_post_id = cms_article_id
