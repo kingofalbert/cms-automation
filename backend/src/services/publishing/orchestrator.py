@@ -329,7 +329,12 @@ class PublishingOrchestrator:
                     worklist_item = worklist_items[0]  # Get the first (most recent) worklist item
                     worklist_item.wordpress_draft_url = editor_url or public_url
                     worklist_item.wordpress_draft_uploaded_at = datetime.utcnow()
-                    worklist_item.wordpress_post_id = cms_article_id
+                    # Convert cms_article_id to int (it comes as string from Playwright)
+                    if cms_article_id and cms_article_id != "unknown":
+                        try:
+                            worklist_item.wordpress_post_id = int(cms_article_id)
+                        except (ValueError, TypeError):
+                            worklist_item.wordpress_post_id = None
                     worklist_item.status = WorklistStatus.PUBLISHED
                     session.add(worklist_item)
 
