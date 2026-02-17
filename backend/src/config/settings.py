@@ -186,6 +186,12 @@ class Settings(BaseSettings):
         description="HTTP Basic Auth password (site-level authentication)",
     )
 
+    # GAS (Google Apps Script) Automation
+    GAS_API_KEY: str = Field(
+        default="",
+        description="API key for Google Apps Script automation (pipeline endpoints)",
+    )
+
     # Supabase Configuration (Authentication)
     SUPABASE_URL: str = Field(
         default="",

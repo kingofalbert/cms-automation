@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from src.config.logging import get_logger
+from src.config.settings import get_settings
 from src.services.auth.jwt import get_jwt_verifier
 
 logger = get_logger(__name__)
@@ -83,6 +84,33 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         # Skip authentication for public paths
         if self._is_public_path(request.url.path):
             return await call_next(request)
+
+        # API Key authentication for /v1/pipeline paths (GAS automation)
+        if request.url.path.startswith("/v1/pipeline"):
+            api_key = request.headers.get("X-API-Key")
+            if api_key:
+                settings = get_settings()
+                if settings.GAS_API_KEY and api_key == settings.GAS_API_KEY:
+                    request.state.user_id = "gas-automation"
+                    request.state.user_email = None
+                    request.state.user_role = "automation"
+                    logger.debug(
+                        "api_key_authenticated",
+                        path=request.url.path,
+                    )
+                    return await call_next(request)
+                else:
+                    logger.warning(
+                        "invalid_api_key",
+                        path=request.url.path,
+                    )
+                    return JSONResponse(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        content={
+                            "error": "Unauthorized",
+                            "message": "Invalid API key",
+                        },
+                    )
 
         # Skip authentication if disabled
         if not self.require_auth:
