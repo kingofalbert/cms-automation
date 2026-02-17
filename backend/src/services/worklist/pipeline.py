@@ -191,6 +191,11 @@ class WorklistPipelineService:
                     article.body = clean_body_html  # Sync for consistency
                     article.parsing_confirmed = False  # Needs manual review
 
+                    # BUG FIX: Copy seo_title from AI parser to Article
+                    article.seo_title = parsed_article.seo_title
+                    article.seo_title_extracted = parsed_article.seo_title_extracted
+                    article.seo_title_source = parsed_article.seo_title_source
+
                     # Phase 7.5: Update unified AI parsing fields
                     article.suggested_meta_description = parsed_article.suggested_meta_description
                     article.suggested_seo_keywords = parsed_article.suggested_seo_keywords or []
@@ -256,6 +261,28 @@ class WorklistPipelineService:
             }
 
             item.drive_metadata = metadata
+
+            # BUG FIX: Copy featured_image_path to Article model
+            if metadata.get("featured_image_path") and item.article_id:
+                article = await self.session.get(Article, item.article_id)
+                if article and not article.featured_image_path:
+                    article.featured_image_path = metadata["featured_image_path"]
+                    self.session.add(article)
+
+            # Apply frontmatter overrides (editor-provided, higher priority than AI)
+            frontmatter = (item.drive_metadata or {}).get("frontmatter")
+            if frontmatter and item.article_id:
+                article = await self.session.get(Article, item.article_id)
+                if article:
+                    if frontmatter.get("seo_title"):
+                        article.seo_title = frontmatter["seo_title"]
+                        article.seo_title_extracted = True
+                        article.seo_title_source = "frontmatter"
+                    if frontmatter.get("focus_keyword"):
+                        article.focus_keyword = frontmatter["focus_keyword"]
+                    if frontmatter.get("image_source"):
+                        article.featured_image_path = frontmatter["image_source"]
+                    self.session.add(article)
 
             # Update status to PARSING_REVIEW
             item.mark_status(WorklistStatus.PARSING_REVIEW)

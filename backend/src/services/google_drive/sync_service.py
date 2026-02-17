@@ -408,6 +408,71 @@ class GoogleDriveSyncService:
             content: Raw document content
             file_name: Optional file name from Google Drive to use as fallback title
         """
+        # --- NEW: Try [[FRONTMATTER]]...[[END_FRONTMATTER]] format ---
+        frontmatter_re = re.compile(
+            r'\[\[FRONTMATTER\]\]\s*\n(.*?)\n\[\[END_FRONTMATTER\]\]',
+            re.DOTALL,
+        )
+        fm_match = frontmatter_re.search(content)
+
+        if fm_match:
+            fm_block = fm_match.group(1)
+            body_content = content[fm_match.end():].strip()
+
+            # Parse key: value pairs
+            fm_data: dict[str, str] = {}
+            for line in fm_block.strip().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                key, _, value = line.partition(':')
+                if key.strip():
+                    fm_data[key.strip().lower()] = value.strip()
+
+            title = fm_data.get('title') or file_name or 'Untitled Document'
+            author = fm_data.get('author')
+            meta_description = fm_data.get('meta_description')
+
+            # Keyword 不分層：merge all keyword fields into flat list, deduplicated
+            seo_keywords: list[str] = []
+            for kw_field in ('focus_keyword', 'keywords_main', 'keywords_secondary',
+                              'keywords_longtail', 'keywords_all'):
+                val = fm_data.get(kw_field, '')
+                if val:
+                    for kw in val.split(','):
+                        kw = kw.strip()
+                        if kw and kw not in seo_keywords:
+                            seo_keywords.append(kw)
+
+            tags = [t.strip() for t in fm_data.get('tags', '').split(',') if t.strip()]
+
+            logger.info(
+                "google_drive_frontmatter_parsed",
+                title=title,
+                has_meta_description=bool(meta_description),
+                seo_keywords_count=len(seo_keywords),
+                tags_count=len(tags),
+            )
+
+            return {
+                "title": title[:500],
+                "content": body_content,
+                "author": author,
+                "notes": [],
+                "meta_description": meta_description,
+                "seo_keywords": seo_keywords,
+                "tags": tags,
+                "categories": [],
+                # Pass fields not on WorklistItem via frontmatter dict
+                "frontmatter": {
+                    "seo_title": fm_data.get('seo_title'),
+                    "focus_keyword": fm_data.get('focus_keyword'),
+                    "image_source": fm_data.get('image_source'),
+                    "image_caption": fm_data.get('image_caption'),
+                    "image_alt": fm_data.get('image_alt'),
+                },
+            }
+
         # Try to parse YAML front matter
         yaml_pattern = re.compile(r'^---\s*\n(.*?)\n---\s*\n(.*)$', re.DOTALL)
         yaml_match = yaml_pattern.match(content)
@@ -591,6 +656,10 @@ class GoogleDriveSyncService:
         now = datetime.utcnow()
         metadata = dict(existing.drive_metadata if existing else {})
         metadata.update(drive_metadata)
+
+        # Store frontmatter data for downstream pipeline use
+        if payload.get("frontmatter"):
+            metadata["frontmatter"] = payload["frontmatter"]
 
         # Calculate word count from content and store in metadata
         content = payload.get("content", "")

@@ -8,7 +8,9 @@ Google Apps Script via the /v1/pipeline/auto-publish endpoint.
 from __future__ import annotations
 
 import json
+import os
 import re
+import tempfile
 from datetime import datetime
 from typing import Any
 
@@ -357,101 +359,150 @@ class AutoPublishService:
 
         publisher = PlaywrightWordPressPublisher()
 
+        # Download featured image if it's a URL (Playwright needs local file path)
+        local_featured_image = None
+        if featured_image_path and featured_image_path.startswith("http"):
+            try:
+                local_featured_image = await self._download_image_to_temp(featured_image_path)
+                featured_image_path = local_featured_image
+            except Exception as img_err:
+                logger.warning(
+                    "featured_image_download_failed",
+                    url=featured_image_path[:100],
+                    error=str(img_err),
+                )
+                featured_image_path = None  # Skip featured image if download fails
+
         try:
-            result = await publisher.publish_article(
-                cms_url=settings.CMS_BASE_URL,
-                username=settings.CMS_USERNAME,
-                password=settings.CMS_APPLICATION_PASSWORD,
-                article_title=title,
-                article_body=body,
-                seo_data=seo_data,
-                article_images=article_images,
-                headless=True,
-                publish_mode="draft",
-                http_auth=http_auth,
-                primary_category=primary_category,
-                secondary_categories=secondary_categories,
-                tags=tags,
-                featured_image_path=featured_image_path,
-            )
-        except Exception as exc:
-            logger.error(
-                "auto_publish_playwright_failed",
-                worklist_item_id=item.id,
-                error=str(exc),
-                exc_info=True,
-            )
-            item.mark_status(WorklistStatus.FAILED)
-            item.add_note({
-                "message": f"WordPress 發佈失敗: {exc}",
-                "level": "error",
-            })
-            self.session.add(item)
-            return {
-                "worklist_item_id": item.id,
-                "article_id": item.article_id,
-                "wordpress_draft_url": None,
-                "wordpress_post_id": None,
-                "status": "failed",
-                "error": str(exc),
-            }
+            try:
+                result = await publisher.publish_article(
+                    cms_url=settings.CMS_BASE_URL,
+                    username=settings.CMS_USERNAME,
+                    password=settings.CMS_APPLICATION_PASSWORD,
+                    article_title=title,
+                    article_body=body,
+                    seo_data=seo_data,
+                    article_images=article_images,
+                    headless=True,
+                    publish_mode="draft",
+                    http_auth=http_auth,
+                    primary_category=primary_category,
+                    secondary_categories=secondary_categories,
+                    tags=tags,
+                    featured_image_path=featured_image_path,
+                )
+            except Exception as exc:
+                logger.error(
+                    "auto_publish_playwright_failed",
+                    worklist_item_id=item.id,
+                    error=str(exc),
+                    exc_info=True,
+                )
+                item.mark_status(WorklistStatus.FAILED)
+                item.add_note({
+                    "message": f"WordPress 發佈失敗: {exc}",
+                    "level": "error",
+                })
+                self.session.add(item)
+                return {
+                    "worklist_item_id": item.id,
+                    "article_id": item.article_id,
+                    "wordpress_draft_url": None,
+                    "wordpress_post_id": None,
+                    "status": "failed",
+                    "error": str(exc),
+                }
 
-        # Process result
-        if result.get("success"):
-            wordpress_draft_url = result.get("editor_url") or result.get("url")
-            wordpress_post_id = result.get("cms_article_id")
+            # Process result
+            if result.get("success"):
+                wordpress_draft_url = result.get("editor_url") or result.get("url")
+                wordpress_post_id = result.get("cms_article_id")
 
-            item.wordpress_draft_url = wordpress_draft_url
-            item.wordpress_post_id = (
-                int(wordpress_post_id) if wordpress_post_id else None
-            )
-            item.wordpress_draft_uploaded_at = datetime.utcnow()
-            item.mark_status(WorklistStatus.PUBLISHED)
-            item.add_note({
-                "message": "已自動發佈為 WordPress 草稿",
-                "level": "info",
-                "metadata": {
-                    "wordpress_post_id": wordpress_post_id,
+                item.wordpress_draft_url = wordpress_draft_url
+                item.wordpress_post_id = (
+                    int(wordpress_post_id) if wordpress_post_id else None
+                )
+                item.wordpress_draft_uploaded_at = datetime.utcnow()
+                item.mark_status(WorklistStatus.PUBLISHED)
+                item.add_note({
+                    "message": "已自動發佈為 WordPress 草稿",
+                    "level": "info",
+                    "metadata": {
+                        "wordpress_post_id": wordpress_post_id,
+                        "wordpress_draft_url": wordpress_draft_url,
+                    },
+                })
+
+                if article:
+                    article.status = ArticleStatus.DRAFT
+                    article.published_url = wordpress_draft_url
+                    article.cms_article_id = str(wordpress_post_id) if wordpress_post_id else None
+                    self.session.add(article)
+
+                self.session.add(item)
+
+                logger.info(
+                    "auto_publish_completed",
+                    worklist_item_id=item.id,
+                    wordpress_post_id=wordpress_post_id,
+                    wordpress_draft_url=wordpress_draft_url,
+                )
+
+                return {
+                    "worklist_item_id": item.id,
+                    "article_id": item.article_id,
                     "wordpress_draft_url": wordpress_draft_url,
-                },
-            })
+                    "wordpress_post_id": wordpress_post_id,
+                    "status": "completed",
+                }
+            else:
+                error_msg = result.get("error", "Unknown publishing error")
+                item.mark_status(WorklistStatus.FAILED)
+                item.add_note({
+                    "message": f"WordPress 發佈失敗: {error_msg}",
+                    "level": "error",
+                })
+                self.session.add(item)
 
-            if article:
-                article.status = ArticleStatus.DRAFT
-                article.published_url = wordpress_draft_url
-                article.cms_article_id = str(wordpress_post_id) if wordpress_post_id else None
-                self.session.add(article)
+                return {
+                    "worklist_item_id": item.id,
+                    "article_id": item.article_id,
+                    "wordpress_draft_url": None,
+                    "wordpress_post_id": None,
+                    "status": "failed",
+                    "error": error_msg,
+                }
+        finally:
+            # Clean up temp file
+            if local_featured_image:
+                try:
+                    os.unlink(local_featured_image)
+                except OSError:
+                    pass
 
-            self.session.add(item)
+    async def _download_image_to_temp(self, url: str) -> str:
+        """Download image from URL to a temporary file. Returns local path."""
+        import httpx
 
-            logger.info(
-                "auto_publish_completed",
-                worklist_item_id=item.id,
-                wordpress_post_id=wordpress_post_id,
-                wordpress_draft_url=wordpress_draft_url,
-            )
-
-            return {
-                "worklist_item_id": item.id,
-                "article_id": item.article_id,
-                "wordpress_draft_url": wordpress_draft_url,
-                "wordpress_post_id": wordpress_post_id,
-                "status": "completed",
-            }
+        # Handle Google Drive URLs: extract file ID and use Drive API
+        drive_match = re.search(r'/file/d/([a-zA-Z0-9_-]+)', url)
+        if drive_match:
+            file_id = drive_match.group(1)
+            storage = await create_google_drive_storage()
+            data = storage.service.files().get_media(fileId=file_id).execute()
         else:
-            error_msg = result.get("error", "Unknown publishing error")
-            item.mark_status(WorklistStatus.FAILED)
-            item.add_note({
-                "message": f"WordPress 發佈失敗: {error_msg}",
-                "level": "error",
-            })
-            self.session.add(item)
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                resp = await client.get(url, follow_redirects=True)
+                resp.raise_for_status()
+                data = resp.content
 
-            return {
-                "worklist_item_id": item.id,
-                "article_id": item.article_id,
-                "wordpress_draft_url": None,
-                "wordpress_post_id": None,
-                "status": "failed",
-                "error": error_msg,
-            }
+        suffix = ".jpg"  # Default
+        for ext in (".png", ".webp", ".gif", ".jpeg"):
+            if ext in url.lower():
+                suffix = ext
+                break
+
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        tmp.write(data)
+        tmp.close()
+        return tmp.name
