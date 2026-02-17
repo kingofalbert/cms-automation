@@ -41,6 +41,16 @@ class TaskStatusResponse(BaseModel):
     error: str | None = None
 
 
+class CleanupRequest(BaseModel):
+    worklist_item_id: int = Field(..., description="ID of the published worklist item to clean up")
+
+
+class CleanupResponse(BaseModel):
+    success: bool
+    freed_bytes_estimate: int = Field(default=0, description="Estimated bytes freed")
+    message: str = ""
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -175,3 +185,52 @@ async def get_auto_publish_status(task_id: str) -> TaskStatusResponse:
             status="pending",
             error="Unable to check task status (Celery may be unavailable)",
         )
+
+
+@router.post(
+    "/cleanup",
+    response_model=CleanupResponse,
+)
+async def cleanup_published_item(
+    payload: CleanupRequest,
+    session: AsyncSession = Depends(get_session),
+) -> CleanupResponse:
+    """Clean up large text fields from a published worklist item to free Supabase storage.
+
+    Called by GAS after confirming a task has completed successfully.
+    Only works on items with status 'published'.
+    """
+    worklist_item_id = payload.worklist_item_id
+
+    logger.info(
+        "cleanup_requested",
+        worklist_item_id=worklist_item_id,
+    )
+
+    try:
+        from src.services.worklist.auto_publish import AutoPublishService
+
+        service = AutoPublishService(session)
+        freed = await service.cleanup_published_item(worklist_item_id)
+
+        return CleanupResponse(
+            success=True,
+            freed_bytes_estimate=freed,
+            message=f"Cleaned up worklist item {worklist_item_id}",
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        logger.error(
+            "cleanup_failed",
+            worklist_item_id=worklist_item_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Cleanup failed: {exc}",
+        ) from exc

@@ -124,6 +124,17 @@ function autoPublishScan() {
         if (result.status === "completed" && result.result && result.result.wordpress_draft_url) {
           sheet.getRange(rowNum, CONFIG.COL_WP_URL).setValue(result.result.wordpress_draft_url);
           sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_DONE);
+
+          // Trigger storage cleanup for synchronous completion
+          var syncItemId = result.result.worklist_item_id;
+          if (syncItemId) {
+            try {
+              _callCleanup(apiKey, syncItemId);
+              Logger.log("Row " + rowNum + " sync cleanup triggered for worklist_item_id=" + syncItemId);
+            } catch (cleanupErr) {
+              Logger.log("Row " + rowNum + " sync cleanup failed (non-critical): " + cleanupErr.message);
+            }
+          }
         }
 
         triggered++;
@@ -179,6 +190,17 @@ function pollTaskStatus() {
         sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_DONE);
         polled++;
         Logger.log("Row " + rowNum + " completed: " + wpUrl);
+
+        // Trigger storage cleanup for the published item
+        var worklistItemId = taskStatus.result && taskStatus.result.worklist_item_id;
+        if (worklistItemId) {
+          try {
+            _callCleanup(apiKey, worklistItemId);
+            Logger.log("Row " + rowNum + " cleanup triggered for worklist_item_id=" + worklistItemId);
+          } catch (cleanupErr) {
+            Logger.log("Row " + rowNum + " cleanup failed (non-critical): " + cleanupErr.message);
+          }
+        }
       } else if (taskStatus.status === "failed") {
         var errorMsg = taskStatus.error || "Unknown error";
         sheet.getRange(rowNum, CONFIG.COL_WP_URL).setValue("Error: " + errorMsg);
@@ -326,5 +348,36 @@ function _getTaskStatus(apiKey, taskId) {
     return JSON.parse(body);
   } else {
     throw new Error("HTTP " + code + ": " + body);
+  }
+}
+
+/**
+ * Call POST /v1/pipeline/cleanup to free Supabase storage after publishing.
+ * Non-critical: failures are logged but do not affect the publish status.
+ */
+function _callCleanup(apiKey, worklistItemId) {
+  var url = CONFIG.BACKEND_URL + "/v1/pipeline/cleanup";
+  var payload = {
+    worklist_item_id: worklistItemId,
+  };
+
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    headers: { "X-API-Key": apiKey },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true,
+  };
+
+  var response = UrlFetchApp.fetch(url, options);
+  var code = response.getResponseCode();
+  var body = response.getContentText();
+
+  if (code >= 200 && code < 300) {
+    var result = JSON.parse(body);
+    Logger.log("Cleanup result: freed ~" + result.freed_bytes_estimate + " bytes");
+    return result;
+  } else {
+    throw new Error("Cleanup HTTP " + code + ": " + body);
   }
 }

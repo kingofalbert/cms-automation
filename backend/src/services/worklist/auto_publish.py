@@ -7,17 +7,23 @@ Google Apps Script via the /v1/pipeline/auto-publish endpoint.
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_logger, get_settings
 from src.models import (
     Article,
     ArticleStatus,
+    ArticleStatusHistory,
+    ExecutionLog,
+    ProofreadingDecision,
+    ProofreadingHistory,
+    PublishTask,
     WorklistItem,
     WorklistStatus,
 )
@@ -137,6 +143,137 @@ class AutoPublishService:
         await self.session.commit()
 
         return result
+
+    async def cleanup_published_item(self, worklist_item_id: int) -> int:
+        """Clean up large text fields from a published item to free Supabase storage.
+
+        Nullifies large content columns and deletes associated history/log rows.
+        Only operates on items with status 'published'.
+
+        Returns estimated bytes freed.
+        """
+        item = await self.session.get(WorklistItem, worklist_item_id)
+        if not item:
+            raise ValueError(f"WorklistItem {worklist_item_id} not found")
+
+        if item.status != WorklistStatus.PUBLISHED:
+            raise ValueError(
+                f"WorklistItem {worklist_item_id} status is '{item.status.value}', "
+                f"expected 'published'"
+            )
+
+        freed_estimate = 0
+
+        # --- Clean WorklistItem large fields ---
+        if item.content:
+            freed_estimate += len(item.content.encode("utf-8", errors="ignore"))
+            item.content = ""  # nullable=False, use empty string
+        if item.raw_html:
+            freed_estimate += len(item.raw_html.encode("utf-8", errors="ignore"))
+            item.raw_html = None
+        if item.notes:
+            freed_estimate += len(json.dumps(item.notes).encode("utf-8", errors="ignore"))
+            item.notes = []
+        self.session.add(item)
+
+        # --- Clean Article large fields ---
+        if item.article_id:
+            article = await self.session.get(Article, item.article_id)
+            if article:
+                # body is nullable=False – replace with placeholder
+                if article.body and len(article.body) > 100:
+                    freed_estimate += len(article.body.encode("utf-8", errors="ignore"))
+                    article.body = "[已清理 - 見 WordPress 草稿]"
+
+                for field in (
+                    "body_html",
+                    "suggested_content",
+                    "faq_html",
+                    "faq_schema_proposals",
+                    "paragraph_suggestions",
+                    "paragraph_split_suggestions",
+                    "suggested_content_changes",
+                    "faq_assessment",
+                    "faq_editorial_notes",
+                ):
+                    val = getattr(article, field, None)
+                    if val is not None:
+                        if isinstance(val, str):
+                            freed_estimate += len(val.encode("utf-8", errors="ignore"))
+                        else:
+                            freed_estimate += len(json.dumps(val).encode("utf-8", errors="ignore"))
+                        setattr(article, field, None)
+
+                # JSONB fields that should be reset to empty list
+                if article.proofreading_issues:
+                    freed_estimate += len(
+                        json.dumps(article.proofreading_issues).encode("utf-8", errors="ignore")
+                    )
+                    article.proofreading_issues = []
+
+                self.session.add(article)
+
+                # --- Delete associated history/log rows ---
+                article_id = article.id
+
+                # article_status_history
+                result = await self.session.execute(
+                    delete(ArticleStatusHistory).where(
+                        ArticleStatusHistory.article_id == article_id
+                    )
+                )
+                freed_estimate += (result.rowcount or 0) * 200  # ~200 bytes/row
+
+                # proofreading_decisions
+                result = await self.session.execute(
+                    delete(ProofreadingDecision).where(
+                        ProofreadingDecision.article_id == article_id
+                    )
+                )
+                freed_estimate += (result.rowcount or 0) * 500  # ~500 bytes/row
+
+                # proofreading_history
+                result = await self.session.execute(
+                    delete(ProofreadingHistory).where(
+                        ProofreadingHistory.article_id == article_id
+                    )
+                )
+                freed_estimate += (result.rowcount or 0) * 1000  # ~1KB/row
+
+                # execution_logs (via publish_tasks)
+                task_ids_result = await self.session.execute(
+                    select(PublishTask.id).where(
+                        PublishTask.article_id == article_id
+                    )
+                )
+                task_ids = [row[0] for row in task_ids_result.all()]
+
+                if task_ids:
+                    result = await self.session.execute(
+                        delete(ExecutionLog).where(
+                            ExecutionLog.task_id.in_(task_ids)
+                        )
+                    )
+                    freed_estimate += (result.rowcount or 0) * 300  # ~300 bytes/row
+
+                    # publish_tasks
+                    result = await self.session.execute(
+                        delete(PublishTask).where(
+                            PublishTask.article_id == article_id
+                        )
+                    )
+                    freed_estimate += (result.rowcount or 0) * 500  # ~500 bytes/row
+
+        await self.session.commit()
+
+        logger.info(
+            "cleanup_completed",
+            worklist_item_id=worklist_item_id,
+            article_id=item.article_id,
+            freed_bytes_estimate=freed_estimate,
+        )
+
+        return freed_estimate
 
     # ------------------------------------------------------------------
     # Internals
