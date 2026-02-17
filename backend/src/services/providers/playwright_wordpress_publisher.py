@@ -117,6 +117,7 @@ class PlaywrightWordPressPublisher:
                 "seo_title_field": "input[name='yoast_wpseo_title']",
                 "focus_keyword_field": "input[name='yoast_wpseo_focuskw']",
                 "meta_description_field": "textarea[name='yoast_wpseo_metadesc']",
+                "keywords_field": "input[name='yoast_wpseo_metakeywords']",
             },
             "publish": {
                 "publish_button": ".editor-post-publish-button__button",
@@ -1066,6 +1067,27 @@ class PlaywrightWordPressPublisher:
                 meta_field = self.config["seo"]["meta_description_field"]
                 await self.page.fill(meta_field, seo_data.meta_description)
                 await asyncio.sleep(0.5)
+
+            # Set meta keywords (comma-separated)
+            if seo_data.keywords:
+                keywords_field = self.config["seo"].get("keywords_field")
+                if keywords_field:
+                    try:
+                        kw_input = await self.page.wait_for_selector(
+                            keywords_field, timeout=3000
+                        )
+                        if kw_input:
+                            await kw_input.fill(", ".join(seo_data.keywords))
+                            await asyncio.sleep(0.5)
+                            logger.info(
+                                "seo_keywords_configured",
+                                count=len(seo_data.keywords),
+                            )
+                    except Exception:
+                        logger.debug(
+                            "seo_keywords_field_not_found",
+                            selector=keywords_field,
+                        )
 
             logger.info("playwright_seo_configured")
 
