@@ -60,6 +60,10 @@ tests/
 
 ### Deployment Commands
 
+**⚠️ CRITICAL: Backend 部署必須從 `backend/` 目錄執行！**
+
+從根目錄部署會導致路由無法正確註冊（如 `/v1/pipeline/*` 端點），因為 Dockerfile 和 `src/` 結構都在 `backend/` 內。
+
 ```bash
 # Load deployment configuration
 source scripts/deployment/config.sh
@@ -68,8 +72,17 @@ source scripts/deployment/config.sh
 cd frontend && npm run build
 gsutil -m rsync -r -d dist gs://cms-automation-frontend-476323
 
-# Deploy backend
-gcloud run deploy cms-automation-backend --source . --region us-east1
+# Deploy backend (MUST run from backend/ directory!)
+cd backend
+gcloud run deploy cms-automation-backend \
+  --source . \
+  --region us-east1 \
+  --project cmsupload-476323 \
+  --allow-unauthenticated \
+  --memory 2Gi \
+  --cpu 2 \
+  --timeout 300 \
+  --set-secrets="SECRET_KEY=cms-automation-prod-SECRET_KEY:latest,DATABASE_URL=cms-automation-prod-DATABASE_URL:latest,REDIS_URL=cms-automation-prod-REDIS_URL:latest,ANTHROPIC_API_KEY=cms-automation-prod-ANTHROPIC_API_KEY:latest,CMS_BASE_URL=cms-automation-prod-CMS_BASE_URL:latest,CMS_USERNAME=cms-automation-prod-CMS_USERNAME:latest,CMS_APPLICATION_PASSWORD=cms-automation-prod-CMS_APPLICATION_PASSWORD:latest,CMS_HTTP_AUTH_USERNAME=cms-automation-prod-CMS_HTTP_AUTH_USERNAME:latest,CMS_HTTP_AUTH_PASSWORD=cms-automation-prod-CMS_HTTP_AUTH_PASSWORD:latest,SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest,GOOGLE_SERVICE_ACCOUNT_JSON=GOOGLE_SERVICE_ACCOUNT_JSON:latest,ALLOWED_ORIGINS=ALLOWED_ORIGINS:latest"
 ```
 
 ### CORS Configuration
