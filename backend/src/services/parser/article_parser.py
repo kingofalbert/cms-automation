@@ -222,8 +222,12 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
        - 這是 SEO title / 【SEO title】 / SEO title：
     6. Any other suggestion/recommendation sections
     7. Section dividers (horizontal lines used to separate content blocks):
-       - Consecutive dashes, em dashes, en dashes, underscores
-       - Examples: -------, —————, ────────, _______
+       - Consecutive dashes, em dashes, en dashes, underscores, double-line chars
+       - Examples: -------, —————, ────────, _______, ════════════
+       - IMPORTANT: Everything AFTER the first divider is truncated (proofreading
+         results, Meta+AEO data, image alt text sections are NOT article content)
+    8. Editor credit line: 責任編輯：XXX
+    9. Metadata section headers: 校對結果, Meta + AEO, 圖片 Alt Text
 
     Args:
         body_html: The body HTML content from AI parsing
@@ -238,20 +242,51 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
 
     cleaned = body_html
 
-    # Remove section dividers (consecutive horizontal line characters)
-    # These are used to separate content blocks like main content from FAQ/author sections
-    # Matches: --------, ————————, ──────────, _________, or mixed combinations
-    # Must be at least 5 consecutive characters to be considered a divider
-    divider_patterns = [
-        # Dividers wrapped in <p> tags (most common in HTML)
-        r'<p>\s*[-—─_=]{5,}\s*</p>',
-        # Dividers with possible surrounding text in <p> tags
-        r'<p>\s*[-—─_=·•]{5,}[-—─_=·•\s]*</p>',
-        # Mixed character dividers (e.g., —--------------)
-        r'<p>\s*[—–-]{1,}[-—–─_=]{4,}\s*</p>',
-    ]
+    # Remove "責任編輯：XXX" line (editor credit line, not part of article body)
+    cleaned = re.sub(
+        r'<p>\s*責任編輯[：:]\s*[^<]*</p>',
+        '', cleaned, flags=re.IGNORECASE
+    )
+    # Also handle plain text version
+    cleaned = re.sub(
+        r'責任編輯[：:][^\n<]*[\n]?',
+        '', cleaned, flags=re.IGNORECASE
+    )
 
-    for pattern in divider_patterns:
+    # Truncate at section dividers — everything after the divider is metadata
+    # (proofreading results, Meta+AEO, image alt text, etc.) and must NOT be in body_html.
+    # Divider characters: ─ (U+2500), ═ (U+2550), — (U+2014), – (U+2013), -, _, =
+    divider_pattern = r'<p>\s*[-—–─═_=·•]{5,}[-—–─═_=·•\s]*</p>'
+    divider_match = re.search(divider_pattern, cleaned, flags=re.IGNORECASE)
+    if divider_match:
+        # Keep only content before the first divider
+        truncated = cleaned[:divider_match.start()].rstrip()
+        after_divider = cleaned[divider_match.end():]
+        logger.info(
+            f"[BODY CLEANUP] Truncated at section divider (pos {divider_match.start()}). "
+            f"Removed {len(after_divider)} chars of metadata sections after divider."
+        )
+        cleaned = truncated
+    else:
+        # Fallback: also check for H2 headers that indicate metadata sections
+        # e.g., <h2>校對結果</h2>, <h2>Meta + AEO</h2>, <h2>圖片 Alt Text</h2>
+        metadata_h2_pattern = r'<h2[^>]*>\s*(?:校對結果|Meta\s*\+?\s*AEO|圖片\s*Alt\s*Text)\s*</h2>'
+        metadata_h2_match = re.search(metadata_h2_pattern, cleaned, flags=re.IGNORECASE)
+        if metadata_h2_match:
+            truncated = cleaned[:metadata_h2_match.start()].rstrip()
+            logger.info(
+                f"[BODY CLEANUP] Truncated at metadata H2 header '{metadata_h2_match.group()}' "
+                f"(pos {metadata_h2_match.start()})."
+            )
+            cleaned = truncated
+
+    # Also remove any remaining standalone divider lines (in case of multiple dividers before truncation)
+    remaining_divider_patterns = [
+        r'<p>\s*[-—–─═_=]{5,}\s*</p>',
+        r'<p>\s*[-—–─═_=·•]{5,}[-—–─═_=·•\s]*</p>',
+        r'<p>\s*[—–-]{1,}[-—–─═_=]{4,}\s*</p>',
+    ]
+    for pattern in remaining_divider_patterns:
         cleaned = re.sub(pattern, '', cleaned, flags=re.IGNORECASE)
 
     # Patterns for metadata section headers (markdown style in <p> tags)
@@ -1328,7 +1363,7 @@ Process the above {content_type} and return the complete JSON response:"""
             """Check if text is a divider/separator line."""
             if not text or len(text) < 5:
                 return False
-            separator_chars = set('-—–─_=~·•*')
+            separator_chars = set('-—–─═_=~·•*')
             separator_count = sum(1 for c in text if c in separator_chars)
             return separator_count / len(text) > 0.8
 
