@@ -114,6 +114,13 @@ class ArticleResponse(TimestampSchema):
     faq_editorial_notes: dict | None = Field(default=None, description='FAQ editorial notes')
     faq_html: str | None = Field(default=None, description='Generated FAQ HTML section')
 
+    # Phase 15: AEO and Document Metadata
+    aeo_type: str | None = Field(default=None, description='AEO type (e.g., 定義解說型, 步驟操作型)')
+    aeo_paragraph: str | None = Field(default=None, description='AEO first paragraph for answer boxes')
+    seo_title_variants: list[dict] | None = Field(default=None, description='SEO title variants (資訊型/懸念型)')
+    doc_proofreading_suggestions: list[dict] | None = Field(default=None, description='Proofreading from 校對結果 section')
+    doc_image_alt_texts: list[dict] | None = Field(default=None, description='Image alt texts from 圖片 Alt Text section')
+
 
 class ArticleListResponse(BaseSchema):
     """Schema for article list response."""

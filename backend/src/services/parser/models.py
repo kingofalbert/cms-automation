@@ -252,6 +252,35 @@ class ParsedArticle(BaseModel):
         description="How extracted FAQs were detected: html_comment_markers, css_class_markers, etc.",
     )
 
+    # Phase 15: Document metadata sections (from divider-separated sections)
+    # AEO (Answer Engine Optimization)
+    aeo_type: str | None = Field(
+        None,
+        description="AEO type from document (e.g., 定義解說型, 步驟操作型)",
+    )
+    aeo_paragraph: str | None = Field(
+        None,
+        description="AEO first paragraph optimized for search engine answer boxes",
+    )
+
+    # SEO title variants from document (資訊型 and 懸念型)
+    seo_title_variants: list[dict[str, str]] | None = Field(
+        None,
+        description="SEO title variants from doc, e.g., [{type: '資訊型', title: '...'}, {type: '懸念型', title: '...'}]",
+    )
+
+    # Document proofreading suggestions (from 校對結果 section)
+    doc_proofreading_suggestions: list[dict[str, Any]] | None = Field(
+        None,
+        description="Proofreading suggestions extracted from document's 校對結果 section",
+    )
+
+    # Document image alt texts (from 圖片 Alt Text section)
+    doc_image_alt_texts: list[dict[str, Any]] | None = Field(
+        None,
+        description="Image alt texts from document's 圖片 Alt Text section with Drive links",
+    )
+
     # Phase 12: Internal Link Recommendations
     related_articles: list[RelatedArticle] = Field(
         default_factory=list,

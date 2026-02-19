@@ -173,6 +173,13 @@ class ParsedArticleData(BaseModel):
     extracted_faqs: list[dict[str, Any]] | None = None
     extracted_faqs_detection_method: str | None = None
 
+    # Phase 15: AEO and document metadata
+    aeo_type: str | None = None
+    aeo_paragraph: str | None = None
+    seo_title_variants: list[dict[str, str]] | None = None
+    doc_proofreading_suggestions: list[dict[str, Any]] | None = None
+    doc_image_alt_texts: list[dict[str, Any]] | None = None
+
     class Config:
         from_attributes = True
 
@@ -426,6 +433,12 @@ async def get_parsing_result(
         # Phase 14: Extracted FAQs for comparison
         extracted_faqs=article.extracted_faqs,
         extracted_faqs_detection_method=article.extracted_faqs_detection_method,
+        # Phase 15: AEO and document metadata
+        aeo_type=article.aeo_type,
+        aeo_paragraph=article.aeo_paragraph,
+        seo_title_variants=article.seo_title_variants,
+        doc_proofreading_suggestions=article.doc_proofreading_suggestions,
+        doc_image_alt_texts=article.doc_image_alt_texts,
     )
 
 

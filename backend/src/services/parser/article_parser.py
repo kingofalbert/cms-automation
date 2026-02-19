@@ -204,6 +204,355 @@ def _repair_json(text: str) -> str | None:
     return repaired
 
 
+def _extract_metadata_sections(body_html: str) -> dict[str, Any]:
+    """Extract structured metadata from sections after the divider in body_html.
+
+    The Google Doc article format includes metadata sections after a divider line:
+    ════════════════════════════════
+    H2: 校對結果 (proofreading suggestions)
+    H2: Meta + AEO (SEO title variants, meta description, focus keyword, tags, AEO)
+    ════════════════════════════════
+    H2: 圖片 Alt Text (image alt texts with Drive links)
+
+    This function extracts and parses these sections BEFORE body truncation.
+
+    Args:
+        body_html: The body HTML content from AI parsing
+
+    Returns:
+        Dict with extracted metadata:
+        - proofreading_suggestions: list of {original, suggestion, reason}
+        - seo_title_variants: list of {type, title}
+        - meta_description: str or None
+        - focus_keyword: str or None
+        - tags: list of str
+        - aeo_type: str or None
+        - aeo_paragraph: str or None
+        - image_alt_texts: list of {position, alt_text, drive_link}
+    """
+    import re
+
+    result: dict[str, Any] = {
+        "proofreading_suggestions": [],
+        "seo_title_variants": [],
+        "meta_description": None,
+        "focus_keyword": None,
+        "tags": [],
+        "aeo_type": None,
+        "aeo_paragraph": None,
+        "image_alt_texts": [],
+    }
+
+    if not body_html:
+        return result
+
+    # Find the first divider to get metadata content after it
+    divider_pattern = r'<p>\s*[-—–─═_=·•]{5,}[-—–─═_=·•\s]*</p>'
+    divider_match = re.search(divider_pattern, body_html, flags=re.IGNORECASE)
+
+    if not divider_match:
+        # Fallback: check for metadata H2 headers without divider
+        metadata_h2_pattern = r'<h2[^>]*>\s*(?:校對結果|Meta\s*\+?\s*AEO|圖片\s*Alt\s*Text)\s*</h2>'
+        metadata_h2_match = re.search(metadata_h2_pattern, body_html, flags=re.IGNORECASE)
+        if not metadata_h2_match:
+            logger.debug("[METADATA EXTRACT] No divider or metadata H2 found, nothing to extract")
+            return result
+        metadata_content = body_html[metadata_h2_match.start():]
+    else:
+        metadata_content = body_html[divider_match.end():]
+
+    # Remove additional dividers within the metadata content
+    metadata_content = re.sub(divider_pattern, '', metadata_content)
+
+    logger.info(f"[METADATA EXTRACT] Found metadata content: {len(metadata_content)} chars")
+
+    # Split into sections by H2 headers
+    # Pattern: <h2>Section Name</h2> ... (content until next <h2> or end)
+    section_pattern = r'<h2[^>]*>\s*(.*?)\s*</h2>'
+    sections: dict[str, str] = {}
+    section_matches = list(re.finditer(section_pattern, metadata_content, flags=re.IGNORECASE | re.DOTALL))
+
+    for i, match in enumerate(section_matches):
+        section_name = re.sub(r'<[^>]+>', '', match.group(1)).strip()
+        start = match.end()
+        end = section_matches[i + 1].start() if i + 1 < len(section_matches) else len(metadata_content)
+        section_content = metadata_content[start:end].strip()
+        sections[section_name] = section_content
+        logger.debug(f"[METADATA EXTRACT] Section '{section_name}': {len(section_content)} chars")
+
+    # --- Parse 校對結果 (Proofreading Suggestions) ---
+    for name, content in sections.items():
+        if '校對結果' in name or '校對' in name:
+            result["proofreading_suggestions"] = _parse_proofreading_section(content)
+            break
+
+    # --- Parse Meta + AEO ---
+    for name, content in sections.items():
+        if 'Meta' in name or 'AEO' in name:
+            aeo_data = _parse_meta_aeo_section(content)
+            result["seo_title_variants"] = aeo_data.get("seo_title_variants", [])
+            result["meta_description"] = aeo_data.get("meta_description")
+            result["focus_keyword"] = aeo_data.get("focus_keyword")
+            result["tags"] = aeo_data.get("tags", [])
+            result["aeo_type"] = aeo_data.get("aeo_type")
+            result["aeo_paragraph"] = aeo_data.get("aeo_paragraph")
+            break
+
+    # --- Parse 圖片 Alt Text ---
+    for name, content in sections.items():
+        if '圖片' in name or 'Alt' in name:
+            result["image_alt_texts"] = _parse_image_alt_text_section(content)
+            break
+
+    logger.info(
+        f"[METADATA EXTRACT] Results: "
+        f"{len(result['proofreading_suggestions'])} proofreading suggestions, "
+        f"{len(result['seo_title_variants'])} SEO title variants, "
+        f"meta_desc={'yes' if result['meta_description'] else 'no'}, "
+        f"focus_kw={'yes' if result['focus_keyword'] else 'no'}, "
+        f"{len(result['tags'])} tags, "
+        f"aeo_type={result['aeo_type']}, "
+        f"{len(result['image_alt_texts'])} image alt texts"
+    )
+
+    return result
+
+
+def _parse_proofreading_section(html_content: str) -> list[dict[str, str]]:
+    """Parse the 校對結果 section into structured proofreading suggestions.
+
+    Expected format:
+        1. 原文：「XXX」→ 建議：「YYY」（原因描述）
+        2. 原文：「AAA」→ 建議：「BBB」（原因描述）
+
+    Also handles simpler formats:
+        1. 「XXX」→「YYY」原因
+        1. XXX → YYY（原因）
+    """
+    import re
+    from bs4 import BeautifulSoup
+
+    suggestions = []
+    soup = BeautifulSoup(html_content, "html.parser")
+    text_content = soup.get_text(separator="\n")
+
+    # Pattern 1: 原文：「X」→ 建議：「Y」（reason）
+    pattern1 = re.compile(
+        r'(\d+)\.\s*原文[：:]\s*[「「"](.*?)[」」"]\s*[→➡→]\s*建議[：:]\s*[「「"](.*?)[」」"]\s*[（(](.*?)[）)]',
+        re.DOTALL
+    )
+    # Pattern 2: 「X」→「Y」reason
+    pattern2 = re.compile(
+        r'(\d+)\.\s*[「「"](.*?)[」」"]\s*[→➡→]\s*[「「"](.*?)[」」"]\s*(.*?)(?=\n\d+\.|$)',
+        re.DOTALL
+    )
+    # Pattern 3: X → Y（reason）
+    pattern3 = re.compile(
+        r'(\d+)\.\s*(.*?)\s*[→➡→]\s*(.*?)(?:\s*[（(](.*?)[）)])?(?=\n\d+\.|$)',
+        re.DOTALL
+    )
+
+    matches = pattern1.findall(text_content)
+    if matches:
+        for m in matches:
+            suggestions.append({
+                "position": int(m[0]),
+                "original": m[1].strip(),
+                "suggestion": m[2].strip(),
+                "reason": m[3].strip(),
+                "source": "doc_proofreading",
+            })
+    else:
+        matches = pattern2.findall(text_content)
+        if matches:
+            for m in matches:
+                suggestions.append({
+                    "position": int(m[0]),
+                    "original": m[1].strip(),
+                    "suggestion": m[2].strip(),
+                    "reason": m[3].strip() if m[3] else "",
+                    "source": "doc_proofreading",
+                })
+        else:
+            matches = pattern3.findall(text_content)
+            for m in matches:
+                original = m[1].strip()
+                suggestion_text = m[2].strip()
+                reason = m[3].strip() if len(m) > 3 and m[3] else ""
+                if original and suggestion_text:
+                    suggestions.append({
+                        "position": int(m[0]),
+                        "original": original,
+                        "suggestion": suggestion_text,
+                        "reason": reason,
+                        "source": "doc_proofreading",
+                    })
+
+    logger.debug(f"[PROOFREADING PARSE] Extracted {len(suggestions)} suggestions")
+    return suggestions
+
+
+def _parse_meta_aeo_section(html_content: str) -> dict[str, Any]:
+    """Parse the Meta + AEO section into structured SEO and AEO data.
+
+    Expected format:
+        SEO標題（資訊型）：老花眼必看：中醫針灸改善視力的5大穴位指南
+        SEO標題（懸念型）：為什麼中醫針灸能讓老花眼不再模糊？
+        Meta 描述：探討中醫針灸如何改善老花眼...
+        Focus Keyword：老花眼 中醫 針灸
+        Tags：老花眼, 中醫, 針灸, 視力保健
+        AEO 類型：定義解說型
+        AEO 首段：老花眼是一種常見的...
+    """
+    import re
+    from bs4 import BeautifulSoup
+
+    result: dict[str, Any] = {
+        "seo_title_variants": [],
+        "meta_description": None,
+        "focus_keyword": None,
+        "tags": [],
+        "aeo_type": None,
+        "aeo_paragraph": None,
+    }
+
+    soup = BeautifulSoup(html_content, "html.parser")
+    text_content = soup.get_text(separator="\n")
+    lines = [line.strip() for line in text_content.split("\n") if line.strip()]
+
+    for line in lines:
+        # SEO標題（資訊型）：...  or SEO標題（懸念型）：...
+        seo_title_match = re.match(
+            r'SEO\s*標題\s*[（(]\s*(.*?)\s*[）)]\s*[：:]\s*(.*)',
+            line, re.IGNORECASE
+        )
+        if seo_title_match:
+            variant_type = seo_title_match.group(1).strip()
+            title_text = seo_title_match.group(2).strip()
+            if title_text:
+                result["seo_title_variants"].append({
+                    "type": variant_type,
+                    "title": title_text,
+                })
+            continue
+
+        # Meta 描述：... or Meta Description：...
+        meta_match = re.match(
+            r'Meta\s*(?:描述|Description)\s*[：:]\s*(.*)',
+            line, re.IGNORECASE
+        )
+        if meta_match:
+            result["meta_description"] = meta_match.group(1).strip()
+            continue
+
+        # Focus Keyword：...
+        fk_match = re.match(
+            r'Focus\s*Keyword\s*[：:]\s*(.*)',
+            line, re.IGNORECASE
+        )
+        if fk_match:
+            result["focus_keyword"] = fk_match.group(1).strip()
+            continue
+
+        # Tags：...
+        tags_match = re.match(
+            r'Tags?\s*[：:]\s*(.*)',
+            line, re.IGNORECASE
+        )
+        if tags_match:
+            raw_tags = tags_match.group(1).strip()
+            # Split by comma, Chinese comma, or slash
+            result["tags"] = [
+                t.strip() for t in re.split(r'[,，、/]', raw_tags) if t.strip()
+            ]
+            continue
+
+        # AEO 類型：...
+        aeo_type_match = re.match(
+            r'AEO\s*類型\s*[：:]\s*(.*)',
+            line, re.IGNORECASE
+        )
+        if aeo_type_match:
+            result["aeo_type"] = aeo_type_match.group(1).strip()
+            continue
+
+        # AEO 首段：...  (may span multiple lines)
+        aeo_para_match = re.match(
+            r'AEO\s*首段\s*[：:]\s*(.*)',
+            line, re.IGNORECASE
+        )
+        if aeo_para_match:
+            result["aeo_paragraph"] = aeo_para_match.group(1).strip()
+            continue
+
+    # If AEO paragraph was not found on a single line, try multiline extraction
+    if not result["aeo_paragraph"]:
+        aeo_para_match = re.search(
+            r'AEO\s*首段\s*[：:]\s*(.*?)(?=\n(?:SEO|Meta|Focus|Tags?|AEO\s*類型)|$)',
+            text_content, re.IGNORECASE | re.DOTALL
+        )
+        if aeo_para_match:
+            result["aeo_paragraph"] = aeo_para_match.group(1).strip()
+
+    logger.debug(
+        f"[META+AEO PARSE] {len(result['seo_title_variants'])} title variants, "
+        f"meta_desc={bool(result['meta_description'])}, focus_kw={result['focus_keyword']}, "
+        f"aeo_type={result['aeo_type']}"
+    )
+    return result
+
+
+def _parse_image_alt_text_section(html_content: str) -> list[dict[str, str | None]]:
+    """Parse the 圖片 Alt Text section into structured image alt text data.
+
+    Expected format:
+        1. 針灸治療老花眼的穴位示意圖 (https://drive.google.com/...)
+        2. 中醫師施針改善視力 (https://drive.google.com/...)
+
+    Also handles:
+        1. Alt text here
+           https://drive.google.com/...
+    """
+    import re
+    from bs4 import BeautifulSoup
+
+    alt_texts = []
+    soup = BeautifulSoup(html_content, "html.parser")
+    text_content = soup.get_text(separator="\n")
+
+    # Also extract links from <a> tags
+    links_by_position: dict[int, str] = {}
+    for a_tag in soup.find_all("a", href=True):
+        href = a_tag["href"]
+        if "drive.google.com" in href or "docs.google.com" in href:
+            # Try to find the numbered position context
+            parent_text = a_tag.parent.get_text() if a_tag.parent else ""
+            num_match = re.match(r'(\d+)', parent_text.strip())
+            if num_match:
+                links_by_position[int(num_match.group(1))] = href
+
+    # Pattern: number. alt_text (optional_url)
+    pattern = re.compile(
+        r'(\d+)\.\s*(.*?)(?:\s*[（(]?\s*(https?://[^\s)）]+)\s*[）)]?)?$',
+        re.MULTILINE
+    )
+
+    for match in pattern.finditer(text_content):
+        position = int(match.group(1))
+        alt_text = match.group(2).strip().rstrip('(（')
+        drive_link = match.group(3) if match.group(3) else links_by_position.get(position)
+
+        if alt_text:
+            alt_texts.append({
+                "position": position,
+                "alt_text": alt_text,
+                "drive_link": drive_link,
+            })
+
+    logger.debug(f"[IMAGE ALT PARSE] Extracted {len(alt_texts)} image alt texts")
+    return alt_texts
+
+
 def _clean_metadata_sections_from_body(body_html: str) -> str:
     """Remove metadata sections (Tag suggestions, SEO keywords, etc.) from body content.
 
@@ -717,7 +1066,11 @@ class ArticleParserService:
                 else None
             )
 
-            # Clean metadata sections from body_html before creating ParsedArticle
+            # Phase 15: Extract metadata sections BEFORE cleaning body_html
+            # This captures data from 校對結果, Meta+AEO, 圖片 Alt Text sections
+            doc_metadata = _extract_metadata_sections(parsed_data["body_html"])
+
+            # Clean metadata sections from body_html (truncates at divider)
             cleaned_body_html = _clean_metadata_sections_from_body(parsed_data["body_html"])
 
             # Extract existing FAQs from the body HTML (if any are marked)
@@ -758,6 +1111,22 @@ class ArticleParserService:
             )
             logger.info(f"SEO Title final choice: '{final_seo_title}' (source: {seo_source})")
 
+            # Phase 15: Use doc metadata to enrich SEO fields if AI didn't provide them
+            effective_meta_description = parsed_data.get("meta_description")
+            if not effective_meta_description and doc_metadata.get("meta_description"):
+                effective_meta_description = doc_metadata["meta_description"]
+                logger.info("[P15] Using meta_description from document metadata section")
+
+            effective_focus_keyword = focus_keyword
+            if not effective_focus_keyword and doc_metadata.get("focus_keyword"):
+                effective_focus_keyword = doc_metadata["focus_keyword"]
+                logger.info("[P15] Using focus_keyword from document metadata section")
+
+            effective_tags = parsed_data.get("tags", [])
+            if not effective_tags and doc_metadata.get("tags"):
+                effective_tags = doc_metadata["tags"]
+                logger.info("[P15] Using tags from document metadata section")
+
             # Construct ParsedArticle from AI response
             parsed_article = ParsedArticle(
                 title_prefix=parsed_data.get("title_prefix"),
@@ -769,14 +1138,14 @@ class ArticleParserService:
                 author_line=parsed_data.get("author_line"),
                 author_name=parsed_data.get("author_name"),
                 body_html=cleaned_body_html,
-                meta_description=parsed_data.get("meta_description"),
+                meta_description=effective_meta_description,
                 seo_keywords=parsed_data.get("seo_keywords", []),
-                tags=parsed_data.get("tags", []),
+                tags=effective_tags,
                 # Phase 10: WordPress taxonomy fields
                 primary_category=parsed_data.get("primary_category"),
                 # Phase 11: Secondary categories for cross-listing
                 secondary_categories=parsed_data.get("secondary_categories", []),
-                focus_keyword=focus_keyword,
+                focus_keyword=effective_focus_keyword,
                 images=self._parse_images_from_ai_response(parsed_data.get("images", [])),
                 # Phase 7.5: Unified AI Parsing fields
                 suggested_titles=parsed_data.get("suggested_titles"),
@@ -788,6 +1157,12 @@ class ArticleParserService:
                 # Extracted FAQs from existing article content
                 extracted_faqs=extracted_faqs,
                 extracted_faqs_detection_method=extracted_faqs_detection_method,
+                # Phase 15: Document metadata sections
+                aeo_type=doc_metadata.get("aeo_type"),
+                aeo_paragraph=doc_metadata.get("aeo_paragraph"),
+                seo_title_variants=doc_metadata.get("seo_title_variants") or None,
+                doc_proofreading_suggestions=doc_metadata.get("proofreading_suggestions") or None,
+                doc_image_alt_texts=doc_metadata.get("image_alt_texts") or None,
                 parsing_method="ai",
                 parsing_confidence=0.95,  # AI has high confidence
             )
@@ -1274,6 +1649,9 @@ Process the above {content_type} and return the complete JSON response:"""
             seo_data = self._extract_seo_metadata(soup)
             images = self._extract_images(soup)
 
+            # Phase 15: Extract metadata sections BEFORE cleaning body_html
+            doc_metadata = _extract_metadata_sections(body_html)
+
             # Clean metadata sections from body_html
             cleaned_body_html = _clean_metadata_sections_from_body(body_html)
 
@@ -1299,6 +1677,15 @@ Process the above {content_type} and return the complete JSON response:"""
                     )
                     logger.info("[Heuristic] Removed extracted FAQ section from body_html")
 
+            # Phase 15: Enrich with document metadata if available
+            effective_meta_desc = seo_data.get("description")
+            if not effective_meta_desc and doc_metadata.get("meta_description"):
+                effective_meta_desc = doc_metadata["meta_description"]
+
+            effective_tags = seo_data.get("tags", [])
+            if not effective_tags and doc_metadata.get("tags"):
+                effective_tags = doc_metadata["tags"]
+
             # Construct parsed article
             parsed_article = ParsedArticle(
                 title_prefix=title_data.get("prefix"),
@@ -1310,13 +1697,20 @@ Process the above {content_type} and return the complete JSON response:"""
                 author_line=author_data.get("raw_line"),
                 author_name=author_data.get("name"),
                 body_html=cleaned_body_html,
-                meta_description=seo_data.get("description"),
+                meta_description=effective_meta_desc,
                 seo_keywords=seo_data.get("keywords", []),
-                tags=seo_data.get("tags", []),
+                tags=effective_tags,
+                focus_keyword=doc_metadata.get("focus_keyword"),
                 images=images,
                 # Extracted FAQs from existing article content
                 extracted_faqs=extracted_faqs,
                 extracted_faqs_detection_method=extracted_faqs_detection_method,
+                # Phase 15: Document metadata sections
+                aeo_type=doc_metadata.get("aeo_type"),
+                aeo_paragraph=doc_metadata.get("aeo_paragraph"),
+                seo_title_variants=doc_metadata.get("seo_title_variants") or None,
+                doc_proofreading_suggestions=doc_metadata.get("proofreading_suggestions") or None,
+                doc_image_alt_texts=doc_metadata.get("image_alt_texts") or None,
                 parsing_method="heuristic",
                 parsing_confidence=0.7,  # Heuristic has lower confidence than AI
             )

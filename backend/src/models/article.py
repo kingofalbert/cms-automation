@@ -426,6 +426,39 @@ class Article(Base, TimestampMixin):
         comment="How extracted FAQs were detected: text_markers, html_comment, css_class, etc.",
     )
 
+    # Phase 15: AEO (Answer Engine Optimization) fields
+    aeo_type: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+        comment="AEO type from document (e.g., 定義解說型, 步驟操作型, 列表型)",
+    )
+    aeo_paragraph: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="AEO first paragraph optimized for search engine answer boxes",
+    )
+
+    # Phase 15: SEO title variants from document
+    seo_title_variants: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="SEO title variants from doc [{type: '資訊型', title: '...'}, {type: '懸念型', title: '...'}]",
+    )
+
+    # Phase 15: Document proofreading suggestions (from 校對結果 section)
+    doc_proofreading_suggestions: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Proofreading suggestions from document's 校對結果 section",
+    )
+
+    # Phase 15: Document image alt texts (from 圖片 Alt Text section)
+    doc_image_alt_texts: Mapped[list | None] = mapped_column(
+        JSONB,
+        nullable=True,
+        comment="Image alt texts from document's 圖片 Alt Text section with Drive links",
+    )
+
     # Metadata
     article_metadata: Mapped[dict] = mapped_column(
         JSONB,

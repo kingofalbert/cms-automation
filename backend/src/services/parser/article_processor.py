@@ -105,6 +105,12 @@ class ArticleProcessingService:
                 article_id, parsed_article.images, db_session
             )
 
+        # Step 3.5: Apply document image alt texts to processed images (Phase 15)
+        if parsed_article.doc_image_alt_texts and processed_images:
+            await self._apply_doc_image_alt_texts(
+                processed_images, parsed_article.doc_image_alt_texts, db_session
+            )
+
         # Step 4: Match related articles for internal linking (Phase 12)
         related_articles_count = 0
         if self.internal_link_service.is_configured:
@@ -214,7 +220,27 @@ class ArticleProcessingService:
                 f"(method: {parsed_article.extracted_faqs_detection_method})"
             )
 
-        logger.debug(f"Updated article {article_id} with parsed data (including tags, categories, SEO fields)")
+        # Phase 15: Store document metadata sections (AEO, SEO variants, proofreading, alt texts)
+        if parsed_article.aeo_type:
+            article.aeo_type = parsed_article.aeo_type
+        if parsed_article.aeo_paragraph:
+            article.aeo_paragraph = parsed_article.aeo_paragraph
+        if parsed_article.seo_title_variants:
+            article.seo_title_variants = parsed_article.seo_title_variants
+        if parsed_article.doc_proofreading_suggestions:
+            article.doc_proofreading_suggestions = parsed_article.doc_proofreading_suggestions
+            logger.debug(
+                f"Stored {len(parsed_article.doc_proofreading_suggestions)} "
+                f"proofreading suggestions from document"
+            )
+        if parsed_article.doc_image_alt_texts:
+            article.doc_image_alt_texts = parsed_article.doc_image_alt_texts
+            logger.debug(
+                f"Stored {len(parsed_article.doc_image_alt_texts)} "
+                f"image alt texts from document"
+            )
+
+        logger.debug(f"Updated article {article_id} with parsed data (including tags, categories, SEO, AEO fields)")
 
         # Phase 7.5: Save AI-generated FAQs to article_faqs table
         # This allows FAQs to be displayed immediately without needing manual generation
@@ -358,6 +384,51 @@ class ArticleProcessingService:
             db_session.add(faq)
 
         logger.info(f"Successfully saved {len(faqs)} FAQs for article {article_id}")
+
+    async def _apply_doc_image_alt_texts(
+        self,
+        article_images: list[ArticleImage],
+        doc_alt_texts: list[dict],
+        db_session: AsyncSession,
+    ) -> None:
+        """Apply human-written alt texts from document to ArticleImage records.
+
+        Matches by position (1-based in doc → 0-based in images).
+        Also stores the Google Drive link for reference.
+
+        Args:
+            article_images: List of ArticleImage records from image processing
+            doc_alt_texts: List of {position, alt_text, drive_link} from document
+            db_session: Database session
+        """
+        if not doc_alt_texts:
+            return
+
+        # Build lookup by position (doc uses 1-based indexing)
+        alt_text_map: dict[int, dict] = {}
+        for item in doc_alt_texts:
+            pos = item.get("position", 0)
+            alt_text_map[pos] = item
+
+        applied_count = 0
+        for img in article_images:
+            # Try 1-based position matching (doc position 1 = image index 0)
+            doc_pos = img.position + 1
+            if doc_pos in alt_text_map:
+                alt_data = alt_text_map[doc_pos]
+                if alt_data.get("alt_text"):
+                    img.alt_text = alt_data["alt_text"]
+                    applied_count += 1
+                    logger.debug(
+                        f"Applied doc alt text to image at position {img.position}: "
+                        f"'{alt_data['alt_text'][:50]}...'"
+                    )
+
+        if applied_count:
+            logger.info(
+                f"[P15] Applied {applied_count}/{len(article_images)} "
+                f"image alt texts from document"
+            )
 
     async def _process_images(
         self,
