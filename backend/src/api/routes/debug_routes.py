@@ -116,6 +116,14 @@ async def get_column_sizes(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     """Get estimated size of each column in a table."""
+    # Whitelist of allowed tables for safety
+    allowed_tables = {"worklist_items", "articles", "health_articles", "proofreading_decisions"}
+    if table_name not in allowed_tables:
+        return {
+            "success": False,
+            "error": f"Table '{table_name}' not in allowed list: {allowed_tables}",
+        }
+
     try:
         # Get column information and estimate sizes
         query = text(f"""

@@ -11,6 +11,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { Button, Tooltip } from '../ui';
+import { api } from '../../lib/api';
 import {
   Image as ImageIcon,
   X,
@@ -363,17 +364,10 @@ const ImageInfoCard: React.FC<{
     setError(null);
 
     try {
-      const response = await fetch(`/api/v1/images/${image.id}/generate-alt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ use_vision: true }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`生成失敗: ${response.statusText}`);
-      }
-
-      const data: ImageAltSuggestion = await response.json();
+      const data = await api.post<ImageAltSuggestion>(
+        `/api/v1/images/${image.id}/generate-alt`,
+        { use_vision: true }
+      );
       setSuggestion(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '生成失敗');

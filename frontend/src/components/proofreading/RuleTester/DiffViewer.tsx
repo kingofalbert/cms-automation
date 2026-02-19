@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, Tag, Switch, Space, Alert } from 'antd';
 import { DiffOutlined, EyeOutlined } from '@ant-design/icons';
+import DOMPurify from 'dompurify';
 import './DiffViewer.css';
 
 interface DiffViewerProps {
@@ -121,7 +122,7 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified, changes }) 
               <div
                 className="diff-text"
                 dangerouslySetInnerHTML={{
-                  __html: generateHighlightedText.modified
+                  __html: DOMPurify.sanitize(generateHighlightedText.modified)
                 }}
               />
             </div>
@@ -138,7 +139,7 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified, changes }) 
               <div
                 className="diff-text"
                 dangerouslySetInnerHTML={{
-                  __html: generateHighlightedText.original
+                  __html: DOMPurify.sanitize(generateHighlightedText.original)
                 }}
               />
             </Card>
@@ -151,7 +152,7 @@ const DiffViewer: React.FC<DiffViewerProps> = ({ original, modified, changes }) 
               <div
                 className="diff-text"
                 dangerouslySetInnerHTML={{
-                  __html: generateHighlightedText.modified
+                  __html: DOMPurify.sanitize(generateHighlightedText.modified)
                 }}
               />
             </Card>

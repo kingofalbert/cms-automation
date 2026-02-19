@@ -111,8 +111,8 @@ class UnifiedOptimizationService:
             output_tokens = response.usage.output_tokens
             total_tokens = input_tokens + output_tokens
 
-            # Calculate cost (Claude Sonnet 4.5 pricing: $3/M input, $15/M output)
-            cost_usd = (input_tokens / 1_000_000 * 3.0) + (output_tokens / 1_000_000 * 15.0)
+            # Calculate cost (Claude Opus 4.5 pricing: $15/M input, $75/M output)
+            cost_usd = (input_tokens / 1_000_000 * 15.0) + (output_tokens / 1_000_000 * 75.0)
 
             duration_ms = int((datetime.now() - start_time).total_seconds() * 1000)
 

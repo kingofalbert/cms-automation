@@ -217,6 +217,10 @@ export default function ProofreadingReviewPage() {
 
   // Handle keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Skip keyboard shortcuts when focus is in an input element
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable || target.getAttribute('role') === 'textbox') return;
+
     if (!selectedIssue) return;
 
     switch (e.key) {

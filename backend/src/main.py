@@ -46,13 +46,15 @@ def create_app() -> FastAPI:
     """
     settings = get_settings()
 
+    # Disable API docs in production
+    is_production = settings.ENVIRONMENT == "production"
     app = FastAPI(
         title=settings.API_TITLE,
         version=settings.API_VERSION,
         description="AI-powered CMS automation using Claude Computer Use API",
         lifespan=lifespan,
-        docs_url="/docs",  # Always enable docs
-        redoc_url="/redoc",  # Always enable ReDoc
+        docs_url=None if is_production else "/docs",
+        redoc_url=None if is_production else "/redoc",
     )
 
     # Add CORS middleware
@@ -60,8 +62,8 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.ALLOWED_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Request-ID"],
         expose_headers=["X-Request-ID"],
     )
 

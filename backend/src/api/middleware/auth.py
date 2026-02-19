@@ -1,5 +1,6 @@
 """Authentication middleware for FastAPI with Supabase JWT verification."""
 
+import hmac
 from collections.abc import Callable
 from typing import Optional
 
@@ -90,7 +91,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             api_key = request.headers.get("X-API-Key")
             if api_key:
                 settings = get_settings()
-                if settings.GAS_API_KEY and api_key == settings.GAS_API_KEY:
+                if settings.GAS_API_KEY and hmac.compare_digest(api_key, settings.GAS_API_KEY):
                     request.state.user_id = "gas-automation"
                     request.state.user_email = None
                     request.state.user_role = "automation"
@@ -116,7 +117,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         if not self.require_auth:
             request.state.user_id = "anonymous"
             request.state.user_email = None
-            request.state.user_role = "editor"
+            request.state.user_role = "viewer"
             return await call_next(request)
 
         # Extract authorization header

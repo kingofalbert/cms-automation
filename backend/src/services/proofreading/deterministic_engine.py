@@ -710,7 +710,7 @@ class QuotationMatchingRule(DeterministicRule):
         left_main = content.count("「")
         right_main = content.count("」")
         left_inner = content.count("『")
-        right_inner = content.count("」")
+        right_inner = content.count("』")
 
         if left_main != right_main:
             issues.append(
@@ -4095,8 +4095,8 @@ class VariantWordRule(DeterministicRule):
                     source=RuleSource.SCRIPT,
                     attributed_by=self.__class__.__name__,
                     location={"offset": match.start()},
-                    snippet=snippet,
-                    auto_fix_value=self.correct_form,
+                    original_text=snippet,
+                    suggested_text=self.correct_form,
                 )
             )
         return issues
@@ -4958,7 +4958,7 @@ class A3_037_BiMianRule(TypoReplacementRule):
     def __init__(self) -> None:
         super().__init__(
             rule_id="A3-037",
-            wrong_pattern=r"[壁避辟]免",
+            wrong_pattern=r"[壁辟]免",
             correct_form="避免",
             description="应为 '避免'，不写 '壁免/辟免'",
         )
@@ -4982,7 +4982,7 @@ class A3_039_ShiGanRule(TypoReplacementRule):
     def __init__(self) -> None:
         super().__init__(
             rule_id="A3-039",
-            wrong_pattern=r"试管婴[孩儿]",
+            wrong_pattern=r"试管婴孩",
             correct_form="试管婴儿",
             description="应为 '试管婴儿'，不写 '试管婴孩'",
         )
@@ -5968,7 +5968,7 @@ class C1_009_OrdinalNumberRule(DeterministicRule):
     """Check ordinal number format (C1-009)."""
 
     # 匹配序数格式
-    ORDINAL_PATTERN = re.compile(r"第\s*[0-9]+\s*[个|位|名|次|届|期|章|条|项]")
+    ORDINAL_PATTERN = re.compile(r"第\s*[0-9]+\s*[个位名次届期章条项]")
 
     def __init__(self) -> None:
         super().__init__(

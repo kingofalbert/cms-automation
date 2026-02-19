@@ -336,71 +336,6 @@ async def get_article_decisions(
 
 
 @router.get(
-    "/{decision_id}",
-    response_model=DecisionResponse,
-    summary="獲取決策詳情",
-    description="獲取指定決策的詳細信息"
-)
-async def get_decision_detail(
-    decision_id: int = Path(..., gt=0, description="決策ID"),
-    session: AsyncSession = Depends(get_session),
-    service: ProofreadingDecisionService = Depends(get_service)
-):
-    """獲取決策詳情
-
-    Args:
-        decision_id: 決策ID
-        session: 數據庫會話
-        service: 決策服務
-
-    Returns:
-        決策詳情
-
-    Raises:
-        HTTPException: 當決策不存在時
-    """
-    try:
-        # 查詢決策
-        from sqlalchemy import select
-
-        from src.models.proofreading import ProofreadingDecision
-
-        result = await session.execute(
-            select(ProofreadingDecision).where(ProofreadingDecision.id == decision_id)
-        )
-        decision = result.scalar_one_or_none()
-
-        if not decision:
-            raise HTTPException(status_code=404, detail=f"決策不存在: {decision_id}")
-
-        # 轉換為響應模型
-        return DecisionResponse(
-            decision_id=decision.id,
-            article_id=decision.article_id,
-            proofreading_history_id=decision.proofreading_history_id,
-            suggestion_id=decision.suggestion_id,
-            suggestion_type=decision.suggestion_type,
-            original_text=decision.original_text,
-            suggested_text=decision.suggested_text,
-            decision=DecisionTypeEnum(decision.decision.value.lower()),
-            custom_correction=decision.custom_correction,
-            decision_reason=decision.decision_reason,
-            confidence_score=decision.confidence_score,
-            context_before=decision.context_before,
-            context_after=decision.context_after,
-            tags=decision.tags or [],
-            created_at=decision.created_at,
-            updated_at=decision.updated_at
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"獲取決策詳情失敗: {e}")
-        raise HTTPException(status_code=500, detail="獲取決策詳情失敗") from e
-
-
-@router.get(
     "/history",
     response_model=DecisionListResponse,
     summary="查詢決策歷史",
@@ -486,6 +421,71 @@ async def query_decision_history(
     except Exception as e:
         logger.error(f"查詢決策歷史失敗: {e}")
         raise HTTPException(status_code=500, detail="查詢失敗") from e
+
+
+@router.get(
+    "/{decision_id}",
+    response_model=DecisionResponse,
+    summary="獲取決策詳情",
+    description="獲取指定決策的詳細信息"
+)
+async def get_decision_detail(
+    decision_id: int = Path(..., gt=0, description="決策ID"),
+    session: AsyncSession = Depends(get_session),
+    service: ProofreadingDecisionService = Depends(get_service)
+):
+    """獲取決策詳情
+
+    Args:
+        decision_id: 決策ID
+        session: 數據庫會話
+        service: 決策服務
+
+    Returns:
+        決策詳情
+
+    Raises:
+        HTTPException: 當決策不存在時
+    """
+    try:
+        # 查詢決策
+        from sqlalchemy import select
+
+        from src.models.proofreading import ProofreadingDecision
+
+        result = await session.execute(
+            select(ProofreadingDecision).where(ProofreadingDecision.id == decision_id)
+        )
+        decision = result.scalar_one_or_none()
+
+        if not decision:
+            raise HTTPException(status_code=404, detail=f"決策不存在: {decision_id}")
+
+        # 轉換為響應模型
+        return DecisionResponse(
+            decision_id=decision.id,
+            article_id=decision.article_id,
+            proofreading_history_id=decision.proofreading_history_id,
+            suggestion_id=decision.suggestion_id,
+            suggestion_type=decision.suggestion_type,
+            original_text=decision.original_text,
+            suggested_text=decision.suggested_text,
+            decision=DecisionTypeEnum(decision.decision.value.lower()),
+            custom_correction=decision.custom_correction,
+            decision_reason=decision.decision_reason,
+            confidence_score=decision.confidence_score,
+            context_before=decision.context_before,
+            context_after=decision.context_after,
+            tags=decision.tags or [],
+            created_at=decision.created_at,
+            updated_at=decision.updated_at
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"獲取決策詳情失敗: {e}")
+        raise HTTPException(status_code=500, detail="獲取決策詳情失敗") from e
 
 
 # ============================================================================
@@ -1562,10 +1562,35 @@ async def test_rules(
 
         # 簡單的模擬規則應用
         if request.rules:
+            import re
             for rule in request.rules:
                 if rule.pattern and rule.replacement:
-                    import re
-                    matches = list(re.finditer(rule.pattern, result_text))
+                    # Reject overly complex patterns to prevent ReDoS
+                    if len(rule.pattern) > 500:
+                        changes.append({
+                            "rule_id": rule.rule_id,
+                            "type": "error",
+                            "position": [0, 0],
+                            "original": "",
+                            "replacement": "",
+                            "confidence": 0,
+                            "error": "Pattern too long (max 500 chars)"
+                        })
+                        continue
+                    try:
+                        compiled = re.compile(rule.pattern)
+                    except re.error as regex_err:
+                        changes.append({
+                            "rule_id": rule.rule_id,
+                            "type": "error",
+                            "position": [0, 0],
+                            "original": "",
+                            "replacement": "",
+                            "confidence": 0,
+                            "error": f"Invalid regex pattern: {regex_err}"
+                        })
+                        continue
+                    matches = list(compiled.finditer(result_text))
                     for match in reversed(matches):  # 從後往前替換避免位置偏移
                         start, end = match.span()
                         changes.append({

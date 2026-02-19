@@ -595,11 +595,13 @@ class PlaywrightWordPressPublisher:
                     await self.page.wait_for_selector("#content_ifr", timeout=5000)
 
                     # Use JavaScript to set TinyMCE content (faster and more reliable)
-                    await self.page.evaluate(f"""
-                        if (typeof tinyMCE !== 'undefined' && tinyMCE.get('content')) {{
-                            tinyMCE.get('content').setContent({repr(content)});
-                        }}
-                    """)
+                    await self.page.evaluate("""
+                        (content) => {
+                            if (typeof tinyMCE !== 'undefined' && tinyMCE.get('content')) {
+                                tinyMCE.get('content').setContent(content);
+                            }
+                        }
+                    """, content)
 
                     # Verify via JavaScript
                     actual_content = await self.page.evaluate("""

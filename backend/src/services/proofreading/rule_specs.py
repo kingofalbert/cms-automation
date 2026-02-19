@@ -1072,7 +1072,7 @@ E3_HISTORICAL_EVENTS_EXTENDED_SPECS = [
         "confidence": 0.92,
     },
     {
-        "rule_id": "E3-307",
+        "rule_id": "E3-317",
         "category": "E",
         "subcategory": "E3",
         "patterns": ["土改"],

@@ -14,8 +14,7 @@ import {
   DecisionStatus,
   IssueEngine,
 } from '@/types/worklist';
-import { Button, Input } from '@/components/ui';
-import { Tooltip } from 'antd';
+import { Button, Input, Tooltip } from '@/components/ui';
 import {
   AlertCircle,
   AlertTriangle,
@@ -410,7 +409,7 @@ function CategoryBadge({ code, locale }: { code: string; locale: string }) {
   }
 
   return (
-    <Tooltip title={description} placement="top">
+    <Tooltip content={description} placement="top">
       <span className="inline-flex cursor-help items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700 hover:bg-slate-200">
         <span className="font-bold text-slate-500">{code}</span>
         <span className="text-slate-600">{label}</span>

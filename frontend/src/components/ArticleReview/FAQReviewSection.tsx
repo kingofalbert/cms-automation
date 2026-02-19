@@ -477,7 +477,7 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
 
                 return (
                   <div
-                    key={`extracted-${index}`}
+                    key={`extracted-${faq.question}`}
                     className="p-4 border-2 border-amber-200 bg-amber-50/50 rounded-lg space-y-3 hover:border-amber-300 transition-colors"
                   >
                     <div className="flex items-start justify-between">
@@ -538,7 +538,7 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
 
                 return (
                   <div
-                    key={`ai-${index}`}
+                    key={`ai-${suggestion.question}`}
                     className="p-4 border-2 border-purple-200 bg-purple-50/50 rounded-lg space-y-3 hover:border-purple-300 transition-colors"
                   >
                     {isEditing ? (
@@ -677,7 +677,7 @@ export const FAQReviewSection: React.FC<FAQReviewSectionProps> = ({
               </div>
               {faqs.map((faq, index) => (
                 <div
-                  key={index}
+                  key={`faq-${faq.question || index}`}
                   className="p-4 border border-gray-200 rounded-lg space-y-3 bg-white"
                 >
                   <div className="flex items-center justify-between">

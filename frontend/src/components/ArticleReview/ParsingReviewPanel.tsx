@@ -181,19 +181,22 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
 
   // Lock in values when we have real data (non-empty meta_description)
   // Once locked, these values NEVER change
-  if (!originalExtractedRef.current.isLocked && data.meta_description) {
-    originalExtractedRef.current = {
-      metaDescription: data.meta_description,
-      seoKeywords: data.seo_keywords || [],
-      tags: (data as any).tags || [],
-      isLocked: true, // Mark as locked - will never update again
-    };
-    console.log('[ParsingReviewPanel] LOCKED originalExtracted:', {
-      metaDescription: data.meta_description.slice(0, 50),
-      seoKeywordsCount: originalExtractedRef.current.seoKeywords.length,
-      tagsCount: originalExtractedRef.current.tags.length,
-    });
-  }
+  // FIX: Moved ref mutation into useEffect to avoid side effects during render
+  useEffect(() => {
+    if (!originalExtractedRef.current.isLocked && data.meta_description) {
+      originalExtractedRef.current = {
+        metaDescription: data.meta_description,
+        seoKeywords: data.seo_keywords || [],
+        tags: (data as any).tags || [],
+        isLocked: true, // Mark as locked - will never update again
+      };
+      console.log('[ParsingReviewPanel] LOCKED originalExtracted:', {
+        metaDescription: data.meta_description.slice(0, 50),
+        seoKeywordsCount: originalExtractedRef.current.seoKeywords.length,
+        tagsCount: originalExtractedRef.current.tags.length,
+      });
+    }
+  }, [data]);
 
   // Provide access to the locked values (or empty defaults if not yet locked)
   const originalExtracted = originalExtractedRef.current;
@@ -289,6 +292,8 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
 
   // Fetch SEO Title suggestions and AI FAQ suggestions when component mounts (if articleId exists)
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchOptimizations = async () => {
       if (!data.article_id) {
         return;
@@ -315,7 +320,9 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
               };
             };
             faqs?: AIFAQSuggestion[];
-          }>(`/v1/articles/${data.article_id}/optimizations`);
+          }>(`/v1/articles/${data.article_id}/optimizations`, { signal: abortController.signal });
+
+          if (abortController.signal.aborted) return;
 
           // Extract SEO Title suggestions
           if (optimizationsData.title_suggestions?.seo_title_suggestions) {
@@ -349,26 +356,37 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
             setAiFaqSuggestions(optimizationsData.faqs);
           }
         } catch (err: unknown) {
+          if (abortController.signal.aborted) return;
           // 404 is expected if optimizations haven't been generated yet
           const axiosErr = err as { response?: { status?: number } };
           if (axiosErr.response?.status !== 404) {
             console.error('Failed to fetch optimizations:', err);
           }
         } finally {
-          setIsLoadingAiOptimizations(false);
+          if (!abortController.signal.aborted) {
+            setIsLoadingAiOptimizations(false);
+          }
         }
+
+        if (abortController.signal.aborted) return;
 
         // Fetch current article data to get current SEO Title
         try {
           const articleData = await api.get<{
             seo_title?: string;
             seo_title_source?: string;
-          }>(`/v1/articles/${data.article_id}`);
-          setCurrentSeoTitle(articleData.seo_title ?? null);
-          setSeoTitleSource(articleData.seo_title_source ?? null);
+          }>(`/v1/articles/${data.article_id}`, { signal: abortController.signal });
+          if (!abortController.signal.aborted) {
+            setCurrentSeoTitle(articleData.seo_title ?? null);
+            setSeoTitleSource(articleData.seo_title_source ?? null);
+          }
         } catch (err) {
-          console.error('Error fetching article data:', err);
+          if (!abortController.signal.aborted) {
+            console.error('Error fetching article data:', err);
+          }
         }
+
+        if (abortController.signal.aborted) return;
 
         // Phase 11: Fetch AI category recommendation
         if (!primaryCategory) {
@@ -381,42 +399,56 @@ export const ParsingReviewPanel = forwardRef<ParsingReviewPanelHandle, ParsingRe
               alternative_categories?: Array<{ category: string; confidence: number; reason: string }>;
               content_analysis?: string;
               cached?: boolean;
-            }>(`/v1/articles/${data.article_id}/recommend-category`, {});
+            }>(`/v1/articles/${data.article_id}/recommend-category`, {}, { signal: abortController.signal });
 
-            setAiCategoryRecommendation({
-              category: categoryData.primary_category,
-              confidence: categoryData.confidence,
-              reasoning: categoryData.reasoning,
-            });
+            if (!abortController.signal.aborted) {
+              setAiCategoryRecommendation({
+                category: categoryData.primary_category,
+                confidence: categoryData.confidence,
+                reasoning: categoryData.reasoning,
+              });
 
-            // Set secondary category recommendations from alternative_categories
-            if (categoryData.alternative_categories && categoryData.alternative_categories.length > 0) {
-              const secondaryRecs = categoryData.alternative_categories.map((alt) => ({
-                category: alt.category,
-                confidence: alt.confidence,
-                reasoning: alt.reason,
-              }));
-              setAiSecondaryRecommendations(secondaryRecs);
+              // Set secondary category recommendations from alternative_categories
+              if (categoryData.alternative_categories && categoryData.alternative_categories.length > 0) {
+                const secondaryRecs = categoryData.alternative_categories.map((alt) => ({
+                  category: alt.category,
+                  confidence: alt.confidence,
+                  reasoning: alt.reason,
+                }));
+                setAiSecondaryRecommendations(secondaryRecs);
+              }
+
+              console.log('AI Category recommendation:', categoryData);
             }
-
-            console.log('AI Category recommendation:', categoryData);
           } catch (err: unknown) {
-            const axiosErr = err as { response?: { status?: number } };
-            if (axiosErr.response?.status !== 404) {
-              console.error('Error fetching category recommendation:', err);
+            if (!abortController.signal.aborted) {
+              const axiosErr = err as { response?: { status?: number } };
+              if (axiosErr.response?.status !== 404) {
+                console.error('Error fetching category recommendation:', err);
+              }
             }
           } finally {
-            setIsLoadingCategoryRecommendation(false);
+            if (!abortController.signal.aborted) {
+              setIsLoadingCategoryRecommendation(false);
+            }
           }
         }
       } catch (error) {
-        console.error('Error fetching optimization data:', error);
+        if (!abortController.signal.aborted) {
+          console.error('Error fetching optimization data:', error);
+        }
       } finally {
-        setIsLoadingSeoTitle(false);
+        if (!abortController.signal.aborted) {
+          setIsLoadingSeoTitle(false);
+        }
       }
     };
 
     fetchOptimizations();
+
+    return () => {
+      abortController.abort();
+    };
   }, [data.article_id, primaryCategory]);
 
   // Phase 15: Expose imperative handle for auto-save

@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -412,6 +412,7 @@ async def publish_worklist_item(
 async def save_review_decisions(
     item_id: int,
     payload: ReviewDecisionsPayload,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> ReviewDecisionsResponse:
     """Save proofreading review decisions and optionally transition status."""
@@ -509,7 +510,7 @@ async def save_review_decisions(
                     if decision_payload.feedback_provided
                     else FeedbackStatus.COMPLETED
                 ),
-                decided_by=1,  # TODO: Get from current_user
+                decided_by=getattr(request.state, "user_id", "anonymous"),
                 decided_at=datetime.utcnow(),
             )
             session.add(new_decision)
@@ -536,7 +537,7 @@ async def save_review_decisions(
             article_id=article.id,
             old_status=old_article_status,
             new_status=article.status.value,
-            changed_by="user:1",  # TODO: Get from current_user
+            changed_by=getattr(request.state, "user_id", "anonymous"),
             change_reason=f"review_completed_transition_to_{payload.transition_to}",
             metadata={
                 "worklist_id": item.id,
@@ -551,7 +552,7 @@ async def save_review_decisions(
         item.add_note({
             "message": payload.review_notes,
             "level": "info",
-            "author": "user:1",  # TODO: Get from current_user
+            "author": getattr(request.state, "user_id", "anonymous"),
             "created_at": datetime.utcnow().isoformat(),
         })
 

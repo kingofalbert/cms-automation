@@ -53,6 +53,17 @@ async def import_articles(
             detail="No filename provided",
         )
 
+    # Enforce file size limit (100 MB for imports)
+    file_content = await file.read()
+    MAX_IMPORT_SIZE = 100 * 1024 * 1024
+    if len(file_content) > MAX_IMPORT_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Import file too large. Maximum size is {MAX_IMPORT_SIZE // (1024 * 1024)} MB.",
+        )
+    # Reset file position for subsequent reads
+    await file.seek(0)
+
     # Auto-detect format from filename if not provided
     if file_format is None:
         extension = Path(file.filename).suffix.lower()

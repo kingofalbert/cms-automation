@@ -54,7 +54,11 @@ def register_routes(app: FastAPI) -> None:
     app.include_router(worklist_routes.router, prefix="/v1", tags=["Worklist"])
     app.include_router(pipeline_routes.router, prefix="/v1", tags=["Pipeline Automation"])
     app.include_router(image_alt_routes.router, tags=["Image Alt Generation"])  # Already has /v1/images prefix
-    app.include_router(debug_routes.router, tags=["Debug"])  # Debug endpoints
+    # Only include debug routes in non-production environments
+    from src.config import get_settings as _get_settings
+    _settings = _get_settings()
+    if _settings.ENVIRONMENT != "production":
+        app.include_router(debug_routes.router, tags=["Debug"])  # Debug endpoints
 
     # Note: proofreading_decisions router already has its own prefix
     app.include_router(proofreading_decisions.router)

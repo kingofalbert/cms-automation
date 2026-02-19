@@ -23,6 +23,7 @@ import {
   Star,
 } from 'lucide-react';
 import { Button } from '../ui';
+import { api } from '../../lib/api';
 import type { SEOTitleSuggestionsData, SEOTitleVariant, SelectSEOTitleRequest, SelectSEOTitleResponse } from '../../types/api';
 
 export type SEOTitleSource = 'extracted' | 'ai' | 'custom';
@@ -166,18 +167,11 @@ export const SEOTitleSelectionCard: React.FC<SEOTitleSelectionCardProps> = ({
         requestBody = { custom_seo_title: extractedSeoTitle || aiSuggestedTitle };
       }
 
-      const response = await fetch(`/api/v1/optimization/articles/${articleId}/select-seo-title`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
+      const result = await api.post<SelectSEOTitleResponse>(
+        `/api/v1/optimization/articles/${articleId}/select-seo-title`,
+        requestBody
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to select SEO Title');
-      }
-
-      const result: SelectSEOTitleResponse = await response.json();
       onSelectionSuccess?.(result);
     } catch (error) {
       console.error('Failed to select SEO Title:', error);

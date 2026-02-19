@@ -342,20 +342,22 @@ class GoogleDriveSyncService:
         }
         return parsed
 
-    async def _export_google_doc(self, storage, file_id: str, mime_type: str) -> str:
+    async def _export_google_doc(self, storage, file_id: str, mime_type: str, max_retries: int = 5) -> str:
         """Export Google Doc to the requested MIME type."""
-        try:
-            request = storage.service.files().export(fileId=file_id, mimeType=mime_type)
-            content = request.execute()
-            if isinstance(content, bytes):
-                return content.decode("utf-8", errors="ignore")
-            return str(content)
-        except HttpError as http_error:
-            status = getattr(http_error, "resp", {}).status if hasattr(http_error, "resp") else None
-            if status == 429:
-                await asyncio.sleep(2)
-                return await self._export_google_doc(storage, file_id, mime_type)
-            raise
+        for attempt in range(max_retries):
+            try:
+                request = storage.service.files().export(fileId=file_id, mimeType=mime_type)
+                content = request.execute()
+                if isinstance(content, bytes):
+                    return content.decode("utf-8", errors="ignore")
+                return str(content)
+            except HttpError as http_error:
+                status = getattr(http_error, "resp", {}).status if hasattr(http_error, "resp") else None
+                if status == 429 and attempt < max_retries - 1:
+                    wait_time = 2 ** (attempt + 1)
+                    await asyncio.sleep(wait_time)
+                    continue
+                raise
 
     def _parse_html_content(self, html_content: str) -> tuple[str, Any]:
         """Parse and clean HTML content from Google Docs export.

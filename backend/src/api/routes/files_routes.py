@@ -67,6 +67,15 @@ async def upload_file(
     try:
         # Read file content
         content = await file.read()
+
+        # Enforce file size limit (50 MB)
+        MAX_FILE_SIZE = 50 * 1024 * 1024
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)} MB.",
+            )
+
         file_content = io.BytesIO(content)
 
         # Determine MIME type

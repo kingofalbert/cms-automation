@@ -39,7 +39,8 @@ interface HistoryItem {
   size_kb: number;
 }
 
-const MONITOR_API_BASE = 'http://localhost:5050/api/pipeline';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const MONITOR_API_BASE = `${API_BASE_URL}/api/pipeline`;
 
 const PipelineMonitorPage: React.FC = () => {
   const [status, setStatus] = useState<PipelineStatus | null>(null);

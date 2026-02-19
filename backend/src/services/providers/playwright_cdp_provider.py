@@ -604,7 +604,7 @@ class PlaywrightCDPProvider(ComputerUseProvider):
         try:
             confirm_button = page.locator('button.editor-post-publish-button:has-text("Publish")')
             await confirm_button.click(timeout=5000)
-        except:
+        except Exception:
             pass  # Already published
 
         # Wait for success panel
