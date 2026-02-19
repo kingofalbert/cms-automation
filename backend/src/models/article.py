@@ -55,6 +55,11 @@ class Article(Base, TimestampMixin):
         nullable=False,
         comment="Full article content (Markdown or HTML)",
     )
+    raw_html: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Original HTML from Google Docs export (for parser with images)",
+    )
 
     # Status and workflow
     status: Mapped[ArticleStatus] = mapped_column(

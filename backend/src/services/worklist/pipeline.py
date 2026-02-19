@@ -87,6 +87,7 @@ class WorklistPipelineService:
         article = Article(
             title=item.title,
             body=item.content,
+            raw_html=item.raw_html,
             status=ArticleStatus.IMPORTED,
             author_id=self.settings.GOOGLE_DRIVE_DEFAULT_AUTHOR_ID,
             source="google_drive",
