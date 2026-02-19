@@ -204,6 +204,43 @@ def _repair_json(text: str) -> str | None:
     return repaired
 
 
+def _normalize_gdoc_html(html: str) -> str:
+    """Normalize raw Google Doc HTML for reliable regex matching.
+
+    Google Docs exports HTML with:
+    - Content wrapped in <span class="..."> inside <p> and <h2> tags
+    - <p> and <h2> tags with class/id attributes
+    - Unicode characters HTML-entity-encoded (e.g., &#9552; for ═)
+
+    This function normalizes by:
+    1. Decoding HTML entities (&#9552; → ═, &#65306; → ：, &nbsp; → space)
+    2. Unwrapping <span> tags inside <p> and <h2> (keep text, remove span wrappers)
+    3. Stripping class/id attributes from <p> and <h2> tags
+
+    Result: <p class="c3"><span class="c0">═══</span></p> → <p>═══</p>
+    """
+    import re
+    from html import unescape
+
+    if not html:
+        return html
+
+    # Step 1: Decode HTML entities
+    normalized = unescape(html)
+
+    # Step 2: Unwrap <span> tags (keep inner text, remove span wrappers)
+    # Apply repeatedly to handle nested spans
+    prev = None
+    while prev != normalized:
+        prev = normalized
+        normalized = re.sub(r'<span[^>]*>(.*?)</span>', r'\1', normalized, flags=re.DOTALL)
+
+    # Step 3: Strip class/id/style attributes from <p> and <h2> tags
+    normalized = re.sub(r'<(p|h2)\s+[^>]*>', r'<\1>', normalized, flags=re.IGNORECASE)
+
+    return normalized
+
+
 def _extract_metadata_sections(body_html: str) -> dict[str, Any]:
     """Extract structured metadata from sections after the divider in body_html.
 
@@ -245,6 +282,9 @@ def _extract_metadata_sections(body_html: str) -> dict[str, Any]:
 
     if not body_html:
         return result
+
+    # Normalize Google Doc HTML for reliable regex matching
+    body_html = _normalize_gdoc_html(body_html)
 
     # Find the first divider to get metadata content after it
     divider_pattern = r'<p>\s*[-—–─═_=·•]{5,}[-—–─═_=·•\s]*</p>'
@@ -321,12 +361,21 @@ def _extract_metadata_sections(body_html: str) -> dict[str, Any]:
 def _parse_proofreading_section(html_content: str) -> list[dict[str, str]]:
     """Parse the 校對結果 section into structured proofreading suggestions.
 
-    Expected format:
-        1. 原文：「XXX」→ 建議：「YYY」（原因描述）
-        2. 原文：「AAA」→ 建議：「BBB」（原因描述）
+    Handles multiple formats:
 
-    Also handles simpler formats:
+    Pattern 0 (Google Doc multi-paragraph, highest priority):
+        1. 【錯誤類型】
+        原文：站上體重計，數字確實下降了...
+        建議：站上體重計，數字確實下降了...
+        說明：違反標點與全半形規則...
+
+    Pattern 1 (single line, with quotes and arrow):
+        1. 原文：「XXX」→ 建議：「YYY」（原因描述）
+
+    Pattern 2 (single line, quotes only):
         1. 「XXX」→「YYY」原因
+
+    Pattern 3 (single line, plain):
         1. XXX → YYY（原因）
     """
     import re
@@ -336,6 +385,65 @@ def _parse_proofreading_section(html_content: str) -> list[dict[str, str]]:
     soup = BeautifulSoup(html_content, "html.parser")
     text_content = soup.get_text(separator="\n")
 
+    # Pattern 0 (highest priority): Google Doc multi-paragraph format
+    # Groups lines by numbered headers like "1. 【...】"
+    # Then extracts 原文：, 建議：, 說明： from within each group
+    item_header_pattern = re.compile(r'^(\d+)\.\s*【.*】')
+    original_pattern = re.compile(r'^原文[：:]\s*(.*)', re.DOTALL)
+    suggestion_pattern = re.compile(r'^建議[：:]\s*(.*)', re.DOTALL)
+    reason_pattern = re.compile(r'^說明[：:]\s*(.*)', re.DOTALL)
+
+    lines = text_content.split("\n")
+    groups: list[tuple[int, list[str]]] = []  # (position, lines_in_group)
+    current_group: tuple[int, list[str]] | None = None
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        header_match = item_header_pattern.match(stripped)
+        if header_match:
+            if current_group is not None:
+                groups.append(current_group)
+            current_group = (int(header_match.group(1)), [])
+        elif current_group is not None:
+            current_group[1].append(stripped)
+
+    if current_group is not None:
+        groups.append(current_group)
+
+    if groups:
+        for position, group_lines in groups:
+            original = ""
+            suggestion_text = ""
+            reason = ""
+            for gl in group_lines:
+                m = original_pattern.match(gl)
+                if m:
+                    original = m.group(1).strip()
+                    continue
+                m = suggestion_pattern.match(gl)
+                if m:
+                    suggestion_text = m.group(1).strip()
+                    continue
+                m = reason_pattern.match(gl)
+                if m:
+                    reason = m.group(1).strip()
+                    continue
+            if original and suggestion_text:
+                suggestions.append({
+                    "position": position,
+                    "original": original,
+                    "suggestion": suggestion_text,
+                    "reason": reason,
+                    "source": "doc_proofreading",
+                })
+
+    if suggestions:
+        logger.debug(f"[PROOFREADING PARSE] Extracted {len(suggestions)} suggestions (Pattern 0)")
+        return suggestions
+
+    # Fallback to legacy single-line patterns
     # Pattern 1: 原文：「X」→ 建議：「Y」（reason）
     pattern1 = re.compile(
         r'(\d+)\.\s*原文[：:]\s*[「「"](.*?)[」」"]\s*[→➡→]\s*建議[：:]\s*[「「"](.*?)[」」"]\s*[（(](.*?)[）)]',
@@ -395,14 +503,29 @@ def _parse_proofreading_section(html_content: str) -> list[dict[str, str]]:
 def _parse_meta_aeo_section(html_content: str) -> dict[str, Any]:
     """Parse the Meta + AEO section into structured SEO and AEO data.
 
-    Expected format:
+    Handles two formats:
+
+    Format A (legacy, single-line):
         SEO標題（資訊型）：老花眼必看：中醫針灸改善視力的5大穴位指南
-        SEO標題（懸念型）：為什麼中醫針灸能讓老花眼不再模糊？
         Meta 描述：探討中醫針灸如何改善老花眼...
-        Focus Keyword：老花眼 中醫 針灸
-        Tags：老花眼, 中醫, 針灸, 視力保健
-        AEO 類型：定義解說型
-        AEO 首段：老花眼是一種常見的...
+
+    Format B (Google Doc export, multi-line with labels on separate lines):
+        SEO標題
+        資訊型：
+        芋頭燉鱿魚：中醫養生觀點下的健康減重食譜
+        懸念型：
+        不挨餓也能瘦？芋頭鱿魚的中醫養生秘密
+        Meta描述
+        節食減肥常讓人疲憊...
+        Focus Keyword
+        芋頭燉鱿魚
+        Tags
+        芋頭燉鱿魚, 中醫養生, ...
+        AEO類型：C
+        AEO首段
+        減肥過程中...
+
+    Uses a state machine approach to handle both formats.
     """
     import re
     from bs4 import BeautifulSoup
@@ -420,72 +543,192 @@ def _parse_meta_aeo_section(html_content: str) -> dict[str, Any]:
     text_content = soup.get_text(separator="\n")
     lines = [line.strip() for line in text_content.split("\n") if line.strip()]
 
+    # Known field labels (used by state machine for label-only lines)
+    field_labels = {
+        "seo_title": re.compile(r'^SEO\s*標題\s*$', re.IGNORECASE),
+        "meta_desc": re.compile(r'^Meta\s*(?:描述|Description)\s*$', re.IGNORECASE),
+        "focus_kw": re.compile(r'^Focus\s*Keyword\s*$', re.IGNORECASE),
+        "tags": re.compile(r'^Tags?\s*$', re.IGNORECASE),
+        "aeo_type": re.compile(r'^AEO\s*類型\s*$', re.IGNORECASE),
+        "aeo_para": re.compile(r'^AEO\s*首段\s*$', re.IGNORECASE),
+    }
+
+    # Inline patterns (label：value on same line) — legacy format + some Google Doc fields
+    inline_patterns = {
+        "seo_title_variant": re.compile(
+            r'^SEO\s*標題\s*[（(]\s*(.*?)\s*[）)]\s*[：:]\s*(.*)', re.IGNORECASE
+        ),
+        "seo_subtype": re.compile(
+            r'^(資訊型|懸念型|問答型|列表型|故事型)\s*[：:]\s*$', re.IGNORECASE
+        ),
+        "seo_subtype_with_value": re.compile(
+            r'^(資訊型|懸念型|問答型|列表型|故事型)\s*[：:]\s*(.+)', re.IGNORECASE
+        ),
+        "meta_desc_inline": re.compile(
+            r'^Meta\s*(?:描述|Description)\s*[：:]\s*(.+)', re.IGNORECASE
+        ),
+        "focus_kw_inline": re.compile(
+            r'^Focus\s*Keyword\s*[：:]\s*(.+)', re.IGNORECASE
+        ),
+        "tags_inline": re.compile(
+            r'^Tags?\s*[：:]\s*(.+)', re.IGNORECASE
+        ),
+        "aeo_type_inline": re.compile(
+            r'^AEO\s*類型\s*[：:]\s*(.+)', re.IGNORECASE
+        ),
+        "aeo_para_inline": re.compile(
+            r'^AEO\s*首段\s*[：:]\s*(.+)', re.IGNORECASE
+        ),
+    }
+
+    context = None  # Current state: None, "seo_title", "seo_subtype:TYPE", "meta_desc", etc.
+    pending_seo_subtype = None  # Track SEO title variant type waiting for value
+
     for line in lines:
-        # SEO標題（資訊型）：...  or SEO標題（懸念型）：...
-        seo_title_match = re.match(
-            r'SEO\s*標題\s*[（(]\s*(.*?)\s*[）)]\s*[：:]\s*(.*)',
-            line, re.IGNORECASE
-        )
-        if seo_title_match:
-            variant_type = seo_title_match.group(1).strip()
-            title_text = seo_title_match.group(2).strip()
+        matched = False
+
+        # --- Check inline patterns first (label：value on same line) ---
+
+        # SEO標題（資訊型）：title (legacy format)
+        m = inline_patterns["seo_title_variant"].match(line)
+        if m:
+            variant_type = m.group(1).strip()
+            title_text = m.group(2).strip()
             if title_text:
-                result["seo_title_variants"].append({
-                    "type": variant_type,
-                    "title": title_text,
-                })
+                result["seo_title_variants"].append({"type": variant_type, "title": title_text})
+            context = None
+            pending_seo_subtype = None
             continue
 
-        # Meta 描述：... or Meta Description：...
-        meta_match = re.match(
-            r'Meta\s*(?:描述|Description)\s*[：:]\s*(.*)',
-            line, re.IGNORECASE
-        )
-        if meta_match:
-            result["meta_description"] = meta_match.group(1).strip()
+        # SEO subtype with value: 資訊型：芋頭燉鱿魚...
+        m = inline_patterns["seo_subtype_with_value"].match(line)
+        if m:
+            variant_type = m.group(1).strip()
+            title_text = m.group(2).strip()
+            if title_text:
+                result["seo_title_variants"].append({"type": variant_type, "title": title_text})
+            context = None
+            pending_seo_subtype = None
             continue
 
-        # Focus Keyword：...
-        fk_match = re.match(
-            r'Focus\s*Keyword\s*[：:]\s*(.*)',
-            line, re.IGNORECASE
-        )
-        if fk_match:
-            result["focus_keyword"] = fk_match.group(1).strip()
+        # SEO subtype label only: 資訊型：(value on next line)
+        m = inline_patterns["seo_subtype"].match(line)
+        if m:
+            pending_seo_subtype = m.group(1).strip()
+            context = "seo_subtype"
             continue
 
-        # Tags：...
-        tags_match = re.match(
-            r'Tags?\s*[：:]\s*(.*)',
-            line, re.IGNORECASE
-        )
-        if tags_match:
-            raw_tags = tags_match.group(1).strip()
-            # Split by comma, Chinese comma, or slash
-            result["tags"] = [
-                t.strip() for t in re.split(r'[,，、/]', raw_tags) if t.strip()
-            ]
+        # Meta描述：value
+        m = inline_patterns["meta_desc_inline"].match(line)
+        if m:
+            result["meta_description"] = m.group(1).strip()
+            context = None
+            pending_seo_subtype = None
             continue
 
-        # AEO 類型：...
-        aeo_type_match = re.match(
-            r'AEO\s*類型\s*[：:]\s*(.*)',
-            line, re.IGNORECASE
-        )
-        if aeo_type_match:
-            result["aeo_type"] = aeo_type_match.group(1).strip()
+        # Focus Keyword：value
+        m = inline_patterns["focus_kw_inline"].match(line)
+        if m:
+            result["focus_keyword"] = m.group(1).strip()
+            context = None
+            pending_seo_subtype = None
             continue
 
-        # AEO 首段：...  (may span multiple lines)
-        aeo_para_match = re.match(
-            r'AEO\s*首段\s*[：:]\s*(.*)',
-            line, re.IGNORECASE
-        )
-        if aeo_para_match:
-            result["aeo_paragraph"] = aeo_para_match.group(1).strip()
+        # Tags：value
+        m = inline_patterns["tags_inline"].match(line)
+        if m:
+            raw_tags = m.group(1).strip()
+            result["tags"] = [t.strip() for t in re.split(r'[,，、/]', raw_tags) if t.strip()]
+            context = None
+            pending_seo_subtype = None
             continue
 
-    # If AEO paragraph was not found on a single line, try multiline extraction
+        # AEO類型：value
+        m = inline_patterns["aeo_type_inline"].match(line)
+        if m:
+            result["aeo_type"] = m.group(1).strip()
+            context = None
+            pending_seo_subtype = None
+            continue
+
+        # AEO首段：value
+        m = inline_patterns["aeo_para_inline"].match(line)
+        if m:
+            result["aeo_paragraph"] = m.group(1).strip()
+            context = None
+            pending_seo_subtype = None
+            continue
+
+        # --- Check label-only lines (set context for next line) ---
+        for field_name, pattern in field_labels.items():
+            if pattern.match(line):
+                context = field_name
+                pending_seo_subtype = None
+                matched = True
+                break
+
+        if matched:
+            continue
+
+        # --- State machine: read value based on current context ---
+        if context == "seo_subtype" and pending_seo_subtype:
+            # Value line after a subtype label like "資訊型："
+            result["seo_title_variants"].append({"type": pending_seo_subtype, "title": line})
+            pending_seo_subtype = None
+            context = "seo_title"  # Stay in SEO title context for more subtypes
+            continue
+
+        if context == "seo_title":
+            # Inside SEO標題 section — check for subtype labels
+            m = inline_patterns["seo_subtype"].match(line)
+            if m:
+                pending_seo_subtype = m.group(1).strip()
+                context = "seo_subtype"
+                continue
+            m = inline_patterns["seo_subtype_with_value"].match(line)
+            if m:
+                variant_type = m.group(1).strip()
+                title_text = m.group(2).strip()
+                if title_text:
+                    result["seo_title_variants"].append({"type": variant_type, "title": title_text})
+                continue
+            # Not a subtype line — end of SEO title section, fall through to re-check
+            context = None
+
+        if context == "meta_desc" and not result["meta_description"]:
+            result["meta_description"] = line
+            context = None
+            continue
+
+        if context == "focus_kw" and not result["focus_keyword"]:
+            result["focus_keyword"] = line
+            context = None
+            continue
+
+        if context == "tags" and not result["tags"]:
+            result["tags"] = [t.strip() for t in re.split(r'[,，、/]', line) if t.strip()]
+            context = None
+            continue
+
+        if context == "aeo_type" and not result["aeo_type"]:
+            result["aeo_type"] = line
+            context = None
+            continue
+
+        if context == "aeo_para" and not result["aeo_paragraph"]:
+            result["aeo_paragraph"] = line
+            context = None
+            continue
+
+        # If we fell through from seo_title context, re-check this line as a new field
+        if context is None:
+            # Re-check label-only patterns for this line (since we cleared context above)
+            for field_name, pattern in field_labels.items():
+                if pattern.match(line):
+                    context = field_name
+                    break
+
+    # Fallback: If AEO paragraph was not found, try multiline extraction
     if not result["aeo_paragraph"]:
         aeo_para_match = re.search(
             r'AEO\s*首段\s*[：:]\s*(.*?)(?=\n(?:SEO|Meta|Focus|Tags?|AEO\s*類型)|$)',
@@ -505,11 +748,16 @@ def _parse_meta_aeo_section(html_content: str) -> dict[str, Any]:
 def _parse_image_alt_text_section(html_content: str) -> list[dict[str, str | None]]:
     """Parse the 圖片 Alt Text section into structured image alt text data.
 
-    Expected format:
-        1. 針灸治療老花眼的穴位示意圖 (https://drive.google.com/...)
-        2. 中醫師施針改善視力 (https://drive.google.com/...)
+    Handles multiple formats:
 
-    Also handles:
+    Format A (inline URL):
+        1. 針灸治療老花眼的穴位示意圖 (https://drive.google.com/...)
+
+    Format B (URL on next line with 圖片連結：prefix):
+        1. 一碗燉煮的魷魚與芋頭...
+        圖片連結：https://drive.google.com/file/d/1FG.../view
+
+    Format C (URL on next line, no prefix):
         1. Alt text here
            https://drive.google.com/...
     """
@@ -548,6 +796,31 @@ def _parse_image_alt_text_section(html_content: str) -> list[dict[str, str | Non
                 "alt_text": alt_text,
                 "drive_link": drive_link,
             })
+
+    # Post-process: scan for 圖片連結：URL lines and associate with preceding numbered items
+    drive_link_pattern = re.compile(r'^圖片連結[：:]\s*(https?://\S+)', re.MULTILINE)
+    lines = text_content.split("\n")
+    last_position = None
+    alt_texts_by_pos = {item["position"]: item for item in alt_texts}
+
+    for line in lines:
+        stripped = line.strip()
+        # Track the last numbered item we saw
+        num_match = re.match(r'^(\d+)\.', stripped)
+        if num_match:
+            last_position = int(num_match.group(1))
+            continue
+
+        # Check for 圖片連結：URL
+        link_match = drive_link_pattern.match(stripped)
+        if link_match and last_position is not None:
+            url = link_match.group(1).strip()
+            if last_position in alt_texts_by_pos and not alt_texts_by_pos[last_position].get("drive_link"):
+                alt_texts_by_pos[last_position]["drive_link"] = url
+            elif last_position not in alt_texts_by_pos:
+                # Edge case: 圖片連結 found but no alt text item for this position
+                # Check links_by_position as well
+                links_by_position[last_position] = url
 
     logger.debug(f"[IMAGE ALT PARSE] Extracted {len(alt_texts)} image alt texts")
     return alt_texts
@@ -589,7 +862,8 @@ def _clean_metadata_sections_from_body(body_html: str) -> str:
     if not body_html:
         return body_html
 
-    cleaned = body_html
+    # Normalize Google Doc HTML for reliable regex matching
+    cleaned = _normalize_gdoc_html(body_html)
 
     # Remove "責任編輯：XXX" line (editor credit line, not part of article body)
     cleaned = re.sub(
@@ -1066,9 +1340,9 @@ class ArticleParserService:
                 else None
             )
 
-            # Phase 15: Extract metadata sections BEFORE cleaning body_html
-            # This captures data from 校對結果, Meta+AEO, 圖片 Alt Text sections
-            doc_metadata = _extract_metadata_sections(parsed_data["body_html"])
+            # Phase 15: Extract metadata sections from ORIGINAL raw_html (not AI body_html)
+            # AI body_html may exclude metadata sections, so we extract from raw source
+            doc_metadata = _extract_metadata_sections(raw_html)
 
             # Clean metadata sections from body_html (truncates at divider)
             cleaned_body_html = _clean_metadata_sections_from_body(parsed_data["body_html"])
@@ -1649,8 +1923,9 @@ Process the above {content_type} and return the complete JSON response:"""
             seo_data = self._extract_seo_metadata(soup)
             images = self._extract_images(soup)
 
-            # Phase 15: Extract metadata sections BEFORE cleaning body_html
-            doc_metadata = _extract_metadata_sections(body_html)
+            # Phase 15: Extract metadata sections from ORIGINAL raw_html (not extracted body)
+            # body_html from heuristic extraction may exclude metadata sections
+            doc_metadata = _extract_metadata_sections(raw_html)
 
             # Clean metadata sections from body_html
             cleaned_body_html = _clean_metadata_sections_from_body(body_html)
