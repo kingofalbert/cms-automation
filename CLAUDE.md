@@ -52,6 +52,14 @@ tests/
 |---------|-----|
 | **cms-automation-backend** | https://cms-automation-backend-297291472291.us-east1.run.app |
 
+### Google Service Account (用於 Google Drive / Docs API)
+| Resource | Value |
+|----------|-------|
+| **Service Account (正確，Cloud Run 使用)** | `cms-automation-drive-service@cmsupload-476323.iam.gserviceaccount.com` |
+| **~~舊帳號（已失效，勿用）~~** | ~~`cms-automation-drive-service@cms-automation-2025.iam.gserviceaccount.com`~~ |
+
+**IMPORTANT**: 共享 Google Docs / Drive 資料夾時，必須使用 `@cmsupload-476323` 的帳號，不要用 `@cms-automation-2025` 的舊帳號！
+
 ### Supabase
 | Resource | Value |
 |----------|-------|

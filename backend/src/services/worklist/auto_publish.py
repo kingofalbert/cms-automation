@@ -97,7 +97,8 @@ class AutoPublishService:
 
         file_metadata = (
             storage.service.files()
-            .get(fileId=file_id, fields="id,name,mimeType,webViewLink,createdTime")
+            .get(fileId=file_id, fields="id,name,mimeType,webViewLink,createdTime",
+                 supportsAllDrives=True)
             .execute()
         )
 
@@ -489,7 +490,7 @@ class AutoPublishService:
         if drive_match:
             file_id = drive_match.group(1)
             storage = await create_google_drive_storage()
-            data = storage.service.files().get_media(fileId=file_id).execute()
+            data = storage.service.files().get_media(fileId=file_id, supportsAllDrives=True).execute()
         else:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 resp = await client.get(url, follow_redirects=True)

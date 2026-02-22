@@ -201,7 +201,7 @@ class GoogleDriveStorage:
             Exception: If download fails
         """
         try:
-            request = self.service.files().get_media(fileId=file_id)
+            request = self.service.files().get_media(fileId=file_id, supportsAllDrives=True)
 
             file_content = io.BytesIO()
             downloader = MediaIoBaseDownload(file_content, request)
@@ -282,6 +282,7 @@ class GoogleDriveStorage:
                 .get(
                     fileId=file_id,
                     fields="id,name,mimeType,size,webViewLink,webContentLink,createdTime,modifiedTime",
+                    supportsAllDrives=True,
                 )
                 .execute()
             )
@@ -325,7 +326,7 @@ class GoogleDriveStorage:
             Exception: If deletion fails
         """
         try:
-            self.service.files().delete(fileId=file_id).execute()
+            self.service.files().delete(fileId=file_id, supportsAllDrives=True).execute()
 
             logger.info("google_drive_file_deleted", file_id=file_id)
 
@@ -358,6 +359,7 @@ class GoogleDriveStorage:
             self.service.permissions().create(
                 fileId=file_id,
                 body=permission,
+                supportsAllDrives=True,
             ).execute()
 
             logger.debug("google_drive_file_made_public", file_id=file_id)
@@ -423,6 +425,8 @@ class GoogleDriveStorage:
                     q=query,
                     pageSize=max_results,
                     fields="files(id,name,mimeType,size,webViewLink,createdTime)",
+                    supportsAllDrives=True,
+                    includeItemsFromAllDrives=True,
                 )
                 .execute()
             )
