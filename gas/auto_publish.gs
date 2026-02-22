@@ -23,19 +23,20 @@ var CONFIG = {
   BACKEND_URL: "https://cms-automation-backend-297291472291.us-east1.run.app",
 
   // Sheet configuration
-  SHEET_NAME: "工作清單",     // Name of the sheet tab
+  SHEET_NAME: "發佈排程",     // Name of the sheet tab
+  LOG_SHEET_NAME: "自動上稿日誌", // Log sheet tab (auto-created if missing)
 
   // Column indices (1-based)
   COL_STATUS:   4,  // D - status column ("待貼稿", "處理中", "已上稿", "失敗")
   COL_DOC_URL:  6,  // F - Google Doc URL
   COL_WP_URL:  12,  // L - WordPress draft URL (output)
-  COL_TASK_ID: 13,  // M - helper column for Celery task ID (hidden)
+  COL_TASK_ID: 15,  // O - helper column for Celery task ID (hidden)
 
   // Status values
   STATUS_PENDING:    "待貼稿",
-  STATUS_PROCESSING: "處理中",
-  STATUS_DONE:       "已上稿",
-  STATUS_FAILED:     "失敗",
+  STATUS_PROCESSING: "貼稿中",
+  STATUS_DONE:       "自動貼稿完成",
+  STATUS_FAILED:     "自動上稿失敗",
 };
 
 
@@ -90,7 +91,9 @@ function autoPublishScan() {
 
   // Read all relevant columns at once for efficiency
   var statusRange  = sheet.getRange(2, CONFIG.COL_STATUS,  lastRow - 1, 1).getValues();
-  var docUrlRange  = sheet.getRange(2, CONFIG.COL_DOC_URL, lastRow - 1, 1).getValues();
+  var docUrlRich   = sheet.getRange(2, CONFIG.COL_DOC_URL, lastRow - 1, 1).getRichTextValues();
+  var docUrlFormulas = sheet.getRange(2, CONFIG.COL_DOC_URL, lastRow - 1, 1).getFormulas();
+  var docUrlValues = sheet.getRange(2, CONFIG.COL_DOC_URL, lastRow - 1, 1).getValues();
   var wpUrlRange   = sheet.getRange(2, CONFIG.COL_WP_URL,  lastRow - 1, 1).getValues();
   var taskIdRange  = sheet.getRange(2, CONFIG.COL_TASK_ID, lastRow - 1, 1).getValues();
 
@@ -99,7 +102,7 @@ function autoPublishScan() {
   for (var i = 0; i < statusRange.length; i++) {
     var rowNum = i + 2; // 1-based row in sheet
     var cellStatus = String(statusRange[i][0]).trim();
-    var docUrl     = String(docUrlRange[i][0]).trim();
+    var docUrl     = _extractHyperlinkUrl(docUrlRich[i][0], docUrlFormulas[i][0], docUrlValues[i][0]);
     var wpUrl      = String(wpUrlRange[i][0]).trim();
     var taskId     = String(taskIdRange[i][0]).trim();
 
@@ -137,6 +140,13 @@ function autoPublishScan() {
           }
         }
 
+        // Log: sync completion or task queued
+        if (result.status === "completed") {
+          _logToSheet(rowNum, docUrl, "完成", "同步完成，WordPress URL: " + (result.result.wordpress_draft_url || "N/A"), result.task_id);
+        } else {
+          _logToSheet(rowNum, docUrl, "已提交", "Task queued", result.task_id);
+        }
+
         triggered++;
         Logger.log("Triggered auto-publish for row " + rowNum + ": " + docUrl);
       }
@@ -144,6 +154,7 @@ function autoPublishScan() {
       Logger.log("ERROR triggering auto-publish for row " + rowNum + ": " + e.message);
       sheet.getRange(rowNum, CONFIG.COL_WP_URL).setValue("Error: " + e.message);
       sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_FAILED);
+      _logToSheet(rowNum, docUrl, "失敗", e.message, "");
     }
   }
 
@@ -190,6 +201,7 @@ function pollTaskStatus() {
         sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_DONE);
         polled++;
         Logger.log("Row " + rowNum + " completed: " + wpUrl);
+        _logToSheet(rowNum, "", "完成", "WordPress URL: " + (wpUrl || "N/A"), taskId);
 
         // Trigger storage cleanup for the published item
         var worklistItemId = taskStatus.result && taskStatus.result.worklist_item_id;
@@ -207,6 +219,7 @@ function pollTaskStatus() {
         sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_FAILED);
         polled++;
         Logger.log("Row " + rowNum + " failed: " + errorMsg);
+        _logToSheet(rowNum, "", "失敗", errorMsg, taskId);
       }
       // "pending" and "processing" -> keep waiting
     } catch (e) {
@@ -294,7 +307,123 @@ function _getApiKey() {
 }
 
 function _isGoogleDocUrl(url) {
-  return url.indexOf("docs.google.com/document") !== -1;
+  if (!url) return false;
+  // Standard: docs.google.com/document/d/...
+  if (url.indexOf("docs.google.com/document") !== -1) return true;
+  // Drive open: drive.google.com/open?id=...
+  if (url.indexOf("drive.google.com") !== -1 && url.indexOf("open?id=") !== -1) return true;
+  return false;
+}
+
+/**
+ * Extract the actual Google Doc URL from a cell that may contain a hyperlink.
+ * Handles: rich text links, HYPERLINK() formulas, plain text URLs, and pure Doc IDs.
+ */
+function _extractHyperlinkUrl(richTextValue, formula, displayValue) {
+  // 1. Try rich text link runs (handles partial links & HYPERLINK formula residue)
+  if (richTextValue) {
+    var runs = richTextValue.getRuns();
+    for (var j = 0; j < runs.length; j++) {
+      // Check hyperlink URL on this run
+      var linkUrl = runs[j].getLinkUrl();
+      if (linkUrl) {
+        var id = _parseDocId(linkUrl);
+        if (id) return _buildDocUrl(id, linkUrl);
+      }
+      // Check run text for embedded URLs
+      var runText = runs[j].getText();
+      var id = _parseDocId(runText);
+      if (id) return _buildDocUrl(id, runText);
+    }
+    // Try top-level link
+    var topUrl = richTextValue.getLinkUrl();
+    if (topUrl) {
+      var id = _parseDocId(topUrl);
+      if (id) return _buildDocUrl(id, topUrl);
+    }
+  }
+
+  // 2. Try HYPERLINK() formula
+  if (formula) {
+    var match = String(formula).match(/HYPERLINK\s*\(\s*"([^"]+)"/i);
+    if (match) {
+      var id = _parseDocId(match[1]);
+      if (id) return _buildDocUrl(id, match[1]);
+    }
+  }
+
+  // 3. Fall back to display value (plain text URL or Doc ID)
+  var text = String(displayValue).trim();
+  var id = _parseDocId(text);
+  if (id) return _buildDocUrl(id, text);
+
+  return text;
+}
+
+/**
+ * Parse a Google Doc ID from various URL formats.
+ * Supports:
+ *   - /document/d/DOC_ID/
+ *   - open?id=DOC_ID
+ *   - Pure Doc ID (25+ alphanumeric chars)
+ */
+function _parseDocId(text) {
+  if (!text) return null;
+  text = String(text).trim();
+
+  // Format 1: /document/d/DOC_ID/
+  var match1 = text.match(/\/document\/d\/([a-zA-Z0-9_-]+)/);
+  if (match1) return match1[1];
+
+  // Format 2: open?id=DOC_ID
+  var match2 = text.match(/open\?id=([a-zA-Z0-9_-]+)/);
+  if (match2) return match2[1];
+
+  // Format 3: Pure Doc ID (25+ alphanumeric/dash/underscore chars)
+  if (/^[a-zA-Z0-9_-]{25,}$/.test(text)) return text;
+
+  return null;
+}
+
+/**
+ * Build a canonical Google Doc URL from a Doc ID.
+ * If the original text is already a full URL, returns it; otherwise constructs one.
+ */
+function _buildDocUrl(docId, originalText) {
+  if (originalText && originalText.indexOf("docs.google.com/document") !== -1) {
+    return originalText;
+  }
+  return "https://docs.google.com/document/d/" + docId + "/edit";
+}
+
+/**
+ * Get or create the log sheet. Auto-creates with headers if missing.
+ */
+function _getOrCreateLogSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var logSheet = ss.getSheetByName(CONFIG.LOG_SHEET_NAME);
+  if (!logSheet) {
+    logSheet = ss.insertSheet(CONFIG.LOG_SHEET_NAME);
+    logSheet.appendRow(["時間戳", "行號", "Google Doc URL", "狀態", "詳細信息", "Task ID"]);
+    logSheet.getRange(1, 1, 1, 6).setFontWeight("bold");
+    logSheet.setColumnWidth(1, 160);
+    logSheet.setColumnWidth(3, 300);
+    logSheet.setColumnWidth(5, 400);
+  }
+  return logSheet;
+}
+
+/**
+ * Write a log entry to the "自動上稿日誌" sheet.
+ */
+function _logToSheet(rowNum, docUrl, status, detail, taskId) {
+  try {
+    var logSheet = _getOrCreateLogSheet();
+    var timestamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+    logSheet.appendRow([timestamp, rowNum || "", docUrl || "", status, detail || "", taskId || ""]);
+  } catch (e) {
+    Logger.log("WARNING: Failed to write log: " + e.message);
+  }
 }
 
 /**
