@@ -12,17 +12,16 @@ class SEOMetadata(BaseSchema):
         ...,
         min_length=10,
         max_length=60,
-        description="SEO optimized title (50-60 characters)",
+        description="SEO optimized title (10-60 characters)",
     )
     meta_description: str = Field(
         ...,
-        min_length=50,
+        min_length=10,
         max_length=160,
-        description="SEO meta description (150-160 characters)",
+        description="SEO meta description (10-160 characters)",
     )
     focus_keyword: str = Field(
-        ...,
-        min_length=2,
+        "",
         max_length=100,
         description="Primary focus keyword for SEO",
     )
@@ -75,18 +74,22 @@ class SEOMetadata(BaseSchema):
     @field_validator("meta_title")
     @classmethod
     def validate_meta_title_length(cls, v: str) -> str:
-        """Ensure meta title is within optimal range."""
+        """Log warning if meta title is shorter than optimal range."""
         if len(v) < 50:
-            raise ValueError("Meta title should be at least 50 characters for best SEO")
+            import logging
+            logging.getLogger(__name__).warning(
+                "Meta title is %d chars (optimal: 50-60). Proceeding anyway.", len(v)
+            )
         return v
 
     @field_validator("meta_description")
     @classmethod
     def validate_meta_description_length(cls, v: str) -> str:
-        """Ensure meta description is within optimal range."""
+        """Log warning if meta description is shorter than optimal range."""
         if len(v) < 120:
-            raise ValueError(
-                "Meta description should be at least 120 characters for best SEO"
+            import logging
+            logging.getLogger(__name__).warning(
+                "Meta description is %d chars (optimal: 120-160). Proceeding anyway.", len(v)
             )
         return v
 

@@ -154,6 +154,8 @@ class PlaywrightWordPressPublisher:
         secondary_categories: list[str] | None = None,
         tags: list[str] | None = None,
         featured_image_path: str | None = None,
+        featured_image_alt_text: str | None = None,
+        featured_image_description: str | None = None,
     ) -> dict[str, Any]:
         """Publish article to WordPress using Playwright.
 
@@ -172,6 +174,8 @@ class PlaywrightWordPressPublisher:
             secondary_categories: List of WordPress secondary category names
             tags: List of WordPress tags
             featured_image_path: Path to featured image file
+            featured_image_alt_text: Alt text for the featured image
+            featured_image_description: Description for the featured image
 
         Returns:
             Publishing result dictionary
@@ -246,7 +250,11 @@ class PlaywrightWordPressPublisher:
 
                 # Set featured image (before SEO to allow og_image auto-detection)
                 if featured_image_path:
-                    await self._step_set_featured_image(featured_image_path)
+                    await self._step_set_featured_image(
+                        featured_image_path,
+                        alt_text=featured_image_alt_text,
+                        description=featured_image_description,
+                    )
 
                 if seo_data:
                     await self._step_configure_seo(seo_data)
@@ -486,11 +494,84 @@ class PlaywrightWordPressPublisher:
 
         logger.info("playwright_title_set", editor_type=editor_type)
 
+    async def _step_set_image_metadata(
+        self,
+        alt_text: str | None = None,
+        title: str | None = None,
+        caption: str | None = None,
+        description: str | None = None,
+    ) -> None:
+        """Set image metadata in the WordPress media modal's Attachment Details panel.
+
+        Must be called while the media modal is open and an image is selected.
+
+        Args:
+            alt_text: Image alt text for SEO and accessibility
+            title: Image title
+            caption: Image caption
+            description: Image description
+        """
+        logger.info(
+            "playwright_step_set_image_metadata",
+            has_alt=bool(alt_text),
+            has_title=bool(title),
+            has_caption=bool(caption),
+            has_description=bool(description),
+        )
+
+        # Wait a moment for attachment details to render
+        await asyncio.sleep(1)
+
+        field_map = [
+            (alt_text, [
+                "#attachment-details-two-column-alt-text",
+                ".setting[data-setting='alt'] input",
+                "label:has-text('Alt Text') + input",
+                "input[data-setting='alt']",
+            ]),
+            (title, [
+                ".setting[data-setting='title'] input",
+                "label:has-text('Title') + input",
+                "input[data-setting='title']",
+            ]),
+            (caption, [
+                ".setting[data-setting='caption'] textarea",
+                "label:has-text('Caption') + textarea",
+                "textarea[data-setting='caption']",
+            ]),
+            (description, [
+                ".setting[data-setting='description'] textarea",
+                "label:has-text('Description') + textarea",
+                "textarea[data-setting='description']",
+            ]),
+        ]
+
+        for value, selectors in field_map:
+            if not value:
+                continue
+            filled = False
+            for selector in selectors:
+                try:
+                    el = await self.page.wait_for_selector(
+                        f".media-modal {selector}", timeout=2000
+                    )
+                    if el:
+                        await el.fill(value)
+                        filled = True
+                        logger.debug(f"Image metadata field set via {selector}")
+                        break
+                except Exception:
+                    continue
+            if not filled:
+                logger.debug(f"Could not find field for value: {value[:30]}...")
+
+        await asyncio.sleep(0.5)
+
     async def _step_upload_images(self, images: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Step 4: Upload images to WordPress media library.
 
         Args:
-            images: List of image metadata with local_path
+            images: List of image metadata with local_path, alt_text, keywords, etc.
 
         Returns:
             List of uploaded image data with WordPress URLs
@@ -501,6 +582,11 @@ class PlaywrightWordPressPublisher:
 
         for idx, image in enumerate(images):
             try:
+                local_path = image.get("local_path")
+                if not local_path:
+                    logger.warning("image_no_local_path", filename=image.get("filename"))
+                    continue
+
                 logger.debug(f"Uploading image {idx + 1}/{len(images)}: {image['filename']}")
 
                 # Click add block button
@@ -520,13 +606,30 @@ class PlaywrightWordPressPublisher:
                     self.config["media"]["file_input"],
                     timeout=5000,
                 )
-                await file_input.set_input_files(image["local_path"])
+                await file_input.set_input_files(local_path)
 
                 # Wait for upload
                 await asyncio.sleep(self.config["waits"]["media_upload"] / 1000)
 
+                # Set image alt text directly on the image block (Gutenberg)
+                alt_text = image.get("alt_text", "")
+                if alt_text:
+                    try:
+                        # In Gutenberg, after uploading an image in an Image block,
+                        # the alt text can be set in the block sidebar
+                        alt_input = await self.page.wait_for_selector(
+                            "textarea[aria-label='Alternative text'], "
+                            "textarea[aria-label='替代文字'], "
+                            ".components-textarea-control__input[aria-label*='alt' i]",
+                            timeout=3000,
+                        )
+                        if alt_input:
+                            await alt_input.fill(alt_text)
+                            logger.debug(f"Image alt text set: {alt_text[:50]}")
+                    except Exception:
+                        logger.debug("Could not set alt text on image block")
+
                 # Get uploaded image URL from block
-                # This is simplified - actual implementation may need to parse the image URL
                 image_url = f"{self.page.url}/uploaded/{image['filename']}"
 
                 uploaded.append({
@@ -539,7 +642,7 @@ class PlaywrightWordPressPublisher:
             except Exception as e:
                 logger.warning(
                     "image_upload_failed",
-                    filename=image["filename"],
+                    filename=image.get("filename", "unknown"),
                     error=str(e),
                 )
                 # Continue with other images
@@ -908,15 +1011,22 @@ class PlaywrightWordPressPublisher:
             )
             # Continue without tags - non-fatal error
 
-    async def _step_set_featured_image(self, image_path: str) -> None:
+    async def _step_set_featured_image(
+        self,
+        image_path: str,
+        alt_text: str | None = None,
+        description: str | None = None,
+    ) -> None:
         """Step 6c: Set WordPress featured image.
 
         Opens the Featured Image panel and uploads the specified image.
 
         Args:
             image_path: Path to the featured image file (local path or URL)
+            alt_text: Alt text for the featured image (SEO / accessibility)
+            description: Description for the featured image in media library
         """
-        logger.info("playwright_step_set_featured_image", path=image_path)
+        logger.info("playwright_step_set_featured_image", path=image_path, has_alt=bool(alt_text))
 
         editor_type = getattr(self, '_editor_type', 'gutenberg')
 
@@ -946,6 +1056,13 @@ class PlaywrightWordPressPublisher:
                 await self.page.wait_for_selector(file_input, timeout=5000)
                 await self.page.set_input_files(file_input, image_path)
                 await asyncio.sleep(self.config["waits"]["media_upload"] / 1000)
+
+                # Set image metadata (alt text, description) before confirming
+                if alt_text or description:
+                    await self._step_set_image_metadata(
+                        alt_text=alt_text,
+                        description=description,
+                    )
 
                 # Click "Set featured image" button
                 set_button = ".media-modal .media-button-select"
@@ -1008,6 +1125,13 @@ class PlaywrightWordPressPublisher:
                 await self.page.wait_for_selector(file_input, timeout=5000)
                 await self.page.set_input_files(file_input, image_path)
                 await asyncio.sleep(self.config["waits"]["media_upload"] / 1000)
+
+                # Set image metadata (alt text, description) before confirming
+                if alt_text or description:
+                    await self._step_set_image_metadata(
+                        alt_text=alt_text,
+                        description=description,
+                    )
 
                 # Click "Set featured image" button in modal
                 set_button = ".media-modal .media-button-select, .media-modal button:has-text('Set featured image')"

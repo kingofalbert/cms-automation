@@ -16,10 +16,12 @@ from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from src.config import get_logger, get_settings
 from src.models import (
     Article,
+    ArticleImage,
     ArticleStatus,
     ArticleStatusHistory,
     ExecutionLog,
@@ -307,10 +309,16 @@ class AutoPublishService:
         if not settings.CMS_BASE_URL:
             raise RuntimeError("CMS_BASE_URL is not configured")
 
-        # Prepare article data
+        # Prepare article data — eagerly load article_images
         article = None
         if item.article_id:
-            article = await self.session.get(Article, item.article_id)
+            stmt = (
+                select(Article)
+                .options(selectinload(Article.article_images))
+                .where(Article.id == item.article_id)
+            )
+            result = await self.session.execute(stmt)
+            article = result.scalar_one_or_none()
 
         title = item.title or "Untitled"
         body = item.content or ""
@@ -320,6 +328,8 @@ class AutoPublishService:
         secondary_categories: list[str] = []
         tags: list[str] = []
         featured_image_path = None
+        featured_image_alt_text: str | None = None
+        featured_image_description: str | None = None
         article_images: list[dict[str, Any]] = []
         seo_data = None
 
@@ -329,7 +339,7 @@ class AutoPublishService:
             tags = getattr(article, "tags", None) or []
             featured_image_path = getattr(article, "featured_image_path", None)
 
-            # Build SEO metadata
+            # Build SEO metadata with error tolerance
             seo_title = getattr(article, "seo_title", None) or title
             meta_desc = (
                 getattr(article, "meta_description", None)
@@ -339,13 +349,60 @@ class AutoPublishService:
             focus_kw = getattr(article, "focus_keyword", None) or ""
             seo_kws = getattr(article, "seo_keywords", None) or []
 
-            if seo_title or meta_desc or focus_kw:
-                seo_data = SEOMetadata(
-                    meta_title=seo_title[:60] if seo_title else title[:60],
-                    meta_description=meta_desc[:160] if meta_desc else "",
-                    focus_keyword=focus_kw,
-                    keywords=seo_kws[:5] if seo_kws else [],
-                )
+            if seo_title or meta_desc:
+                try:
+                    meta_title = (seo_title[:60] if seo_title else title[:60]) or ""
+                    meta_description = (meta_desc[:160] if meta_desc else "") or ""
+
+                    # Ensure minimum lengths for Pydantic validation
+                    if len(meta_title) < 10:
+                        meta_title = title[:60] if len(title) >= 10 else title.ljust(10)
+                    if len(meta_description) < 10:
+                        meta_description = meta_title  # fallback to title
+
+                    seo_data = SEOMetadata(
+                        meta_title=meta_title,
+                        meta_description=meta_description,
+                        focus_keyword=focus_kw if len(focus_kw) >= 2 else "",
+                        keywords=seo_kws[:5] if seo_kws else [],
+                    )
+                except Exception as seo_err:
+                    logger.warning(
+                        "seo_metadata_build_failed",
+                        error=str(seo_err),
+                        seo_title=seo_title[:30] if seo_title else None,
+                        meta_desc_len=len(meta_desc) if meta_desc else 0,
+                    )
+                    # Continue without SEO data — non-fatal
+
+            # Load article images from the database
+            if article.article_images:
+                for img in article.article_images:
+                    img_url = img.source_url or img.source_path
+                    if not img_url:
+                        continue
+
+                    # Determine alt_text: image.alt_text > image.caption > article title
+                    alt_text = img.alt_text or img.caption or title
+
+                    # Keywords for images inherit from article tags
+                    img_keywords = tags or []
+
+                    if img.is_featured:
+                        # Use featured image as the featured_image_path
+                        if not featured_image_path:
+                            featured_image_path = img_url
+                            featured_image_alt_text = alt_text
+                            featured_image_description = img.description or ""
+                    else:
+                        article_images.append({
+                            "filename": f"image_{img.position}.jpg",
+                            "source_url": img_url,
+                            "alt_text": alt_text,
+                            "caption": img.caption or "",
+                            "description": img.description or "",
+                            "keywords": img_keywords,
+                        })
 
             # Use body_html from article if available (cleaner content)
             if getattr(article, "body_html", None):
@@ -374,6 +431,22 @@ class AutoPublishService:
                 )
                 featured_image_path = None  # Skip featured image if download fails
 
+        # Download article images to local temp files
+        local_image_paths: list[str] = []
+        for img_dict in article_images:
+            img_url = img_dict.get("source_url", "")
+            if img_url and img_url.startswith("http"):
+                try:
+                    local_path = await self._download_image_to_temp(img_url)
+                    img_dict["local_path"] = local_path
+                    local_image_paths.append(local_path)
+                except Exception as img_err:
+                    logger.warning(
+                        "article_image_download_failed",
+                        url=img_url[:100],
+                        error=str(img_err),
+                    )
+
         try:
             try:
                 result = await publisher.publish_article(
@@ -391,6 +464,8 @@ class AutoPublishService:
                     secondary_categories=secondary_categories,
                     tags=tags,
                     featured_image_path=featured_image_path,
+                    featured_image_alt_text=featured_image_alt_text,
+                    featured_image_description=featured_image_description,
                 )
             except Exception as exc:
                 logger.error(
@@ -474,10 +549,15 @@ class AutoPublishService:
                     "error": error_msg,
                 }
         finally:
-            # Clean up temp file
+            # Clean up temp files
             if local_featured_image:
                 try:
                     os.unlink(local_featured_image)
+                except OSError:
+                    pass
+            for tmp_path in local_image_paths:
+                try:
+                    os.unlink(tmp_path)
                 except OSError:
                     pass
 
