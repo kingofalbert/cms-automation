@@ -382,8 +382,8 @@ class AutoPublishService:
                     if not img_url:
                         continue
 
-                    # Determine alt_text: image.alt_text > image.caption > article title
-                    alt_text = img.alt_text or img.caption or title
+                    # Determine alt_text: image.alt_text > image.caption
+                    alt_text = img.alt_text or img.caption or ""
 
                     # Keywords for images inherit from article tags
                     img_keywords = tags or []
