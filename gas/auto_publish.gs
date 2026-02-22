@@ -18,7 +18,7 @@
 // Configuration
 // ---------------------------------------------------------------------------
 
-var CONFIG = {
+var AP_CONFIG = {
   // Backend URL (Cloud Run)
   BACKEND_URL: "https://cms-automation-backend-297291472291.us-east1.run.app",
 
@@ -36,7 +36,7 @@ var CONFIG = {
   STATUS_PENDING:    "待貼稿",
   STATUS_PROCESSING: "貼稿中",
   STATUS_DONE:       "自動貼稿完成",
-  STATUS_FAILED:     "自動上稿失敗",
+  STATUS_FAILED:     "自動貼稿失敗",
 };
 
 
@@ -90,12 +90,12 @@ function autoPublishScan() {
   if (lastRow < 2) return; // No data rows
 
   // Read all relevant columns at once for efficiency
-  var statusRange  = sheet.getRange(2, CONFIG.COL_STATUS,  lastRow - 1, 1).getValues();
-  var docUrlRich   = sheet.getRange(2, CONFIG.COL_DOC_URL, lastRow - 1, 1).getRichTextValues();
-  var docUrlFormulas = sheet.getRange(2, CONFIG.COL_DOC_URL, lastRow - 1, 1).getFormulas();
-  var docUrlValues = sheet.getRange(2, CONFIG.COL_DOC_URL, lastRow - 1, 1).getValues();
-  var wpUrlRange   = sheet.getRange(2, CONFIG.COL_WP_URL,  lastRow - 1, 1).getValues();
-  var taskIdRange  = sheet.getRange(2, CONFIG.COL_TASK_ID, lastRow - 1, 1).getValues();
+  var statusRange  = sheet.getRange(2, AP_CONFIG.COL_STATUS,  lastRow - 1, 1).getValues();
+  var docUrlRich   = sheet.getRange(2, AP_CONFIG.COL_DOC_URL, lastRow - 1, 1).getRichTextValues();
+  var docUrlFormulas = sheet.getRange(2, AP_CONFIG.COL_DOC_URL, lastRow - 1, 1).getFormulas();
+  var docUrlValues = sheet.getRange(2, AP_CONFIG.COL_DOC_URL, lastRow - 1, 1).getValues();
+  var wpUrlRange   = sheet.getRange(2, AP_CONFIG.COL_WP_URL,  lastRow - 1, 1).getValues();
+  var taskIdRange  = sheet.getRange(2, AP_CONFIG.COL_TASK_ID, lastRow - 1, 1).getValues();
 
   var triggered = 0;
 
@@ -107,7 +107,7 @@ function autoPublishScan() {
     var taskId     = String(taskIdRange[i][0]).trim();
 
     // Skip if not pending, no doc URL, already has task ID, or already has result
-    if (cellStatus !== CONFIG.STATUS_PENDING) continue;
+    if (cellStatus !== AP_CONFIG.STATUS_PENDING) continue;
     if (!docUrl || !_isGoogleDocUrl(docUrl)) continue;
     if (taskId) continue;
     if (wpUrl) continue;
@@ -118,15 +118,15 @@ function autoPublishScan() {
 
       if (result && result.task_id) {
         // Write task ID to helper column
-        sheet.getRange(rowNum, CONFIG.COL_TASK_ID).setValue(result.task_id);
+        sheet.getRange(rowNum, AP_CONFIG.COL_TASK_ID).setValue(result.task_id);
 
         // Update status to "處理中"
-        sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_PROCESSING);
+        sheet.getRange(rowNum, AP_CONFIG.COL_STATUS).setValue(AP_CONFIG.STATUS_PROCESSING);
 
         // If completed synchronously, write result immediately
         if (result.status === "completed" && result.result && result.result.wordpress_draft_url) {
-          sheet.getRange(rowNum, CONFIG.COL_WP_URL).setValue(result.result.wordpress_draft_url);
-          sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_DONE);
+          sheet.getRange(rowNum, AP_CONFIG.COL_WP_URL).setValue(result.result.wordpress_draft_url);
+          sheet.getRange(rowNum, AP_CONFIG.COL_STATUS).setValue(AP_CONFIG.STATUS_DONE);
 
           // Trigger storage cleanup for synchronous completion
           var syncItemId = result.result.worklist_item_id;
@@ -152,8 +152,8 @@ function autoPublishScan() {
       }
     } catch (e) {
       Logger.log("ERROR triggering auto-publish for row " + rowNum + ": " + e.message);
-      sheet.getRange(rowNum, CONFIG.COL_WP_URL).setValue("Error: " + e.message);
-      sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_FAILED);
+      sheet.getRange(rowNum, AP_CONFIG.COL_WP_URL).setValue("Error: " + e.message);
+      sheet.getRange(rowNum, AP_CONFIG.COL_STATUS).setValue(AP_CONFIG.STATUS_FAILED);
       _logToSheet(rowNum, docUrl, "失敗", e.message, "");
     }
   }
@@ -178,8 +178,8 @@ function pollTaskStatus() {
   var lastRow = sheet.getLastRow();
   if (lastRow < 2) return;
 
-  var statusRange = sheet.getRange(2, CONFIG.COL_STATUS,  lastRow - 1, 1).getValues();
-  var taskIdRange = sheet.getRange(2, CONFIG.COL_TASK_ID, lastRow - 1, 1).getValues();
+  var statusRange = sheet.getRange(2, AP_CONFIG.COL_STATUS,  lastRow - 1, 1).getValues();
+  var taskIdRange = sheet.getRange(2, AP_CONFIG.COL_TASK_ID, lastRow - 1, 1).getValues();
 
   var polled = 0;
 
@@ -189,7 +189,7 @@ function pollTaskStatus() {
     var taskId     = String(taskIdRange[i][0]).trim();
 
     // Only poll rows that are processing and have a task ID
-    if (cellStatus !== CONFIG.STATUS_PROCESSING) continue;
+    if (cellStatus !== AP_CONFIG.STATUS_PROCESSING) continue;
     if (!taskId) continue;
 
     try {
@@ -197,8 +197,8 @@ function pollTaskStatus() {
 
       if (taskStatus.status === "completed") {
         var wpUrl = (taskStatus.result && taskStatus.result.wordpress_draft_url) || "";
-        sheet.getRange(rowNum, CONFIG.COL_WP_URL).setValue(wpUrl || "Published (no URL)");
-        sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_DONE);
+        sheet.getRange(rowNum, AP_CONFIG.COL_WP_URL).setValue(wpUrl || "Published (no URL)");
+        sheet.getRange(rowNum, AP_CONFIG.COL_STATUS).setValue(AP_CONFIG.STATUS_DONE);
         polled++;
         Logger.log("Row " + rowNum + " completed: " + wpUrl);
         _logToSheet(rowNum, "", "完成", "WordPress URL: " + (wpUrl || "N/A"), taskId);
@@ -215,8 +215,8 @@ function pollTaskStatus() {
         }
       } else if (taskStatus.status === "failed") {
         var errorMsg = taskStatus.error || "Unknown error";
-        sheet.getRange(rowNum, CONFIG.COL_WP_URL).setValue("Error: " + errorMsg);
-        sheet.getRange(rowNum, CONFIG.COL_STATUS).setValue(CONFIG.STATUS_FAILED);
+        sheet.getRange(rowNum, AP_CONFIG.COL_WP_URL).setValue("Error: " + errorMsg);
+        sheet.getRange(rowNum, AP_CONFIG.COL_STATUS).setValue(AP_CONFIG.STATUS_FAILED);
         polled++;
         Logger.log("Row " + rowNum + " failed: " + errorMsg);
         _logToSheet(rowNum, "", "失敗", errorMsg, taskId);
@@ -248,7 +248,7 @@ function testConnection() {
     return;
   }
 
-  var url = CONFIG.BACKEND_URL + "/health";
+  var url = AP_CONFIG.BACKEND_URL + "/health";
   try {
     var response = UrlFetchApp.fetch(url, {
       method: "get",
@@ -294,9 +294,9 @@ function testAutoPublish() {
 
 function _getSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+  var sheet = ss.getSheetByName(AP_CONFIG.SHEET_NAME);
   if (!sheet) {
-    Logger.log("ERROR: Sheet '" + CONFIG.SHEET_NAME + "' not found.");
+    Logger.log("ERROR: Sheet '" + AP_CONFIG.SHEET_NAME + "' not found.");
     return null;
   }
   return sheet;
@@ -401,9 +401,9 @@ function _buildDocUrl(docId, originalText) {
  */
 function _getOrCreateLogSheet() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var logSheet = ss.getSheetByName(CONFIG.LOG_SHEET_NAME);
+  var logSheet = ss.getSheetByName(AP_CONFIG.LOG_SHEET_NAME);
   if (!logSheet) {
-    logSheet = ss.insertSheet(CONFIG.LOG_SHEET_NAME);
+    logSheet = ss.insertSheet(AP_CONFIG.LOG_SHEET_NAME);
     logSheet.appendRow(["時間戳", "行號", "Google Doc URL", "狀態", "詳細信息", "Task ID"]);
     logSheet.getRange(1, 1, 1, 6).setFontWeight("bold");
     logSheet.setColumnWidth(1, 160);
@@ -430,7 +430,7 @@ function _logToSheet(rowNum, docUrl, status, detail, taskId) {
  * Call POST /v1/pipeline/auto-publish
  */
 function _callAutoPublish(apiKey, googleDocUrl, sheetRow) {
-  var url = CONFIG.BACKEND_URL + "/v1/pipeline/auto-publish";
+  var url = AP_CONFIG.BACKEND_URL + "/v1/pipeline/auto-publish";
   var payload = {
     google_doc_url: googleDocUrl,
   };
@@ -461,7 +461,7 @@ function _callAutoPublish(apiKey, googleDocUrl, sheetRow) {
  * Call GET /v1/pipeline/auto-publish/{taskId}/status
  */
 function _getTaskStatus(apiKey, taskId) {
-  var url = CONFIG.BACKEND_URL + "/v1/pipeline/auto-publish/" + encodeURIComponent(taskId) + "/status";
+  var url = AP_CONFIG.BACKEND_URL + "/v1/pipeline/auto-publish/" + encodeURIComponent(taskId) + "/status";
 
   var options = {
     method: "get",
@@ -485,7 +485,7 @@ function _getTaskStatus(apiKey, taskId) {
  * Non-critical: failures are logged but do not affect the publish status.
  */
 function _callCleanup(apiKey, worklistItemId) {
-  var url = CONFIG.BACKEND_URL + "/v1/pipeline/cleanup";
+  var url = AP_CONFIG.BACKEND_URL + "/v1/pipeline/cleanup";
   var payload = {
     worklist_item_id: worklistItemId,
   };
