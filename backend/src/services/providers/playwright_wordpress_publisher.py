@@ -1033,15 +1033,26 @@ class PlaywrightWordPressPublisher:
         try:
             if editor_type == "classic":
                 # Classic Editor: Featured Image is in a meta box
+                # Scroll down to ensure the featured image box is visible
+                await self.page.evaluate("""
+                    () => {
+                        const el = document.querySelector('#postimagediv, #set-post-thumbnail');
+                        if (el) el.scrollIntoView({ behavior: 'instant', block: 'center' });
+                    }
+                """)
+                await asyncio.sleep(0.5)
+
                 # Click "Set featured image" link
                 set_featured_link = "#set-post-thumbnail"
                 await self.page.wait_for_selector(set_featured_link, timeout=5000)
                 await self.page.click(set_featured_link)
+                logger.info("playwright_featured_image_link_clicked")
                 await asyncio.sleep(1)
 
                 # Wait for media modal
                 media_modal = ".media-modal"
                 await self.page.wait_for_selector(media_modal, timeout=10000)
+                logger.info("playwright_media_modal_opened")
 
                 # Click "Upload files" tab (supports English + Chinese WordPress)
                 upload_tab = (
@@ -1050,18 +1061,25 @@ class PlaywrightWordPressPublisher:
                     ".media-modal .media-router .media-menu-item:first-child"
                 )
                 try:
-                    await self.page.click(upload_tab)
+                    await self.page.click(upload_tab, timeout=5000)
+                    logger.info("playwright_upload_tab_clicked")
                     await asyncio.sleep(0.5)
                 except Exception as tab_err:
                     logger.warning("playwright_upload_tab_click_failed", error=str(tab_err))
+
+                # Verify file exists and log its size
+                import os as _os
+                file_size = _os.path.getsize(image_path) if _os.path.exists(image_path) else -1
+                logger.info("playwright_uploading_file", path=image_path, size_bytes=file_size)
 
                 # Upload the file
                 file_input = ".media-modal input[type='file']"
                 await self.page.wait_for_selector(file_input, timeout=5000)
                 await self.page.set_input_files(file_input, image_path)
+                logger.info("playwright_file_input_set")
 
                 # Wait for upload to complete (button becomes enabled)
-                upload_ok = await self._wait_for_media_upload_complete(timeout_ms=45000)
+                upload_ok = await self._wait_for_media_upload_complete(timeout_ms=60000)
                 if not upload_ok:
                     logger.warning("playwright_featured_image_upload_timeout", path=image_path)
 
@@ -1075,6 +1093,7 @@ class PlaywrightWordPressPublisher:
                 # Click "Set featured image" button
                 set_button = ".media-modal .media-button-select"
                 await self.page.click(set_button, timeout=10000)
+                logger.info("playwright_featured_image_button_clicked")
                 await asyncio.sleep(1)
 
             else:
@@ -1170,17 +1189,19 @@ class PlaywrightWordPressPublisher:
             )
             # Continue without featured image - non-fatal error
 
-    async def _wait_for_media_upload_complete(self, timeout_ms: int = 45000) -> bool:
+    async def _wait_for_media_upload_complete(self, timeout_ms: int = 60000) -> bool:
         """Wait for WordPress media upload to complete.
 
         Polls for the confirm button (.media-button-select) to become enabled,
         which indicates the upload finished and the image is selected.
+        If the upload finishes but no attachment is selected, tries to select
+        the most recently uploaded attachment.
 
         Args:
             timeout_ms: Maximum wait time in milliseconds.
 
         Returns:
-            True if upload completed (button enabled), False if timed out.
+            True if upload completed and attachment selected, False if failed.
         """
         poll_interval = 2.0  # seconds between checks
         max_polls = int(timeout_ms / (poll_interval * 1000))
@@ -1190,16 +1211,65 @@ class PlaywrightWordPressPublisher:
 
         for attempt in range(max_polls):
             try:
-                # Check if the confirm button exists and is enabled
-                is_enabled = await self.page.evaluate("""
+                # Gather diagnostic state in a single evaluate call
+                state = await self.page.evaluate("""
                     () => {
-                        const btn = document.querySelector('.media-modal .media-button-select');
-                        if (!btn) return null;
-                        return !btn.disabled;
+                        const modal = document.querySelector('.media-modal');
+                        if (!modal) return { modal: false };
+
+                        const btn = modal.querySelector('.media-button-select');
+                        const btnEnabled = btn ? !btn.disabled : null;
+                        const btnText = btn ? btn.textContent.trim() : null;
+
+                        // Check for upload progress indicators
+                        const progressBar = modal.querySelector('.media-progress-bar, .upload-status .bar');
+                        const uploading = modal.querySelector('.upload-inline-status, .media-uploader-status.uploading');
+                        const spinner = modal.querySelector('.spinner.is-active');
+
+                        // Count attachments in the modal
+                        const attachments = modal.querySelectorAll('.attachment');
+                        const selectedAttachment = modal.querySelector('.attachment.selected, .attachment[aria-checked="true"]');
+
+                        // Check for upload errors
+                        const uploadError = modal.querySelector('.upload-error, .upload-errors');
+                        const errorVisible = uploadError && uploadError.offsetParent !== null;
+                        const errorText = errorVisible ? uploadError.textContent.trim().substring(0, 200) : null;
+
+                        return {
+                            modal: true,
+                            btnEnabled: btnEnabled,
+                            btnText: btnText,
+                            hasProgressBar: !!progressBar,
+                            isUploading: !!uploading || !!spinner,
+                            attachmentCount: attachments.length,
+                            hasSelected: !!selectedAttachment,
+                            hasError: errorVisible,
+                            errorText: errorText,
+                        };
                     }
                 """)
 
-                if is_enabled is True:
+                if attempt % 3 == 0:  # Log state every 3rd poll
+                    logger.info(
+                        "playwright_media_upload_poll",
+                        attempt=attempt + 1,
+                        **{k: v for k, v in (state or {}).items() if k != 'errorText'},
+                    )
+
+                if not state or not state.get('modal'):
+                    logger.warning("playwright_media_modal_disappeared")
+                    return False
+
+                # Check for upload errors
+                if state.get('hasError'):
+                    logger.warning(
+                        "playwright_media_upload_error_detected",
+                        error_text=state.get('errorText'),
+                    )
+                    return False
+
+                # Button is enabled => upload done and attachment selected
+                if state.get('btnEnabled') is True:
                     logger.info(
                         "playwright_media_upload_complete",
                         attempt=attempt + 1,
@@ -1207,46 +1277,114 @@ class PlaywrightWordPressPublisher:
                     )
                     return True
 
-                if is_enabled is None:
-                    logger.debug("media_button_select not found yet, waiting...")
+                # Upload finished (no progress/spinner) but button still disabled
+                # => attachment not selected. Try to select the first one.
+                if (
+                    not state.get('isUploading')
+                    and not state.get('hasProgressBar')
+                    and state.get('attachmentCount', 0) > 0
+                    and not state.get('hasSelected')
+                    and attempt >= 3  # Give upload at least 6s to start
+                ):
+                    logger.info(
+                        "playwright_media_upload_trying_select_attachment",
+                        attachment_count=state.get('attachmentCount'),
+                    )
+                    await self._try_select_first_attachment()
+                    await asyncio.sleep(1)
+                    continue
 
             except Exception as e:
                 logger.debug(f"Upload poll error: {e}")
 
-            # Also check for upload errors in the modal
+            await asyncio.sleep(poll_interval)
+
+        # Timed out — gather final state for diagnostics
+        try:
+            final_state = await self.page.evaluate("""
+                () => {
+                    const modal = document.querySelector('.media-modal');
+                    if (!modal) return { modal: false };
+                    const btn = modal.querySelector('.media-button-select');
+                    const attachments = modal.querySelectorAll('.attachment');
+                    const selected = modal.querySelector('.attachment.selected, .attachment[aria-checked="true"]');
+                    return {
+                        btnEnabled: btn ? !btn.disabled : null,
+                        attachmentCount: attachments.length,
+                        hasSelected: !!selected,
+                        modalHTML: modal.querySelector('.uploader-inline')?.innerHTML?.substring(0, 500) || null,
+                    };
+                }
+            """)
+            logger.warning(
+                "playwright_media_upload_poll_timeout",
+                timeout_ms=timeout_ms,
+                polls=max_polls,
+                final_state=final_state,
+            )
+        except Exception:
+            logger.warning(
+                "playwright_media_upload_poll_timeout",
+                timeout_ms=timeout_ms,
+                polls=max_polls,
+            )
+
+        # Last resort: try selecting attachment one more time
+        selected = await self._try_select_first_attachment()
+        if selected:
+            await asyncio.sleep(1)
+            # Check button again
             try:
-                error_visible = await self.page.evaluate("""
+                btn_enabled = await self.page.evaluate("""
                     () => {
-                        const err = document.querySelector('.media-modal .upload-error, .media-modal .upload-errors');
-                        return err && err.offsetParent !== null;
+                        const btn = document.querySelector('.media-modal .media-button-select');
+                        return btn ? !btn.disabled : false;
                     }
                 """)
-                if error_visible:
-                    logger.warning("playwright_media_upload_error_detected")
-                    return False
+                if btn_enabled:
+                    logger.info("playwright_media_upload_recovered_after_timeout")
+                    return True
             except Exception:
                 pass
 
-            await asyncio.sleep(poll_interval)
+        return False
 
-        # Timed out — try JS fallback: force-enable the button and click
-        logger.warning(
-            "playwright_media_upload_poll_timeout",
-            timeout_ms=timeout_ms,
-            polls=max_polls,
-        )
+    async def _try_select_first_attachment(self) -> bool:
+        """Try to click the first attachment in the media modal to select it.
+
+        Returns True if an attachment was clicked.
+        """
         try:
-            await self.page.evaluate("""
+            clicked = await self.page.evaluate("""
                 () => {
-                    const btn = document.querySelector('.media-modal .media-button-select');
-                    if (btn) btn.disabled = false;
+                    const modal = document.querySelector('.media-modal');
+                    if (!modal) return false;
+
+                    // Try to find and click the first attachment
+                    const attachment = modal.querySelector('.attachment:not(.upload-error)');
+                    if (attachment) {
+                        attachment.click();
+                        return true;
+                    }
+
+                    // Alternative: look for attachments in the media library grid
+                    const libraryItem = modal.querySelector('.attachments-browser .attachment');
+                    if (libraryItem) {
+                        libraryItem.click();
+                        return true;
+                    }
+
+                    return false;
                 }
             """)
-            logger.info("playwright_media_button_force_enabled")
+            if clicked:
+                logger.info("playwright_media_attachment_clicked")
+            else:
+                logger.warning("playwright_media_no_attachment_to_select")
+            return bool(clicked)
         except Exception as e:
-            logger.warning("playwright_media_button_force_enable_failed", error=str(e))
-
-        return False
+            logger.warning("playwright_media_select_attachment_failed", error=str(e))
+            return False
 
     async def _step_configure_seo(self, seo_data: SEOMetadata) -> None:
         """Step 6: Configure SEO metadata.
