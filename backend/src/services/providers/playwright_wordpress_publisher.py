@@ -1224,6 +1224,29 @@ class PlaywrightWordPressPublisher:
             )
             # Continue without SEO configuration
 
+    async def _dismiss_media_modal(self) -> None:
+        """Dismiss any open WordPress media modal that may block page interaction."""
+        try:
+            modal = await self.page.query_selector(".media-modal")
+            if modal and await modal.is_visible():
+                # Try clicking the close button
+                close_btn = await self.page.query_selector(
+                    ".media-modal .media-modal-close, "
+                    ".media-modal button[aria-label='Close dialog'], "
+                    ".media-modal button[aria-label='Close']"
+                )
+                if close_btn:
+                    await close_btn.click()
+                    await asyncio.sleep(0.5)
+                    logger.info("playwright_media_modal_dismissed")
+                else:
+                    # Fallback: press Escape
+                    await self.page.keyboard.press("Escape")
+                    await asyncio.sleep(0.5)
+                    logger.info("playwright_media_modal_dismissed_via_escape")
+        except Exception:
+            pass
+
     async def _step_publish(self, publish_mode: Literal["publish", "draft"] = "publish") -> tuple[str | None, str]:
         """Step 7: Publish article or save as draft.
 
@@ -1236,23 +1259,78 @@ class PlaywrightWordPressPublisher:
         editor_type = getattr(self, '_editor_type', 'gutenberg')
         logger.info("playwright_step_publish", publish_mode=publish_mode, editor_type=editor_type)
 
+        # Dismiss any stale media modal that may be blocking the page
+        await self._dismiss_media_modal()
+
         # Scroll to top to ensure buttons are visible
         await self.page.evaluate("window.scrollTo(0, 0)")
+        await asyncio.sleep(0.5)
 
         if publish_mode == "draft":
             if editor_type == "classic":
-                # Classic Editor: Save Draft button is #save-post
-                save_selector = "#save-post"
-                logger.info("playwright_using_classic_save_draft", selector=save_selector)
+                # Classic Editor: Save Draft button — try multiple selectors
+                save_selectors = [
+                    "#save-post",                      # Standard Save Draft
+                    "input[name='save']",              # Alternative name-based
+                    "#publish",                        # Publish button (saves as draft if status is draft)
+                ]
+                logger.info("playwright_using_classic_save_draft")
+
+                saved = False
+                for selector in save_selectors:
+                    try:
+                        btn = await self.page.wait_for_selector(selector, state="visible", timeout=3000)
+                        if btn:
+                            await btn.click()
+                            saved = True
+                            logger.info("playwright_classic_draft_clicked", selector=selector)
+                            break
+                    except Exception:
+                        continue
+
+                if not saved:
+                    # Last resort: submit the form via JavaScript
+                    logger.warning("playwright_save_draft_buttons_not_found, using JS submit")
+                    await self.page.evaluate("""
+                        () => {
+                            // Ensure post status is 'draft'
+                            const statusField = document.querySelector('#post_status');
+                            if (statusField) statusField.value = 'draft';
+
+                            // Try clicking save-post via JS (may be hidden but present)
+                            const saveBtn = document.querySelector('#save-post');
+                            if (saveBtn) {
+                                saveBtn.disabled = false;
+                                saveBtn.click();
+                                return 'clicked_save_post';
+                            }
+
+                            // Try the publish button with draft status
+                            const publishBtn = document.querySelector('#publish');
+                            if (publishBtn) {
+                                publishBtn.click();
+                                return 'clicked_publish';
+                            }
+
+                            // Submit the form directly
+                            const form = document.querySelector('#post');
+                            if (form) {
+                                form.submit();
+                                return 'form_submitted';
+                            }
+                            return 'nothing_found';
+                        }
+                    """)
+                    saved = True
             else:
                 # Gutenberg: Use config selector
                 save_selector = self.config["publish"].get("save_draft_button")
                 if not save_selector:
                     raise ValueError("Save draft selector not configured")
 
-            # Wait for save button to be visible and clickable
-            await self.page.wait_for_selector(save_selector, state="visible", timeout=10000)
-            await self.page.click(save_selector)
+                # Wait for save button to be visible and clickable
+                await self.page.wait_for_selector(save_selector, state="visible", timeout=10000)
+                await self.page.click(save_selector)
 
             # For Classic Editor, wait for the page to reload/update
             if editor_type == "classic":
