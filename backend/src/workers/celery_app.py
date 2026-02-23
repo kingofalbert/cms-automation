@@ -43,6 +43,10 @@ celery_app.conf.update(
     # Monitoring
     worker_send_task_events=True,
     task_send_sent_event=True,
+    # Fast-fail when broker (Redis) is unreachable so the API can fall back
+    # to synchronous execution quickly instead of waiting ~20s.
+    broker_connection_timeout=2,
+    broker_connection_retry=False,
 )
 
 # Auto-discover tasks from all modules
