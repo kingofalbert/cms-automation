@@ -1283,7 +1283,7 @@ class PlaywrightWordPressPublisher:
             if editor_type == "classic":
                 logger.info("playwright_using_classic_save_draft")
 
-                # Use JavaScript to click save draft — more reliable than
+                # Use JavaScript to submit the draft form — more reliable than
                 # Playwright selectors which require element to be "visible"
                 # (modal overlays/backdrops can block visibility checks)
                 js_result = await self.page.evaluate("""
@@ -1292,34 +1292,36 @@ class PlaywrightWordPressPublisher:
                         const statusField = document.querySelector('#post_status');
                         if (statusField) statusField.value = 'draft';
 
-                        // Try the Save Draft button
-                        const saveBtn = document.querySelector('#save-post');
-                        if (saveBtn) {
-                            saveBtn.disabled = false;
-                            saveBtn.click();
-                            return 'clicked_save_post';
-                        }
-
-                        // Try input[name=save]
-                        const saveInput = document.querySelector("input[name='save']");
-                        if (saveInput) {
-                            saveInput.disabled = false;
-                            saveInput.click();
-                            return 'clicked_save_input';
-                        }
-
-                        // Try the Publish button (with draft status already set)
-                        const publishBtn = document.querySelector('#publish');
-                        if (publishBtn) {
-                            publishBtn.click();
-                            return 'clicked_publish';
-                        }
-
-                        // Submit the form directly
                         const form = document.querySelector('#post');
-                        if (form) {
+                        const saveBtn = document.querySelector('#save-post');
+
+                        if (form && saveBtn) {
+                            saveBtn.disabled = false;
+                            // Use requestSubmit with submitter — properly includes
+                            // the button's name=value in POST data
+                            if (form.requestSubmit) {
+                                form.requestSubmit(saveBtn);
+                                return 'requestSubmit_save_post';
+                            }
+                            // Fallback: add hidden input for button name/value, then submit
+                            const hidden = document.createElement('input');
+                            hidden.type = 'hidden';
+                            hidden.name = saveBtn.name || 'save';
+                            hidden.value = saveBtn.value || 'Save Draft';
+                            form.appendChild(hidden);
                             form.submit();
-                            return 'form_submitted';
+                            return 'form_submit_with_save';
+                        }
+
+                        if (form) {
+                            // No save button found — add save param and submit
+                            const hidden = document.createElement('input');
+                            hidden.type = 'hidden';
+                            hidden.name = 'save';
+                            hidden.value = 'Save Draft';
+                            form.appendChild(hidden);
+                            form.submit();
+                            return 'form_submit_manual_save';
                         }
                         return 'nothing_found';
                     }
@@ -1339,7 +1341,7 @@ class PlaywrightWordPressPublisher:
             if editor_type == "classic":
                 # Wait for URL to contain post= parameter (indicates post was saved)
                 try:
-                    await self.page.wait_for_url("**/post.php?post=*", timeout=15000)
+                    await self.page.wait_for_url("**/post.php?post=*", timeout=30000)
                     logger.info("playwright_draft_saved_classic")
                 except Exception:
                     # Already on edit page, check for success message
