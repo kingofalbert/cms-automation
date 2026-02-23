@@ -1072,11 +1072,55 @@ class PlaywrightWordPressPublisher:
                 file_size = _os.path.getsize(image_path) if _os.path.exists(image_path) else -1
                 logger.info("playwright_uploading_file", path=image_path, size_bytes=file_size)
 
-                # Upload the file
-                file_input = ".media-modal input[type='file']"
-                await self.page.wait_for_selector(file_input, timeout=5000)
-                await self.page.set_input_files(file_input, image_path)
-                logger.info("playwright_file_input_set")
+                # Upload the file using file chooser API (works with plupload)
+                # WordPress uses plupload which requires the native file dialog
+                # flow rather than directly setting files on the input element.
+                upload_success = False
+                try:
+                    # Method 1: Use expect_file_chooser with the "Select Files" button
+                    select_btn = (
+                        ".media-modal .upload-ui button.browser, "
+                        ".media-modal .upload-ui a.browser, "
+                        ".media-modal button:has-text('選取檔案'), "
+                        ".media-modal button:has-text('Select Files')"
+                    )
+                    async with self.page.expect_file_chooser(timeout=5000) as fc_info:
+                        await self.page.click(select_btn, timeout=3000)
+                    file_chooser = await fc_info.value
+                    await file_chooser.set_files(image_path)
+                    upload_success = True
+                    logger.info("playwright_file_chooser_set")
+                except Exception as fc_err:
+                    logger.warning(
+                        "playwright_file_chooser_failed_trying_input",
+                        error=str(fc_err),
+                    )
+                    # Method 2: Fall back to set_input_files on the plupload shim
+                    try:
+                        file_input = (
+                            ".media-modal .moxie-shim input[type='file'], "
+                            ".media-modal input[type='file']"
+                        )
+                        await self.page.wait_for_selector(file_input, timeout=5000)
+                        await self.page.set_input_files(file_input, image_path)
+                        # Dispatch change event to trigger plupload
+                        await self.page.evaluate("""
+                            () => {
+                                const input = document.querySelector(
+                                    '.media-modal .moxie-shim input[type="file"], '
+                                    + '.media-modal input[type="file"]'
+                                );
+                                if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        """)
+                        upload_success = True
+                        logger.info("playwright_file_input_set_with_event")
+                    except Exception as input_err:
+                        logger.warning(
+                            "playwright_file_input_also_failed",
+                            error=str(input_err),
+                        )
+                logger.info("playwright_upload_initiated", method="file_chooser" if upload_success else "fallback")
 
                 # Wait for upload to complete (button becomes enabled)
                 upload_ok = await self._wait_for_media_upload_complete(timeout_ms=60000)
@@ -1153,10 +1197,48 @@ class PlaywrightWordPressPublisher:
                 except Exception as tab_err:
                     logger.warning("playwright_upload_tab_click_failed", error=str(tab_err))
 
-                # Upload the file
-                file_input = ".media-modal input[type='file']"
-                await self.page.wait_for_selector(file_input, timeout=5000)
-                await self.page.set_input_files(file_input, image_path)
+                # Upload the file using file chooser API (works with plupload)
+                import os as _os
+                file_size = _os.path.getsize(image_path) if _os.path.exists(image_path) else -1
+                logger.info("playwright_uploading_file", path=image_path, size_bytes=file_size)
+
+                upload_success = False
+                try:
+                    select_btn = (
+                        ".media-modal .upload-ui button.browser, "
+                        ".media-modal .upload-ui a.browser, "
+                        ".media-modal button:has-text('選取檔案'), "
+                        ".media-modal button:has-text('Select Files')"
+                    )
+                    async with self.page.expect_file_chooser(timeout=5000) as fc_info:
+                        await self.page.click(select_btn, timeout=3000)
+                    file_chooser = await fc_info.value
+                    await file_chooser.set_files(image_path)
+                    upload_success = True
+                    logger.info("playwright_file_chooser_set")
+                except Exception as fc_err:
+                    logger.warning("playwright_file_chooser_failed_trying_input", error=str(fc_err))
+                    try:
+                        file_input = (
+                            ".media-modal .moxie-shim input[type='file'], "
+                            ".media-modal input[type='file']"
+                        )
+                        await self.page.wait_for_selector(file_input, timeout=5000)
+                        await self.page.set_input_files(file_input, image_path)
+                        await self.page.evaluate("""
+                            () => {
+                                const input = document.querySelector(
+                                    '.media-modal .moxie-shim input[type="file"], '
+                                    + '.media-modal input[type="file"]'
+                                );
+                                if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        """)
+                        upload_success = True
+                        logger.info("playwright_file_input_set_with_event")
+                    except Exception as input_err:
+                        logger.warning("playwright_file_input_also_failed", error=str(input_err))
+                logger.info("playwright_upload_initiated", method="file_chooser" if upload_success else "fallback")
 
                 # Wait for upload to complete (button becomes enabled)
                 upload_ok = await self._wait_for_media_upload_complete(timeout_ms=45000)
