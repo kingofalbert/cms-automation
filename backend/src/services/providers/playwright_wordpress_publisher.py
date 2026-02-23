@@ -1043,19 +1043,27 @@ class PlaywrightWordPressPublisher:
                 media_modal = ".media-modal"
                 await self.page.wait_for_selector(media_modal, timeout=10000)
 
-                # Click "Upload files" tab
-                upload_tab = ".media-modal .media-menu-item:has-text('Upload files')"
+                # Click "Upload files" tab (supports English + Chinese WordPress)
+                upload_tab = (
+                    ".media-modal .media-menu-item:has-text('Upload files'), "
+                    ".media-modal .media-menu-item:has-text('上傳檔案'), "
+                    ".media-modal .media-router .media-menu-item:first-child"
+                )
                 try:
                     await self.page.click(upload_tab)
                     await asyncio.sleep(0.5)
-                except Exception:
-                    pass
+                except Exception as tab_err:
+                    logger.warning("playwright_upload_tab_click_failed", error=str(tab_err))
 
                 # Upload the file
                 file_input = ".media-modal input[type='file']"
                 await self.page.wait_for_selector(file_input, timeout=5000)
                 await self.page.set_input_files(file_input, image_path)
-                await asyncio.sleep(self.config["waits"]["media_upload"] / 1000)
+
+                # Wait for upload to complete (button becomes enabled)
+                upload_ok = await self._wait_for_media_upload_complete(timeout_ms=45000)
+                if not upload_ok:
+                    logger.warning("playwright_featured_image_upload_timeout", path=image_path)
 
                 # Set image metadata (alt text, description) before confirming
                 if alt_text or description:
@@ -1066,7 +1074,7 @@ class PlaywrightWordPressPublisher:
 
                 # Click "Set featured image" button
                 set_button = ".media-modal .media-button-select"
-                await self.page.click(set_button)
+                await self.page.click(set_button, timeout=10000)
                 await asyncio.sleep(1)
 
             else:
@@ -1112,19 +1120,29 @@ class PlaywrightWordPressPublisher:
                 media_modal = ".media-modal"
                 await self.page.wait_for_selector(media_modal, timeout=10000)
 
-                # Click "Upload files" tab
-                upload_tab = ".media-modal button:has-text('Upload files'), .media-modal .media-menu-item:has-text('Upload files')"
+                # Click "Upload files" tab (supports English + Chinese WordPress)
+                upload_tab = (
+                    ".media-modal button:has-text('Upload files'), "
+                    ".media-modal .media-menu-item:has-text('Upload files'), "
+                    ".media-modal button:has-text('上傳檔案'), "
+                    ".media-modal .media-menu-item:has-text('上傳檔案'), "
+                    ".media-modal .media-router .media-menu-item:first-child"
+                )
                 try:
                     await self.page.click(upload_tab)
                     await asyncio.sleep(0.5)
-                except Exception:
-                    pass
+                except Exception as tab_err:
+                    logger.warning("playwright_upload_tab_click_failed", error=str(tab_err))
 
                 # Upload the file
                 file_input = ".media-modal input[type='file']"
                 await self.page.wait_for_selector(file_input, timeout=5000)
                 await self.page.set_input_files(file_input, image_path)
-                await asyncio.sleep(self.config["waits"]["media_upload"] / 1000)
+
+                # Wait for upload to complete (button becomes enabled)
+                upload_ok = await self._wait_for_media_upload_complete(timeout_ms=45000)
+                if not upload_ok:
+                    logger.warning("playwright_featured_image_upload_timeout", path=image_path)
 
                 # Set image metadata (alt text, description) before confirming
                 if alt_text or description:
@@ -1135,7 +1153,7 @@ class PlaywrightWordPressPublisher:
 
                 # Click "Set featured image" button in modal
                 set_button = ".media-modal .media-button-select, .media-modal button:has-text('Set featured image')"
-                await self.page.click(set_button)
+                await self.page.click(set_button, timeout=10000)
                 await asyncio.sleep(1)
 
             logger.info(
@@ -1151,6 +1169,84 @@ class PlaywrightWordPressPublisher:
                 path=image_path,
             )
             # Continue without featured image - non-fatal error
+
+    async def _wait_for_media_upload_complete(self, timeout_ms: int = 45000) -> bool:
+        """Wait for WordPress media upload to complete.
+
+        Polls for the confirm button (.media-button-select) to become enabled,
+        which indicates the upload finished and the image is selected.
+
+        Args:
+            timeout_ms: Maximum wait time in milliseconds.
+
+        Returns:
+            True if upload completed (button enabled), False if timed out.
+        """
+        poll_interval = 2.0  # seconds between checks
+        max_polls = int(timeout_ms / (poll_interval * 1000))
+
+        # Give the upload a moment to start
+        await asyncio.sleep(1)
+
+        for attempt in range(max_polls):
+            try:
+                # Check if the confirm button exists and is enabled
+                is_enabled = await self.page.evaluate("""
+                    () => {
+                        const btn = document.querySelector('.media-modal .media-button-select');
+                        if (!btn) return null;
+                        return !btn.disabled;
+                    }
+                """)
+
+                if is_enabled is True:
+                    logger.info(
+                        "playwright_media_upload_complete",
+                        attempt=attempt + 1,
+                        elapsed_s=round(1 + (attempt + 1) * poll_interval, 1),
+                    )
+                    return True
+
+                if is_enabled is None:
+                    logger.debug("media_button_select not found yet, waiting...")
+
+            except Exception as e:
+                logger.debug(f"Upload poll error: {e}")
+
+            # Also check for upload errors in the modal
+            try:
+                error_visible = await self.page.evaluate("""
+                    () => {
+                        const err = document.querySelector('.media-modal .upload-error, .media-modal .upload-errors');
+                        return err && err.offsetParent !== null;
+                    }
+                """)
+                if error_visible:
+                    logger.warning("playwright_media_upload_error_detected")
+                    return False
+            except Exception:
+                pass
+
+            await asyncio.sleep(poll_interval)
+
+        # Timed out — try JS fallback: force-enable the button and click
+        logger.warning(
+            "playwright_media_upload_poll_timeout",
+            timeout_ms=timeout_ms,
+            polls=max_polls,
+        )
+        try:
+            await self.page.evaluate("""
+                () => {
+                    const btn = document.querySelector('.media-modal .media-button-select');
+                    if (btn) btn.disabled = false;
+                }
+            """)
+            logger.info("playwright_media_button_force_enabled")
+        except Exception as e:
+            logger.warning("playwright_media_button_force_enable_failed", error=str(e))
+
+        return False
 
     async def _step_configure_seo(self, seo_data: SEOMetadata) -> None:
         """Step 6: Configure SEO metadata.
