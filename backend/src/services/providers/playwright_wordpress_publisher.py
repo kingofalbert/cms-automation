@@ -1237,13 +1237,26 @@ class PlaywrightWordPressPublisher:
                 )
                 if close_btn:
                     await close_btn.click()
-                    await asyncio.sleep(0.5)
-                    logger.info("playwright_media_modal_dismissed")
                 else:
                     # Fallback: press Escape
                     await self.page.keyboard.press("Escape")
-                    await asyncio.sleep(0.5)
-                    logger.info("playwright_media_modal_dismissed_via_escape")
+
+                # Wait for modal and backdrop to fully disappear
+                try:
+                    await self.page.wait_for_selector(
+                        ".media-modal", state="hidden", timeout=5000
+                    )
+                except Exception:
+                    # Force-remove modal via JS if it won't close
+                    await self.page.evaluate("""
+                        () => {
+                            document.querySelectorAll('.media-modal, .media-modal-backdrop')
+                                .forEach(el => el.remove());
+                        }
+                    """)
+                    await asyncio.sleep(0.3)
+
+                logger.info("playwright_media_modal_dismissed")
         except Exception:
             pass
 
@@ -1268,60 +1281,50 @@ class PlaywrightWordPressPublisher:
 
         if publish_mode == "draft":
             if editor_type == "classic":
-                # Classic Editor: Save Draft button — try multiple selectors
-                save_selectors = [
-                    "#save-post",                      # Standard Save Draft
-                    "input[name='save']",              # Alternative name-based
-                    "#publish",                        # Publish button (saves as draft if status is draft)
-                ]
                 logger.info("playwright_using_classic_save_draft")
 
-                saved = False
-                for selector in save_selectors:
-                    try:
-                        btn = await self.page.wait_for_selector(selector, state="visible", timeout=3000)
-                        if btn:
-                            await btn.click()
-                            saved = True
-                            logger.info("playwright_classic_draft_clicked", selector=selector)
-                            break
-                    except Exception:
-                        continue
+                # Use JavaScript to click save draft — more reliable than
+                # Playwright selectors which require element to be "visible"
+                # (modal overlays/backdrops can block visibility checks)
+                js_result = await self.page.evaluate("""
+                    () => {
+                        // Ensure post status is 'draft'
+                        const statusField = document.querySelector('#post_status');
+                        if (statusField) statusField.value = 'draft';
 
-                if not saved:
-                    # Last resort: submit the form via JavaScript
-                    logger.warning("playwright_save_draft_buttons_not_found, using JS submit")
-                    await self.page.evaluate("""
-                        () => {
-                            // Ensure post status is 'draft'
-                            const statusField = document.querySelector('#post_status');
-                            if (statusField) statusField.value = 'draft';
-
-                            // Try clicking save-post via JS (may be hidden but present)
-                            const saveBtn = document.querySelector('#save-post');
-                            if (saveBtn) {
-                                saveBtn.disabled = false;
-                                saveBtn.click();
-                                return 'clicked_save_post';
-                            }
-
-                            // Try the publish button with draft status
-                            const publishBtn = document.querySelector('#publish');
-                            if (publishBtn) {
-                                publishBtn.click();
-                                return 'clicked_publish';
-                            }
-
-                            // Submit the form directly
-                            const form = document.querySelector('#post');
-                            if (form) {
-                                form.submit();
-                                return 'form_submitted';
-                            }
-                            return 'nothing_found';
+                        // Try the Save Draft button
+                        const saveBtn = document.querySelector('#save-post');
+                        if (saveBtn) {
+                            saveBtn.disabled = false;
+                            saveBtn.click();
+                            return 'clicked_save_post';
                         }
-                    """)
-                    saved = True
+
+                        // Try input[name=save]
+                        const saveInput = document.querySelector("input[name='save']");
+                        if (saveInput) {
+                            saveInput.disabled = false;
+                            saveInput.click();
+                            return 'clicked_save_input';
+                        }
+
+                        // Try the Publish button (with draft status already set)
+                        const publishBtn = document.querySelector('#publish');
+                        if (publishBtn) {
+                            publishBtn.click();
+                            return 'clicked_publish';
+                        }
+
+                        // Submit the form directly
+                        const form = document.querySelector('#post');
+                        if (form) {
+                            form.submit();
+                            return 'form_submitted';
+                        }
+                        return 'nothing_found';
+                    }
+                """)
+                logger.info("playwright_classic_draft_js_result", result=js_result)
             else:
                 # Gutenberg: Use config selector
                 save_selector = self.config["publish"].get("save_draft_button")
