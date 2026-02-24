@@ -90,7 +90,8 @@ gcloud run deploy cms-automation-backend \
   --memory 2Gi \
   --cpu 2 \
   --timeout 300 \
-  --set-secrets="SECRET_KEY=cms-automation-prod-SECRET_KEY:latest,DATABASE_URL=cms-automation-prod-DATABASE_URL:latest,REDIS_URL=cms-automation-prod-REDIS_URL:latest,ANTHROPIC_API_KEY=cms-automation-prod-ANTHROPIC_API_KEY:latest,CMS_BASE_URL=cms-automation-prod-CMS_BASE_URL:latest,CMS_USERNAME=cms-automation-prod-CMS_USERNAME:latest,CMS_APPLICATION_PASSWORD=cms-automation-prod-CMS_APPLICATION_PASSWORD:latest,CMS_HTTP_AUTH_USERNAME=cms-automation-prod-CMS_HTTP_AUTH_USERNAME:latest,CMS_HTTP_AUTH_PASSWORD=cms-automation-prod-CMS_HTTP_AUTH_PASSWORD:latest,SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest,GOOGLE_SERVICE_ACCOUNT_JSON=GOOGLE_SERVICE_ACCOUNT_JSON:latest,ALLOWED_ORIGINS=ALLOWED_ORIGINS:latest"
+  --set-secrets="SECRET_KEY=cms-automation-prod-SECRET_KEY:latest,DATABASE_URL=cms-automation-prod-DATABASE_URL:latest,REDIS_URL=cms-automation-prod-REDIS_URL:latest,ANTHROPIC_API_KEY=cms-automation-prod-ANTHROPIC_API_KEY:latest,CMS_BASE_URL=cms-automation-prod-CMS_BASE_URL:latest,CMS_USERNAME=cms-automation-prod-CMS_USERNAME:latest,CMS_APPLICATION_PASSWORD=cms-automation-prod-CMS_APPLICATION_PASSWORD:latest,CMS_HTTP_AUTH_USERNAME=cms-automation-prod-CMS_HTTP_AUTH_USERNAME:latest,CMS_HTTP_AUTH_PASSWORD=cms-automation-prod-CMS_HTTP_AUTH_PASSWORD:latest,SUPABASE_SERVICE_ROLE_KEY=supabase-service-role-key:latest,GOOGLE_SERVICE_ACCOUNT_JSON=GOOGLE_SERVICE_ACCOUNT_JSON:latest,ALLOWED_ORIGINS=ALLOWED_ORIGINS:latest,GAS_API_KEY=cms-automation-prod-GAS_API_KEY:latest" \
+  --set-env-vars="ENVIRONMENT=production,GCP_PROJECT_ID=cmsupload-476323,LOG_LEVEL=INFO,GOOGLE_DRIVE_FOLDER_ID=1r4YwLr-58AvVl3e7TW5zqWn0X95-3EcG,DATABASE_POOL_SIZE=5,DATABASE_MAX_OVERFLOW=5"
 ```
 
 ### CORS Configuration
