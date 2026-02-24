@@ -5,11 +5,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_logger, get_settings
 from src.models import (
     Article,
+    ArticleImage,
     ArticleStatus,
     ArticleStatusHistory,
     WorklistItem,
@@ -197,6 +199,12 @@ class WorklistPipelineService:
                     article.seo_title_extracted = parsed_article.seo_title_extracted
                     article.seo_title_source = parsed_article.seo_title_source
 
+                    # Phase 15: Save document metadata fields
+                    article.seo_title_variants = parsed_article.seo_title_variants
+                    article.aeo_type = parsed_article.aeo_type
+                    article.aeo_paragraph = parsed_article.aeo_paragraph
+                    article.doc_image_alt_texts = parsed_article.doc_image_alt_texts
+
                     # Phase 7.5: Update unified AI parsing fields
                     article.suggested_meta_description = parsed_article.suggested_meta_description
                     article.suggested_seo_keywords = parsed_article.suggested_seo_keywords or []
@@ -269,6 +277,53 @@ class WorklistPipelineService:
                 if article and not article.featured_image_path:
                     article.featured_image_path = metadata["featured_image_path"]
                     self.session.add(article)
+
+            # Issue #3 Fix: Create ArticleImage records from parsed images
+            if parsed_article.images and item.article_id:
+                # Handle re-runs: delete existing ArticleImage records first
+                await self.session.execute(
+                    delete(ArticleImage).where(ArticleImage.article_id == item.article_id)
+                )
+                await self.session.flush()
+
+                # Get doc_image_alt_texts for enrichment (position-matched)
+                doc_alt_texts = parsed_article.doc_image_alt_texts or []
+
+                for img in parsed_article.images:
+                    # Find matching alt text data by position
+                    alt_data = next(
+                        (d for d in doc_alt_texts if isinstance(d, dict) and d.get("position") == img.position),
+                        None,
+                    )
+
+                    # Determine source URL: prefer drive_link from alt_texts, fallback to parsed source_url
+                    source_url = img.source_url
+                    alt_text = img.alt_text or img.caption or ""
+                    if alt_data:
+                        alt_text = alt_data.get("alt_text", alt_text) or alt_text
+                        if alt_data.get("drive_link"):
+                            source_url = alt_data["drive_link"]
+
+                    article_image = ArticleImage(
+                        article_id=item.article_id,
+                        position=img.position,
+                        source_url=source_url,
+                        source_path=img.source_path,
+                        preview_path=img.preview_path,
+                        caption=img.caption,
+                        alt_text=alt_text,
+                        description=img.description,
+                        is_featured=img.is_featured,
+                        image_type=img.image_type,
+                        detection_method=img.detection_method,
+                    )
+                    self.session.add(article_image)
+
+                logger.info(
+                    "article_images_created",
+                    article_id=item.article_id,
+                    image_count=len(parsed_article.images),
+                )
 
             # Apply frontmatter overrides (editor-provided, higher priority than AI)
             frontmatter = (item.drive_metadata or {}).get("frontmatter")
@@ -620,10 +675,18 @@ class WorklistPipelineService:
             text = p.get_text(strip=True)
 
             # Remove author line paragraph (usually first paragraph)
+            # Length guard: only remove if paragraph is roughly the same size as author_line
+            # to avoid removing long author intro paragraphs (作者介紹) that contain the name
             if author_line and text and author_line.strip() in text:
-                paragraphs_to_remove.append(p)
-                logger.debug(f"Removing author line paragraph: {text[:50]}...")
-                continue
+                if len(text) <= len(author_line.strip()) * 2 + 20:
+                    paragraphs_to_remove.append(p)
+                    logger.debug(f"Removing author line paragraph: {text[:50]}...")
+                    continue
+                else:
+                    logger.debug(
+                        f"Keeping long paragraph containing author line "
+                        f"(text_len={len(text)}, author_len={len(author_line.strip())}): {text[:50]}..."
+                    )
 
             # Remove image metadata paragraphs (圖片, 圖片連結)
             if text and (

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from typing import Any
 
@@ -111,9 +112,12 @@ async def auto_publish(
         from src.services.worklist.auto_publish import AutoPublishService
 
         service = AutoPublishService(session)
-        result = await service.process_google_doc(
-            google_doc_url=google_doc_url,
-            sheet_row=sheet_row,
+        result = await asyncio.wait_for(
+            service.process_google_doc(
+                google_doc_url=google_doc_url,
+                sheet_row=sheet_row,
+            ),
+            timeout=240.0,
         )
 
         return AutoPublishResponse(
@@ -122,15 +126,26 @@ async def auto_publish(
             message="Processed synchronously (Celery unavailable)",
             result=result,
         )
+    except asyncio.TimeoutError:
+        logger.error(
+            "auto_publish_sync_timeout",
+            google_doc_url=google_doc_url,
+            timeout=240.0,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Auto-publish timed out after 240s. The document may be too large or the server is under heavy load.",
+        )
     except Exception as exc:
         logger.error(
             "auto_publish_sync_failed",
             error=str(exc),
             exc_info=True,
         )
+        error_detail = str(exc) or repr(exc) or type(exc).__name__
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Auto-publish failed: {exc}",
+            detail=f"Auto-publish failed: {error_detail}",
         ) from exc
 
 

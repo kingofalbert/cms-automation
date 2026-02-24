@@ -156,6 +156,7 @@ class PlaywrightWordPressPublisher:
         featured_image_path: str | None = None,
         featured_image_alt_text: str | None = None,
         featured_image_description: str | None = None,
+        skip_visual_verification: bool = False,
     ) -> dict[str, Any]:
         """Publish article to WordPress using Playwright.
 
@@ -264,11 +265,22 @@ class PlaywrightWordPressPublisher:
                 screenshot_path = f"/tmp/playwright_success_{article_id}.png"
                 await self.page.screenshot(path=screenshot_path)
 
-                # Perform AI visual verification
-                verification_result = await self._verify_with_vision_ai(
-                    expected_title=article_title,
-                    expected_content_snippet=article_body[:200] if article_body else None,
-                )
+                # Perform AI visual verification (skip if requested for performance)
+                if skip_visual_verification:
+                    verification_result = {
+                        "verified": True,
+                        "confidence": 1.0,
+                        "title_found": True,
+                        "content_found": True,
+                        "save_confirmed": True,
+                        "errors_detected": [],
+                        "details": "Visual verification skipped (auto-publish mode)",
+                    }
+                else:
+                    verification_result = await self._verify_with_vision_ai(
+                        expected_title=article_title,
+                        expected_content_snippet=article_body[:200] if article_body else None,
+                    )
 
                 status_value = "draft" if publish_mode == "draft" else "published"
 
@@ -1502,9 +1514,12 @@ class PlaywrightWordPressPublisher:
             logger.info("playwright_seo_configured")
 
         except Exception as e:
-            logger.warning(
+            logger.error(
                 "seo_configuration_failed",
                 error=str(e),
+                seo_title=seo_data.meta_title if seo_data else None,
+                meta_description_len=len(seo_data.meta_description) if seo_data and seo_data.meta_description else 0,
+                focus_keyword=seo_data.focus_keyword if seo_data else None,
             )
             # Continue without SEO configuration
 

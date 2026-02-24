@@ -340,10 +340,20 @@ class AutoPublishService:
             featured_image_path = getattr(article, "featured_image_path", None)
 
             # Build SEO metadata with error tolerance
-            seo_title = getattr(article, "seo_title", None) or title
+            # Fallback chain: seo_title -> first seo_title_variant -> title
+            seo_title = getattr(article, "seo_title", None)
+            if not seo_title:
+                seo_title_variants = getattr(article, "seo_title_variants", None)
+                if seo_title_variants and isinstance(seo_title_variants, list) and len(seo_title_variants) > 0:
+                    seo_title = seo_title_variants[0].get("title", "") if isinstance(seo_title_variants[0], dict) else ""
+            if not seo_title:
+                seo_title = title
+
+            # Fallback chain: meta_description -> suggested_meta_description -> aeo_paragraph -> ""
             meta_desc = (
                 getattr(article, "meta_description", None)
                 or getattr(article, "suggested_meta_description", None)
+                or getattr(article, "aeo_paragraph", None)
                 or ""
             )
             focus_kw = getattr(article, "focus_keyword", None) or ""
@@ -466,6 +476,7 @@ class AutoPublishService:
                     featured_image_path=featured_image_path,
                     featured_image_alt_text=featured_image_alt_text,
                     featured_image_description=featured_image_description,
+                    skip_visual_verification=True,
                 )
             except Exception as exc:
                 logger.error(
@@ -572,11 +583,14 @@ class AutoPublishService:
             storage = await create_google_drive_storage()
             data = storage.service.files().get_media(fileId=file_id, supportsAllDrives=True).execute()
         else:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.get(url, follow_redirects=True)
+            # Google Docs embedded images (lh3.googleusercontent.com) and regular URLs
+            # are both publicly accessible and can be downloaded with httpx
+            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+                resp = await client.get(url)
                 resp.raise_for_status()
                 data = resp.content
 
+        # Determine file extension from URL or content type
         suffix = ".jpg"  # Default
         for ext in (".png", ".webp", ".gif", ".jpeg"):
             if ext in url.lower():

@@ -214,10 +214,12 @@ def _normalize_gdoc_html(html: str) -> str:
 
     This function normalizes by:
     1. Decoding HTML entities (&#9552; → ═, &#65306; → ：, &nbsp; → space)
-    2. Unwrapping <span> tags inside <p> and <h2> (keep text, remove span wrappers)
+    2. Unwrapping <span> tags with class= attributes (Google Docs layout classes),
+       preserving spans with style="color:..." (author intros, styled text)
     3. Stripping class/id attributes from <p> and <h2> tags
 
     Result: <p class="c3"><span class="c0">═══</span></p> → <p>═══</p>
+    But: <span style="color:#1155cc">作者介紹</span> is preserved.
     """
     import re
     from html import unescape
@@ -228,14 +230,25 @@ def _normalize_gdoc_html(html: str) -> str:
     # Step 1: Decode HTML entities
     normalized = unescape(html)
 
-    # Step 2: Unwrap <span> tags (keep inner text, remove span wrappers)
-    # Apply repeatedly to handle nested spans
+    # Step 2: Unwrap <span> tags that have class= attributes (Google Docs layout spans)
+    # Preserve any <span> that contains style= (e.g., color-styled author intros)
+    # Google Docs may emit <span class="c0" style="color:#1155cc"> — keep these
     prev = None
     while prev != normalized:
         prev = normalized
-        normalized = re.sub(r'<span[^>]*>(.*?)</span>', r'\1', normalized, flags=re.DOTALL)
+        # Match spans with class= but WITHOUT style= attribute
+        normalized = re.sub(
+            r'<span\s+class=(?:(?!style=)[^>])*>(.*?)</span>', r'\1', normalized, flags=re.DOTALL
+        )
 
-    # Step 3: Strip class/id/style attributes from <p> and <h2> tags
+    # Also strip bare <span> tags without any attributes
+    prev = None
+    while prev != normalized:
+        prev = normalized
+        normalized = re.sub(r'<span>(.*?)</span>', r'\1', normalized, flags=re.DOTALL)
+
+    # Step 3: Strip class/id/style attributes from <p> and <h2> tags only
+    # (does NOT affect <span> tags — color styles are preserved)
     normalized = re.sub(r'<(p|h2)\s+[^>]*>', r'<\1>', normalized, flags=re.IGNORECASE)
 
     return normalized
@@ -1587,6 +1600,7 @@ Parse the following Google Doc HTML and extract structured information.
 - Respond ONLY with valid JSON, no additional text.
 - Ensure title_main is never empty.
 - body_html should not contain images or header metadata.
+- body_html MUST preserve `<span style="color:...">` tags for colored text (e.g., blue author intros / 作者介紹). Do NOT strip inline color styles.
 - position in images is the paragraph index where the image should appear (0-based).
 
 Parse and respond with JSON:"""
