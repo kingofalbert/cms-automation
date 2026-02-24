@@ -1031,231 +1031,149 @@ class PlaywrightWordPressPublisher:
         editor_type = getattr(self, '_editor_type', 'gutenberg')
 
         try:
-            if editor_type == "classic":
-                # Classic Editor: Featured Image is in a meta box
-                # Scroll down to ensure the featured image box is visible
-                await self.page.evaluate("""
-                    () => {
-                        const el = document.querySelector('#postimagediv, #set-post-thumbnail');
-                        if (el) el.scrollIntoView({ behavior: 'instant', block: 'center' });
+            # Upload image via async-upload.php and set as featured image
+            # via AJAX — bypasses the flaky plupload media modal entirely.
+            import os as _os
+            import base64 as _base64
+
+            file_size = _os.path.getsize(image_path) if _os.path.exists(image_path) else -1
+            logger.info("playwright_uploading_file", path=image_path, size_bytes=file_size)
+
+            # Read file and convert to base64 for transfer to browser context
+            with open(image_path, "rb") as f:
+                file_bytes = f.read()
+            file_b64 = _base64.b64encode(file_bytes).decode("ascii")
+            file_name = _os.path.basename(image_path)
+
+            # Upload via async-upload.php (WordPress's native AJAX upload)
+            attachment_id = await self.page.evaluate("""
+                async ([fileB64, fileName, altText, desc]) => {
+                    // Decode base64 to binary
+                    const binaryStr = atob(fileB64);
+                    const bytes = new Uint8Array(binaryStr.length);
+                    for (let i = 0; i < binaryStr.length; i++) {
+                        bytes[i] = binaryStr.charCodeAt(i);
                     }
-                """)
-                await asyncio.sleep(0.5)
+                    const blob = new Blob([bytes], { type: 'image/jpeg' });
+                    const file = new File([blob], fileName, { type: 'image/jpeg' });
 
-                # Click "Set featured image" link
-                set_featured_link = "#set-post-thumbnail"
-                await self.page.wait_for_selector(set_featured_link, timeout=5000)
-                await self.page.click(set_featured_link)
-                logger.info("playwright_featured_image_link_clicked")
-                await asyncio.sleep(1)
+                    // Get the upload nonce from the page
+                    const nonce = (typeof _wpPluploadSettings !== 'undefined'
+                        ? _wpPluploadSettings.defaults?.multipart_params?._wpnonce
+                        : null)
+                        || document.querySelector('#_wpnonce')?.value
+                        || (typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : null);
 
-                # Wait for media modal
-                media_modal = ".media-modal"
-                await self.page.wait_for_selector(media_modal, timeout=10000)
-                logger.info("playwright_media_modal_opened")
+                    if (!nonce) {
+                        throw new Error('Could not find WordPress upload nonce');
+                    }
 
-                # Click "Upload files" tab (supports English + Chinese WordPress)
-                upload_tab = (
-                    ".media-modal .media-menu-item:has-text('Upload files'), "
-                    ".media-modal .media-menu-item:has-text('上傳檔案'), "
-                    ".media-modal .media-router .media-menu-item:first-child"
-                )
-                try:
-                    await self.page.click(upload_tab, timeout=5000)
-                    logger.info("playwright_upload_tab_clicked")
-                    await asyncio.sleep(0.5)
-                except Exception as tab_err:
-                    logger.warning("playwright_upload_tab_click_failed", error=str(tab_err))
+                    // Upload via async-upload.php
+                    const formData = new FormData();
+                    formData.append('async-upload', file);
+                    formData.append('name', fileName);
+                    formData.append('action', 'upload-attachment');
+                    formData.append('_wpnonce', nonce);
 
-                # Verify file exists and log its size
-                import os as _os
-                file_size = _os.path.getsize(image_path) if _os.path.exists(image_path) else -1
-                logger.info("playwright_uploading_file", path=image_path, size_bytes=file_size)
+                    const resp = await fetch('/wp-admin/async-upload.php', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                    });
 
-                # Upload the file using file chooser API (works with plupload)
-                # WordPress uses plupload which requires the native file dialog
-                # flow rather than directly setting files on the input element.
-                upload_success = False
-                try:
-                    # Method 1: Use expect_file_chooser with the "Select Files" button
-                    select_btn = (
-                        ".media-modal .upload-ui button.browser, "
-                        ".media-modal .upload-ui a.browser, "
-                        ".media-modal button:has-text('選取檔案'), "
-                        ".media-modal button:has-text('Select Files')"
-                    )
-                    async with self.page.expect_file_chooser(timeout=5000) as fc_info:
-                        await self.page.click(select_btn, timeout=3000)
-                    file_chooser = await fc_info.value
-                    await file_chooser.set_files(image_path)
-                    upload_success = True
-                    logger.info("playwright_file_chooser_set")
-                except Exception as fc_err:
-                    logger.warning(
-                        "playwright_file_chooser_failed_trying_input",
-                        error=str(fc_err),
-                    )
-                    # Method 2: Fall back to set_input_files on the plupload shim
-                    try:
-                        file_input = (
-                            ".media-modal .moxie-shim input[type='file'], "
-                            ".media-modal input[type='file']"
-                        )
-                        await self.page.wait_for_selector(file_input, timeout=5000)
-                        await self.page.set_input_files(file_input, image_path)
-                        # Dispatch change event to trigger plupload
-                        await self.page.evaluate("""
-                            () => {
-                                const input = document.querySelector(
-                                    '.media-modal .moxie-shim input[type="file"], '
-                                    + '.media-modal input[type="file"]'
-                                );
-                                if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        """)
-                        upload_success = True
-                        logger.info("playwright_file_input_set_with_event")
-                    except Exception as input_err:
-                        logger.warning(
-                            "playwright_file_input_also_failed",
-                            error=str(input_err),
-                        )
-                logger.info("playwright_upload_initiated", method="file_chooser" if upload_success else "fallback")
+                    if (!resp.ok) {
+                        const text = await resp.text();
+                        throw new Error('Upload failed: HTTP ' + resp.status + ' - ' + text.substring(0, 200));
+                    }
 
-                # Wait for upload to complete (button becomes enabled)
-                upload_ok = await self._wait_for_media_upload_complete(timeout_ms=60000)
-                if not upload_ok:
-                    logger.warning("playwright_featured_image_upload_timeout", path=image_path)
+                    const result = await resp.json();
+                    if (!result.success || !result.data?.id) {
+                        throw new Error('Upload response invalid: ' + JSON.stringify(result).substring(0, 200));
+                    }
 
-                # Set image metadata (alt text, description) before confirming
-                if alt_text or description:
-                    await self._step_set_image_metadata(
-                        alt_text=alt_text,
-                        description=description,
-                    )
+                    const attachmentId = result.data.id;
 
-                # Click "Set featured image" button
-                set_button = ".media-modal .media-button-select"
-                await self.page.click(set_button, timeout=10000)
-                logger.info("playwright_featured_image_button_clicked")
-                await asyncio.sleep(1)
+                    // Update alt text and description if provided
+                    if (altText || desc) {
+                        const updateData = new FormData();
+                        updateData.append('action', 'save-attachment');
+                        updateData.append('id', attachmentId);
+                        updateData.append('nonce', nonce);
+                        updateData.append('post_title', fileName.replace(/\\.[^.]+$/, ''));
+                        if (altText) updateData.append('alt', altText);
+                        if (desc) updateData.append('description', desc);
 
-            else:
-                # Gutenberg Editor: Featured Image is in the sidebar panel
-                # First, ensure Settings sidebar is open
-                try:
-                    settings_button = "button[aria-label='Settings']"
-                    settings_btn = await self.page.query_selector(settings_button)
-                    if settings_btn:
-                        is_pressed = await settings_btn.get_attribute("aria-pressed")
-                        if is_pressed != "true":
-                            await settings_btn.click()
-                            await asyncio.sleep(0.5)
-                except Exception:
-                    pass
+                        await fetch('/wp-admin/admin-ajax.php', {
+                            method: 'POST',
+                            body: updateData,
+                            credentials: 'same-origin',
+                        });
+                    }
 
-                # Click on the Post tab
-                try:
-                    post_tab = "button[data-label='Post'], button:has-text('Post')"
-                    await self.page.click(post_tab)
-                    await asyncio.sleep(0.3)
-                except Exception:
-                    pass
+                    return attachmentId;
+                }
+            """, [file_b64, file_name, alt_text or "", description or ""])
 
-                # Expand Featured Image panel if collapsed
-                try:
-                    featured_panel_button = "button.components-panel__body-toggle:has-text('Featured image')"
-                    panel_btn = await self.page.query_selector(featured_panel_button)
-                    if panel_btn:
-                        is_expanded = await panel_btn.get_attribute("aria-expanded")
-                        if is_expanded != "true":
-                            await panel_btn.click()
-                            await asyncio.sleep(0.3)
-                except Exception:
-                    pass
+            logger.info(
+                "playwright_image_uploaded_via_ajax",
+                attachment_id=attachment_id,
+            )
 
-                # Click "Set featured image" button
-                set_featured_button = ".editor-post-featured-image__toggle, button:has-text('Set featured image')"
-                await self.page.click(set_featured_button)
-                await asyncio.sleep(1)
+            # Set as featured image via AJAX
+            post_id = await self.page.evaluate("() => document.querySelector('#post_ID')?.value")
+            if not post_id:
+                raise ValueError("Could not find post ID on page")
 
-                # Wait for media modal
-                media_modal = ".media-modal"
-                await self.page.wait_for_selector(media_modal, timeout=10000)
+            # Use WordPress's built-in set-post-thumbnail AJAX action
+            nonce_result = await self.page.evaluate("""
+                async ([postId, attachmentId]) => {
+                    // Get the featured image nonce
+                    const nonce = (typeof _wpPluploadSettings !== 'undefined'
+                        ? _wpPluploadSettings.defaults?.multipart_params?._wpnonce
+                        : null)
+                        || document.querySelector('#_wpnonce')?.value
+                        || (typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : null);
 
-                # Click "Upload files" tab (supports English + Chinese WordPress)
-                upload_tab = (
-                    ".media-modal button:has-text('Upload files'), "
-                    ".media-modal .media-menu-item:has-text('Upload files'), "
-                    ".media-modal button:has-text('上傳檔案'), "
-                    ".media-modal .media-menu-item:has-text('上傳檔案'), "
-                    ".media-modal .media-router .media-menu-item:first-child"
-                )
-                try:
-                    await self.page.click(upload_tab)
-                    await asyncio.sleep(0.5)
-                except Exception as tab_err:
-                    logger.warning("playwright_upload_tab_click_failed", error=str(tab_err))
+                    const formData = new FormData();
+                    formData.append('action', 'set-post-thumbnail');
+                    formData.append('post_id', postId);
+                    formData.append('thumbnail_id', attachmentId);
+                    formData.append('_ajax_nonce', nonce);
 
-                # Upload the file using file chooser API (works with plupload)
-                import os as _os
-                file_size = _os.path.getsize(image_path) if _os.path.exists(image_path) else -1
-                logger.info("playwright_uploading_file", path=image_path, size_bytes=file_size)
+                    // Also try the specific nonce for set-post-thumbnail
+                    const setThumbNonce = document.querySelector('#_ajax_linking_nonce')?.value || nonce;
+                    formData.set('_ajax_nonce', setThumbNonce);
 
-                upload_success = False
-                try:
-                    select_btn = (
-                        ".media-modal .upload-ui button.browser, "
-                        ".media-modal .upload-ui a.browser, "
-                        ".media-modal button:has-text('選取檔案'), "
-                        ".media-modal button:has-text('Select Files')"
-                    )
-                    async with self.page.expect_file_chooser(timeout=5000) as fc_info:
-                        await self.page.click(select_btn, timeout=3000)
-                    file_chooser = await fc_info.value
-                    await file_chooser.set_files(image_path)
-                    upload_success = True
-                    logger.info("playwright_file_chooser_set")
-                except Exception as fc_err:
-                    logger.warning("playwright_file_chooser_failed_trying_input", error=str(fc_err))
-                    try:
-                        file_input = (
-                            ".media-modal .moxie-shim input[type='file'], "
-                            ".media-modal input[type='file']"
-                        )
-                        await self.page.wait_for_selector(file_input, timeout=5000)
-                        await self.page.set_input_files(file_input, image_path)
-                        await self.page.evaluate("""
-                            () => {
-                                const input = document.querySelector(
-                                    '.media-modal .moxie-shim input[type="file"], '
-                                    + '.media-modal input[type="file"]'
-                                );
-                                if (input) input.dispatchEvent(new Event('change', { bubbles: true }));
-                            }
-                        """)
-                        upload_success = True
-                        logger.info("playwright_file_input_set_with_event")
-                    except Exception as input_err:
-                        logger.warning("playwright_file_input_also_failed", error=str(input_err))
-                logger.info("playwright_upload_initiated", method="file_chooser" if upload_success else "fallback")
+                    const resp = await fetch('/wp-admin/admin-ajax.php', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin',
+                    });
 
-                # Wait for upload to complete (button becomes enabled)
-                upload_ok = await self._wait_for_media_upload_complete(timeout_ms=45000)
-                if not upload_ok:
-                    logger.warning("playwright_featured_image_upload_timeout", path=image_path)
+                    const text = await resp.text();
+                    return { status: resp.status, body: text.substring(0, 500) };
+                }
+            """, [post_id, attachment_id])
 
-                # Set image metadata (alt text, description) before confirming
-                if alt_text or description:
-                    await self._step_set_image_metadata(
-                        alt_text=alt_text,
-                        description=description,
-                    )
+            logger.info(
+                "playwright_featured_image_ajax_result",
+                post_id=post_id,
+                attachment_id=attachment_id,
+                result=nonce_result,
+            )
 
-                # Click "Set featured image" button in modal
-                set_button = ".media-modal .media-button-select, .media-modal button:has-text('Set featured image')"
-                await self.page.click(set_button, timeout=10000)
-                await asyncio.sleep(1)
+            # Refresh the featured image meta box to reflect the change
+            await self.page.evaluate("""
+                (attachmentId) => {
+                    // Update the featured image display in the meta box
+                    const container = document.querySelector('#postimagediv .inside');
+                    if (container && typeof wp !== 'undefined' && wp.media) {
+                        // Trigger WordPress to refresh the featured image box
+                        wp.media.featuredImage?.set(attachmentId);
+                    }
+                }
+            """, attachment_id)
+            await asyncio.sleep(1)
 
             logger.info(
                 "playwright_featured_image_set",
