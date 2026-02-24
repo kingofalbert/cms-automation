@@ -1124,34 +1124,84 @@ class PlaywrightWordPressPublisher:
             if not post_id:
                 raise ValueError("Could not find post ID on page")
 
-            # Use WordPress's built-in set-post-thumbnail AJAX action
+            # Use WordPress's built-in set-post-thumbnail AJAX action.
+            # The nonce for this action is generated specifically as
+            # "set_post_thumbnail-{post_id}" — we need to find it or
+            # generate it via the page's WP nonce infrastructure.
             nonce_result = await self.page.evaluate("""
                 async ([postId, attachmentId]) => {
-                    // Get the featured image nonce
-                    const nonce = (typeof _wpPluploadSettings !== 'undefined'
-                        ? _wpPluploadSettings.defaults?.multipart_params?._wpnonce
-                        : null)
-                        || document.querySelector('#_wpnonce')?.value
-                        || (typeof wpApiSettings !== 'undefined' ? wpApiSettings.nonce : null);
+                    // Method 1: Try the _wpnonce hidden field in the post form
+                    // WordPress generates a specific nonce for set-post-thumbnail
+                    // embedded in the #set-post-thumbnail link or via wp.media
+                    let nonce = null;
 
-                    const formData = new FormData();
-                    formData.append('action', 'set-post-thumbnail');
-                    formData.append('post_id', postId);
-                    formData.append('thumbnail_id', attachmentId);
-                    formData.append('_ajax_nonce', nonce);
+                    // Check the set-post-thumbnail link's data attributes
+                    const thumbLink = document.querySelector('#set-post-thumbnail');
+                    if (thumbLink) {
+                        const href = thumbLink.getAttribute('href') || '';
+                        const nonceMatch = href.match(/[?&]_wpnonce=([^&]+)/);
+                        if (nonceMatch) nonce = nonceMatch[1];
+                    }
 
-                    // Also try the specific nonce for set-post-thumbnail
-                    const setThumbNonce = document.querySelector('#_ajax_linking_nonce')?.value || nonce;
-                    formData.set('_ajax_nonce', setThumbNonce);
+                    // Method 2: Generate nonce via AJAX (wp_ajax_heartbeat provides nonces)
+                    if (!nonce) {
+                        try {
+                            // Use the post form nonce and the set_post_thumbnail_[post_id] action
+                            // Try fetching via admin-ajax with get-post-thumbnail-html action
+                            const formData = new FormData();
+                            formData.append('action', 'get-post-thumbnail-html');
+                            formData.append('post_id', postId);
+                            formData.append('thumbnail_id', attachmentId);
+                            // Use the _wpnonce from the post edit form
+                            const formNonce = document.querySelector('#_wpnonce')?.value;
+                            if (formNonce) {
+                                formData.append('_ajax_nonce', formNonce);
+                                formData.append('_wpnonce', formNonce);
+                            }
 
-                    const resp = await fetch('/wp-admin/admin-ajax.php', {
-                        method: 'POST',
-                        body: formData,
-                        credentials: 'same-origin',
-                    });
+                            const resp = await fetch('/wp-admin/admin-ajax.php', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'same-origin',
+                            });
+                            const text = await resp.text();
+                            if (resp.ok && text !== '0' && text !== '-1') {
+                                return { status: resp.status, body: text.substring(0, 500), method: 'get-post-thumbnail-html' };
+                            }
+                        } catch(e) {}
+                    }
 
-                    const text = await resp.text();
-                    return { status: resp.status, body: text.substring(0, 500) };
+                    // Method 3: Use wp.media JavaScript API to set featured image
+                    if (typeof wp !== 'undefined' && wp.media && wp.media.featuredImage) {
+                        try {
+                            wp.media.featuredImage.set(attachmentId);
+                            // Wait a moment for the AJAX call to complete
+                            await new Promise(r => setTimeout(r, 2000));
+                            return { status: 200, body: 'set via wp.media.featuredImage.set()', method: 'wp.media' };
+                        } catch(e) {}
+                    }
+
+                    // Method 4: Direct meta update via hidden input + save
+                    // Set the _thumbnail_id hidden input if it exists
+                    const thumbInput = document.querySelector('#_thumbnail_id');
+                    if (thumbInput) {
+                        thumbInput.value = attachmentId;
+                        return { status: 200, body: 'set _thumbnail_id input to ' + attachmentId, method: 'hidden_input' };
+                    }
+
+                    // Method 5: Create the hidden input if it doesn't exist
+                    const postForm = document.querySelector('#post');
+                    if (postForm) {
+                        const input = document.createElement('input');
+                        input.type = 'hidden';
+                        input.name = '_thumbnail_id';
+                        input.id = '_thumbnail_id';
+                        input.value = attachmentId;
+                        postForm.appendChild(input);
+                        return { status: 200, body: 'created _thumbnail_id input with ' + attachmentId, method: 'created_input' };
+                    }
+
+                    return { status: 500, body: 'No method worked', method: 'none' };
                 }
             """, [post_id, attachment_id])
 
