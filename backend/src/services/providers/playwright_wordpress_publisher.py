@@ -371,7 +371,13 @@ class PlaywrightWordPressPublisher:
         logger.info("playwright_navigating_to_login", url=login_url)
 
         try:
-            await self.page.goto(login_url, timeout=30000)
+            # Use domcontentloaded instead of default "load" to avoid waiting
+            # for ALL sub-resources (JS/CSS/fonts).  WordPress admin pages load
+            # 50+ resources; if any CDN/tracking script is slow, "load" never
+            # fires within the timeout.
+            await self.page.goto(
+                login_url, timeout=60000, wait_until="domcontentloaded",
+            )
         except Exception as e:
             logger.error("playwright_login_page_failed", error=str(e), url=login_url)
             # Take screenshot for debugging
@@ -429,49 +435,99 @@ class PlaywrightWordPressPublisher:
         logger.info("playwright_login_completed", dashboard_url=post_login_url)
 
     async def _step_navigate_to_new_post(self) -> None:
-        """Step 2: Navigate to new post page."""
+        """Step 2: Navigate to new post page.
+
+        Uses domcontentloaded + element wait instead of the default "load"
+        event, which requires ALL sub-resources (50+ JS/CSS for Gutenberg)
+        to finish downloading.  This is the #1 cause of intermittent 30s
+        timeouts from Cloud Run.
+        """
+        import time as _time
+
         logger.info("playwright_step_new_post", current_url=self.page.url)
 
-        # Click "Posts" → "Add New"
-        new_post_link = self.config["dashboard"]["new_post_link"]
+        if not self._cms_url:
+            raise RuntimeError("CMS URL not stored - login step may have failed")
 
-        try:
-            # Try direct link click
-            await self.page.wait_for_selector(new_post_link, timeout=5000)
-            await self.page.click(new_post_link)
-            logger.info("playwright_clicked_new_post_link")
-        except Exception as e:
-            # Fallback: navigate directly to post-new.php using stored CMS URL
-            logger.warning("playwright_new_post_link_failed", error=str(e))
-            if not self._cms_url:
-                raise RuntimeError("CMS URL not stored - login step may have failed")
-            new_post_url = f"{self._cms_url}/wp-admin/post-new.php"
-            logger.info("playwright_navigating_to_new_post", url=new_post_url)
-            await self.page.goto(new_post_url, timeout=30000)
+        new_post_url = f"{self._cms_url}/wp-admin/post-new.php"
+        nav_start = _time.monotonic()
 
-        # Wait for editor to load
-        await asyncio.sleep(self.config["waits"]["editor_load"] / 1000)
+        # Always navigate directly to post-new.php — more reliable than
+        # trying to find and click the "Add New" menu link on the dashboard.
+        max_attempts = 2
+        for attempt in range(1, max_attempts + 1):
+            try:
+                logger.info(
+                    "playwright_navigating_to_new_post",
+                    url=new_post_url,
+                    attempt=attempt,
+                )
+                await self.page.goto(
+                    new_post_url,
+                    timeout=60000,
+                    wait_until="domcontentloaded",
+                )
+                logger.info(
+                    "playwright_new_post_dom_ready",
+                    elapsed_s=round(_time.monotonic() - nav_start, 1),
+                    current_url=self.page.url,
+                )
+                break
+            except Exception as e:
+                logger.warning(
+                    "playwright_new_post_navigation_failed",
+                    attempt=attempt,
+                    error=str(e),
+                    elapsed_s=round(_time.monotonic() - nav_start, 1),
+                )
+                if attempt >= max_attempts:
+                    # Take diagnostic screenshot before raising
+                    try:
+                        await self.page.screenshot(
+                            path="/tmp/playwright_nav_error.png",
+                        )
+                    except Exception:
+                        pass
+                    raise
+                # Brief pause before retry
+                await asyncio.sleep(3)
 
-        # Detect editor type: Gutenberg or Classic
-        # Try Gutenberg first, then Classic
+        # Wait for the editor element to appear — this is what we actually
+        # need, NOT the full page load (which includes analytics/fonts/etc).
         gutenberg_title = self.config["editor"]["title_field"]  # .editor-post-title__input
         classic_title = "#title"  # Classic Editor title field
 
         try:
-            await self.page.wait_for_selector(gutenberg_title, timeout=5000)
+            await self.page.wait_for_selector(gutenberg_title, timeout=30000)
             self._editor_type = "gutenberg"
-            logger.info("playwright_editor_detected", editor_type="gutenberg")
+            logger.info(
+                "playwright_editor_detected",
+                editor_type="gutenberg",
+                elapsed_s=round(_time.monotonic() - nav_start, 1),
+            )
         except Exception:
             try:
-                await self.page.wait_for_selector(classic_title, timeout=10000)
+                await self.page.wait_for_selector(classic_title, timeout=15000)
                 self._editor_type = "classic"
-                logger.info("playwright_editor_detected", editor_type="classic")
+                logger.info(
+                    "playwright_editor_detected",
+                    editor_type="classic",
+                    elapsed_s=round(_time.monotonic() - nav_start, 1),
+                )
             except Exception:
-                # Last fallback - check for any input with 'title' in name
                 self._editor_type = "unknown"
-                logger.warning("playwright_editor_unknown", message="Could not detect editor type")
+                logger.warning(
+                    "playwright_editor_unknown",
+                    message="Could not detect editor type",
+                    current_url=self.page.url,
+                    elapsed_s=round(_time.monotonic() - nav_start, 1),
+                )
 
-        logger.info("playwright_new_post_loaded", editor_type=getattr(self, '_editor_type', 'unknown'))
+        logger.info(
+            "playwright_new_post_loaded",
+            editor_type=getattr(self, '_editor_type', 'unknown'),
+            total_elapsed_s=round(_time.monotonic() - nav_start, 1),
+        )
 
     async def _step_set_title(self, title: str) -> None:
         """Step 3: Set article title.
