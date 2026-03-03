@@ -631,7 +631,8 @@ class AutoPublishService:
                     "message": f"WordPress 發佈失敗: {exc}",
                     "level": "error",
                 })
-                self.session.add(item)
+                # NOTE: Do NOT call self.session.add() — connection may
+                # be dead. process_google_doc() handles DB persistence.
                 return {
                     "worklist_item_id": item.id,
                     "article_id": item.article_id,
@@ -661,13 +662,11 @@ class AutoPublishService:
                     },
                 })
 
-                if article:
-                    article.status = ArticleStatus.DRAFT
-                    article.published_url = wordpress_draft_url
-                    article.cms_article_id = str(wordpress_post_id) if wordpress_post_id else None
-                    self.session.add(article)
-
-                self.session.add(item)
+                # NOTE: Do NOT call self.session.add() here — the DB
+                # connection is likely dead after 5+ minutes of Playwright
+                # work.  process_google_doc() handles persistence using a
+                # fresh session.  We only update the in-memory objects so
+                # the caller can read the result.
 
                 logger.info(
                     "auto_publish_completed",
@@ -694,7 +693,8 @@ class AutoPublishService:
                     "message": f"WordPress 發佈失敗: {error_msg}",
                     "level": "error",
                 })
-                self.session.add(item)
+                # NOTE: Do NOT call self.session.add() — connection may
+                # be dead. process_google_doc() handles DB persistence.
 
                 return {
                     "worklist_item_id": item.id,
