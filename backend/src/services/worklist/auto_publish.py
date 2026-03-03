@@ -66,9 +66,18 @@ class AutoPublishService:
     ) -> dict[str, Any]:
         """Run the full pipeline: fetch doc -> parse -> proofread -> publish draft.
 
+        Each phase uses a SHORT-LIVED DB session that is opened, used, and
+        closed immediately.  This prevents PGBouncer from killing idle
+        connections during long-running non-DB operations (AI parsing takes
+        2-3 min, proofreading 1-2 min, Playwright 3-7 min).
+
         Returns a dict with worklist_item_id, article_id, wordpress_draft_url,
         wordpress_post_id, and status.
         """
+        from src.config.database import get_db_config
+
+        db_config = get_db_config()
+
         # 1. Extract file_id from the URL
         file_id = self._extract_file_id(google_doc_url)
         if not file_id:
@@ -84,139 +93,178 @@ class AutoPublishService:
             requester=requester,
         )
 
-        # 2. Idempotency: check for an existing WorklistItem with same drive_file_id
-        existing = await self._find_existing_item(file_id)
-        if existing and existing.wordpress_draft_url:
-            logger.info(
-                "auto_publish_already_published",
-                worklist_item_id=existing.id,
-                wordpress_draft_url=existing.wordpress_draft_url,
+        # ------------------------------------------------------------------
+        # Phase A: Idempotency check + fetch Google Doc + upsert worklist item
+        # Uses a short-lived session that closes before AI parsing starts.
+        # ------------------------------------------------------------------
+        async with db_config.session() as session_a:
+            # Idempotency: check for an existing WorklistItem
+            stmt_existing = select(WorklistItem).where(
+                WorklistItem.drive_file_id == file_id
             )
-            return {
-                "worklist_item_id": existing.id,
-                "article_id": existing.article_id,
-                "wordpress_draft_url": existing.wordpress_draft_url,
-                "wordpress_post_id": existing.wordpress_post_id,
-                "status": "already_published",
-            }
+            result = await session_a.execute(stmt_existing)
+            existing = result.scalar_one_or_none()
 
-        # 3. Fetch the Google Doc via Drive API
-        storage = await create_google_drive_storage()
+            if existing and existing.wordpress_draft_url:
+                logger.info(
+                    "auto_publish_already_published",
+                    worklist_item_id=existing.id,
+                    wordpress_draft_url=existing.wordpress_draft_url,
+                )
+                return {
+                    "worklist_item_id": existing.id,
+                    "article_id": existing.article_id,
+                    "wordpress_draft_url": existing.wordpress_draft_url,
+                    "wordpress_post_id": existing.wordpress_post_id,
+                    "status": "already_published",
+                }
 
-        file_metadata = (
-            storage.service.files()
-            .get(fileId=file_id, fields="id,name,mimeType,webViewLink,createdTime",
-                 supportsAllDrives=True)
-            .execute()
-        )
-
-        # 4. Hydrate the document (download + parse HTML)
-        sync_service = GoogleDriveSyncService(self.session)
-        parsed = await sync_service._hydrate_document(storage, file_metadata)
-        if parsed is None:
-            raise ValueError(
-                f"Unsupported document format for file {file_id} "
-                f"(mimeType: {file_metadata.get('mimeType')})"
+            # Fetch and hydrate Google Doc
+            storage = await create_google_drive_storage()
+            file_metadata = (
+                storage.service.files()
+                .get(fileId=file_id,
+                     fields="id,name,mimeType,webViewLink,createdTime",
+                     supportsAllDrives=True)
+                .execute()
             )
+            sync_service = GoogleDriveSyncService(session_a)
+            parsed = await sync_service._hydrate_document(storage, file_metadata)
+            if parsed is None:
+                raise ValueError(
+                    f"Unsupported document format for file {file_id} "
+                    f"(mimeType: {file_metadata.get('mimeType')})"
+                )
 
-        # 5. Upsert worklist item
-        item, created = await sync_service._upsert_worklist_item(parsed)
-        await self.session.commit()
+            # Upsert worklist item (commit included in context exit)
+            item, created = await sync_service._upsert_worklist_item(parsed)
+            # db_config.session() auto-commits on exit
 
+        worklist_item_id = item.id
         logger.info(
             "auto_publish_worklist_item_ready",
-            worklist_item_id=item.id,
+            worklist_item_id=worklist_item_id,
             created=created,
         )
 
-        # 6. Run parse + proofread pipeline
-        pipeline = WorklistPipelineService(self.session)
-        await pipeline.process_new_item(item)
-        await self.session.commit()
+        # ------------------------------------------------------------------
+        # Phase B: AI parse + proofread (takes 3-5 minutes)
+        # Uses its own session.  WorklistPipelineService.process_new_item()
+        # does internal DB operations and commits via its session.
+        # The session's connection MAY die during the long AI calls;
+        # pipeline.py commits before each AI call to release the
+        # PGBouncer connection.  Suppress session close errors.
+        # ------------------------------------------------------------------
+        session_b_ctx = db_config.session()
+        session_b = await session_b_ctx.__aenter__()
+        try:
+            item_b = await session_b.get(WorklistItem, worklist_item_id)
+            pipeline = WorklistPipelineService(session_b)
+            await pipeline.process_new_item(item_b)
+        finally:
+            try:
+                await session_b_ctx.__aexit__(None, None, None)
+            except Exception:
+                pass
 
-        # 7. Auto-advance past review gates -> READY_TO_PUBLISH
-        item.mark_status(WorklistStatus.READY_TO_PUBLISH)
-        item.add_note({
-            "message": "自動跳過審核（GAS 自動發佈流程）",
-            "level": "info",
-            "metadata": {"requester": requester, "sheet_row": sheet_row},
-        })
-        if item.article_id:
-            article = await self.session.get(Article, item.article_id)
-            if article:
-                article.status = ArticleStatus.READY_TO_PUBLISH
-                self.session.add(article)
-        self.session.add(item)
-        await self.session.commit()
+        # ------------------------------------------------------------------
+        # Phase C: Advance status to READY_TO_PUBLISH
+        # Quick DB operation — fresh session.
+        # ------------------------------------------------------------------
+        async with db_config.session() as session_c:
+            item_c = await session_c.get(WorklistItem, worklist_item_id)
+            item_c.mark_status(WorklistStatus.READY_TO_PUBLISH)
+            item_c.add_note({
+                "message": "自動跳過審核（GAS 自動發佈流程）",
+                "level": "info",
+                "metadata": {"requester": requester, "sheet_row": sheet_row},
+            })
+            if item_c.article_id:
+                article_c = await session_c.get(Article, item_c.article_id)
+                if article_c:
+                    article_c.status = ArticleStatus.READY_TO_PUBLISH
+                    session_c.add(article_c)
+            session_c.add(item_c)
+            # db_config.session() auto-commits on exit
 
-        # 8. Publish as WordPress draft
-        # NOTE: Playwright publishing takes 3-7 minutes.  The original DB
-        # session's connection will be closed by PGBouncer long before that
-        # finishes.  Therefore we commit any pending state *before* calling
-        # Playwright, and use a **fresh session** afterwards to persist the
-        # publish result.
-        result = await self._publish_as_draft(item)
+        # ------------------------------------------------------------------
+        # Phase D: Playwright publish (takes 3-7 minutes)
+        # Load article data with a fresh session, then run Playwright.
+        # The session's connection WILL die during Playwright, so we
+        # manually close it with error suppression.
+        # ------------------------------------------------------------------
+        session_d_ctx = db_config.session()
+        session_d = await session_d_ctx.__aenter__()
+        try:
+            item_d = await session_d.get(WorklistItem, worklist_item_id)
+            publish_result = await self._publish_as_draft(item_d, session_d)
+        finally:
+            try:
+                await session_d_ctx.__aexit__(None, None, None)
+            except Exception:
+                # Connection died during Playwright — expected.
+                pass
 
-        # Use a fresh session to persist publish results.
-        # The original session's connection is likely dead after 5+ minutes
-        # of Playwright work.
-        from src.config.database import get_db_config
-
-        db_config = get_db_config()
-        async with db_config.session() as fresh_session:
-            fresh_item = await fresh_session.get(WorklistItem, item.id)
-            fresh_article = (
-                await fresh_session.get(Article, item.article_id)
-                if item.article_id
-                else None
-            )
-
-            if fresh_item:
-                # Copy publish-related fields from the in-memory item
-                fresh_item.wordpress_draft_url = getattr(item, "wordpress_draft_url", None)
-                fresh_item.wordpress_post_id = getattr(item, "wordpress_post_id", None)
-                fresh_item.wordpress_draft_uploaded_at = getattr(
-                    item, "wordpress_draft_uploaded_at", None
+        # ------------------------------------------------------------------
+        # Phase E: Persist publish results with a guaranteed-fresh session
+        # ------------------------------------------------------------------
+        async with db_config.session() as session_e:
+            item_e = await session_e.get(WorklistItem, worklist_item_id)
+            if item_e:
+                item_e.wordpress_draft_url = getattr(
+                    item_d, "wordpress_draft_url", None
                 )
-                fresh_item.status = item.status
-                fresh_item.notes = item.notes
-                fresh_session.add(fresh_item)
+                item_e.wordpress_post_id = getattr(
+                    item_d, "wordpress_post_id", None
+                )
+                item_e.wordpress_draft_uploaded_at = getattr(
+                    item_d, "wordpress_draft_uploaded_at", None
+                )
+                item_e.status = item_d.status
+                item_e.notes = item_d.notes
+                session_e.add(item_e)
 
-            if fresh_article and result.get("status") == "completed":
-                fresh_article.status = ArticleStatus.DRAFT
-                fresh_article.cms_article_id = result.get("wordpress_post_id")
-                if isinstance(fresh_article.cms_article_id, int):
-                    fresh_article.cms_article_id = str(fresh_article.cms_article_id)
-                fresh_article.published_url = result.get("wordpress_draft_url")
-                fresh_session.add(fresh_article)
+            if item_d.article_id and publish_result.get("status") == "completed":
+                article_e = await session_e.get(Article, item_d.article_id)
+                if article_e:
+                    article_e.status = ArticleStatus.DRAFT
+                    wp_post_id = publish_result.get("wordpress_post_id")
+                    article_e.cms_article_id = (
+                        str(wp_post_id) if wp_post_id else None
+                    )
+                    article_e.published_url = publish_result.get(
+                        "wordpress_draft_url"
+                    )
+                    session_e.add(article_e)
+            # db_config.session() auto-commits on exit
 
-            await fresh_session.commit()
-            logger.info(
-                "auto_publish_db_committed_with_fresh_session",
-                worklist_item_id=item.id,
-                status=result.get("status"),
-            )
+        logger.info(
+            "auto_publish_db_committed_with_fresh_session",
+            worklist_item_id=worklist_item_id,
+            status=publish_result.get("status"),
+        )
 
         # Auto-cleanup after successful publish (separate session)
-        if result.get("status") == "completed":
+        if publish_result.get("status") == "completed":
             try:
                 async with db_config.session() as cleanup_session:
                     cleanup_svc = AutoPublishService(cleanup_session)
-                    freed = await cleanup_svc.cleanup_published_item(item.id)
+                    freed = await cleanup_svc.cleanup_published_item(
+                        worklist_item_id
+                    )
                 logger.info(
                     "auto_cleanup_after_publish",
-                    worklist_item_id=item.id,
+                    worklist_item_id=worklist_item_id,
                     freed_bytes_estimate=freed,
                 )
             except Exception as cleanup_err:
                 logger.warning(
                     "auto_cleanup_after_publish_failed",
-                    worklist_item_id=item.id,
+                    worklist_item_id=worklist_item_id,
                     error=str(cleanup_err),
                 )
-                # Non-fatal: scheduled task or GAS callback will retry
 
-        return result
+        return publish_result
 
     async def cleanup_published_item(self, worklist_item_id: int) -> int:
         """Clean up large text fields from a published item to free Supabase storage.
@@ -428,8 +476,17 @@ class AutoPublishService:
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def _publish_as_draft(self, item: WorklistItem) -> dict[str, Any]:
-        """Publish a worklist item as a WordPress draft using Playwright."""
+    async def _publish_as_draft(
+        self, item: WorklistItem, session: AsyncSession | None = None,
+    ) -> dict[str, Any]:
+        """Publish a worklist item as a WordPress draft using Playwright.
+
+        Args:
+            item: WorklistItem to publish.
+            session: DB session for loading article data.  Falls back to
+                     self.session for backward compatibility.
+        """
+        db = session or self.session
         from src.api.schemas.seo import SEOMetadata
         from src.services.providers.playwright_wordpress_publisher import (
             PlaywrightWordPressPublisher,
@@ -448,7 +505,7 @@ class AutoPublishService:
                 .options(selectinload(Article.article_images))
                 .where(Article.id == item.article_id)
             )
-            result = await self.session.execute(stmt)
+            result = await db.execute(stmt)
             article = result.scalar_one_or_none()
 
         title = item.title or "Untitled"

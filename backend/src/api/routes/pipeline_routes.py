@@ -121,39 +121,21 @@ async def auto_publish(
     async def _run_pipeline(tid: str, doc_url: str, row: int | None) -> None:
         """Execute the auto-publish pipeline in the background.
 
-        The pipeline takes 5-7 minutes (AI parsing + Playwright).
-        PGBouncer will close idle DB connections during that time, so
-        the initial session's connection will be dead by the time the
-        pipeline finishes.  process_google_doc() handles this by using
-        fresh sessions for post-publish DB commits.  We explicitly
-        close the initial session with error suppression so that
-        a dead-connection error during cleanup doesn't mask the actual
-        pipeline result.
+        process_google_doc() manages its own short-lived DB sessions
+        for each phase, so we don't need to hold a long-lived session
+        here.  The service instance only needs settings, not a session.
         """
-        result = None
         try:
-            db_config = get_db_config()
-            session = db_config.session()
-            bg_session = await session.__aenter__()
-            try:
-                from src.services.worklist.auto_publish import AutoPublishService
+            from src.services.worklist.auto_publish import AutoPublishService
 
-                service = AutoPublishService(bg_session)
-                result = await service.process_google_doc(
-                    google_doc_url=doc_url,
-                    sheet_row=row,
-                )
-            finally:
-                # The session's DB connection may be dead after minutes
-                # of Playwright work.  Swallow close errors so they
-                # don't mask the pipeline result.
-                try:
-                    await session.__aexit__(None, None, None)
-                except Exception as close_err:
-                    logger.debug(
-                        "bg_session_close_error_suppressed",
-                        error=str(close_err)[:200],
-                    )
+            # AutoPublishService.process_google_doc() now manages its own
+            # sessions internally.  Pass a dummy session=None; the method
+            # ignores self.session entirely.
+            service = AutoPublishService(session=None)  # type: ignore[arg-type]
+            result = await service.process_google_doc(
+                google_doc_url=doc_url,
+                sheet_row=row,
+            )
             _task_results[tid] = {"status": "completed", "result": result}
             logger.info("auto_publish_background_completed", task_id=tid)
         except Exception as exc:

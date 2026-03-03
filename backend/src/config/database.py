@@ -39,18 +39,15 @@ class DatabaseConfig:
             if db_url.startswith("postgresql://"):
                 db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-            # For async engines, only use NullPool in test mode
-            # Default async pool will be used in non-test environments
+            # Use NullPool because PGBouncer already handles connection pooling.
+            # Keeping a SQLAlchemy-level pool on top of PGBouncer causes stale
+            # connections: PGBouncer closes idle server connections after ~60s,
+            # but SQLAlchemy's pool doesn't know and hands out dead connections.
+            # NullPool creates a fresh PGBouncer connection for each operation
+            # and releases it immediately — no stale connections ever.
             engine_kwargs = {
                 "echo": self.settings.LOG_LEVEL == "DEBUG",
-                "pool_size": self.settings.DATABASE_POOL_SIZE,
-                "max_overflow": self.settings.DATABASE_MAX_OVERFLOW,
-                "pool_timeout": self.settings.DATABASE_POOL_TIMEOUT,
-                "pool_recycle": self.settings.DATABASE_POOL_RECYCLE,
-                # Enable pool_pre_ping to detect stale connections after Cloud Run cold starts.
-                # Safe with PGBouncer because prepared statements are fully disabled
-                # via statement_cache_size=0 below.
-                "pool_pre_ping": True,
+                "poolclass": NullPool,
                 # Fix for pgbouncer transaction mode prepared statement conflicts:
                 # Use UUID-based statement names to avoid collisions between workers
                 # Reference: https://github.com/sqlalchemy/sqlalchemy/issues/6467
@@ -65,15 +62,11 @@ class DatabaseConfig:
                 },
             }
 
-            if self.settings.ENVIRONMENT == "test":
-                engine_kwargs["poolclass"] = NullPool
-
             self._engine = create_async_engine(db_url, **engine_kwargs)
 
             logger.info(
                 "database_engine_created",
-                pool_size=self.settings.DATABASE_POOL_SIZE,
-                max_overflow=self.settings.DATABASE_MAX_OVERFLOW,
+                pool_class="NullPool",
                 environment=self.settings.ENVIRONMENT,
             )
 

@@ -141,6 +141,11 @@ class WorklistPipelineService:
                 has_raw_html=bool(item.raw_html),
             )
 
+            # Commit pending changes before AI parsing so the DB connection
+            # is released back to PGBouncer during the 2+ minute AI call.
+            # Without this, PGBouncer kills idle connections during parsing.
+            await self.session.commit()
+
             # Parse with AI (will fallback to heuristics if AI fails).
             # parse_document() uses the synchronous anthropic.Anthropic client
             # which blocks the event loop.  Run it in a thread so that
@@ -394,6 +399,10 @@ class WorklistPipelineService:
     async def _run_proofreading(self, item: WorklistItem, article: Article) -> None:
         """Invoke AI + deterministic proofreading and persist the results."""
         payload = self._build_payload(article, item)
+
+        # Commit before the long AI call so PGBouncer releases the
+        # server connection during the 1-2 minute proofreading.
+        await self.session.commit()
 
         try:
             result = await asyncio.wait_for(
