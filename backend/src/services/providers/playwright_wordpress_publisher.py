@@ -261,9 +261,12 @@ class PlaywrightWordPressPublisher:
                     await self._step_configure_seo(seo_data)
                 article_location, article_id = await self._step_publish(publish_mode=publish_mode)
 
-                # Take final screenshot
+                # Take final screenshot (timeout to avoid font-loading hangs)
                 screenshot_path = f"/tmp/playwright_success_{article_id}.png"
-                await self.page.screenshot(path=screenshot_path)
+                try:
+                    await self.page.screenshot(path=screenshot_path, timeout=10000)
+                except Exception:
+                    logger.warning("playwright_screenshot_timeout", path=screenshot_path)
 
                 # Perform AI visual verification (skip if requested for performance)
                 if skip_visual_verification:
@@ -338,10 +341,10 @@ class PlaywrightWordPressPublisher:
                 exc_info=True,
             )
 
-            # Take error screenshot
+            # Take error screenshot (short timeout to avoid font-loading hangs)
             if self.page:
                 try:
-                    await self.page.screenshot(path="/tmp/playwright_error.png")
+                    await self.page.screenshot(path="/tmp/playwright_error.png", timeout=10000)
                 except Exception:
                     pass
 
