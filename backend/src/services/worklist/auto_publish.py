@@ -150,8 +150,71 @@ class AutoPublishService:
         await self.session.commit()
 
         # 8. Publish as WordPress draft
+        # NOTE: Playwright publishing takes 3-7 minutes.  The original DB
+        # session's connection will be closed by PGBouncer long before that
+        # finishes.  Therefore we commit any pending state *before* calling
+        # Playwright, and use a **fresh session** afterwards to persist the
+        # publish result.
         result = await self._publish_as_draft(item)
-        await self.session.commit()
+
+        # Use a fresh session to persist publish results.
+        # The original session's connection is likely dead after 5+ minutes
+        # of Playwright work.
+        from src.config.database import get_db_config
+
+        db_config = get_db_config()
+        async with db_config.session() as fresh_session:
+            fresh_item = await fresh_session.get(WorklistItem, item.id)
+            fresh_article = (
+                await fresh_session.get(Article, item.article_id)
+                if item.article_id
+                else None
+            )
+
+            if fresh_item:
+                # Copy publish-related fields from the in-memory item
+                fresh_item.wordpress_draft_url = getattr(item, "wordpress_draft_url", None)
+                fresh_item.wordpress_post_id = getattr(item, "wordpress_post_id", None)
+                fresh_item.wordpress_draft_uploaded_at = getattr(
+                    item, "wordpress_draft_uploaded_at", None
+                )
+                fresh_item.status = item.status
+                fresh_item.notes = item.notes
+                fresh_session.add(fresh_item)
+
+            if fresh_article and result.get("status") == "completed":
+                fresh_article.status = ArticleStatus.DRAFT
+                fresh_article.cms_article_id = result.get("wordpress_post_id")
+                if isinstance(fresh_article.cms_article_id, int):
+                    fresh_article.cms_article_id = str(fresh_article.cms_article_id)
+                fresh_article.published_url = result.get("wordpress_draft_url")
+                fresh_session.add(fresh_article)
+
+            await fresh_session.commit()
+            logger.info(
+                "auto_publish_db_committed_with_fresh_session",
+                worklist_item_id=item.id,
+                status=result.get("status"),
+            )
+
+        # Auto-cleanup after successful publish (separate session)
+        if result.get("status") == "completed":
+            try:
+                async with db_config.session() as cleanup_session:
+                    cleanup_svc = AutoPublishService(cleanup_session)
+                    freed = await cleanup_svc.cleanup_published_item(item.id)
+                logger.info(
+                    "auto_cleanup_after_publish",
+                    worklist_item_id=item.id,
+                    freed_bytes_estimate=freed,
+                )
+            except Exception as cleanup_err:
+                logger.warning(
+                    "auto_cleanup_after_publish_failed",
+                    worklist_item_id=item.id,
+                    error=str(cleanup_err),
+                )
+                # Non-fatal: scheduled task or GAS callback will retry
 
         return result
 
@@ -613,28 +676,9 @@ class AutoPublishService:
                     wordpress_draft_url=wordpress_draft_url,
                 )
 
-                # Auto-cleanup in a SEPARATE session to release the main
-                # connection back to the pool immediately.  The publish
-                # result is already committed above.
-                try:
-                    from src.config.database import get_db_config
-
-                    db_config = get_db_config()
-                    async with db_config.session() as cleanup_session:
-                        cleanup_svc = AutoPublishService(cleanup_session)
-                        freed = await cleanup_svc.cleanup_published_item(item.id)
-                    logger.info(
-                        "auto_cleanup_after_publish",
-                        worklist_item_id=item.id,
-                        freed_bytes_estimate=freed,
-                    )
-                except Exception as cleanup_err:
-                    logger.warning(
-                        "auto_cleanup_after_publish_failed",
-                        worklist_item_id=item.id,
-                        error=str(cleanup_err),
-                    )
-                    # Non-fatal: scheduled task or GAS callback will retry
+                # NOTE: Auto-cleanup moved to process_google_doc() after
+                # the fresh-session commit ensures the item status is
+                # persisted before cleanup checks it.
 
                 return {
                     "worklist_item_id": item.id,
