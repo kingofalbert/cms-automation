@@ -7,6 +7,7 @@ Google Apps Script via the /v1/pipeline/auto-publish endpoint.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
@@ -31,6 +32,11 @@ from src.models import (
     WorklistItem,
     WorklistStatus,
 )
+from src.models.article_faq import ArticleFAQ
+from src.models.article_image import ArticleImageReview
+from src.models.seo import SEOMetadata
+from src.models.seo_suggestions import SEOSuggestion
+from src.models.title_suggestions import TitleSuggestion
 from src.services.google_drive.sync_service import GoogleDriveSyncService
 from src.services.storage import create_google_drive_storage
 from src.services.worklist.pipeline import WorklistPipelineService
@@ -190,8 +196,10 @@ class AutoPublishService:
                     freed_estimate += len(article.body.encode("utf-8", errors="ignore"))
                     article.body = "[已清理 - 見 WordPress 草稿]"
 
+                # Nullable text/JSONB fields to clear
                 for field in (
                     "body_html",
+                    "raw_html",
                     "suggested_content",
                     "faq_html",
                     "faq_schema_proposals",
@@ -200,6 +208,16 @@ class AutoPublishService:
                     "suggested_content_changes",
                     "faq_assessment",
                     "faq_editorial_notes",
+                    "suggested_meta_description",
+                    "suggested_meta_reasoning",
+                    "suggested_seo_keywords",
+                    "suggested_titles",
+                    "seo_title_variants",
+                    "doc_proofreading_suggestions",
+                    "doc_image_alt_texts",
+                    "extracted_faqs",
+                    "related_articles",
+                    "parsing_feedback",
                 ):
                     val = getattr(article, field, None)
                     if val is not None:
@@ -209,16 +227,21 @@ class AutoPublishService:
                             freed_estimate += len(json.dumps(val).encode("utf-8", errors="ignore"))
                         setattr(article, field, None)
 
-                # JSONB fields that should be reset to empty list
-                if article.proofreading_issues:
-                    freed_estimate += len(
-                        json.dumps(article.proofreading_issues).encode("utf-8", errors="ignore")
-                    )
-                    article.proofreading_issues = []
+                # JSONB fields with NOT NULL constraint — reset to empty
+                for field, empty_val in (
+                    ("article_metadata", {}),
+                    ("proofreading_issues", []),
+                ):
+                    val = getattr(article, field, None)
+                    if val:
+                        freed_estimate += len(
+                            json.dumps(val).encode("utf-8", errors="ignore")
+                        )
+                        setattr(article, field, empty_val)
 
                 self.session.add(article)
 
-                # --- Delete associated history/log rows ---
+                # --- Delete associated table rows ---
                 article_id = article.id
 
                 # article_status_history
@@ -227,7 +250,7 @@ class AutoPublishService:
                         ArticleStatusHistory.article_id == article_id
                     )
                 )
-                freed_estimate += (result.rowcount or 0) * 200  # ~200 bytes/row
+                freed_estimate += (result.rowcount or 0) * 200
 
                 # proofreading_decisions
                 result = await self.session.execute(
@@ -235,7 +258,7 @@ class AutoPublishService:
                         ProofreadingDecision.article_id == article_id
                     )
                 )
-                freed_estimate += (result.rowcount or 0) * 500  # ~500 bytes/row
+                freed_estimate += (result.rowcount or 0) * 500
 
                 # proofreading_history
                 result = await self.session.execute(
@@ -243,7 +266,52 @@ class AutoPublishService:
                         ProofreadingHistory.article_id == article_id
                     )
                 )
-                freed_estimate += (result.rowcount or 0) * 1000  # ~1KB/row
+                freed_estimate += (result.rowcount or 0) * 1000
+
+                # seo_metadata
+                result = await self.session.execute(
+                    delete(SEOMetadata).where(SEOMetadata.article_id == article_id)
+                )
+                freed_estimate += (result.rowcount or 0) * 500
+
+                # seo_suggestions
+                result = await self.session.execute(
+                    delete(SEOSuggestion).where(SEOSuggestion.article_id == article_id)
+                )
+                freed_estimate += (result.rowcount or 0) * 500
+
+                # title_suggestions
+                result = await self.session.execute(
+                    delete(TitleSuggestion).where(TitleSuggestion.article_id == article_id)
+                )
+                freed_estimate += (result.rowcount or 0) * 500
+
+                # article_faqs
+                result = await self.session.execute(
+                    delete(ArticleFAQ).where(ArticleFAQ.article_id == article_id)
+                )
+                freed_estimate += (result.rowcount or 0) * 300
+
+                # article_image_reviews (must delete before article_images)
+                image_ids_result = await self.session.execute(
+                    select(ArticleImage.id).where(
+                        ArticleImage.article_id == article_id
+                    )
+                )
+                image_ids = [row[0] for row in image_ids_result.all()]
+                if image_ids:
+                    result = await self.session.execute(
+                        delete(ArticleImageReview).where(
+                            ArticleImageReview.article_image_id.in_(image_ids)
+                        )
+                    )
+                    freed_estimate += (result.rowcount or 0) * 300
+
+                # article_images
+                result = await self.session.execute(
+                    delete(ArticleImage).where(ArticleImage.article_id == article_id)
+                )
+                freed_estimate += (result.rowcount or 0) * 500
 
                 # execution_logs (via publish_tasks)
                 task_ids_result = await self.session.execute(
@@ -259,7 +327,7 @@ class AutoPublishService:
                             ExecutionLog.task_id.in_(task_ids)
                         )
                     )
-                    freed_estimate += (result.rowcount or 0) * 300  # ~300 bytes/row
+                    freed_estimate += (result.rowcount or 0) * 300
 
                     # publish_tasks
                     result = await self.session.execute(
@@ -267,7 +335,7 @@ class AutoPublishService:
                             PublishTask.article_id == article_id
                         )
                     )
-                    freed_estimate += (result.rowcount or 0) * 500  # ~500 bytes/row
+                    freed_estimate += (result.rowcount or 0) * 500
 
         await self.session.commit()
 
@@ -441,11 +509,16 @@ class AutoPublishService:
                 )
                 featured_image_path = None  # Skip featured image if download fails
 
-        # Download article images to local temp files
+        # Download article images to local temp files (parallel for speed)
         local_image_paths: list[str] = []
-        for img_dict in article_images:
-            img_url = img_dict.get("source_url", "")
-            if img_url and img_url.startswith("http"):
+        downloadable = [
+            (i, img_dict)
+            for i, img_dict in enumerate(article_images)
+            if img_dict.get("source_url", "").startswith("http")
+        ]
+        if downloadable:
+            async def _download_one(idx: int, img_dict: dict) -> None:
+                img_url = img_dict["source_url"]
                 try:
                     local_path = await self._download_image_to_temp(img_url)
                     img_dict["local_path"] = local_path
@@ -456,6 +529,11 @@ class AutoPublishService:
                         url=img_url[:100],
                         error=str(img_err),
                     )
+
+            await asyncio.gather(
+                *(_download_one(i, d) for i, d in downloadable),
+                return_exceptions=True,
+            )
 
         try:
             try:
@@ -534,6 +612,29 @@ class AutoPublishService:
                     wordpress_post_id=wordpress_post_id,
                     wordpress_draft_url=wordpress_draft_url,
                 )
+
+                # Auto-cleanup in a SEPARATE session to release the main
+                # connection back to the pool immediately.  The publish
+                # result is already committed above.
+                try:
+                    from src.config.database import get_db_config
+
+                    db_config = get_db_config()
+                    async with db_config.session() as cleanup_session:
+                        cleanup_svc = AutoPublishService(cleanup_session)
+                        freed = await cleanup_svc.cleanup_published_item(item.id)
+                    logger.info(
+                        "auto_cleanup_after_publish",
+                        worklist_item_id=item.id,
+                        freed_bytes_estimate=freed,
+                    )
+                except Exception as cleanup_err:
+                    logger.warning(
+                        "auto_cleanup_after_publish_failed",
+                        worklist_item_id=item.id,
+                        error=str(cleanup_err),
+                    )
+                    # Non-fatal: scheduled task or GAS callback will retry
 
                 return {
                     "worklist_item_id": item.id,

@@ -47,8 +47,10 @@ class DatabaseConfig:
                 "max_overflow": self.settings.DATABASE_MAX_OVERFLOW,
                 "pool_timeout": self.settings.DATABASE_POOL_TIMEOUT,
                 "pool_recycle": self.settings.DATABASE_POOL_RECYCLE,
-                # Disable pool_pre_ping with pgbouncer transaction mode (SA 2.0 issue)
-                "pool_pre_ping": False,
+                # Enable pool_pre_ping to detect stale connections after Cloud Run cold starts.
+                # Safe with PGBouncer because prepared statements are fully disabled
+                # via statement_cache_size=0 below.
+                "pool_pre_ping": True,
                 # Fix for pgbouncer transaction mode prepared statement conflicts:
                 # Use UUID-based statement names to avoid collisions between workers
                 # Reference: https://github.com/sqlalchemy/sqlalchemy/issues/6467

@@ -91,13 +91,30 @@ app = create_app()
 
 
 @app.get("/health", tags=["Health"])
-async def health_check() -> dict[str, str]:
-    """Health check endpoint.
+async def health_check() -> dict:
+    """Health check endpoint with database connectivity probe.
 
     Returns:
-        dict: Health status
+        dict: Health status including database connectivity
     """
-    return {"status": "healthy", "service": "cms-automation"}
+    import asyncio
+
+    from sqlalchemy import text
+
+    db_config = get_db_config()
+    db_status = "healthy"
+
+    try:
+        async with db_config.session() as session:
+            await asyncio.wait_for(
+                session.execute(text("SELECT 1")),
+                timeout=3.0,
+            )
+    except Exception as exc:
+        db_status = f"unhealthy: {type(exc).__name__}"
+
+    overall = "healthy" if db_status == "healthy" else "degraded"
+    return {"status": overall, "service": "cms-automation", "database": db_status}
 
 
 @app.get("/", include_in_schema=False)

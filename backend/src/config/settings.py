@@ -79,9 +79,9 @@ class Settings(BaseSettings):
         description="Pool timeout in seconds",
     )
     DATABASE_POOL_RECYCLE: int = Field(
-        default=3600,
+        default=600,
         ge=60,
-        description="Connection recycle time in seconds",
+        description="Connection recycle time in seconds (600s matches PGBouncer defaults)",
     )
 
     # Redis Configuration

@@ -10,12 +10,19 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.config.database import get_session
+from src.config.database import get_db_config, get_session
 from src.config.logging import get_logger
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/pipeline", tags=["Pipeline Automation"])
+
+# ---------------------------------------------------------------------------
+# In-memory task tracking for the async fallback path (when Celery is down).
+# Maps task_id -> {"status": ..., "result": ..., "error": ...}
+# Entries are kept until the next deployment (Cloud Run instance recycle).
+# ---------------------------------------------------------------------------
+_task_results: dict[str, dict[str, Any]] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -106,47 +113,50 @@ async def auto_publish(
             error=str(celery_err),
         )
 
-    # Fallback: synchronous execution
+    # Fallback: run pipeline in a background asyncio.Task so the HTTP
+    # response returns immediately (202) instead of blocking for 240s+.
     task_id = str(uuid.uuid4())
-    try:
-        from src.services.worklist.auto_publish import AutoPublishService
+    _task_results[task_id] = {"status": "processing"}
 
-        service = AutoPublishService(session)
-        result = await asyncio.wait_for(
-            service.process_google_doc(
-                google_doc_url=google_doc_url,
-                sheet_row=sheet_row,
-            ),
-            timeout=240.0,
-        )
+    async def _run_pipeline(tid: str, doc_url: str, row: int | None) -> None:
+        """Execute the auto-publish pipeline in the background."""
+        try:
+            db_config = get_db_config()
+            async with db_config.session() as bg_session:
+                from src.services.worklist.auto_publish import AutoPublishService
 
-        return AutoPublishResponse(
-            task_id=task_id,
-            status="completed",
-            message="Processed synchronously (Celery unavailable)",
-            result=result,
-        )
-    except asyncio.TimeoutError:
-        logger.error(
-            "auto_publish_sync_timeout",
-            google_doc_url=google_doc_url,
-            timeout=240.0,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Auto-publish timed out after 240s. The document may be too large or the server is under heavy load.",
-        )
-    except Exception as exc:
-        logger.error(
-            "auto_publish_sync_failed",
-            error=str(exc),
-            exc_info=True,
-        )
-        error_detail = str(exc) or repr(exc) or type(exc).__name__
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Auto-publish failed: {error_detail}",
-        ) from exc
+                service = AutoPublishService(bg_session)
+                result = await service.process_google_doc(
+                    google_doc_url=doc_url,
+                    sheet_row=row,
+                )
+            _task_results[tid] = {"status": "completed", "result": result}
+            logger.info("auto_publish_background_completed", task_id=tid)
+        except Exception as exc:
+            logger.error(
+                "auto_publish_background_failed",
+                task_id=tid,
+                error=str(exc),
+                exc_info=True,
+            )
+            _task_results[tid] = {
+                "status": "failed",
+                "error": str(exc) or repr(exc) or type(exc).__name__,
+            }
+
+    asyncio.create_task(_run_pipeline(task_id, google_doc_url, sheet_row))
+
+    logger.info(
+        "auto_publish_background_task_created",
+        task_id=task_id,
+        google_doc_url=google_doc_url,
+    )
+
+    return AutoPublishResponse(
+        task_id=task_id,
+        status="queued",
+        message="Task queued for background processing (Celery unavailable)",
+    )
 
 
 @router.get(
@@ -156,7 +166,17 @@ async def auto_publish(
 async def get_auto_publish_status(task_id: str) -> TaskStatusResponse:
     """Poll the status of an auto-publish task."""
 
-    # Try Celery result backend
+    # 1. Check in-memory results first (background asyncio.Task fallback)
+    if task_id in _task_results:
+        entry = _task_results[task_id]
+        return TaskStatusResponse(
+            task_id=task_id,
+            status=entry.get("status", "processing"),
+            result=entry.get("result"),
+            error=entry.get("error"),
+        )
+
+    # 2. Try Celery result backend
     try:
         from src.workers.celery_app import celery_app
 

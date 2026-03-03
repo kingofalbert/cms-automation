@@ -30,4 +30,10 @@ celery_app.conf.beat_schedule = {
         "schedule": 300.0,  # Every 5 minutes
         "options": {"queue": "maintenance"},
     },
+    # Clean up published/failed items to free DB space (every 6 hours)
+    "cleanup-published-items": {
+        "task": "src.workers.tasks.maintenance.cleanup_published_items",
+        "schedule": crontab(minute=30, hour="*/6"),  # Every 6 hours at :30
+        "options": {"queue": "maintenance"},
+    },
 }

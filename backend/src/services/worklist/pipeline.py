@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Any
 
@@ -140,8 +141,14 @@ class WorklistPipelineService:
                 has_raw_html=bool(item.raw_html),
             )
 
-            # Parse with AI (will fallback to heuristics if AI fails)
-            parsing_result = self.parser_service.parse_document(raw_html)
+            # Parse with AI (will fallback to heuristics if AI fails).
+            # parse_document() uses the synchronous anthropic.Anthropic client
+            # which blocks the event loop.  Run it in a thread so that
+            # asyncio.wait_for timeouts can actually fire.
+            parsing_result = await asyncio.wait_for(
+                asyncio.to_thread(self.parser_service.parse_document, raw_html),
+                timeout=120.0,  # 120s budget for AI parsing
+            )
 
             if not parsing_result.success:
                 # Parsing failed
@@ -389,7 +396,10 @@ class WorklistPipelineService:
         payload = self._build_payload(article, item)
 
         try:
-            result = await self.proofreading_service.analyze_article(payload)
+            result = await asyncio.wait_for(
+                self.proofreading_service.analyze_article(payload),
+                timeout=90.0,  # 90s budget for AI proofreading
+            )
         except Exception as exc:
             logger.error(
                 "worklist_auto_proofreading_failed",
