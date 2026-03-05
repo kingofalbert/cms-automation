@@ -609,6 +609,12 @@ class AutoPublishService:
             elif getattr(article, "body", None):
                 body = article.body
 
+        # Strip all inline style attributes from body HTML so WordPress uses
+        # its own theme fonts/sizes.  Google Docs HTML and AI output may carry
+        # font-family, font-size, color and other inline styles that override
+        # the site stylesheet.
+        body = re.sub(r'\s*style="[^"]*"', '', body)
+
         # HTTP auth
         http_auth = None
         if settings.CMS_HTTP_AUTH_USERNAME and settings.CMS_HTTP_AUTH_PASSWORD:
