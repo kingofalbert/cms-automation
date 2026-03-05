@@ -290,52 +290,102 @@ class WorklistPipelineService:
                     article.featured_image_path = metadata["featured_image_path"]
                     self.session.add(article)
 
-            # Issue #3 Fix: Create ArticleImage records from parsed images
-            if parsed_article.images and item.article_id:
+            # Create ArticleImage records.
+            # Primary source: doc_image_alt_texts (圖片 Alt Text section with drive_links).
+            # Fallback: AI-parsed images (may contain base64 placeholders).
+            #
+            # The 圖片 Alt Text section contains the ACTUAL high-res image links
+            # (Google Drive URLs) that editors saved in the document.  The AI parser
+            # cannot see these because base64 inline images are stripped before
+            # sending to the AI.  Therefore we create ArticleImage records directly
+            # from doc_image_alt_texts when available.
+            doc_alt_texts = parsed_article.doc_image_alt_texts or []
+            ai_images = parsed_article.images or []
+            has_images = bool(doc_alt_texts) or bool(ai_images)
+
+            if has_images and item.article_id:
                 # Handle re-runs: delete existing ArticleImage records first
                 await self.session.execute(
                     delete(ArticleImage).where(ArticleImage.article_id == item.article_id)
                 )
                 await self.session.flush()
 
-                # Get doc_image_alt_texts for enrichment (position-matched)
-                doc_alt_texts = parsed_article.doc_image_alt_texts or []
+                created_count = 0
 
-                for img in parsed_article.images:
-                    # Find matching alt text data by position
-                    alt_data = next(
-                        (d for d in doc_alt_texts if isinstance(d, dict) and d.get("position") == img.position),
-                        None,
-                    )
+                if doc_alt_texts:
+                    # --- Primary path: create from doc_image_alt_texts ---
+                    # These have reliable drive_links (original image URLs).
+                    # Positions are 1-based sequential numbers from the doc.
+                    for idx, alt_data in enumerate(doc_alt_texts):
+                        if not isinstance(alt_data, dict):
+                            continue
+                        drive_link = alt_data.get("drive_link")
+                        alt_text = alt_data.get("alt_text", "")
+                        doc_position = alt_data.get("position", idx + 1)
 
-                    # Determine source URL: prefer drive_link from alt_texts, fallback to parsed source_url
-                    source_url = img.source_url
-                    alt_text = img.alt_text or img.caption or ""
-                    if alt_data:
-                        alt_text = alt_data.get("alt_text", alt_text) or alt_text
-                        if alt_data.get("drive_link"):
-                            source_url = alt_data["drive_link"]
+                        # source_url: use drive_link (original image); skip if absent
+                        if not drive_link:
+                            logger.warning(
+                                "image_alt_text_missing_drive_link",
+                                position=doc_position,
+                                alt_text=alt_text[:50] if alt_text else "",
+                            )
+                            continue
 
-                    article_image = ArticleImage(
+                        # First image (position 1) is typically the featured image
+                        is_featured = (doc_position == 1)
+
+                        article_image = ArticleImage(
+                            article_id=item.article_id,
+                            position=doc_position,
+                            source_url=drive_link,
+                            caption=alt_text,
+                            alt_text=alt_text,
+                            is_featured=is_featured,
+                            image_type="featured" if is_featured else "content",
+                            detection_method="doc_alt_text_section",
+                        )
+                        self.session.add(article_image)
+                        created_count += 1
+
+                    logger.info(
+                        "article_images_created_from_doc_alt_texts",
                         article_id=item.article_id,
-                        position=img.position,
-                        source_url=source_url,
-                        source_path=img.source_path,
-                        preview_path=img.preview_path,
-                        caption=img.caption,
-                        alt_text=alt_text,
-                        description=img.description,
-                        is_featured=img.is_featured,
-                        image_type=img.image_type,
-                        detection_method=img.detection_method,
+                        image_count=created_count,
+                        alt_text_count=len(doc_alt_texts),
                     )
-                    self.session.add(article_image)
+                else:
+                    # --- Fallback: create from AI-parsed images ---
+                    # Only used when the document has no 圖片 Alt Text section.
+                    for img in ai_images:
+                        source_url = img.source_url
+                        # Skip placeholder URLs injected by _preprocess_html_for_ai
+                        if source_url and "BASE64_IMAGE_REMOVED" in source_url:
+                            continue
+                        if not source_url:
+                            continue
 
-                logger.info(
-                    "article_images_created",
-                    article_id=item.article_id,
-                    image_count=len(parsed_article.images),
-                )
+                        article_image = ArticleImage(
+                            article_id=item.article_id,
+                            position=img.position,
+                            source_url=source_url,
+                            source_path=img.source_path,
+                            preview_path=img.preview_path,
+                            caption=img.caption,
+                            alt_text=img.alt_text or img.caption or "",
+                            description=img.description,
+                            is_featured=img.is_featured,
+                            image_type=img.image_type,
+                            detection_method=img.detection_method,
+                        )
+                        self.session.add(article_image)
+                        created_count += 1
+
+                    logger.info(
+                        "article_images_created_from_ai_parsing",
+                        article_id=item.article_id,
+                        image_count=created_count,
+                    )
 
             # Apply frontmatter overrides (editor-provided, higher priority than AI)
             frontmatter = (item.drive_metadata or {}).get("frontmatter")

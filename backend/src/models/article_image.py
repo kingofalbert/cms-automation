@@ -57,7 +57,7 @@ class ArticleImage(Base, TimestampMixin):
     )
 
     source_url: Mapped[str | None] = mapped_column(
-        String(1000),
+        Text,
         nullable=True,
         comment='Original "原圖/點此下載" URL from Google Doc',
     )

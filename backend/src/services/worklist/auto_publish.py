@@ -8,6 +8,7 @@ Google Apps Script via the /v1/pipeline/auto-publish endpoint.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import re
@@ -617,7 +618,14 @@ class AutoPublishService:
 
         # Download featured image if it's a URL (Playwright needs local file path)
         local_featured_image = None
-        if featured_image_path and featured_image_path.startswith("http"):
+        if featured_image_path and featured_image_path.startswith("data:"):
+            try:
+                local_featured_image = self._decode_data_uri_to_temp(featured_image_path)
+                featured_image_path = local_featured_image
+            except Exception as img_err:
+                logger.warning("featured_image_data_uri_decode_failed", error=str(img_err))
+                featured_image_path = None
+        elif featured_image_path and featured_image_path.startswith("http"):
             try:
                 local_featured_image = await self._download_image_to_temp(featured_image_path)
                 featured_image_path = local_featured_image
@@ -629,8 +637,19 @@ class AutoPublishService:
                 )
                 featured_image_path = None  # Skip featured image if download fails
 
-        # Download article images to local temp files (parallel for speed)
+        # Decode base64 data URI images to local temp files
         local_image_paths: list[str] = []
+        for img_dict in article_images:
+            src = img_dict.get("source_url", "")
+            if src.startswith("data:"):
+                try:
+                    local_path = self._decode_data_uri_to_temp(src)
+                    img_dict["local_path"] = local_path
+                    local_image_paths.append(local_path)
+                except Exception as img_err:
+                    logger.warning("article_image_data_uri_decode_failed", error=str(img_err))
+
+        # Download HTTP URL images to local temp files (parallel for speed)
         downloadable = [
             (i, img_dict)
             for i, img_dict in enumerate(article_images)
@@ -801,5 +820,26 @@ class AutoPublishService:
 
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
         tmp.write(data)
+        tmp.close()
+        return tmp.name
+
+    @staticmethod
+    def _decode_data_uri_to_temp(data_uri: str) -> str:
+        """Decode a base64 data URI to a temporary file. Returns local path."""
+        # Format: data:<mime>;base64,<encoded>
+        header, encoded = data_uri.split(",", 1)
+        mime = header.split(";")[0].replace("data:", "")
+
+        ext_map = {
+            "image/png": ".png",
+            "image/jpeg": ".jpg",
+            "image/webp": ".webp",
+            "image/gif": ".gif",
+        }
+        suffix = ext_map.get(mime, ".jpg")
+
+        raw = base64.b64decode(encoded)
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        tmp.write(raw)
         tmp.close()
         return tmp.name
