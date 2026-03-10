@@ -265,8 +265,15 @@ class WorklistPipelineService:
                     for img in parsed_article.images
                 ]
                 # Set featured image from first image if available
+                # Guard: skip base64 data URIs (can be ~30KB) and URLs exceeding VARCHAR(500)
                 if parsed_article.images:
-                    metadata["featured_image_path"] = parsed_article.images[0].source_url
+                    _candidate_url = parsed_article.images[0].source_url
+                    if (
+                        _candidate_url
+                        and not _candidate_url.startswith("data:")
+                        and len(_candidate_url) <= 500
+                    ):
+                        metadata["featured_image_path"] = _candidate_url
 
             # Store title components
             metadata["title_prefix"] = parsed_article.title_prefix
@@ -284,10 +291,17 @@ class WorklistPipelineService:
             item.drive_metadata = metadata
 
             # BUG FIX: Copy featured_image_path to Article model
-            if metadata.get("featured_image_path") and item.article_id:
+            # Guard: only persist URLs that fit VARCHAR(500) and are not data URIs
+            _feat_path = metadata.get("featured_image_path")
+            if (
+                _feat_path
+                and not _feat_path.startswith("data:")
+                and len(_feat_path) <= 500
+                and item.article_id
+            ):
                 article = await self.session.get(Article, item.article_id)
                 if article and not article.featured_image_path:
-                    article.featured_image_path = metadata["featured_image_path"]
+                    article.featured_image_path = _feat_path
                     self.session.add(article)
 
             # Create ArticleImage records.

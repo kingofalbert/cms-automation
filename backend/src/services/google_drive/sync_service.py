@@ -316,13 +316,16 @@ class GoogleDriveSyncService:
                     error=str(exc),
                 )
 
-            logger.error(
+            # Log at WARNING (not ERROR) and return None so the caller
+            # counts this as "skipped" instead of double-logging an ERROR
+            # via the google_drive_sync_item_failed handler.
+            logger.warning(
                 "google_drive_fetch_failed",
                 file_id=file_id,
                 error=str(exc),
                 exc_info=True,
             )
-            raise
+            return None
 
         # Parse content and use Drive file name as fallback title
         file_name = file_metadata.get("name")
@@ -353,6 +356,17 @@ class GoogleDriveSyncService:
                 return str(content)
             except HttpError as http_error:
                 status = getattr(http_error, "resp", {}).status if hasattr(http_error, "resp") else None
+                error_msg = str(http_error)
+
+                # Non-retryable: document too large to export (403 exportSizeLimitExceeded)
+                if "exportSizeLimitExceeded" in error_msg or "too large to be exported" in error_msg:
+                    logger.warning(
+                        "google_drive_export_size_limit",
+                        file_id=file_id,
+                        error=error_msg,
+                    )
+                    raise
+
                 if status == 429 and attempt < max_retries - 1:
                     wait_time = 2 ** (attempt + 1)
                     await asyncio.sleep(wait_time)
