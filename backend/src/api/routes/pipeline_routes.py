@@ -87,13 +87,21 @@ async def auto_publish(
         sheet_row=sheet_row,
     )
 
-    # Try Celery first
+    # Try Celery first, with a hard 3s wall-clock timeout.
+    # Even with socket_connect_timeout=2, nested retries in kombu/celery
+    # could compound.  This ensures we fall back to asyncio quickly.
     try:
         from src.workers.tasks.auto_publish import auto_publish_task
 
-        async_result = auto_publish_task.delay(
-            google_doc_url=google_doc_url,
-            sheet_row=sheet_row,
+        async_result = await asyncio.wait_for(
+            asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: auto_publish_task.delay(
+                    google_doc_url=google_doc_url,
+                    sheet_row=sheet_row,
+                ),
+            ),
+            timeout=3.0,
         )
 
         logger.info(

@@ -47,6 +47,24 @@ celery_app.conf.update(
     # to synchronous execution quickly instead of waiting ~20s.
     broker_connection_timeout=2,
     broker_connection_retry=False,
+    # Socket-level timeouts on Redis transport.  broker_connection_timeout
+    # only controls the kombu retry loop, NOT the TCP connect timeout.
+    # Without these, sock.connect() blocks for the OS SYN timeout (~19s).
+    broker_transport_options={
+        "socket_connect_timeout": 2,
+        "socket_timeout": 2,
+        "max_retries": 0,
+    },
+    # Disable publish retry so kombu ensure() doesn't add 3 more attempts.
+    task_publish_retry=False,
+    # Result backend socket timeouts (for AsyncResult / on_task_call).
+    result_backend_transport_options={
+        "socket_connect_timeout": 2,
+        "socket_timeout": 2,
+        "retry_policy": {
+            "max_retries": 0,
+        },
+    },
 )
 
 # Auto-discover tasks from all modules
