@@ -5,6 +5,7 @@ from src.models.article import Article, ArticleStatus, ArticleStatusHistory
 from src.models.article_faq import ArticleFAQ, FAQQuestionType, FAQSearchIntent, FAQStatus
 from src.models.article_image import ArticleImage, ArticleImageReview, ImageReviewAction
 from src.models.base import Base, SoftDeleteMixin, TimestampMixin
+from src.models.pipeline_task import PipelineTask, PipelineTaskStatus
 from src.models.proofreading import (
     DecisionType,
     FeedbackStatus,
@@ -63,6 +64,9 @@ __all__ = [
     "SEOSuggestion",
     # Title Suggestions (Phase 7 - Unified Optimization)
     "TitleSuggestion",
+    # Pipeline Tasks
+    "PipelineTask",
+    "PipelineTaskStatus",
     # Publishing
     "PublishTask",
     "Provider",

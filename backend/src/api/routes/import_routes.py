@@ -4,7 +4,6 @@ import os
 import tempfile
 from pathlib import Path
 
-from celery.result import AsyncResult
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 
 from src.api.schemas.import_schema import (
@@ -13,7 +12,13 @@ from src.api.schemas.import_schema import (
     ImportTaskStatusSchema,
 )
 from src.config.logging import get_logger
-from src.workers.celery_app import celery_app
+
+try:
+    from celery.result import AsyncResult
+    from src.workers.celery_app import celery_app
+except ImportError:
+    AsyncResult = None  # type: ignore[assignment,misc]
+    celery_app = None  # type: ignore[assignment]
 
 router = APIRouter()
 logger = get_logger(__name__)

@@ -3,7 +3,6 @@
 from datetime import datetime
 from typing import Any
 
-from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -18,7 +17,13 @@ from src.config.database import get_session as get_db
 from src.config.logging import get_logger
 from src.models.article import Article
 from src.models.seo import SEOMetadata
-from src.workers.celery_app import celery_app
+
+try:
+    from celery.result import AsyncResult
+    from src.workers.celery_app import celery_app
+except ImportError:
+    AsyncResult = None  # type: ignore[assignment,misc]
+    celery_app = None  # type: ignore[assignment]
 
 router = APIRouter()
 logger = get_logger(__name__)

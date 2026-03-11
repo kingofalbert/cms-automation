@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+import uuid
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -24,9 +27,10 @@ from src.api.schemas import (
     WorklistSyncStatusResponse,
     WorklistSyncTriggerResponse,
 )
-from src.config.database import get_session
+from src.config.database import get_db_config, get_session
 from src.config.logging import get_logger
 from src.models import Article, ArticleFAQ, ProofreadingDecision, WorklistItem
+from src.models.pipeline_task import PipelineTask
 from src.services.worklist import WorklistService
 
 logger = get_logger(__name__)
@@ -95,14 +99,63 @@ async def get_sync_status(
     return WorklistSyncStatusResponse(**status_payload)
 
 
-@router.post("/sync", response_model=WorklistSyncTriggerResponse)
+@router.post("/sync", response_model=WorklistSyncTriggerResponse, status_code=status.HTTP_202_ACCEPTED)
 async def trigger_worklist_sync(
     session: AsyncSession = Depends(get_session),
 ) -> WorklistSyncTriggerResponse:
-    """Trigger asynchronous sync with Google Drive."""
-    service = WorklistService(session)
-    result = await service.trigger_sync()
-    return WorklistSyncTriggerResponse(**result)
+    """Trigger asynchronous sync with Google Drive.
+
+    Returns 202 immediately and runs sync in the background.
+    Poll GET /sync-status for progress.
+    """
+    task_id = str(uuid.uuid4())
+    queued_at = datetime.now(UTC).isoformat()
+
+    # Persist task in DB
+    task = PipelineTask(
+        id=task_id,
+        task_type="worklist_sync",
+        status="processing",
+        input={"triggered_at": queued_at},
+    )
+    session.add(task)
+    await session.commit()
+
+    async def _run_sync(tid: str) -> None:
+        db_config = get_db_config()
+        try:
+            async with db_config.session() as s:
+                svc = WorklistService(s)
+                result = await svc.trigger_sync()
+            async with db_config.session() as s:
+                t = await s.get(PipelineTask, tid)
+                if t:
+                    t.status = "completed"
+                    t.result = result
+                    t.completed_at = datetime.now(UTC)
+                    await s.commit()
+            logger.info("worklist_sync_background_completed", task_id=tid)
+        except Exception as exc:
+            logger.error("worklist_sync_background_failed", task_id=tid, error=str(exc), exc_info=True)
+            try:
+                async with db_config.session() as s:
+                    t = await s.get(PipelineTask, tid)
+                    if t:
+                        t.status = "failed"
+                        t.error = str(exc)
+                        t.completed_at = datetime.now(UTC)
+                        await s.commit()
+            except Exception:
+                logger.error("sync_task_status_update_failed", task_id=tid, exc_info=True)
+
+    asyncio.create_task(_run_sync(task_id))
+
+    return WorklistSyncTriggerResponse(
+        status="accepted",
+        message=f"Sync started in background (task_id={task_id})",
+        queued_at=queued_at,
+        summary=None,
+    )
 
 
 @router.post("/{item_id}/trigger-proofreading")
