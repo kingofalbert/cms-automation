@@ -90,29 +90,10 @@ async def publish_article_with_computer_use(
         cms_type=request.cms_type,
     )
 
-    # Lazy import to avoid circular dependency
-    from src.workers.tasks.computer_use_tasks import publish_article_with_computer_use_task
-
-    # Trigger Celery task
-    task = publish_article_with_computer_use_task.delay(
-        article_id=request.article_id,
-        cms_url=cms_url,
-        cms_username=cms_username,
-        cms_password=cms_password,
-        cms_type=request.cms_type,
-        publishing_strategy=request.publishing_strategy,
-    )
-
-    logger.info(
-        "computer_use_task_created",
-        task_id=task.id,
-        article_id=request.article_id,
-    )
-
-    return PublishArticleResponse(
-        task_id=task.id,
-        message="Computer Use publishing task started. Use /computer-use/task/{task_id} to check status.",
-        article_id=request.article_id,
+    # Celery workers have been removed — return 501
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Computer Use publishing via Celery is no longer available. Use the Playwright publisher at POST /v1/worklist/{item_id}/publish instead.",
     )
 
 
@@ -170,16 +151,7 @@ async def test_computer_use_environment() -> dict:
     """
     logger.info("computer_use_environment_test_requested")
 
-    # Lazy import to avoid circular dependency
-    from src.workers.tasks.computer_use_tasks import test_computer_use_environment_task
-
-    task = test_computer_use_environment_task.delay()
-    result = task.get(timeout=10)  # Wait up to 10 seconds
-
-    return {
-        "status": "ok" if all(result.values()) else "issues_found",
-        "checks": result,
-        "message": "All checks passed"
-        if all(result.values())
-        else "Some components are not configured correctly",
-    }
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Computer Use environment test is no longer available (Celery removed).",
+    )

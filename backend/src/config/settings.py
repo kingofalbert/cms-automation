@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, PostgresDsn, RedisDsn, field_validator
+from pydantic import Field, PostgresDsn, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Get project root (parent of backend directory)
@@ -84,12 +84,11 @@ class Settings(BaseSettings):
         description="Connection recycle time in seconds (600s matches PGBouncer defaults)",
     )
 
-    # Redis Configuration
-    REDIS_URL: RedisDsn = Field(
-        ...,
-        description="Redis connection string",
+    # Redis Configuration (optional — not used in production)
+    REDIS_URL: str = Field(
+        default="",
+        description="Redis connection string (unused; kept for backward compat)",
     )
-    REDIS_MAX_CONNECTIONS: int = Field(default=50, ge=1)
 
     # Anthropic API Configuration
     ANTHROPIC_API_KEY: str = Field(
@@ -266,56 +265,12 @@ class Settings(BaseSettings):
     ENABLE_METRICS: bool = Field(default=True)
     METRICS_PORT: int = Field(default=9090, ge=1000, le=65535)
 
-    # Celery Configuration
-    CELERY_BROKER_URL: str | None = Field(default=None)
-    CELERY_RESULT_BACKEND: str | None = Field(default=None)
-    CELERY_TASK_SERIALIZER: str = Field(default="json")
-    CELERY_RESULT_SERIALIZER: str = Field(default="json")
-    CELERY_ACCEPT_CONTENT: list[str] = Field(default=["json"])
-    CELERY_TIMEZONE: str = Field(default="UTC")
-    CELERY_ENABLE_UTC: bool = Field(default=True)
-    CELERY_TASK_TRACK_STARTED: bool = Field(default=True)
-    CELERY_TASK_TIME_LIMIT: int = Field(default=600, ge=60)
-    CELERY_TASK_SOFT_TIME_LIMIT: int = Field(default=540, ge=30)
-    CELERY_WORKER_PREFETCH_MULTIPLIER: int = Field(default=4, ge=1)
-    CELERY_WORKER_MAX_TASKS_PER_CHILD: int = Field(default=1000, ge=1)
-
-    @field_validator("CELERY_BROKER_URL", mode="before")
-    @classmethod
-    def set_celery_broker_url(cls, v: str | None, info) -> str:
-        """Set Celery broker URL from REDIS_URL if not provided."""
-        if v is not None:
-            return v
-        redis_url = info.data.get("REDIS_URL")
-        if redis_url:
-            return str(redis_url)
-        raise ValueError("Either CELERY_BROKER_URL or REDIS_URL must be set")
-
-    @field_validator("CELERY_RESULT_BACKEND", mode="before")
-    @classmethod
-    def set_celery_result_backend(cls, v: str | None, info) -> str:
-        """Set Celery result backend from REDIS_URL if not provided."""
-        if v is not None:
-            return v
-        redis_url = info.data.get("REDIS_URL")
-        if redis_url:
-            return str(redis_url)
-        raise ValueError("Either CELERY_RESULT_BACKEND or REDIS_URL must be set")
-
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_allowed_origins(cls, v: str | list[str]) -> list[str]:
         """Parse ALLOWED_ORIGINS from comma-separated string."""
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",")]
-        return v
-
-    @field_validator("CELERY_ACCEPT_CONTENT", mode="before")
-    @classmethod
-    def parse_celery_accept_content(cls, v: str | list[str]) -> list[str]:
-        """Parse CELERY_ACCEPT_CONTENT from comma-separated string."""
-        if isinstance(v, str):
-            return [item.strip() for item in v.split(",")]
         return v
 
 

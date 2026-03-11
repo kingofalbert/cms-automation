@@ -110,9 +110,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 EXPOSE 8080
 
 # Start application using entrypoint script
-# SERVICE_TYPE environment variable determines what to run:
-# - api: API Server (default)
-# - worker: Celery Worker
-# - beat: Celery Beat Scheduler
 CMD ["/app/entrypoint.sh"]
-# Build timestamp: 1767590722

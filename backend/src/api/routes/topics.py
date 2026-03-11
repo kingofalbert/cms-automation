@@ -47,12 +47,9 @@ async def create_topic_request(
     await session.commit()
     await session.refresh(topic_request)
 
-    # Dispatch background task for article generation
-    # Lazy import to avoid circular dependency
-    from src.workers.tasks.generate_article import generate_article_task
-
-    generate_article_task.delay(topic_request.id)
-
+    # TODO: Article generation via Celery has been removed.
+    # This endpoint creates the topic request but no longer dispatches
+    # a background generation task.
     return topic_request
 
 
