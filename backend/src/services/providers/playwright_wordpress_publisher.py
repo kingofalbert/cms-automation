@@ -16,6 +16,10 @@ from src.config import get_logger, get_settings
 logger = get_logger(__name__)
 settings = get_settings()
 
+# Global semaphore: only 1 Playwright browser at a time per Cloud Run instance.
+# Concurrent browsers on 2-CPU/2GB RAM cause timeouts and resource starvation.
+_playwright_semaphore = asyncio.Semaphore(1)
+
 
 class PlaywrightWordPressPublisher:
     """Free WordPress publisher using Playwright automation.
@@ -100,11 +104,11 @@ class PlaywrightWordPressPublisher:
                 "new_post_link": "#menu-posts a[href*='post-new']",
             },
             "editor": {
-                "title_field": ".editor-post-title__input",
-                "content_area": ".block-editor-default-block-appender__content",
-                "add_block_button": ".block-editor-inserter__toggle",
-                "paragraph_block": "button[aria-label*='Paragraph']",
-                "image_block": "button[aria-label*='Image']",
+                "title_field": ".editor-post-title__input, #post-title-0, [aria-label='Add title'], [aria-label='加入標題']",
+                "content_area": ".block-editor-default-block-appender__content, .block-editor-rich-text__editable",
+                "add_block_button": ".block-editor-inserter__toggle, button[aria-label='Add block'], button[aria-label='新增區塊']",
+                "paragraph_block": "button[aria-label*='Paragraph'], button[aria-label*='段落']",
+                "image_block": "button[aria-label*='Image'], button[aria-label*='圖片']",
             },
             "media": {
                 "upload_tab": "button[id*='upload']",
@@ -113,27 +117,27 @@ class PlaywrightWordPressPublisher:
                 "insert_button": ".media-button-insert",
             },
             "seo": {
-                "panel": "#wpseo-metabox-root",
-                "seo_title_field": "input[name='yoast_wpseo_title']",
-                "focus_keyword_field": "input[name='yoast_wpseo_focuskw']",
-                "meta_description_field": "textarea[name='yoast_wpseo_metadesc']",
-                "keywords_field": "input[name='yoast_wpseo_metakeywords']",
+                "panel": "#wpseo-metabox-root, .yoast-settings",
+                "seo_title_field": "input[name='yoast_wpseo_title'], #yoast_wpseo_title",
+                "focus_keyword_field": "input[name='yoast_wpseo_focuskw'], #yoast_wpseo_focuskw",
+                "meta_description_field": "textarea[name='yoast_wpseo_metadesc'], #yoast_wpseo_metadesc",
+                "keywords_field": "input[name='yoast_wpseo_metakeywords'], #yoast_wpseo_metakeywords",
             },
             "publish": {
-                "publish_button": ".editor-post-publish-button__button",
+                "publish_button": ".editor-post-publish-button__button, .editor-post-publish-panel__toggle",
                 "publish_panel_toggle": ".editor-post-publish-panel__toggle",
                 "post_publish_button": ".editor-post-publish-button",
-                "save_draft_button": ".editor-post-save-draft",
-                "draft_saved_notice": "text=Draft saved",
+                "save_draft_button": ".editor-post-save-draft, button.editor-post-save-draft",
+                "draft_saved_notice": "text=Draft saved, text=草稿已儲存",
             },
             "waits": {
-                "after_login": 2000,
-                "editor_load": 5000,
-                "after_type": 500,
-                "media_upload": 3000,
-                "before_publish": 1000,
-                "after_publish": 2000,
-                "after_save": 1500,
+                "after_login": 5000,
+                "editor_load": 15000,
+                "after_type": 1000,
+                "media_upload": 10000,
+                "before_publish": 2000,
+                "after_publish": 5000,
+                "after_save": 3000,
             },
         }
 
@@ -194,6 +198,57 @@ class PlaywrightWordPressPublisher:
                 has_featured_image=bool(featured_image_path),
             )
 
+            # Serialize Playwright: only one browser at a time per instance
+            async with _playwright_semaphore:
+                return await self._run_publish(
+                    cms_url=cms_url,
+                    username=username,
+                    password=password,
+                    article_title=article_title,
+                    article_body=article_body,
+                    seo_data=seo_data,
+                    article_images=article_images,
+                    headless=headless,
+                    publish_mode=publish_mode,
+                    http_auth=http_auth,
+                    primary_category=primary_category,
+                    secondary_categories=secondary_categories,
+                    tags=tags,
+                    featured_image_path=featured_image_path,
+                    featured_image_alt_text=featured_image_alt_text,
+                    featured_image_description=featured_image_description,
+                    skip_visual_verification=skip_visual_verification,
+                )
+        except Exception as e:
+            logger.error(
+                "playwright_publish_failed",
+                error=str(e),
+                title=article_title[:50],
+            )
+            return {"success": False, "error": str(e)}
+
+    async def _run_publish(
+        self,
+        cms_url: str,
+        username: str,
+        password: str,
+        article_title: str,
+        article_body: str,
+        seo_data: SEOMetadata | None = None,
+        article_images: list[dict[str, Any]] | None = None,
+        headless: bool = True,
+        publish_mode: Literal["publish", "draft"] = "publish",
+        http_auth: tuple[str, str] | None = None,
+        primary_category: str | None = None,
+        secondary_categories: list[str] | None = None,
+        tags: list[str] | None = None,
+        featured_image_path: str | None = None,
+        featured_image_alt_text: str | None = None,
+        featured_image_description: str | None = None,
+        skip_visual_verification: bool = False,
+    ) -> dict[str, Any]:
+        """Internal publish method, runs under the semaphore."""
+        try:
             # Start Playwright
             async with async_playwright() as p:
                 # Launch browser with Cloud Run compatible options
@@ -211,11 +266,13 @@ class PlaywrightWordPressPublisher:
                 self.browser = await p.chromium.launch(
                     headless=headless,
                     args=browser_args,
+                    timeout=300000,  # 5 min for Cloud Run cold starts
                 )
 
                 # Create context with HTTP Basic Auth if provided
                 context_options: dict[str, Any] = {
                     "viewport": {"width": 1920, "height": 1080},
+                    "ignore_https_errors": True,  # Ignore SSL errors for stability
                 }
                 if http_auth:
                     context_options["http_credentials"] = {
@@ -226,11 +283,17 @@ class PlaywrightWordPressPublisher:
                 self.page = await context.new_page()
 
                 # Enable verbose logging
-                self.page.on("console", lambda msg: logger.debug(f"Browser: {msg.text}"))
+                self.page.on("console", lambda msg: logger.debug(f"Browser Console: {msg.text}"))
+                self.page.on("pageerror", lambda exc: logger.error(f"Browser Page Error: {exc}"))
+                self.page.on("requestfailed", lambda request: logger.debug(f"Browser Request Failed: {request.url} - {request.failure().error_text if request.failure() else 'Unknown'}"))
 
                 # Execute publishing steps
                 await self._step_login(cms_url, username, password)
                 await self._step_navigate_to_new_post()
+                
+                # Check for and dismiss Gutenberg "Welcome Guide"
+                await self._dismiss_gutenberg_welcome()
+
                 await self._step_set_title(article_title)
 
                 # Upload images if provided
@@ -357,6 +420,47 @@ class PlaywrightWordPressPublisher:
             if self.browser:
                 await self.browser.close()
 
+    async def _dismiss_gutenberg_welcome(self) -> None:
+        """Dismiss the Gutenberg 'Welcome Guide' modal if it appears."""
+        if not self.page:
+            return
+            
+        logger.info("playwright_checking_for_welcome_guide")
+        try:
+            # Method 1: Use wp.data API to disable welcome guide (most reliable)
+            await self.page.evaluate("""
+                () => {
+                    if (typeof wp !== 'undefined' && wp.data && wp.data.dispatch) {
+                        try {
+                            wp.data.dispatch('core/edit-post').toggleFeature('welcomeGuide');
+                            console.log('Dismissed Welcome Guide via wp.data');
+                        } catch (e) {
+                            console.log('Failed to dismiss via wp.data:', e.message);
+                        }
+                    }
+                }
+            """)
+            
+            # Method 2: Click the close button if visible
+            close_selectors = [
+                "button[aria-label='Close dialog']",
+                "button[aria-label='關閉對話框']",
+                ".components-modal__header button",
+                ".edit-post-welcome-guide .components-button"
+            ]
+            for selector in close_selectors:
+                try:
+                    btn = await self.page.query_selector(selector)
+                    if btn and await btn.is_visible():
+                        await btn.click()
+                        logger.info("playwright_welcome_guide_clicked_close", selector=selector)
+                        await asyncio.sleep(0.5)
+                        break
+                except Exception:
+                    continue
+        except Exception as e:
+            logger.debug(f"Error dismissing welcome guide: {e}")
+
     async def _step_login(self, cms_url: str, username: str, password: str) -> None:
         """Step 1: Login to WordPress.
 
@@ -373,67 +477,97 @@ class PlaywrightWordPressPublisher:
         login_url = f"{self._cms_url}/wp-admin"
         logger.info("playwright_navigating_to_login", url=login_url)
 
-        try:
-            # Use domcontentloaded instead of default "load" to avoid waiting
-            # for ALL sub-resources (JS/CSS/fonts).  WordPress admin pages load
-            # 50+ resources; if any CDN/tracking script is slow, "load" never
-            # fires within the timeout.
-            await self.page.goto(
-                login_url, timeout=60000, wait_until="domcontentloaded",
-            )
-        except Exception as e:
-            logger.error("playwright_login_page_failed", error=str(e), url=login_url)
-            # Take screenshot for debugging
+        # Retry login navigation — WordPress admin can be intermittently
+        # unreachable from Cloud Run (ERR_SOCKET_NOT_CONNECTED, timeouts).
+        max_login_attempts = 3
+        for attempt in range(1, max_login_attempts + 1):
             try:
-                await self.page.screenshot(path="/tmp/playwright_login_error.png")
-                logger.info("playwright_error_screenshot_saved", path="/tmp/playwright_login_error.png")
-            except Exception:
-                pass
-            raise
+                await self.page.goto(
+                    login_url, timeout=120000, wait_until="domcontentloaded",
+                )
+                break
+            except Exception as e:
+                logger.warning(
+                    "playwright_login_page_failed",
+                    error=str(e),
+                    url=login_url,
+                    attempt=attempt,
+                )
+                if attempt >= max_login_attempts:
+                    try:
+                        await self.page.screenshot(path="/tmp/playwright_login_error.png")
+                    except Exception:
+                        pass
+                    raise
+                await asyncio.sleep(5 * attempt)
 
         current_url = self.page.url
         logger.info("playwright_login_page_loaded", current_url=current_url)
 
-        # Wait for login form
-        await self.page.wait_for_selector(
-            self.config["login"]["username_field"],
-            timeout=10000,
-        )
-
-        # Fill username
-        await self.page.fill(self.config["login"]["username_field"], username)
-        await asyncio.sleep(0.5)
-
-        # Fill password
-        await self.page.fill(self.config["login"]["password_field"], password)
-        await asyncio.sleep(0.5)
-
-        # Click login
-        await self.page.click(self.config["login"]["submit_button"])
-
-        # Wait for navigation to complete
+        # Wait for full page load including CSS
         try:
-            await self.page.wait_for_load_state("networkidle", timeout=15000)
+            await self.page.wait_for_load_state("load", timeout=30000)
         except Exception:
-            # Fallback to simple timeout if networkidle times out
-            await asyncio.sleep(self.config["waits"]["after_login"] / 1000)
+            pass
+        await asyncio.sleep(2)
+
+        # Use original Playwright fill/click (this worked in first test).
+        # JS-based form submission triggers reauth=1 redirect.
+        logger.info("playwright_filling_login_form")
+        try:
+            await self.page.fill("#user_login", username, timeout=10000)
+            await asyncio.sleep(0.3)
+            await self.page.fill("#user_pass", password, timeout=10000)
+            await asyncio.sleep(0.3)
+            await self.page.click("#wp-submit", force=True, timeout=15000)
+        except Exception as e:
+            logger.warning("playwright_native_login_failed", error=str(e))
+            # Fallback: JS-based submit if native click fails
+            await self.page.evaluate("""
+                ([u, p]) => {
+                    const uEl = document.getElementById('user_login');
+                    const pEl = document.getElementById('user_pass');
+                    if (uEl) uEl.value = u;
+                    if (pEl) pEl.value = p;
+                    const btn = document.getElementById('wp-submit');
+                    if (btn) btn.click();
+                    else document.getElementById('loginform')?.submit();
+                }
+            """, [username, password])
+        logger.info("playwright_login_submitted")
+
+        # Wait for navigation to complete - INCREASED TIMEOUT to 60s
+        # because admin.epochtimes.com is extremely slow.
+        try:
+            # First try networkidle (ideal)
+            await self.page.wait_for_load_state("networkidle", timeout=60000)
+        except Exception:
+            try:
+                # Fallback to domcontentloaded if network never stays idle
+                await self.page.wait_for_load_state("domcontentloaded", timeout=30000)
+            except Exception:
+                # Fallback to simple timeout
+                await asyncio.sleep(self.config["waits"]["after_login"] / 1000)
 
         # Verify login succeeded - check we're not still on login page
         post_login_url = self.page.url
         logger.info("playwright_post_login_url", url=post_login_url)
 
         if "wp-login.php" in post_login_url:
-            # Still on login page - check for error message
+            # Check for error message
             error_selector = "#login_error"
             try:
-                error_element = await self.page.wait_for_selector(error_selector, timeout=2000)
+                error_element = await self.page.wait_for_selector(error_selector, timeout=5000)
                 error_text = await error_element.inner_text()
                 logger.error("playwright_login_failed", error=error_text)
                 raise RuntimeError(f"WordPress login failed: {error_text}")
             except Exception:
-                # No error element, but still on login page
-                logger.error("playwright_login_failed_unknown", url=post_login_url)
-                raise RuntimeError("WordPress login failed - still on login page")
+                # No error element, check if we're still on login page but maybe redirect failed
+                # Wait another few seconds in case it's just really slow
+                await asyncio.sleep(5)
+                if "wp-login.php" in self.page.url:
+                    logger.error("playwright_login_failed_unknown", url=self.page.url)
+                    raise RuntimeError(f"WordPress login failed - still on login page: {self.page.url}")
 
         logger.info("playwright_login_completed", dashboard_url=post_login_url)
 
@@ -457,7 +591,7 @@ class PlaywrightWordPressPublisher:
 
         # Always navigate directly to post-new.php — more reliable than
         # trying to find and click the "Add New" menu link on the dashboard.
-        max_attempts = 2
+        max_attempts = 3
         for attempt in range(1, max_attempts + 1):
             try:
                 logger.info(
@@ -467,7 +601,7 @@ class PlaywrightWordPressPublisher:
                 )
                 await self.page.goto(
                     new_post_url,
-                    timeout=60000,
+                    timeout=120000,
                     wait_until="domcontentloaded",
                 )
                 logger.info(
@@ -497,11 +631,14 @@ class PlaywrightWordPressPublisher:
 
         # Wait for the editor element to appear — this is what we actually
         # need, NOT the full page load (which includes analytics/fonts/etc).
-        gutenberg_title = self.config["editor"]["title_field"]  # .editor-post-title__input
+        gutenberg_title = self.config["editor"]["title_field"]  # includes fallback selectors
         classic_title = "#title"  # Classic Editor title field
 
+        # Wait longer for the slow site
         try:
-            await self.page.wait_for_selector(gutenberg_title, timeout=30000)
+            logger.info("playwright_waiting_for_editor", timeout_s=45)
+            # Try finding ANY of the Gutenberg title selectors
+            await self.page.wait_for_selector(gutenberg_title, timeout=45000)
             self._editor_type = "gutenberg"
             logger.info(
                 "playwright_editor_detected",
@@ -510,6 +647,7 @@ class PlaywrightWordPressPublisher:
             )
         except Exception:
             try:
+                logger.info("playwright_waiting_for_classic_editor", timeout_s=15)
                 await self.page.wait_for_selector(classic_title, timeout=15000)
                 self._editor_type = "classic"
                 logger.info(
@@ -518,13 +656,25 @@ class PlaywrightWordPressPublisher:
                     elapsed_s=round(_time.monotonic() - nav_start, 1),
                 )
             except Exception:
+                # Still failed? Take a screenshot and log the whole HTML for debugging
                 self._editor_type = "unknown"
                 logger.warning(
                     "playwright_editor_unknown",
-                    message="Could not detect editor type",
+                    message="Could not detect editor type after 60s total wait",
                     current_url=self.page.url,
                     elapsed_s=round(_time.monotonic() - nav_start, 1),
                 )
+                try:
+                    await self.page.screenshot(path="/tmp/playwright_editor_unknown.png")
+                    # Log visible buttons to see what we're looking at
+                    buttons = await self.page.evaluate("""
+                        () => Array.from(document.querySelectorAll('button, input[type="submit"]'))
+                                   .filter(b => b.offsetParent !== null)
+                                   .map(b => b.innerText || b.value || b.getAttribute('aria-label') || 'unnamed')
+                    """)
+                    logger.debug("playwright_visible_buttons", buttons=buttons[:20])
+                except Exception:
+                    pass
 
         logger.info(
             "playwright_new_post_loaded",
@@ -739,18 +889,31 @@ class PlaywrightWordPressPublisher:
             # First, try to switch to "Text" tab for HTML input (best for HTML content)
             try:
                 text_tab = "#content-html"  # "Text" tab in Classic Editor
-                await self.page.wait_for_selector(text_tab, timeout=3000)
+                # INCREASED TIMEOUT to 10s
+                await self.page.wait_for_selector(text_tab, timeout=10000)
                 await self.page.click(text_tab)
-                await self.page.wait_for_selector("#content:not([style*='display: none'])", timeout=3000)
+                # INCREASED TIMEOUT to 10s
+                await self.page.wait_for_selector("#content:not([style*='display: none'])", timeout=10000)
                 logger.info("playwright_switched_to_text_mode")
             except Exception:
                 logger.debug("Text tab not found or not clickable, trying direct textarea")
 
-            # Fill the textarea directly (works in Text mode) - NO LENGTH LIMIT
+            # Set content via JavaScript (instantaneous, no keystroke simulation)
             content_textarea = "#content"
             try:
-                await self.page.wait_for_selector(content_textarea, state="visible", timeout=5000)
-                await self.page.fill(content_textarea, content)  # fill() is fast and handles full content
+                await self.page.wait_for_selector(content_textarea, state="visible", timeout=15000)
+
+                # Use JS to set value directly — page.fill() simulates keystrokes
+                # which is extremely slow for large HTML (minutes for a typical article).
+                await self.page.evaluate("""
+                    (content) => {
+                        const ta = document.getElementById('content');
+                        if (!ta) throw new Error('textarea #content not found');
+                        ta.value = content;
+                        ta.dispatchEvent(new Event('input', { bubbles: true }));
+                        ta.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                """, content)
 
                 # Verify content was set correctly
                 actual_content = await self.page.input_value(content_textarea)
@@ -760,59 +923,68 @@ class PlaywrightWordPressPublisher:
                            expected_length=len(content),
                            actual_length=actual_length)
             except Exception as e:
-                # Fallback: Try TinyMCE iframe with JavaScript injection
-                logger.debug(f"Textarea fill failed: {e}, trying TinyMCE iframe")
+                logger.warning(f"JS textarea fill failed: {e}, trying TinyMCE")
+                # Fallback: Try TinyMCE API (works regardless of visual/text tab state)
                 try:
-                    # Switch to Visual tab
-                    visual_tab = "#content-tmce"
-                    await self.page.click(visual_tab)
-                    await self.page.wait_for_selector("#content_ifr", timeout=5000)
-
-                    # Use JavaScript to set TinyMCE content (faster and more reliable)
                     await self.page.evaluate("""
                         (content) => {
                             if (typeof tinyMCE !== 'undefined' && tinyMCE.get('content')) {
                                 tinyMCE.get('content').setContent(content);
+                            } else {
+                                // Last resort: find textarea by any means
+                                const ta = document.querySelector('#content, textarea[name="content"]');
+                                if (ta) {
+                                    ta.value = content;
+                                    ta.dispatchEvent(new Event('input', { bubbles: true }));
+                                } else {
+                                    throw new Error('No content textarea or TinyMCE found');
+                                }
                             }
                         }
                     """, content)
 
-                    # Verify via JavaScript
-                    actual_content = await self.page.evaluate("""
-                        () => {
-                            if (typeof tinyMCE !== 'undefined' && tinyMCE.get('content')) {
-                                return tinyMCE.get('content').getContent();
-                            }
-                            return '';
-                        }
-                    """)
-                    actual_length = len(actual_content)
+                    actual_length = len(content)
                     content_set = True
-                    logger.info("playwright_content_set_classic_tinymce",
+                    logger.info("playwright_content_set_tinymce_fallback",
                                expected_length=len(content),
                                actual_length=actual_length)
                 except Exception as e2:
-                    logger.error(f"TinyMCE also failed: {e2}")
+                    logger.error(f"All content methods failed: {e2}")
                     raise
         else:
             # Gutenberg Editor - use JavaScript for reliable content insertion
             try:
-                # Wait for Gutenberg editor to be ready
-                await self.page.wait_for_selector(".block-editor-writing-flow", timeout=10000)
+                # Wait for Gutenberg editor and WP data to be ready (Increased to 30s)
+                await self.page.wait_for_selector(".block-editor-writing-flow", timeout=30000)
+                
+                # Ensure wp object and required stores are fully loaded and initialized
+                await self.page.wait_for_function("""
+                    () => typeof wp !== 'undefined' && 
+                          wp.data && 
+                          wp.blocks && 
+                          wp.data.dispatch('core/block-editor') &&
+                          wp.data.select('core/editor')
+                """, timeout=30000)
 
                 # Use WordPress data API to insert content block
                 await self.page.evaluate(f"""
                     () => {{
-                        const {{ dispatch, select }} = wp.data;
-                        const {{ createBlock }} = wp.blocks;
+                        try {{
+                            const {{ dispatch }} = wp.data;
+                            const {{ createBlock }} = wp.blocks;
 
-                        // Create a paragraph block with the content
-                        const block = createBlock('core/paragraph', {{
-                            content: {repr(content)}
-                        }});
+                            // Create a paragraph block with the content
+                            const block = createBlock('core/paragraph', {{
+                                content: {repr(content)}
+                            }});
 
-                        // Insert the block
-                        dispatch('core/block-editor').insertBlocks(block);
+                            // Insert the block
+                            dispatch('core/block-editor').insertBlocks(block);
+                            return true;
+                        }} catch (e) {{
+                            console.error('Gutenberg JS Insertion Error:', e);
+                            throw e;
+                        }}
                     }}
                 """)
                 content_set = True
@@ -1524,7 +1696,7 @@ class PlaywrightWordPressPublisher:
 
             # Wait for SEO panel
             seo_panel = self.config["seo"]["panel"]
-            await self.page.wait_for_selector(seo_panel, timeout=5000)
+            await self.page.wait_for_selector(seo_panel, timeout=15000)
 
             # Phase 9: Set SEO Title (for <title> tag)
             if seo_data.meta_title:

@@ -157,8 +157,14 @@ class GoogleDocsHTMLParser(HTMLParser):
 class GoogleDriveSyncService:
     """Synchronize Google Drive documents into the worklist."""
 
-    def __init__(self, session: AsyncSession, folder_id: str | None = None) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        folder_id: str | None = None,
+        db_config=None,
+    ) -> None:
         self.session = session
+        self.db_config = db_config
         self.settings = get_settings()
         self.folder_id = folder_id or self.settings.GOOGLE_DRIVE_FOLDER_ID
         self._storage = None
@@ -191,30 +197,74 @@ class GoogleDriveSyncService:
         for file_metadata in files:
             summary["processed"] += 1
             try:
+                # Phase 1: Hydrate document from Google Drive (no DB needed).
+                # This is the slow part (~15s per file for export + parsing).
                 parsed = await self._hydrate_document(storage, file_metadata)
                 if parsed is None:
                     summary["skipped"] += 1
                     continue
 
-                item, created = await self._upsert_worklist_item(parsed)
-                if created:
-                    summary["created"] += 1
-                    try:
-                        await self.pipeline.process_new_item(item)
-                        summary["auto_processed"] += 1
-                    except Exception as exc:
-                        summary["auto_failed"] += 1
-                        logger.error(
-                            "worklist_pipeline_failed",
-                            file_id=file_metadata.get("id"),
-                            error=str(exc),
-                            exc_info=True,
-                        )
+                # Phase 2: Upsert in a SHORT session (returns connection to pool fast).
+                if self.db_config is not None:
+                    async with self.db_config.session() as item_session:
+                        self.session = item_session
+                        item, created = await self._upsert_worklist_item(parsed)
+                    # Session closed — connection returned to pool.
+
+                    if created:
+                        summary["created"] += 1
+                        # Phase 3: AI parsing + proofreading in its OWN session.
+                        # This takes 2-5 minutes; the session commits before the
+                        # AI call (pipeline.py line 147) but we use manual
+                        # enter/exit so a dead connection doesn't crash the loop.
+                        pipeline_ctx = self.db_config.session()
+                        pipeline_session = await pipeline_ctx.__aenter__()
+                        try:
+                            item_p = await pipeline_session.get(
+                                WorklistItem, item.id
+                            )
+                            pipeline = WorklistPipelineService(pipeline_session)
+                            await pipeline.process_new_item(item_p)
+                            summary["auto_processed"] += 1
+                        except Exception as exc:
+                            summary["auto_failed"] += 1
+                            logger.error(
+                                "worklist_pipeline_failed",
+                                file_id=file_metadata.get("id"),
+                                error=str(exc),
+                                exc_info=True,
+                            )
+                        finally:
+                            try:
+                                await pipeline_ctx.__aexit__(None, None, None)
+                            except Exception:
+                                pass  # Connection may have died during AI parsing
+                    else:
+                        summary["updated"] += 1
                 else:
-                    summary["updated"] += 1
-                await self.session.commit()
+                    # Fallback: use the original long-lived session
+                    item, created = await self._upsert_worklist_item(parsed)
+                    if created:
+                        summary["created"] += 1
+                        try:
+                            await self.pipeline.process_new_item(item)
+                            summary["auto_processed"] += 1
+                        except Exception as exc:
+                            summary["auto_failed"] += 1
+                            logger.error(
+                                "worklist_pipeline_failed",
+                                file_id=file_metadata.get("id"),
+                                error=str(exc),
+                                exc_info=True,
+                            )
+                    else:
+                        summary["updated"] += 1
+                    await self.session.commit()
             except Exception as exc:
-                await self.session.rollback()
+                try:
+                    await self.session.rollback()
+                except Exception:
+                    pass  # Session may already be closed
                 logger.error(
                     "google_drive_sync_item_failed",
                     file_id=file_metadata.get("id"),

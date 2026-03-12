@@ -108,7 +108,7 @@ async def health_check() -> dict:
         async with db_config.session() as session:
             await asyncio.wait_for(
                 session.execute(text("SELECT 1")),
-                timeout=3.0,
+                timeout=5.0,
             )
     except Exception as exc:
         db_status = f"unhealthy: {type(exc).__name__}"

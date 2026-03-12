@@ -154,10 +154,19 @@ async def get_auto_publish_status(
     task_id: str,
     session: AsyncSession = Depends(get_session),
 ) -> TaskStatusResponse:
-    """Poll the status of an auto-publish task."""
+    """Poll the status of an auto-publish task.
+
+    Returns a terminal "expired" status for unknown task IDs so that
+    external callers (e.g. GAS) can stop polling gracefully instead of
+    retrying indefinitely on 404.
+    """
     task = await session.get(PipelineTask, task_id)
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        return TaskStatusResponse(
+            task_id=task_id,
+            status="expired",
+            error="Task not found or expired",
+        )
 
     return TaskStatusResponse(
         task_id=task.id,

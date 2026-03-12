@@ -61,16 +61,16 @@ class Settings(BaseSettings):
         description="PostgreSQL connection string",
     )
     DATABASE_POOL_SIZE: int = Field(
-        default=20,
+        default=5,
         ge=1,
         le=100,
-        description="Database connection pool size",
+        description="Database connection pool size per instance (Transaction mode port 6543 supports 200 max clients)",
     )
     DATABASE_MAX_OVERFLOW: int = Field(
-        default=10,
+        default=5,
         ge=0,
         le=50,
-        description="Maximum overflow connections",
+        description="Maximum overflow connections per instance (pool_size + max_overflow = max connections per instance)",
     )
     DATABASE_POOL_TIMEOUT: int = Field(
         default=30,
@@ -79,9 +79,9 @@ class Settings(BaseSettings):
         description="Pool timeout in seconds",
     )
     DATABASE_POOL_RECYCLE: int = Field(
-        default=600,
+        default=270,
         ge=60,
-        description="Connection recycle time in seconds (600s matches PGBouncer defaults)",
+        description="Connection recycle time in seconds (must be under Supavisor 300s idle timeout)",
     )
 
     # Redis Configuration (optional — not used in production)

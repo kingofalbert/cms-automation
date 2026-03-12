@@ -159,7 +159,11 @@ class WorklistService:
 
     async def trigger_sync(self) -> dict[str, Any]:
         """Synchronously trigger Google Drive sync."""
-        sync_service = GoogleDriveSyncService(self.session)
+        from src.config.database import get_db_config
+        sync_service = GoogleDriveSyncService(
+            self.session,
+            db_config=get_db_config(),
+        )
         try:
             summary = await sync_service.sync_worklist()
             return {
@@ -288,7 +292,7 @@ class WorklistService:
             old_status=article.status.value if article.status else None,
             new_status=target_status.value,
             changed_by="system",
-            change_reason=note_payload.get("message") or "worklist_status_update",
+            change_reason=(note_payload.get("message") or "worklist_status_update")[:255],
             change_metadata=note_payload,
         )
         article.status = target_status

@@ -1,21 +1,25 @@
 """Database connection configuration and session management."""
 
-from collections.abc import AsyncGenerator
+import asyncio
+from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
+from typing import TypeVar
 from uuid import uuid4
 
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
-from sqlalchemy.pool import NullPool
 
 from src.config.logging import get_logger
 from src.config.settings import get_settings
 
 logger = get_logger(__name__)
+
+T = TypeVar("T")
 
 
 class DatabaseConfig:
@@ -39,34 +43,60 @@ class DatabaseConfig:
             if db_url.startswith("postgresql://"):
                 db_url = db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-            # Use NullPool because PGBouncer already handles connection pooling.
-            # Keeping a SQLAlchemy-level pool on top of PGBouncer causes stale
-            # connections: PGBouncer closes idle server connections after ~60s,
-            # but SQLAlchemy's pool doesn't know and hands out dead connections.
-            # NullPool creates a fresh PGBouncer connection for each operation
-            # and releases it immediately — no stale connections ever.
+            # Ensure SSL is enabled (required for Supabase)
+            if "ssl=" not in db_url and "sslmode=" not in db_url:
+                separator = "&" if "?" in db_url else "?"
+                db_url = f"{db_url}{separator}ssl=require"
+
+            pool_size = self.settings.DATABASE_POOL_SIZE
+            max_overflow = self.settings.DATABASE_MAX_OVERFLOW
+            pool_recycle = self.settings.DATABASE_POOL_RECYCLE
+
             engine_kwargs = {
                 "echo": self.settings.LOG_LEVEL == "DEBUG",
-                "poolclass": NullPool,
-                # Fix for pgbouncer transaction mode prepared statement conflicts:
-                # Use UUID-based statement names to avoid collisions between workers
-                # Reference: https://github.com/sqlalchemy/sqlalchemy/issues/6467
+                # QueuePool with pre_ping: reuses connections (avoids per-request
+                # initialization cost that triggers ConnectionDoesNotExistError
+                # with Supavisor Transaction Mode) and validates them before use.
+                "pool_pre_ping": True,
+                "pool_size": pool_size,
+                "max_overflow": max_overflow,
+                "pool_recycle": pool_recycle,
+                "pool_timeout": self.settings.DATABASE_POOL_TIMEOUT,
                 "connect_args": {
-                    "statement_cache_size": 0,  # Disable prepared statement caching
-                    "prepared_statement_cache_size": 0,  # Disable prepared statement cache
-                    # Generate unique prepared statement names with UUID to avoid conflicts
+                    "statement_cache_size": 0,
+                    "prepared_statement_cache_size": 0,
                     "prepared_statement_name_func": lambda: f"__asyncpg_{uuid4()}__",
+                    "command_timeout": 60,
                     "server_settings": {
-                        "jit": "off",  # Disable JIT for better compatibility
+                        "jit": "off",
                     },
                 },
             }
 
             self._engine = create_async_engine(db_url, **engine_kwargs)
 
+            # Pool event listeners for observability
+            sync_engine = self._engine.sync_engine
+
+            @event.listens_for(sync_engine, "connect")
+            def _on_connect(dbapi_conn, connection_record):
+                logger.debug("db_pool_connect", id=id(dbapi_conn))
+
+            @event.listens_for(sync_engine, "checkout")
+            def _on_checkout(dbapi_conn, connection_record, connection_proxy):
+                logger.debug("db_pool_checkout", id=id(dbapi_conn))
+
+            @event.listens_for(sync_engine, "checkin")
+            def _on_checkin(dbapi_conn, connection_record):
+                logger.debug("db_pool_checkin", id=id(dbapi_conn))
+
             logger.info(
                 "database_engine_created",
-                pool_class="NullPool",
+                pool_class="QueuePool",
+                pool_size=pool_size,
+                max_overflow=max_overflow,
+                pool_recycle=pool_recycle,
+                pool_pre_ping=True,
                 environment=self.settings.ENVIRONMENT,
             )
 
@@ -121,6 +151,69 @@ class DatabaseConfig:
             raise
         finally:
             await session.close()
+
+    async def execute_with_retry(
+        self,
+        operation: Callable[..., T],
+        max_attempts: int = 3,
+    ) -> T:
+        """Execute a database operation with retry on transient connection errors.
+
+        Args:
+            operation: An async callable that receives an AsyncSession and returns a result.
+            max_attempts: Maximum number of attempts (default 3).
+
+        Returns:
+            The result of the operation.
+
+        Example:
+            async def fetch_articles(session):
+                result = await session.execute(select(Article))
+                return result.scalars().all()
+
+            articles = await db_config.execute_with_retry(fetch_articles)
+        """
+        backoff_delays = [0.5, 1.0, 2.0]
+        last_exc: Exception | None = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                async with self.session() as session:
+                    return await operation(session)
+            except Exception as exc:
+                if attempt >= max_attempts or not self._is_transient(exc):
+                    raise
+                last_exc = exc
+                delay = backoff_delays[min(attempt - 1, len(backoff_delays) - 1)]
+                logger.warning(
+                    "db_transient_error_retrying",
+                    attempt=attempt,
+                    max_attempts=max_attempts,
+                    delay=delay,
+                    error_type=type(exc).__name__,
+                    error=str(exc),
+                )
+                await asyncio.sleep(delay)
+
+        # Should not reach here, but satisfy type checker
+        raise last_exc  # type: ignore[misc]
+
+    @staticmethod
+    def _is_transient(exc: BaseException) -> bool:
+        """Check if an exception is a transient connection error worth retrying."""
+        transient_names = {
+            "ConnectionDoesNotExistError",
+            "InterfaceError",
+            "ConnectionRefusedError",
+            "ConnectionResetError",
+        }
+        # Walk the cause chain
+        current: BaseException | None = exc
+        while current is not None:
+            if type(current).__name__ in transient_names:
+                return True
+            current = current.__cause__
+        return False
 
 
 # Global database configuration instance

@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -101,60 +101,39 @@ async def get_sync_status(
 
 @router.post("/sync", response_model=WorklistSyncTriggerResponse, status_code=status.HTTP_202_ACCEPTED)
 async def trigger_worklist_sync(
-    session: AsyncSession = Depends(get_session),
+    background_tasks: BackgroundTasks,
 ) -> WorklistSyncTriggerResponse:
     """Trigger asynchronous sync with Google Drive.
 
     Returns 202 immediately and runs sync in the background.
     Poll GET /sync-status for progress.
     """
+    from src.config.database import get_db_config
+    from src.models import PipelineTask
+    
+    db_config = get_db_config()
     task_id = str(uuid.uuid4())
     queued_at = datetime.now(UTC).isoformat()
 
-    # Persist task in DB
-    task = PipelineTask(
-        id=task_id,
-        task_type="worklist_sync",
-        status="processing",
-        input={"triggered_at": queued_at},
-    )
-    session.add(task)
-    await session.commit()
+    # Phase 1: Create task in DB
+    async with db_config.session() as session:
+        task = PipelineTask(
+            id=task_id,
+            task_type="worklist_sync",
+            status="processing",
+            input={"triggered_at": queued_at},
+        )
+        session.add(task)
+        await session.commit()
 
-    async def _run_sync(tid: str) -> None:
-        db_config = get_db_config()
-        try:
-            async with db_config.session() as s:
-                svc = WorklistService(s)
-                result = await svc.trigger_sync()
-            async with db_config.session() as s:
-                t = await s.get(PipelineTask, tid)
-                if t:
-                    t.status = "completed"
-                    t.result = result
-                    t.completed_at = datetime.now(UTC)
-                    await s.commit()
-            logger.info("worklist_sync_background_completed", task_id=tid)
-        except Exception as exc:
-            logger.error("worklist_sync_background_failed", task_id=tid, error=str(exc), exc_info=True)
-            try:
-                async with db_config.session() as s:
-                    t = await s.get(PipelineTask, tid)
-                    if t:
-                        t.status = "failed"
-                        t.error = str(exc)
-                        t.completed_at = datetime.now(UTC)
-                        await s.commit()
-            except Exception:
-                logger.error("sync_task_status_update_failed", task_id=tid, exc_info=True)
-
-    asyncio.create_task(_run_sync(task_id))
+    # Phase 2: Schedule background task
+    background_tasks.add_task(_run_sync_task, task_id)
 
     return WorklistSyncTriggerResponse(
         status="accepted",
-        message=f"Sync started in background (task_id={task_id})",
+        message="Sync task queued for background processing",
+        task_id=task_id,
         queued_at=queued_at,
-        summary=None,
     )
 
 
@@ -252,213 +231,40 @@ async def update_worklist_status(
 @router.post("/{item_id}/publish", response_model=WorklistItemResponse)
 async def publish_worklist_item(
     item_id: int,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
 ) -> WorklistItemResponse:
-    """Publish worklist item as WordPress draft.
+    """Publish worklist item as WordPress draft in the background.
 
-    Creates a draft post in WordPress with the article content and returns
-    the WordPress draft URL for the Phase 17 PublishSuccessConfirmation dialog.
+    Returns the item immediately and starts the publishing process as a background task.
+    The UI will see the 'publishing' status and poll for updates.
     """
-    from datetime import datetime
-    from sqlalchemy.orm import selectinload
-    from src.config.settings import get_settings
-    from src.services.providers.playwright_wordpress_publisher import PlaywrightWordPressPublisher
-    from src.api.schemas.seo import SEOMetadata
-
-    settings = get_settings()
-
     service = WorklistService(session)
-
-    # 1. Get worklist item with article data (including article_images)
-    try:
-        item = await service.get_item(item_id)
-    except ValueError as exc:
+    item = await service.get_item(item_id)
+    
+    if not item:
+        raise HTTPException(status_code=404, detail=f"Item {item_id} not found")
+        
+    if item.status.value not in ["proofreading", "ready_to_publish", "failed"]:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(exc),
-        ) from exc
-
-    # 2. Verify item is ready to publish
-    if item.status.value not in ["proofreading", "ready_to_publish"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Item must be in 'proofreading' or 'ready_to_publish' status to publish, current: {item.status.value}",
+            status_code=400, 
+            detail=f"Item status {item.status.value} not eligible for publishing"
         )
 
-    # 3. Check CMS configuration
-    if not settings.CMS_BASE_URL:
-        logger.warning("wordpress_not_configured", item_id=item_id)
-        # Fall back to placeholder behavior if WordPress not configured
-        try:
-            updated = await service.update_status(
-                item_id=item_id,
-                status="ready_to_publish",
-                note={"action": "publish", "message": "WordPress not configured - marked ready_to_publish"},
-            )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=str(exc),
-            ) from exc
-        return _serialize_item(updated)
-
-    # 4. Prepare article content for WordPress
-    article = getattr(item, "article", None)
-    title = item.title or "Untitled"
-    body = item.content or ""
-
-    # Phase B: Get extended publishing data from article
-    primary_category = None
-    secondary_categories = []
-    tags = []
-    featured_image_path = None
-    article_images = []
-    seo_data = None
-
-    if article:
-        # Get categories and tags
-        primary_category = getattr(article, "primary_category", None)
-        secondary_categories = getattr(article, "secondary_categories", None) or []
-        tags = getattr(article, "tags", None) or []
-        featured_image_path = getattr(article, "featured_image_path", None)
-
-        # Get article images
-        if hasattr(article, "article_images") and article.article_images:
-            for img in article.article_images:
-                article_images.append({
-                    "id": img.id,
-                    "source_path": img.source_path,
-                    "source_url": img.source_url,
-                    "preview_path": img.preview_path,
-                    "caption": img.caption,
-                    "alt_text": img.alt_text or img.caption or "",
-                    "description": img.description,
-                    "position": img.position,
-                    "is_featured": img.is_featured,
-                    "image_type": img.image_type,
-                })
-
-        # Build SEO metadata from article
-        try:
-            seo_title = getattr(article, "seo_title", None) or title
-            meta_description = getattr(article, "meta_description", None) or getattr(article, "suggested_meta_description", None) or ""
-            focus_keyword = getattr(article, "focus_keyword", None) or ""
-            seo_keywords = getattr(article, "seo_keywords", None) or []
-
-            if seo_title or meta_description or focus_keyword:
-                seo_data = SEOMetadata(
-                    meta_title=seo_title[:60] if seo_title else title[:60],
-                    meta_description=meta_description[:160] if meta_description else "",
-                    focus_keyword=focus_keyword,
-                    keywords=seo_keywords[:5] if seo_keywords else [],
-                )
-        except Exception as e:
-            logger.warning("seo_metadata_build_failed", error=str(e))
-            seo_data = None
-
-    logger.info(
-        "publish_worklist_item_data_prepared",
+    # Update status to publishing immediately
+    updated = await service.update_status(
         item_id=item_id,
-        has_article=article is not None,
-        primary_category=primary_category,
-        secondary_categories_count=len(secondary_categories),
-        tags_count=len(tags),
-        has_featured_image=bool(featured_image_path),
-        article_images_count=len(article_images),
-        has_seo_data=seo_data is not None,
+        status="publishing",
+        note={"action": "publish_started", "message": "Manual publishing task started in background"}
     )
-
-    # 5. Use Playwright browser automation to publish to WordPress
-    # Build HTTP auth tuple if site-level authentication is configured
-    http_auth = None
-    if settings.CMS_HTTP_AUTH_USERNAME and settings.CMS_HTTP_AUTH_PASSWORD:
-        http_auth = (settings.CMS_HTTP_AUTH_USERNAME, settings.CMS_HTTP_AUTH_PASSWORD)
-
-    publisher = PlaywrightWordPressPublisher()
-
-    wordpress_draft_url = None
-    wordpress_post_id = None
-    publish_message = "Publishing triggered from worklist"
-
-    try:
-        result = await publisher.publish_article(
-            cms_url=settings.CMS_BASE_URL,
-            username=settings.CMS_USERNAME,
-            password=settings.CMS_APPLICATION_PASSWORD,
-            article_title=title,
-            article_body=body,
-            seo_data=seo_data,
-            article_images=article_images,
-            headless=True,  # Run headless in Cloud Run
-            publish_mode="draft",  # Always save as draft for Phase 17
-            http_auth=http_auth,
-            # Phase B: Extended publishing data
-            primary_category=primary_category,
-            secondary_categories=secondary_categories,
-            tags=tags,
-            featured_image_path=featured_image_path,
-        )
-
-        if result.get("success"):
-            wordpress_draft_url = result.get("editor_url") or result.get("url")
-            wordpress_post_id = result.get("cms_article_id")
-            publish_message = "Published as WordPress draft via Playwright"
-
-            logger.info(
-                "wordpress_draft_created",
-                item_id=item_id,
-                post_id=wordpress_post_id,
-                url=wordpress_draft_url,
-            )
-        else:
-            # Playwright publishing failed
-            error_msg = result.get("error", "Unknown error")
-            logger.warning("wordpress_publish_failed", item_id=item_id, error=error_msg)
-            publish_message = f"WordPress publish failed: {error_msg}"
-
-    except Exception as e:
-        # Playwright or network errors
-        logger.error("wordpress_publish_error", item_id=item_id, error=str(e), exc_info=True)
-        publish_message = f"WordPress connection error: {str(e)}"
-
-    # 6. Update worklist item with WordPress draft info (if available)
-    try:
-        # Update item with WordPress info
-        item.wordpress_draft_url = wordpress_draft_url
-        item.wordpress_post_id = int(wordpress_post_id) if wordpress_post_id else None
-        item.wordpress_draft_uploaded_at = datetime.utcnow() if wordpress_post_id else None
-
-        # If WordPress draft was created successfully, mark as published
-        # Otherwise keep as ready_to_publish for retry
-        new_status = "published" if wordpress_post_id else "ready_to_publish"
-
-        updated = await service.update_status(
-            item_id=item_id,
-            status=new_status,
-            note={
-                "action": "publish",
-                "message": publish_message,
-                "wordpress_post_id": wordpress_post_id,
-                "wordpress_draft_url": wordpress_draft_url,
-            },
-        )
-
-        # Refresh to get latest data
-        await session.refresh(item)
-
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
-        ) from exc
-
-    logger.info(
-        "worklist_published_to_wordpress",
-        item_id=item_id,
-        wordpress_post_id=wordpress_post_id,
-        wordpress_draft_url=wordpress_draft_url,
-    )
-    return _serialize_item(item)
+    
+    # We must commit before returning so the background task sees the 'publishing' status
+    await session.commit()
+    
+    # Schedule the background task
+    background_tasks.add_task(_run_publish_task, item_id)
+    
+    return _serialize_item(updated)
 
 
 @router.post("/{item_id}/review-decisions", response_model=ReviewDecisionsResponse)
@@ -571,10 +377,12 @@ async def save_review_decisions(
         saved_count += 1
 
     # 5. Update statuses if transition_to is specified
-    old_worklist_status = item.status.value if hasattr(item.status, "value") else item.status
     old_article_status = article.status.value if hasattr(article.status, "value") else article.status
 
     if payload.transition_to:
+        from src.models.worklist import WorklistStatus
+        from src.models.article import ArticleStatus
+        
         if payload.transition_to == "ready_to_publish":
             item.mark_status(WorklistStatus.READY_TO_PUBLISH)
             article.status = ArticleStatus.READY_TO_PUBLISH
@@ -639,13 +447,193 @@ async def save_review_decisions(
     )
 
 
+# --- Background Tasks ---
+
+async def _run_sync_task(task_id: str) -> None:
+    """Background task to run the full sync flow."""
+    from src.config.database import get_db_config
+    from src.models import PipelineTask
+    from src.services.worklist.service import WorklistService
+    
+    db_config = get_db_config()
+    logger.info("worklist_sync_background_started", task_id=task_id)
+    
+    try:
+        # Step 1: Execute sync
+        async with db_config.session() as s:
+            svc = WorklistService(s)
+            result = await svc.trigger_sync()
+            
+        # Step 2: Update task status to completed
+        async with db_config.session() as s:
+            t = await s.get(PipelineTask, task_id)
+            if t:
+                t.status = "completed"
+                t.result = result
+                t.completed_at = datetime.now(UTC)
+                await s.commit()
+        logger.info("worklist_sync_background_completed", task_id=task_id)
+    except Exception as exc:
+        logger.error("worklist_sync_background_failed", task_id=task_id, error=str(exc), exc_info=True)
+        try:
+            async with db_config.session() as s:
+                t = await s.get(PipelineTask, task_id)
+                if t:
+                    t.status = "failed"
+                    t.error = str(exc)
+                    t.completed_at = datetime.now(UTC)
+                    await s.commit()
+        except Exception:
+            logger.error("sync_task_status_update_failed", task_id=task_id, exc_info=True)
+
+
+async def _run_publish_task(item_id: int):
+    """Background task to run the full Playwright publishing flow."""
+    from datetime import datetime
+    from src.config.settings import get_settings
+    from src.config.database import get_db_config
+    from src.services.providers.playwright_wordpress_publisher import PlaywrightWordPressPublisher
+    from src.api.schemas.seo import SEOMetadata
+    from src.services.worklist.service import WorklistService
+
+    settings = get_settings()
+    db_config = get_db_config()
+    
+    logger.info("background_publish_task_started", item_id=item_id)
+    
+    # Data container for Playwright
+    data = {}
+    
+    # Phase 1: Fetch data
+    try:
+        async with db_config.session() as session:
+            service = WorklistService(session)
+            item = await service.get_item(item_id)
+            
+            article = getattr(item, "article", None)
+            data = {
+                "title": item.title or "Untitled",
+                "body": item.content or "",
+                "primary_category": None,
+                "secondary_categories": [],
+                "tags": [],
+                "featured_image_path": None,
+                "article_images": [],
+                "seo_data": None
+            }
+
+            if article:
+                data["primary_category"] = getattr(article, "primary_category", None)
+                data["secondary_categories"] = getattr(article, "secondary_categories", None) or []
+                data["tags"] = getattr(article, "tags", None) or []
+                data["featured_image_path"] = getattr(article, "featured_image_path", None)
+
+                if hasattr(article, "article_images") and article.article_images:
+                    for img in article.article_images:
+                        data["article_images"].append({
+                            "id": img.id,
+                            "source_path": img.source_path,
+                            "source_url": img.source_url,
+                            "preview_path": img.preview_path,
+                            "caption": img.caption,
+                            "alt_text": img.alt_text or img.caption or "",
+                            "description": img.description,
+                            "position": img.position,
+                            "is_featured": img.is_featured,
+                            "image_type": img.image_type,
+                        })
+
+                try:
+                    seo_title = getattr(article, "seo_title", None) or data["title"]
+                    meta_description = getattr(article, "meta_description", None) or getattr(article, "suggested_meta_description", None) or ""
+                    focus_keyword = getattr(article, "focus_keyword", None) or ""
+                    seo_keywords = getattr(article, "seo_keywords", None) or []
+
+                    if seo_title or meta_description or focus_keyword:
+                        data["seo_data"] = SEOMetadata(
+                            meta_title=seo_title[:60],
+                            meta_description=meta_description[:160],
+                            focus_keyword=focus_keyword,
+                            keywords=seo_keywords[:5],
+                        )
+                except Exception as e:
+                    logger.warning("background_seo_metadata_failed", item_id=item_id, error=str(e))
+    except Exception as e:
+        logger.error("background_publish_data_fetch_failed", item_id=item_id, error=str(e))
+        return
+
+    # Phase 2: Run Playwright (outside DB session)
+    http_auth = None
+    if settings.CMS_HTTP_AUTH_USERNAME and settings.CMS_HTTP_AUTH_PASSWORD:
+        http_auth = (settings.CMS_HTTP_AUTH_USERNAME, settings.CMS_HTTP_AUTH_PASSWORD)
+
+    publisher = PlaywrightWordPressPublisher()
+    result = {}
+    try:
+        result = await publisher.publish_article(
+            cms_url=settings.CMS_BASE_URL,
+            username=settings.CMS_USERNAME,
+            password=settings.CMS_APPLICATION_PASSWORD,
+            article_title=data["title"],
+            article_body=data["body"],
+            seo_data=data.get("seo_data"),
+            article_images=data["article_images"],
+            headless=True,
+            publish_mode="draft",
+            http_auth=http_auth,
+            primary_category=data["primary_category"],
+            secondary_categories=data["secondary_categories"],
+            tags=data["tags"],
+            featured_image_path=data["featured_image_path"],
+        )
+    except Exception as e:
+        logger.error("background_playwright_error", item_id=item_id, error=str(e))
+        result = {"success": False, "error": str(e)}
+
+    # Phase 3: Update results in a NEW session
+    try:
+        async with db_config.session() as session:
+            service = WorklistService(session)
+            item = await service.get_item(item_id)
+            
+            wp_post_id = None
+            wp_draft_url = None
+            if result.get("success"):
+                wp_draft_url = result.get("editor_url") or result.get("url")
+                wp_post_id = int(result.get("cms_article_id")) if result.get("cms_article_id") else None
+                
+                item.wordpress_draft_url = wp_draft_url
+                item.wordpress_post_id = wp_post_id
+                item.wordpress_draft_uploaded_at = datetime.utcnow()
+                new_status = "published"
+                msg = "Successfully published to WordPress draft"
+            else:
+                new_status = "failed"
+                msg = f"WordPress publish failed: {result.get('error', 'Unknown error')}"
+                
+            await service.update_status(
+                item_id=item_id,
+                status=new_status,
+                note={
+                    "action": "publish_complete",
+                    "message": msg,
+                    "wordpress_post_id": wp_post_id,
+                    "wordpress_draft_url": wp_draft_url,
+                }
+            )
+            logger.info("background_publish_task_complete", item_id=item_id, status=new_status)
+    except Exception as e:
+        logger.error("background_publish_final_update_failed", item_id=item_id, error=str(e))
+
+
+# --- Serialization Helpers ---
+
 def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
     """Convert ORM worklist item to schema."""
     # Start with existing drive_metadata
     metadata = dict(item.drive_metadata or {})
 
     # Try to calculate word count from content if loaded
-    # Note: content may be deferred in list queries for performance
     try:
         from sqlalchemy.orm.attributes import instance_state
         state = instance_state(item)
@@ -658,7 +646,6 @@ def _serialize_item(item: WorklistItem) -> WorklistItemResponse:
                 # Average reading speed: ~200 words per minute for Chinese text
                 metadata["estimated_reading_time"] = max(1, round(word_count / 200))
     except Exception:
-        # If we can't access content, leave word_count as-is from drive_metadata
         pass
 
     return WorklistItemResponse(
@@ -685,21 +672,29 @@ async def _serialize_item_detail(
     session: AsyncSession,
 ) -> WorklistItemDetailResponse:
     """Convert worklist item with related article data to detail schema."""
+    from src.models import ArticleStatusHistory
     base = _serialize_item(item)
     article = getattr(item, "article", None)
     history_entries: list[WorklistStatusHistoryEntry] = []
-    if article and getattr(article, "status_history", None):
-        for entry in sorted(article.status_history, key=lambda h: h.created_at):
-            history_entries.append(
-                WorklistStatusHistoryEntry(
-                    old_status=entry.old_status,
-                    new_status=entry.new_status,
-                    changed_by=entry.changed_by,
-                    change_reason=entry.change_reason,
-                    metadata=entry.change_metadata or {},
-                    created_at=entry.created_at,
+    
+    # Load history if available
+    if article:
+        # Note: In async mode, relationships need to be explicitly loaded
+        # or accessed via await session.refresh(article, ['status_history'])
+        # For simplicity, we assume they are loaded or use getattr safely
+        status_history = getattr(article, "status_history", [])
+        if status_history:
+            for entry in sorted(status_history, key=lambda h: h.created_at):
+                history_entries.append(
+                    WorklistStatusHistoryEntry(
+                        old_status=entry.old_status,
+                        new_status=entry.new_status,
+                        changed_by=entry.changed_by,
+                        change_reason=entry.change_reason,
+                        metadata=entry.change_metadata or {},
+                        created_at=entry.created_at,
+                    )
                 )
-            )
 
     # Get proofreading issues and stats
     proofreading_issues = []
@@ -777,7 +772,6 @@ async def _serialize_item_detail(
                     alt_text=img.alt_text,
                     description=img.description,
                     position=img.position,
-                    # Phase 13: Featured image detection fields
                     is_featured=img.is_featured if hasattr(img, 'is_featured') else False,
                     image_type=img.image_type if hasattr(img, 'image_type') else "content",
                     detection_method=img.detection_method if hasattr(img, 'detection_method') else None,
@@ -842,7 +836,6 @@ async def _serialize_item_detail(
         drive_metadata=item.drive_metadata or {},
         proofreading_issues=proofreading_issues,
         proofreading_stats=proofreading_stats,
-        # Phase 7: Parsing fields from article
         title_main=title_main,
         title_prefix=title_prefix,
         title_suffix=title_suffix,
@@ -853,16 +846,11 @@ async def _serialize_item_detail(
         suggested_seo_keywords=suggested_seo_keywords,
         parsing_confirmed=parsing_confirmed,
         parsing_confirmed_at=parsing_confirmed_at,
-        # Phase 7: Article images
         article_images=article_images,
-        # FAQ state persistence: include article_metadata with faq_suggestions
         article_metadata=article_metadata,
-        # Phase 14: Extracted FAQs from original article
         extracted_faqs=extracted_faqs,
         extracted_faqs_detection_method=extracted_faqs_detection_method,
-        # AI-generated FAQs from article_faqs table
         ai_faqs=ai_faqs,
-        # Phase 15: Category fields for auto-save persistence
         primary_category=primary_category,
         secondary_categories=secondary_categories or [],
     )
@@ -884,7 +872,6 @@ def _calculate_proofreading_stats(issues: list[dict]) -> dict[str, int]:
     }
 
     for issue in issues:
-        # Count by severity
         severity = issue.get("severity", "").lower()
         if severity == "critical":
             stats["critical_count"] += 1
@@ -893,7 +880,6 @@ def _calculate_proofreading_stats(issues: list[dict]) -> dict[str, int]:
         elif severity == "info":
             stats["info_count"] += 1
 
-        # Count by decision status
         decision_status = issue.get("decision_status", "pending")
         if decision_status == "pending":
             stats["pending_count"] += 1
@@ -904,7 +890,6 @@ def _calculate_proofreading_stats(issues: list[dict]) -> dict[str, int]:
         elif decision_status == "modified":
             stats["modified_count"] += 1
 
-        # Count by engine
         engine = issue.get("engine", "").lower()
         if engine == "ai":
             stats["ai_issues_count"] += 1
@@ -942,29 +927,18 @@ def _build_issue_context(
     """Derive consistent identifiers and text snippets for a proofreading issue."""
     position, start, end = _compute_position(issue)
 
-    # Priority for original_text:
-    # 1. Explicitly stored original_text
-    # 2. Extract from article content using position
-    # 3. Fall back to evidence
-    # 4. Fall back to message (issue description)
     original_text = issue.get("original_text")
     if (not original_text) and article_content and end > start:
         original_text = _safe_slice(article_content, start, end)
     if not original_text:
         original_text = issue.get("evidence") or ""
-    # If still empty, use message as display text (but mark it differently)
     display_original = original_text if original_text else issue.get("message", "")
 
-    # Priority for suggested_text:
-    # 1. Explicitly stored suggested_text
-    # 2. suggestion field
-    # 3. Same as original (no change suggested)
     suggested_text = (
         issue.get("suggested_text")
         or issue.get("suggestion")
         or ""
     )
-    # If no suggestion, indicate same as original
     display_suggested = suggested_text if suggested_text else display_original
 
     explanation = issue.get("explanation") or issue.get("message") or ""

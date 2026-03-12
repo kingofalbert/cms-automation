@@ -190,21 +190,32 @@ class AutoPublishService:
 
         # ------------------------------------------------------------------
         # Phase D: Playwright publish (takes 3-7 minutes)
-        # Load article data with a fresh session, then run Playwright.
-        # The session's connection WILL die during Playwright, so we
-        # manually close it with error suppression.
+        # Load article data in a SHORT session, close it, then run
+        # Playwright WITHOUT holding a DB connection.  This prevents
+        # pool exhaustion during the 3-7 minute browser automation.
         # ------------------------------------------------------------------
-        session_d_ctx = db_config.session()
-        session_d = await session_d_ctx.__aenter__()
-        try:
+        article_d = None
+        async with db_config.session() as session_d:
             item_d = await session_d.get(WorklistItem, worklist_item_id)
-            publish_result = await self._publish_as_draft(item_d, session_d)
-        finally:
-            try:
-                await session_d_ctx.__aexit__(None, None, None)
-            except Exception:
-                # Connection died during Playwright — expected.
-                pass
+            # Eagerly load article + images so we can close the session
+            if item_d and item_d.article_id:
+                stmt = (
+                    select(Article)
+                    .options(selectinload(Article.article_images))
+                    .where(Article.id == item_d.article_id)
+                )
+                result = await session_d.execute(stmt)
+                article_d = result.scalar_one_or_none()
+            # Detach objects so they're usable after session closes
+            session_d.expunge(item_d)
+            if article_d:
+                session_d.expunge(article_d)
+        # Session closed — connection returned to pool.
+
+        # Run Playwright (3-7 min, no DB connection held)
+        publish_result = await self._publish_as_draft(
+            item_d, session=None, article=article_d,
+        )
 
         # ------------------------------------------------------------------
         # Phase E: Persist publish results with a guaranteed-fresh session
@@ -478,7 +489,11 @@ class AutoPublishService:
         return result.scalar_one_or_none()
 
     async def _publish_as_draft(
-        self, item: WorklistItem, session: AsyncSession | None = None,
+        self,
+        item: WorklistItem,
+        session: AsyncSession | None = None,
+        *,
+        article: Article | None = None,
     ) -> dict[str, Any]:
         """Publish a worklist item as a WordPress draft using Playwright.
 
@@ -486,8 +501,9 @@ class AutoPublishService:
             item: WorklistItem to publish.
             session: DB session for loading article data.  Falls back to
                      self.session for backward compatibility.
+            article: Pre-loaded Article with article_images.  If provided,
+                     skips the DB query (used when session is unavailable).
         """
-        db = session or self.session
         from src.api.schemas.seo import SEOMetadata
         from src.services.providers.playwright_wordpress_publisher import (
             PlaywrightWordPressPublisher,
@@ -498,9 +514,9 @@ class AutoPublishService:
         if not settings.CMS_BASE_URL:
             raise RuntimeError("CMS_BASE_URL is not configured")
 
-        # Prepare article data — eagerly load article_images
-        article = None
-        if item.article_id:
+        # Load article from DB only if not pre-loaded
+        if article is None and item.article_id:
+            db = session or self.session
             stmt = (
                 select(Article)
                 .options(selectinload(Article.article_images))

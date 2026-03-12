@@ -161,6 +161,7 @@ class WorklistSyncTriggerResponse(BaseSchema):
 
     status: str = Field(..., description="Sync queue status")
     message: str = Field(..., description="Status message")
+    task_id: str | None = Field(default=None, description="Background task ID for polling")
     queued_at: str = Field(..., description="ISO timestamp when sync was queued")
     summary: dict[str, Any] | None = Field(
         default=None, description="Synchronization summary details"
