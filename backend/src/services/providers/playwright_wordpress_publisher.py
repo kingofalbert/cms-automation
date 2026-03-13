@@ -258,7 +258,16 @@ class PlaywrightWordPressPublisher:
                     "--disable-dev-shm-usage",  # Important for Docker/Cloud Run
                     "--disable-gpu",
                     "--disable-software-rasterizer",
-                    "--single-process",  # Run in single process mode for containerized environments
+                    # Use limited renderer processes instead of --single-process
+                    # (--single-process causes I/O starvation on Cloud Run)
+                    "--renderer-process-limit=1",
+                    # Cloud Run cold-start networking optimizations
+                    "--disable-background-networking",
+                    "--no-first-run",
+                    "--dns-prefetch-disable",
+                    "--disable-extensions",
+                    "--disable-component-update",
+                    "--disable-default-apps",
                 ]
                 if not headless:
                     browser_args.append("--start-maximized")
@@ -271,7 +280,7 @@ class PlaywrightWordPressPublisher:
 
                 # Create context with HTTP Basic Auth if provided
                 context_options: dict[str, Any] = {
-                    "viewport": {"width": 1920, "height": 1080},
+                    "viewport": {"width": 1280, "height": 720},
                     "ignore_https_errors": True,  # Ignore SSL errors for stability
                 }
                 if http_auth:
@@ -286,6 +295,12 @@ class PlaywrightWordPressPublisher:
                 self.page.on("console", lambda msg: logger.debug(f"Browser Console: {msg.text}"))
                 self.page.on("pageerror", lambda exc: logger.error(f"Browser Page Error: {exc}"))
                 self.page.on("requestfailed", lambda request: logger.debug(f"Browser Request Failed: {request.url} - {request.failure().error_text if request.failure() else 'Unknown'}"))
+
+                # Block analytics/tracking/fonts to speed up page loads on Cloud Run
+                await self.page.route(
+                    "**/{google-analytics,googletagmanager,facebook,analytics,fonts.googleapis,fonts.gstatic}*",
+                    lambda route: route.abort(),
+                )
 
                 # Execute publishing steps
                 await self._step_login(cms_url, username, password)
@@ -474,8 +489,23 @@ class PlaywrightWordPressPublisher:
         # Store CMS URL for later use
         self._cms_url = cms_url.rstrip("/")
 
-        login_url = f"{self._cms_url}/wp-admin"
+        # Navigate directly to wp-login.php (avoids /wp-admin → wp-login.php
+        # redirect chain which adds 5-10s on Cloud Run cold starts)
+        login_url = f"{self._cms_url}/wp-login.php"
         logger.info("playwright_navigating_to_login", url=login_url)
+
+        # Pre-warm DNS/TCP/TLS connection before full page navigation.
+        # Cloud Run cold DNS resolution through Google's internal resolver
+        # can take 10-30s on first request.
+        try:
+            logger.info("playwright_prewarm_start", url=self._cms_url)
+            await self.page.request.head(
+                self._cms_url, timeout=30000, ignore_https_errors=True,
+            )
+            logger.info("playwright_prewarm_done")
+        except Exception as e:
+            logger.warning("playwright_prewarm_failed", error=str(e))
+            # Non-fatal — page.goto will still work, just slower
 
         # Retry login navigation — WordPress admin can be intermittently
         # unreachable from Cloud Run (ERR_SOCKET_NOT_CONNECTED, timeouts).
@@ -515,9 +545,11 @@ class PlaywrightWordPressPublisher:
         # JS-based form submission triggers reauth=1 redirect.
         logger.info("playwright_filling_login_form")
         try:
-            await self.page.fill("#user_login", username, timeout=10000)
+            # Wait for login form to be visible before filling
+            await self.page.wait_for_selector("#user_login", state="visible", timeout=30000)
+            await self.page.fill("#user_login", username, timeout=30000)
             await asyncio.sleep(0.3)
-            await self.page.fill("#user_pass", password, timeout=10000)
+            await self.page.fill("#user_pass", password, timeout=30000)
             await asyncio.sleep(0.3)
             await self.page.click("#wp-submit", force=True, timeout=15000)
         except Exception as e:

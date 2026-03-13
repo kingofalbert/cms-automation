@@ -35,7 +35,7 @@ gcloud run deploy "${SERVICE}" \
   --region "${REGION}" \
   --project "${PROJECT}" \
   --allow-unauthenticated \
-  --memory 2Gi \
+  --memory 4Gi \
   --cpu 2 \
   --timeout 300 \
   --max-instances 5 \
