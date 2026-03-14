@@ -110,30 +110,10 @@ async def get_task_status(task_id: str) -> TaskStatusResponse:
     Raises:
         HTTPException: If task ID is not found
     """
-    from celery.result import AsyncResult
-
-    task_result = AsyncResult(task_id)
-
-    logger.info(
-        "computer_use_task_status_checked",
-        task_id=task_id,
-        status=task_result.status,
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Computer Use task tracking via Celery is no longer available.",
     )
-
-    response_data = {
-        "task_id": task_id,
-        "status": task_result.status,
-        "result": None,
-        "error": None,
-    }
-
-    if task_result.ready():
-        if task_result.successful():
-            response_data["result"] = task_result.result
-        else:
-            response_data["error"] = str(task_result.info)
-
-    return TaskStatusResponse(**response_data)
 
 
 @router.post("/test-environment")

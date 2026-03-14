@@ -13,13 +13,6 @@ from src.api.schemas.import_schema import (
 )
 from src.config.logging import get_logger
 
-try:
-    from celery.result import AsyncResult
-    from src.workers.celery_app import celery_app
-except ImportError:
-    AsyncResult = None  # type: ignore[assignment,misc]
-    celery_app = None  # type: ignore[assignment]
-
 router = APIRouter()
 logger = get_logger(__name__)
 

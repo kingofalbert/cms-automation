@@ -18,13 +18,6 @@ from src.config.logging import get_logger
 from src.models.article import Article
 from src.models.seo import SEOMetadata
 
-try:
-    from celery.result import AsyncResult
-    from src.workers.celery_app import celery_app
-except ImportError:
-    AsyncResult = None  # type: ignore[assignment,misc]
-    celery_app = None  # type: ignore[assignment]
-
 router = APIRouter()
 logger = get_logger(__name__)
 

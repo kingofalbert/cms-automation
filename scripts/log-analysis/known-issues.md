@@ -49,11 +49,12 @@ Each entry has:
 - **Category**: warning
 - **Status**: mitigating
 - **First seen**: 2026-03-08
-- **Updated**: 2026-03-13
+- **Updated**: 2026-03-14
 - **Notes**: 4 specific Google Docs exceed the 10MB HTML export limit. Fix
   (commit `4911a90`) downgraded to WARNING and added early exit, but docs are
-  still attempted each sync cycle (~100 warnings/day). Fully resolving requires
-  a persistent skip list for known oversized files.
+  still attempted each sync cycle (~2700 warnings/day estimated at current sync
+  frequency). Fully resolving requires a persistent skip list for known oversized
+  files.
 
 ### 5. Celery retry limit exhausted (CRITICAL)
 
@@ -68,13 +69,37 @@ Each entry has:
 
 - **Pattern**: `QueuePool limit of size .* overflow .* reached`, `TimeoutError`
 - **Category**: error
+- **Status**: resolved
+- **First seen**: 2026-03-13
+- **Resolved**: 2026-03-14 (commit `6465c2f` deployed as revision `00082-zbp`)
+- **Notes**: Fix deployed: sync-in-progress guard, pool timeout catch in status
+  endpoint, TimeoutError retry, asyncio.create_task for sync, pool_size=3,
+  max_overflow=2. Post-reinit at 15:10 UTC on 3/14: 1 error vs 35 pre-reinit.
+  Pool settings only take effect after instance recycles (DatabaseConfig singleton).
+
+### 7. Playwright publish failures (WordPress title selector timeout)
+
+- **Pattern**: `playwright_publish_failed`, `wait_for_selector.*editor-post-title`
+- **Category**: error
+- **Status**: mitigating
+- **First seen**: 2026-03-14
+- **Notes**: 10/10 publish attempts failed with title field selector timeout
+  (03:31-06:20 UTC). WordPress editor page not loading — likely `ping.xie`
+  password incorrect or WordPress admin unreachable. Requires human intervention
+  to reset WordPress credentials. 6 related SEO configuration failures
+  (`seo_configuration_failed`) for Yoast metabox selector also observed.
+
+### 8. Stuck pipeline tasks (no stale task reaper)
+
+- **Pattern**: `status=processing` tasks polled indefinitely
+- **Category**: error
 - **Status**: mitigating
 - **First seen**: 2026-03-13
-- **Notes**: Long-lived DB sessions held during AI pipeline processing (2-5 min
-  per document) starve short-lived queries (status polls, upserts). Fix applied
-  in worktree branch `worktree-agent-a98b56c4`: sync-in-progress guard, pool
-  timeout catch in status endpoint, TimeoutError retry, asyncio.create_task for
-  sync. Needs deploy to take effect.
+- **Updated**: 2026-03-14
+- **Notes**: 3 tasks stuck in "processing": `5f585d9d`, `36c52b48` (from 3/13,
+  24+ hours), `1557fe38` (new 3/14). GAS polls every 5 min with no max retry,
+  generating ~288 API calls/day per stuck task. Needs stale task reaper
+  (architectural decision) to mark tasks older than 30 min as failed.
 
 ---
 
