@@ -38,6 +38,9 @@ router = APIRouter(prefix="/worklist", tags=["Worklist"])
 
 WorklistListResponse = PaginatedResponse[WorklistItemResponse]
 
+# Guard to prevent overlapping sync cycles
+_sync_lock = asyncio.Lock()
+
 
 @router.get("", response_model=WorklistListResponse)
 async def list_worklist_items(
@@ -100,9 +103,7 @@ async def get_sync_status(
 
 
 @router.post("/sync", response_model=WorklistSyncTriggerResponse, status_code=status.HTTP_202_ACCEPTED)
-async def trigger_worklist_sync(
-    background_tasks: BackgroundTasks,
-) -> WorklistSyncTriggerResponse:
+async def trigger_worklist_sync() -> WorklistSyncTriggerResponse:
     """Trigger asynchronous sync with Google Drive.
 
     Returns 202 immediately and runs sync in the background.
@@ -110,10 +111,20 @@ async def trigger_worklist_sync(
     """
     from src.config.database import get_db_config
     from src.models import PipelineTask
-    
+
+    queued_at = datetime.now(UTC).isoformat()
+
+    # Guard: skip if a sync is already running
+    if _sync_lock.locked():
+        return WorklistSyncTriggerResponse(
+            status="skipped",
+            message="Previous sync still running",
+            task_id=None,
+            queued_at=queued_at,
+        )
+
     db_config = get_db_config()
     task_id = str(uuid.uuid4())
-    queued_at = datetime.now(UTC).isoformat()
 
     # Phase 1: Create task in DB
     async with db_config.session() as session:
@@ -126,8 +137,9 @@ async def trigger_worklist_sync(
         session.add(task)
         await session.commit()
 
-    # Phase 2: Schedule background task
-    background_tasks.add_task(_run_sync_task, task_id)
+    # Phase 2: Schedule as a fire-and-forget asyncio task
+    # (avoids BaseHTTPMiddleware blocking the response until completion)
+    asyncio.create_task(_run_sync_task(task_id))
 
     return WorklistSyncTriggerResponse(
         status="accepted",
@@ -454,37 +466,38 @@ async def _run_sync_task(task_id: str) -> None:
     from src.config.database import get_db_config
     from src.models import PipelineTask
     from src.services.worklist.service import WorklistService
-    
+
     db_config = get_db_config()
     logger.info("worklist_sync_background_started", task_id=task_id)
-    
-    try:
-        # Step 1: Execute sync
-        async with db_config.session() as s:
-            svc = WorklistService(s)
-            result = await svc.trigger_sync()
-            
-        # Step 2: Update task status to completed
-        async with db_config.session() as s:
-            t = await s.get(PipelineTask, task_id)
-            if t:
-                t.status = "completed"
-                t.result = result
-                t.completed_at = datetime.now(UTC)
-                await s.commit()
-        logger.info("worklist_sync_background_completed", task_id=task_id)
-    except Exception as exc:
-        logger.error("worklist_sync_background_failed", task_id=task_id, error=str(exc), exc_info=True)
+
+    async with _sync_lock:
         try:
+            # Step 1: Execute sync
+            async with db_config.session() as s:
+                svc = WorklistService(s)
+                result = await svc.trigger_sync()
+
+            # Step 2: Update task status to completed
             async with db_config.session() as s:
                 t = await s.get(PipelineTask, task_id)
                 if t:
-                    t.status = "failed"
-                    t.error = str(exc)
+                    t.status = "completed"
+                    t.result = result
                     t.completed_at = datetime.now(UTC)
                     await s.commit()
-        except Exception:
-            logger.error("sync_task_status_update_failed", task_id=task_id, exc_info=True)
+            logger.info("worklist_sync_background_completed", task_id=task_id)
+        except Exception as exc:
+            logger.error("worklist_sync_background_failed", task_id=task_id, error=str(exc), exc_info=True)
+            try:
+                async with db_config.session() as s:
+                    t = await s.get(PipelineTask, task_id)
+                    if t:
+                        t.status = "failed"
+                        t.error = str(exc)
+                        t.completed_at = datetime.now(UTC)
+                        await s.commit()
+            except Exception:
+                logger.error("sync_task_status_update_failed", task_id=task_id, exc_info=True)
 
 
 async def _run_publish_task(item_id: int):

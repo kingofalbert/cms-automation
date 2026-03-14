@@ -5,6 +5,7 @@ set -euo pipefail
 # Designed to be called from crontab or manually.
 # Uses claude CLI in non-interactive mode to execute the /log-analysis command.
 
+export HOME=/Users/albertking
 export PATH="/usr/local/bin:/opt/homebrew/bin:$PATH"
 
 cd /Users/albertking/ES/cms_automation

@@ -10,6 +10,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
+from sqlalchemy.exc import TimeoutError as SATimeoutError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config.database import get_db_config, get_session
@@ -160,7 +161,15 @@ async def get_auto_publish_status(
     external callers (e.g. GAS) can stop polling gracefully instead of
     retrying indefinitely on 404.
     """
-    task = await session.get(PipelineTask, task_id)
+    try:
+        task = await session.get(PipelineTask, task_id)
+    except SATimeoutError:
+        return TaskStatusResponse(
+            task_id=task_id,
+            status="processing",
+            error="Server busy, please retry shortly",
+        )
+
     if not task:
         return TaskStatusResponse(
             task_id=task_id,

@@ -19,21 +19,19 @@ Each entry has:
 
 - **Pattern**: `Error -3 connecting to redis:6379`
 - **Category**: infra
-- **Status**: accepted
+- **Status**: resolved
 - **First seen**: 2026-03-01
-- **Notes**: Cloud Run cannot reach the Redis instance because there is no
-  VPC connector configured. Celery status checks fail on every poll. This is
-  expected until a Serverless VPC Access connector or Redis Memorystore with
-  direct VPC is provisioned.
+- **Resolved**: 2026-03-10 (commit `9c7307e` — Celery/Redis removed from codebase)
+- **Notes**: No longer applicable. Redis and Celery were fully removed.
 
 ### 2. Celery status check failures (consequence of #1)
 
 - **Pattern**: `celery_status_check_failed`
 - **Category**: warning
-- **Status**: accepted
+- **Status**: resolved
 - **First seen**: 2026-03-01
-- **Notes**: Direct consequence of Redis being unreachable. Will resolve when
-  Redis connectivity is fixed.
+- **Resolved**: 2026-03-10 (commit `9c7307e` — Celery/Redis removed from codebase)
+- **Notes**: No longer applicable. Celery health check code was removed.
 
 ### 3. Worklist sync 504 timeout
 
@@ -48,24 +46,35 @@ Each entry has:
 ### 4. Google Drive sync item failures (exportSizeLimitExceeded)
 
 - **Pattern**: `google_drive_sync_item_failed`, `exportSizeLimitExceeded`
-- **Category**: error
-- **Status**: fixed (merged to main 2026-03-10, commit `4911a90`)
+- **Category**: warning
+- **Status**: mitigating
 - **First seen**: 2026-03-08
-- **Updated**: 2026-03-10
-- **Notes**: 4 specific Google Docs exceed the 10MB HTML export limit. This is
-  a PERMANENT condition (not transient). Each 5-minute sync cycle retries these
-  docs, generating ~65 errors and ~73 warnings per day. Auto-fix adds early
-  exit on exportSizeLimitExceeded to skip these documents immediately.
+- **Updated**: 2026-03-13
+- **Notes**: 4 specific Google Docs exceed the 10MB HTML export limit. Fix
+  (commit `4911a90`) downgraded to WARNING and added early exit, but docs are
+  still attempted each sync cycle (~100 warnings/day). Fully resolving requires
+  a persistent skip list for known oversized files.
 
 ### 5. Celery retry limit exhausted (CRITICAL)
 
 - **Pattern**: `Retry limit exceeded while trying to reconnect`
 - **Category**: infra
-- **Status**: accepted
+- **Status**: resolved
 - **First seen**: 2026-03-10
-- **Notes**: Consequence of Redis being unreachable (#1). Celery backend
-  permanently stops reconnection attempts after exhausting retries. Generates
-  CRITICAL-level log entries. Will resolve when Redis connectivity is fixed.
+- **Resolved**: 2026-03-10 (commit `9c7307e` — Celery/Redis removed from codebase)
+- **Notes**: No longer applicable. Celery was fully removed.
+
+### 6. QueuePool exhaustion during worklist sync (connection contention)
+
+- **Pattern**: `QueuePool limit of size .* overflow .* reached`, `TimeoutError`
+- **Category**: error
+- **Status**: mitigating
+- **First seen**: 2026-03-13
+- **Notes**: Long-lived DB sessions held during AI pipeline processing (2-5 min
+  per document) starve short-lived queries (status polls, upserts). Fix applied
+  in worktree branch `worktree-agent-a98b56c4`: sync-in-progress guard, pool
+  timeout catch in status endpoint, TimeoutError retry, asyncio.create_task for
+  sync. Needs deploy to take effect.
 
 ---
 

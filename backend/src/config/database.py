@@ -206,6 +206,7 @@ class DatabaseConfig:
             "InterfaceError",
             "ConnectionRefusedError",
             "ConnectionResetError",
+            "TimeoutError",
         }
         # Walk the cause chain
         current: BaseException | None = exc

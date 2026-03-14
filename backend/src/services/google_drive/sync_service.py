@@ -268,13 +268,13 @@ class GoogleDriveSyncService:
                 logger.error(
                     "google_drive_sync_item_failed",
                     file_id=file_metadata.get("id"),
-                    error=str(exc),
+                    error=str(exc) or type(exc).__name__,
                     exc_info=True,
                 )
                 summary["errors"].append(
                     {
                         "file_id": file_metadata.get("id"),
-                        "error": str(exc),
+                        "error": str(exc) or type(exc).__name__,
                     }
                 )
 
