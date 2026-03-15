@@ -24,13 +24,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     Handles startup and shutdown events.
     """
+    from sqlalchemy import text
+
     # Startup
     settings = get_settings()
     app.state.settings = settings
 
-    # Initialize database
+    # Initialize database and pre-warm the connection pool.
+    # Without this, the first /health check triggers engine creation +
+    # DNS + TCP + TLS to Supabase, which takes 5-15s on Cloud Run cold
+    # start and exceeds the 5s health check timeout.
     db_config = get_db_config()
     app.state.db_config = db_config
+
+    try:
+        async with db_config.session() as session:
+            await session.execute(text("SELECT 1"))
+    except Exception:
+        # Non-fatal: pool will retry on first real request
+        pass
 
     yield
 
