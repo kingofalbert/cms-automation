@@ -1,7 +1,9 @@
 """FastAPI application entry point."""
 
+import asyncio
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,9 +15,50 @@ from src.api.middleware.auth import AuthenticationMiddleware
 from src.api.routes import register_routes
 from src.config import get_settings, setup_logging
 from src.config.database import get_db_config
+from src.config.logging import get_logger
 
 # Initialize logging
 setup_logging()
+
+_logger = get_logger(__name__)
+
+
+async def _reap_stale_tasks(db_config) -> int:
+    """Mark processing tasks older than 30 min as failed."""
+    from sqlalchemy import and_, update
+
+    from src.models.pipeline_task import PipelineTask
+
+    cutoff = datetime.now(UTC) - timedelta(minutes=30)
+    try:
+        async with db_config.session() as session:
+            result = await session.execute(
+                update(PipelineTask)
+                .where(and_(
+                    PipelineTask.status == "processing",
+                    PipelineTask.created_at < cutoff,
+                ))
+                .values(
+                    status="failed",
+                    error="Task timed out (stale reaper)",
+                    completed_at=datetime.now(UTC),
+                )
+            )
+            await session.commit()
+            count = result.rowcount
+            if count:
+                _logger.info("stale_tasks_reaped", count=count)
+            return count
+    except Exception:
+        _logger.warning("stale_task_reaper_failed", exc_info=True)
+        return 0
+
+
+async def _periodic_reaper(db_config) -> None:
+    """Run stale task reaper every 10 minutes."""
+    while True:
+        await asyncio.sleep(600)
+        await _reap_stale_tasks(db_config)
 
 
 @asynccontextmanager
@@ -44,9 +87,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         # Non-fatal: pool will retry on first real request
         pass
 
+    # Reap stale tasks at startup (clears stuck tasks from previous instances)
+    await _reap_stale_tasks(db_config)
+
+    # Start periodic reaper (every 10 minutes)
+    reaper_task = asyncio.create_task(_periodic_reaper(db_config))
+
     yield
 
     # Shutdown
+    reaper_task.cancel()
+    try:
+        await reaper_task
+    except asyncio.CancelledError:
+        pass
     await db_config.close()
 
 

@@ -1331,7 +1331,7 @@ class ArticleParserService:
                         parsed_data = json.loads(repaired_json)
                         logger.info("[DEBUG] JSON repair successful!")
                     except json.JSONDecodeError as repair_error:
-                        logger.error(f"[DEBUG] JSON repair also failed: {repair_error}")
+                        logger.warning("json_repair_failed", error=str(repair_error))
                         raise initial_error  # Re-raise the original error
                 else:
                     raise initial_error
@@ -1472,8 +1472,8 @@ class ArticleParserService:
             )
 
         except json.JSONDecodeError as e:
-            logger.error(f"[DEBUG] JSON parse FAILED: {e}")
-            logger.error(f"[DEBUG] Failed response text (first 500 chars): {cleaned_response[:500] if 'cleaned_response' in locals() else 'NOT_AVAILABLE'}")
+            logger.warning("ai_json_parse_failed", error=str(e))
+            logger.warning("ai_json_parse_failed_response", text=cleaned_response[:500] if 'cleaned_response' in locals() else 'NOT_AVAILABLE')
             return ParsingResult(
                 success=False,
                 errors=[

@@ -497,18 +497,23 @@ class PlaywrightWordPressPublisher:
         # Pre-warm DNS/TCP/TLS connection before full page navigation.
         # Cloud Run cold DNS resolution through Google's internal resolver
         # can take 10-30s on first request.
+        import time as _time
+
         try:
             logger.info("playwright_prewarm_start", url=self._cms_url)
-            await self.page.request.head(
+            t0 = _time.monotonic()
+            resp = await self.page.request.head(
                 self._cms_url, timeout=30000, ignore_https_errors=True,
             )
-            logger.info("playwright_prewarm_done")
+            latency = int((_time.monotonic() - t0) * 1000)
+            logger.info("playwright_prewarm_done", latency_ms=latency, status=resp.status)
         except Exception as e:
             logger.warning("playwright_prewarm_failed", error=str(e))
             # Non-fatal — page.goto will still work, just slower
 
         # Retry login navigation — WordPress admin can be intermittently
         # unreachable from Cloud Run (ERR_SOCKET_NOT_CONNECTED, timeouts).
+        # On retry, create a fresh browser context to clear broken socket state.
         max_login_attempts = 3
         for attempt in range(1, max_login_attempts + 1):
             try:
@@ -529,6 +534,20 @@ class PlaywrightWordPressPublisher:
                     except Exception:
                         pass
                     raise
+                # Create fresh browser context to clear broken socket state
+                try:
+                    old_context = self.page.context
+                    new_context = await self.browser.new_context(
+                        ignore_https_errors=True,
+                        viewport={"width": 1280, "height": 800},
+                    )
+                    self.page = await new_context.new_page()
+                    # Re-apply resource blocking for performance
+                    await self.page.route("**/*.{png,jpg,jpeg,gif,svg,woff,woff2,ttf,eot}", lambda route: route.abort())
+                    await old_context.close()
+                    logger.info("playwright_fresh_context_created", attempt=attempt)
+                except Exception as ctx_err:
+                    logger.warning("playwright_fresh_context_failed", error=str(ctx_err))
                 await asyncio.sleep(5 * attempt)
 
         current_url = self.page.url

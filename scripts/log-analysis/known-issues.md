@@ -72,34 +72,62 @@ Each entry has:
 - **Status**: resolved
 - **First seen**: 2026-03-13
 - **Resolved**: 2026-03-14 (commit `6465c2f` deployed as revision `00082-zbp`)
+- **Updated**: 2026-03-15
 - **Notes**: Fix deployed: sync-in-progress guard, pool timeout catch in status
   endpoint, TimeoutError retry, asyncio.create_task for sync, pool_size=3,
   max_overflow=2. Post-reinit at 15:10 UTC on 3/14: 1 error vs 35 pre-reinit.
-  Pool settings only take effect after instance recycles (DatabaseConfig singleton).
+  Settings defaults in `settings.py` also changed from 5/5 to 3/2 so even
+  instances that miss env vars use safe pool sizes.
 
 ### 7. Playwright publish failures (WordPress title selector timeout)
 
 - **Pattern**: `playwright_publish_failed`, `wait_for_selector.*editor-post-title`
 - **Category**: error
-- **Status**: mitigating
+- **Status**: resolved
 - **First seen**: 2026-03-14
-- **Notes**: 10/10 publish attempts failed with title field selector timeout
-  (03:31-06:20 UTC). WordPress editor page not loading — likely `ping.xie`
-  password incorrect or WordPress admin unreachable. Requires human intervention
-  to reset WordPress credentials. 6 related SEO configuration failures
-  (`seo_configuration_failed`) for Yoast metabox selector also observed.
+- **Resolved**: 2026-03-14 (commit `34f6cdb` deployed as revision `00084-s47`)
+- **Updated**: 2026-03-15
+- **Notes**: Root cause was NOT password — `ping.xie` credentials are correct.
+  The site uses Classic Editor, but code checked Gutenberg first (45s timeout),
+  then Classic (15s timeout). On Cloud Run slow loads, both timeouts expired,
+  and `_editor_type` defaulted to `"gutenberg"`, causing `_step_set_title` to
+  use wrong selectors. Fix: check Classic first (60s), default to `"classic"`.
+  Additional fix: login retry now creates fresh browser context (clears broken
+  socket state) and pre-warm logs latency_ms + response status for diagnostics.
 
 ### 8. Stuck pipeline tasks (no stale task reaper)
 
 - **Pattern**: `status=processing` tasks polled indefinitely
 - **Category**: error
-- **Status**: mitigating
+- **Status**: resolved
 - **First seen**: 2026-03-13
-- **Updated**: 2026-03-14
-- **Notes**: 3 tasks stuck in "processing": `5f585d9d`, `36c52b48` (from 3/13,
-  24+ hours), `1557fe38` (new 3/14). GAS polls every 5 min with no max retry,
-  generating ~288 API calls/day per stuck task. Needs stale task reaper
-  (architectural decision) to mark tasks older than 30 min as failed.
+- **Resolved**: 2026-03-15
+- **Notes**: Stale task reaper added in `main.py` lifespan: marks processing
+  tasks older than 30 min as failed at startup and every 10 minutes. Eliminates
+  ~288 API calls/day per stuck task from GAS polling.
+
+### 9. Auto-publish concurrency causing pool exhaustion
+
+- **Pattern**: `auto_publish_background_failed` with `QueuePool` errors
+- **Category**: error
+- **Status**: resolved
+- **First seen**: 2026-03-14
+- **Resolved**: 2026-03-15
+- **Notes**: Concurrent auto-publish pipelines competed for DB connections.
+  Added `asyncio.Semaphore(1)` in `pipeline_routes.py` so only one pipeline
+  runs at a time per instance. Tasks still queue but wait instead of failing.
+
+### 10. Export size skip list for oversized Google Docs
+
+- **Pattern**: `google_drive_export_size_limit` (repeated ~2700 warnings/day)
+- **Category**: warning
+- **Status**: resolved
+- **First seen**: 2026-03-08
+- **Resolved**: 2026-03-15
+- **Notes**: 4 known oversized Google Docs attempted export every sync cycle.
+  Added persistent skip list (`_KNOWN_OVERSIZED_FILE_IDS`) in `sync_service.py`
+  plus runtime skip set that learns new oversized docs. Eliminates ~2700
+  warnings/day.
 
 ---
 

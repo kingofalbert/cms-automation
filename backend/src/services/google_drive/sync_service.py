@@ -41,6 +41,16 @@ except ImportError:  # pragma: no cover - Metrics module optional for testing
 
 logger = get_logger(__name__)
 
+# Known oversized Google Docs that exceed the 10MB HTML export limit.
+# Skip these at hydration time to avoid ~2700 warnings/day.
+_KNOWN_OVERSIZED_FILE_IDS: set[str] = {
+    "12QCm1-O3NOmJI9PQFC57t5JFHRPhfLbargbbShoQBhw",
+    "1pPavFgcGvuFI9BA5Y4N200s2HublDWSLerH6N5e3YFU",
+    "1KB5Hy9vWCcJgLMOeRSwAsaN-dfEJtPqOTzphSoEjobY",
+    "1JuULChgkPWFXUQqmUd66vvM6viPQ5Lt68q0wBYrFYlk",
+}
+_runtime_skip_file_ids: set[str] = set()
+
 
 class GoogleDocsHTMLParser(HTMLParser):
     """Clean HTML parser for Google Docs exported content.
@@ -298,6 +308,10 @@ class GoogleDriveSyncService:
         if not file_id:
             return None
 
+        if file_id in _KNOWN_OVERSIZED_FILE_IDS or file_id in _runtime_skip_file_ids:
+            logger.debug("google_drive_skipping_oversized_file", file_id=file_id)
+            return None
+
         try:
             if mime_type == "application/vnd.google-apps.document":
                 # Export as HTML to preserve formatting and structure
@@ -410,6 +424,7 @@ class GoogleDriveSyncService:
 
                 # Non-retryable: document too large to export (403 exportSizeLimitExceeded)
                 if "exportSizeLimitExceeded" in error_msg or "too large to be exported" in error_msg:
+                    _runtime_skip_file_ids.add(file_id)
                     logger.warning(
                         "google_drive_export_size_limit",
                         file_id=file_id,

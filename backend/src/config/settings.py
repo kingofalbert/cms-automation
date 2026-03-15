@@ -61,13 +61,13 @@ class Settings(BaseSettings):
         description="PostgreSQL connection string",
     )
     DATABASE_POOL_SIZE: int = Field(
-        default=5,
+        default=3,
         ge=1,
         le=100,
         description="Database connection pool size per instance (Transaction mode port 6543 supports 200 max clients)",
     )
     DATABASE_MAX_OVERFLOW: int = Field(
-        default=5,
+        default=2,
         ge=0,
         le=50,
         description="Maximum overflow connections per instance (pool_size + max_overflow = max connections per instance)",
