@@ -666,33 +666,34 @@ class PlaywrightWordPressPublisher:
         gutenberg_title = self.config["editor"]["title_field"]  # includes fallback selectors
         classic_title = "#title"  # Classic Editor title field
 
-        # Wait longer for the slow site
+        # Try Classic Editor first — admin.epochtimes.com uses Classic Editor,
+        # so check for #title before the slower Gutenberg selectors.
         try:
-            logger.info("playwright_waiting_for_editor", timeout_s=45)
-            # Try finding ANY of the Gutenberg title selectors
-            await self.page.wait_for_selector(gutenberg_title, timeout=45000)
-            self._editor_type = "gutenberg"
+            logger.info("playwright_waiting_for_classic_editor", timeout_s=60)
+            await self.page.wait_for_selector(classic_title, timeout=60000)
+            self._editor_type = "classic"
             logger.info(
                 "playwright_editor_detected",
-                editor_type="gutenberg",
+                editor_type="classic",
                 elapsed_s=round(_time.monotonic() - nav_start, 1),
             )
         except Exception:
             try:
-                logger.info("playwright_waiting_for_classic_editor", timeout_s=15)
-                await self.page.wait_for_selector(classic_title, timeout=15000)
-                self._editor_type = "classic"
+                logger.info("playwright_waiting_for_editor", timeout_s=30)
+                # Fallback: Try Gutenberg selectors
+                await self.page.wait_for_selector(gutenberg_title, timeout=30000)
+                self._editor_type = "gutenberg"
                 logger.info(
                     "playwright_editor_detected",
-                    editor_type="classic",
+                    editor_type="gutenberg",
                     elapsed_s=round(_time.monotonic() - nav_start, 1),
                 )
             except Exception:
-                # Still failed? Take a screenshot and log the whole HTML for debugging
-                self._editor_type = "unknown"
+                # Still failed? Default to classic since that's what this site uses.
+                self._editor_type = "classic"
                 logger.warning(
                     "playwright_editor_unknown",
-                    message="Could not detect editor type after 60s total wait",
+                    message="Could not detect editor type after 90s total wait, defaulting to classic",
                     current_url=self.page.url,
                     elapsed_s=round(_time.monotonic() - nav_start, 1),
                 )
@@ -723,7 +724,7 @@ class PlaywrightWordPressPublisher:
         logger.info("playwright_step_set_title", title=title[:50])
 
         # Use appropriate selector based on detected editor
-        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        editor_type = getattr(self, '_editor_type', 'classic')
         if editor_type == "classic":
             title_field = "#title"
         else:
@@ -912,7 +913,7 @@ class PlaywrightWordPressPublisher:
         """
         logger.info("playwright_step_set_content", length=len(content))
 
-        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        editor_type = getattr(self, '_editor_type', 'classic')
         content_set = False
         actual_length = 0
 
@@ -1071,7 +1072,7 @@ class PlaywrightWordPressPublisher:
             secondary_count=len(secondary_categories),
         )
 
-        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        editor_type = getattr(self, '_editor_type', 'classic')
         all_categories = []
         if primary_category:
             all_categories.append(primary_category)
@@ -1203,7 +1204,7 @@ class PlaywrightWordPressPublisher:
 
         logger.info("playwright_step_set_tags", count=len(tags))
 
-        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        editor_type = getattr(self, '_editor_type', 'classic')
 
         try:
             if editor_type == "classic":
@@ -1303,7 +1304,7 @@ class PlaywrightWordPressPublisher:
         """
         logger.info("playwright_step_set_featured_image", path=image_path, has_alt=bool(alt_text))
 
-        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        editor_type = getattr(self, '_editor_type', 'classic')
 
         try:
             # Upload image via async-upload.php and set as featured image
@@ -1831,7 +1832,7 @@ class PlaywrightWordPressPublisher:
         Returns:
             Tuple of (result_url, article_id)
         """
-        editor_type = getattr(self, '_editor_type', 'gutenberg')
+        editor_type = getattr(self, '_editor_type', 'classic')
         logger.info("playwright_step_publish", publish_mode=publish_mode, editor_type=editor_type)
 
         # Dismiss any stale media modal that may be blocking the page
